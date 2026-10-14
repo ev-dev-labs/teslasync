@@ -14,7 +14,7 @@ import {
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { MapsOperationalBrief } from '../components/operationalbrief-all/MapsOperationalBrief';
-import { Skeleton, EmptyState, QueryError, AlertBanner, LiveStaleDataBanner } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, AlertBanner, LiveStaleDataBanner, DataSourceNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   MapContainer, Marker, Popup, Polyline,
@@ -31,13 +31,14 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useUrlEnum } from '@/hooks/useUrlState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
-import { formatDateTime } from '@/lib/dateFormat';
 
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { request } from '@/api/client';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useGuardedNavigate } from '@/hooks/useNavigationGuard';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
@@ -93,6 +94,8 @@ function StatusRow({ icon, label, children }: { icon: ReactNode; label: string; 
 export default function MapOverviewPage() {
   const { fmtScientificNumber, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation('maps');
+  const { formatDateTime } = useDateFormat();
+  const navigate = useGuardedNavigate();
   usePageTitle(t('mapOverview.pageTitle', 'Map overview'));
 
   /* ---- unit prefs: format at the display boundary from SI ---- */
@@ -115,7 +118,6 @@ export default function MapOverviewPage() {
     isLoading: vehiclesLoading,
   } = vehiclesQuery;
   const vehiclesState = deriveDataState(vehiclesQuery);
-  const vehiclesError = vehiclesState.fatalError;
 
   const selectedId = vehicleId != null ? String(vehicleId) : '';
 
@@ -134,7 +136,7 @@ export default function MapOverviewPage() {
     provenance: 'historical',
     unavailable: latestQuery.isSuccess && latest == null,
   });
-  const latestLoading = latestQuery.isLoading && !latestState.hasData;
+  const latestLoading = latestState.status === 'initial';
   const latestError = latestState.fatalError;
 
   const historyQuery = useQuery<PositionRecord[]>({
@@ -151,7 +153,7 @@ export default function MapOverviewPage() {
     provenance: 'historical',
     unavailable: historyQuery.isSuccess && (history?.length ?? 0) === 0,
   });
-  const historyLoading = historyQuery.isLoading && !historyState.hasData;
+  const historyLoading = historyState.status === 'initial';
   const historyError = historyState.fatalError;
 
   const locationQuery = useQuery<LocationSnapshot | null>({
@@ -168,7 +170,7 @@ export default function MapOverviewPage() {
     provenance: 'unknown',
     unavailable: locationQuery.isSuccess && locationDetails == null,
   });
-  const locationLoading = locationQuery.isLoading && !locationState.hasData;
+  const locationLoading = locationState.status === 'initial';
   const locationError = locationState.fatalError;
 
   /* ---- derived ---- */
@@ -216,11 +218,11 @@ export default function MapOverviewPage() {
   const homelinkNearby = locationDetails?.homelink_nearby;
   const briefScope = t('mapOverview.brief.scope', 'Selected vehicle · latest position only. Map trail and playback use a separate latest-50-position history request.');
   const briefMetrics = [
-    { metricId: 'speed', occurrenceId: 'overview-speed', rawValue: latest?.speed, label: t('mapOverview.currentSpeed', 'Current speed'), description: briefScope, display: { formatter: (raw: number) => ({ value: formatSpeed(raw), unit: '' }) } },
+    { metricId: 'speed', occurrenceId: 'overview-speed', rawValue: latest?.speed, label: t('mapOverview.observedSpeed', 'Observed speed'), description: briefScope, display: { formatter: (raw: number) => ({ value: formatSpeed(raw), unit: '' }) } },
     { metricId: 'number', occurrenceId: 'overview-heading', rawValue: latest?.heading, label: t('mapOverview.heading', 'Heading'), description: t('mapOverview.brief.heading', 'Reported heading in degrees.'), display: { formatter: (raw: number) => ({ value: `${fmtNumber(raw)}°`, unit: '' }) } },
     { metricId: 'number', occurrenceId: 'overview-latitude', rawValue: hasValidLocation ? latest?.latitude : null, label: t('mapOverview.colLat', 'Lat'), description: t('mapOverview.latLon', 'Lat / lon'), context: hasValidLocation && latest ? `${fmtScientificNumber(latest.latitude, 4)}, ${fmtScientificNumber(latest.longitude, 4)}` : undefined, display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
     { metricId: 'number', occurrenceId: 'overview-longitude', rawValue: hasValidLocation ? latest?.longitude : null, label: t('mapOverview.colLon', 'Lon'), description: t('mapOverview.latLon', 'Lat / lon'), display: { formatter: (raw: number) => ({ value: fmtScientificNumber(raw, 4), unit: '' }) } },
-    { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastUpdated', 'Last updated'), description: t('mapOverview.autoRefresh', 'Auto-refreshes every 15 s') },
+    { metricId: 'text', occurrenceId: 'overview-updated', rawValue: latest?.created_at ? formatDateTime(latest.created_at) : null, label: t('mapOverview.lastObserved', 'Last observed'), description: t('mapOverview.observationFreshness', 'Stored observation time. Polling every 15 s checks for positions, not whether this observation is current.') },
   ] as const;
 
   const triLabel = (v: boolean | null | undefined): string =>
@@ -293,15 +295,11 @@ export default function MapOverviewPage() {
         }
       },
     }),
-    [formatSpeed, fmtNumber, fmtScientificNumber],
+    [formatDateTime, formatSpeed, fmtNumber, fmtScientificNumber],
   );
 
-  // Defensive guard: only surface the "no vehicle" empty state once the fleet
-  // has actually loaded and is genuinely empty. While vehicles are still
-  // loading — or if the fleet request failed — fall through to PageContainer so
-  // the user sees a proper loading spinner / error banner instead of a
-  // misleading "set up TeslaSync" prompt.
-  if (vehicleId == null && !vehiclesLoading && !vehiclesError) {
+  // An initial paused read has not established an empty fleet.
+  if (vehicleId == null && vehiclesQuery.isSuccess && vehicles?.length === 0) {
     return <NoVehicleSelected pageTitle={t('mapOverview.title', 'Map overview')} />;
   }
 
@@ -310,15 +308,15 @@ export default function MapOverviewPage() {
     <PageLayout
       title={t('mapOverview.title', 'Map overview')}
       subtitle={t(
-        'mapOverview.subtitle',
-        'Live vehicle location and recent history',
+        'mapOverview.historicalSubtitle',
+        'Latest recorded vehicle position and recent history',
       )}
       loading={vehiclesLoading && !latestState.hasData && !historyState.hasData && !locationState.hasData}
       error={!latestState.hasData && !historyState.hasData && !locationState.hasData ? vehiclesState.fatalError : null}
       query={latestQuery}
       dataSources={[
         { id: 'vehicles', label: t('mapOverview.vehicle', 'Vehicle'), query: vehiclesQuery },
-        { id: 'latest-position', label: t('mapOverview.mapRegion', 'Live location map'), query: latestQuery, enabled: selectedId !== '' },
+        { id: 'latest-position', label: t('mapOverview.positionMap', 'Recorded location map'), query: latestQuery, enabled: selectedId !== '' },
         { id: 'position-history', label: t('mapOverview.recentHistory', 'Recent location history'), query: historyQuery, enabled: selectedId !== '' },
         { id: 'location-details', label: t('mapOverview.locationDetails', 'Location details'), query: locationQuery, enabled: selectedId !== '' },
       ]}
@@ -332,29 +330,32 @@ export default function MapOverviewPage() {
         </AlertBanner>
       )}
 
-      {/* 1 — KPI band: live vehicle status, full-width responsive metric grid. */}
+      {/* 1 — KPI band: recorded vehicle status, full-width responsive metric grid. */}
       <FadeIn>
         <MapsOperationalBrief
           title={t('mapOverview.kpis', 'Vehicle status')}
           description={t('mapOverview.brief.description', 'Reported motion and coordinates from the latest position; missing GPS is not a measured zero.')}
           scope={briefScope}
           metrics={briefMetrics}
-          sources={[{ label: t('mapOverview.mapRegion', 'Live location map'), state: latestState }]}
+          sources={[{ label: t('mapOverview.positionMap', 'Recorded location map'), state: latestState }]}
           loading={latestLoading}
         />
       </FadeIn>
 
-      {/* 2 — Hero: live map spanning most of the width + side context column. */}
+      {/* 2 — Hero: recorded position map + side context column. */}
       <FadeIn delay={0.05}>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          {/* Live map — the hero visual. */}
+          {/* Recorded position map — the hero visual. */}
           <GlassPanel
             role="region"
-            aria-label={t('mapOverview.mapRegion', 'Live location map')}
+            aria-label={t('mapOverview.positionMap', 'Recorded location map')}
             className="relative h-[380px] overflow-hidden sm:h-[460px] xl:col-span-2 xl:h-[600px]"
           >
             {latestLoading && !latest ? (
-              <Skeleton height="100%" className="h-full w-full rounded-none" />
+              <>
+                <DataSourceNotice sources={[{ id: 'latest-position', label: t('mapOverview.positionMap', 'Recorded location map'), query: latestQuery, enabled: selectedId !== '' }]} />
+                <Skeleton height="100%" className="h-full w-full rounded-none" />
+              </>
             ) : latestError ? (
               <div className="flex h-full items-center justify-center p-6">
                 <QueryError error={latestError} onRetry={() => latestQuery.refetch()} />
@@ -363,6 +364,7 @@ export default function MapOverviewPage() {
               <>
                 <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
                 <MapContainer
+                  key={`position-map:${selectedId}`}
                   center={[latest.latitude, latest.longitude]}
                   zoom={15}
                   scrollWheelZoom
@@ -397,12 +399,10 @@ export default function MapOverviewPage() {
           {/* Side context: location status + quick links (fills the map height on xl). */}
           <div className="flex flex-col gap-4">
             <LayoutCard title={t('mapOverview.locationDetails', 'Location details')}>
-              {locationLoading ? (
-                <Skeleton lines={4} height={20} />
-              ) : locationError ? (
-                <QueryError error={locationError} onRetry={() => locationQuery.refetch()} />
-              ) : (latest || locationDetails) ? (
-                <div className="space-y-3">
+              <div className="space-y-3">
+                  <DataSourceNotice sources={[{ id: 'location-details', label: t('mapOverview.locationDetails', 'Location details'), query: locationQuery, enabled: selectedId !== '' }]} />
+                  {locationLoading && <Skeleton lines={3} height={20} />}
+                  {locationError && <QueryError error={locationError} onRetry={() => locationQuery.refetch()} />}
                   {/* Home */}
                   <StatusRow
                     icon={<Home className={cn('h-5 w-5', typography.color.muted)} />}
@@ -442,12 +442,12 @@ export default function MapOverviewPage() {
                       {formatDistance(latest?.odometer ?? null)}
                     </Text>
                   </StatusRow>
-                </div>
-              ) : (
-                <EmptyState /* no-action: transient empty state — no location data yet */
-                  message={t('mapOverview.noLocation', 'No location data available yet')}
-                />
-              )}
+                  {locationQuery.isSuccess && !locationDetails && !latest && (
+                    <EmptyState /* no-action: transient empty state — no location data yet */
+                      message={t('mapOverview.noLocation', 'No location data available yet')}
+                    />
+                  )}
+              </div>
             </LayoutCard>
 
             <LayoutCard title={t('mapOverview.quickLinks', 'Quick links')}>
@@ -456,7 +456,7 @@ export default function MapOverviewPage() {
                   variant="outline"
                   wrapLabel
                   icon={<Route className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => { window.location.hash = '#/maps/navigation-route'; }}
+                  onClick={() => { void navigate('/navigation'); }}
                   className="min-h-11 w-full justify-start"
                 >
                   {t('mapOverview.navRoute', 'Navigation route')}
@@ -465,7 +465,7 @@ export default function MapOverviewPage() {
                   variant="outline"
                   wrapLabel
                   icon={<Fence className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => { window.location.hash = '#/maps/geofences'; }}
+                  onClick={() => { void navigate('/geofences'); }}
                   className="min-h-11 w-full justify-start"
                 >
                   {t('mapOverview.geofences', 'Geofences')}
@@ -474,7 +474,7 @@ export default function MapOverviewPage() {
                   variant="outline"
                   wrapLabel
                   icon={<LocateFixed className="h-4 w-4" aria-hidden="true" />}
-                  onClick={() => { window.location.hash = '#/maps/locations'; }}
+                  onClick={() => { void navigate('/locations'); }}
                   className="min-h-11 w-full justify-start"
                 >
                   {t('mapOverview.locations', 'Locations')}
@@ -489,11 +489,15 @@ export default function MapOverviewPage() {
       <FadeIn delay={0.1}>
         <LayoutCard title={t('mapOverview.recentPlayback', 'Recent route playback')}>
           {historyLoading ? (
-            <Skeleton height={360} />
+            <>
+              <DataSourceNotice sources={[{ id: 'position-history', label: t('mapOverview.recentHistory', 'Recent location history'), query: historyQuery, enabled: selectedId !== '' }]} />
+              <Skeleton height={360} />
+            </>
           ) : historyError ? (
             <QueryError error={historyError} onRetry={() => historyQuery.refetch()} />
           ) : playbackPoints.length > 1 ? (
             <RoutePlayback
+              key={`position-playback:${selectedId}`}
               points={playbackPoints}
               height={360}
               ariaLabel={t('mapOverview.playbackLabel', 'Recent route playback map')}
@@ -511,7 +515,10 @@ export default function MapOverviewPage() {
       <FadeIn delay={0.15}>
         <LayoutCard title={t('mapOverview.recentHistory', 'Recent location history')}>
           {historyLoading ? (
-            <Skeleton lines={6} height={16} className="mt-2" />
+            <>
+              <DataSourceNotice sources={[{ id: 'position-history', label: t('mapOverview.recentHistory', 'Recent location history'), query: historyQuery, enabled: selectedId !== '' }]} />
+              <Skeleton lines={6} height={16} className="mt-2" />
+            </>
           ) : historyError ? (
             <QueryError error={historyError} onRetry={() => historyQuery.refetch()} />
           ) : historyRows.length > 0 ? (
