@@ -11,6 +11,7 @@ import { FadeIn } from '@/components/motion';
 import { Button, Icon } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 
 import {
@@ -56,8 +57,10 @@ export default function PreconditioningEffectivenessPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatDuration } = useUnits();
-  const climateQuery = useClimateHistory(vehicleIdStr);
-  const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000);
+  const { startInstant, endInstantExclusive } = useRangeState();
+  const window = { start: startInstant, end: endInstantExclusive };
+  const climateQuery = useClimateHistory(vehicleIdStr, window);
+  const drivesQuery = useDriveHistory(vehicleIdStr || undefined, 1000, window);
   const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
   const drivesSource = deriveDataState(drivesQuery, { provenance: 'historical' });
   const summary = useMemo(
@@ -87,6 +90,7 @@ export default function PreconditioningEffectivenessPage() {
         hasData: climateHasData,
         isLoading:
           !climateHasData
+          && climateQuery.fetchStatus !== 'paused'
           && (
             climateQuery.isLoading
             || (
@@ -106,6 +110,7 @@ export default function PreconditioningEffectivenessPage() {
         hasData: drivesHaveData,
         isLoading:
           !drivesHaveData
+          && drivesQuery.fetchStatus !== 'paused'
           && (
             drivesQuery.isLoading
             || (
@@ -124,9 +129,7 @@ export default function PreconditioningEffectivenessPage() {
     }),
     [
       climateHasData,
-      climateQuery.error,
       climateQuery.fetchStatus,
-      climateQuery.isError,
       climateQuery.isFetching,
       climateQuery.isLoading,
       climateQuery.isPending,
@@ -134,9 +137,7 @@ export default function PreconditioningEffectivenessPage() {
       climateSource.fatalError,
       climateSource.refreshError,
       drivesHaveData,
-      drivesQuery.error,
       drivesQuery.fetchStatus,
-      drivesQuery.isError,
       drivesQuery.isFetching,
       drivesQuery.isLoading,
       drivesQuery.isPending,
@@ -149,20 +150,6 @@ export default function PreconditioningEffectivenessPage() {
       vehicleId,
     ],
   );
-  // SectionBody's current paused guard means 'no usable evidence'. Keep that
-  // presentation contract separate from the ledger's actual transport state,
-  // so offline refreshes disclose retained evidence without blanking its panels.
-  const sectionState: PreconditioningQueryState = {
-    ...queryState,
-    climate: {
-      ...queryState.climate,
-      isPaused: queryState.climate.isPaused && !climateHasData,
-    },
-    drives: {
-      ...queryState.drives,
-      isPaused: queryState.drives.isPaused && !drivesHaveData,
-    },
-  };
   const convertDelta = useCallback<TemperatureDeltaConverter>(
     (valueC) => (
       valueC == null || !Number.isFinite(valueC)
@@ -195,6 +182,8 @@ export default function PreconditioningEffectivenessPage() {
         'Observational pre-drive cabin readiness with explicit source, exclusion, support, and uncertainty accounting',
       )}
       query={[climateQuery, drivesQuery]}
+      announce={false}
+      busy={refreshing && vehicleId != null}
       secondaryActions={(
         <div className="flex flex-wrap items-center gap-2">
           <Button
@@ -232,29 +221,29 @@ export default function PreconditioningEffectivenessPage() {
         />
       </FadeIn>
       <FadeIn delay={0.04}>
-        <PreconditioningClimateDisposition summary={summary} state={sectionState} />
+        <PreconditioningClimateDisposition summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.05}>
-        <PreconditioningDepartureDisposition summary={summary} state={sectionState} />
+        <PreconditioningDepartureDisposition summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.06}>
         <PreconditioningJoinSupport
           summary={summary}
-          state={sectionState}
+          state={queryState}
           formatDuration={formatDuration}
         />
       </FadeIn>
       <FadeIn delay={0.07}>
         <PreconditioningHourlyProfile
           summary={summary}
-          state={sectionState}
+          state={queryState}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.08}>
         <PreconditioningReadinessComparison
           summary={summary}
-          state={sectionState}
+          state={queryState}
           convertDelta={convertDelta}
           formatDelta={formatDelta}
           temperatureUnit={unitPrefs.temperature}
@@ -263,7 +252,7 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.09}>
         <PreconditioningImprovementComparison
           summary={summary}
-          state={sectionState}
+          state={queryState}
           convertDelta={convertDelta}
           formatDelta={formatDelta}
           temperatureUnit={unitPrefs.temperature}
@@ -272,21 +261,21 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.1}>
         <PreconditioningStrata
           summary={summary}
-          state={sectionState}
+          state={queryState}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.11}>
         <PreconditioningImprovementDistribution
           summary={summary}
-          state={sectionState}
+          state={queryState}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.12}>
         <PreconditioningThresholdConfidence
           summary={summary}
-          state={sectionState}
+          state={queryState}
           formatDuration={formatDuration}
           formatDelta={formatDelta}
         />
@@ -294,20 +283,20 @@ export default function PreconditioningEffectivenessPage() {
       <FadeIn delay={0.13}>
         <PreconditioningDepartureDirectory
           summary={summary}
-          state={sectionState}
+          state={queryState}
           locale={locale}
           formatDuration={formatDuration}
           formatDelta={formatDelta}
         />
       </FadeIn>
       <FadeIn delay={0.14}>
-        <PreconditioningExactAccounting summary={summary} state={sectionState} />
+        <PreconditioningExactAccounting summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.15}>
-        <PreconditioningDataAvailability summary={summary} state={sectionState} />
+        <PreconditioningDataAvailability summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.16}>
-        <PreconditioningMethodology summary={summary} state={sectionState} />
+        <PreconditioningMethodology summary={summary} state={queryState} />
       </FadeIn>
     </PageLayout>
   );

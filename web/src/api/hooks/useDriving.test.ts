@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
 import { drivingKeys, useDrives, useDrivingStats, useDriveHistory, useDriveCalendarHistory, useDriveScore, useSpeedProfile } from './useDriving';
 import { chargingKeys, useChargingHistory } from './useCharging';
-import { useMediaHistory, vehicleSystemsKeys } from './useVehicleSystems';
+import { useClimateHistory, useMediaHistory, vehicleSystemsKeys } from './useVehicleSystems';
 import { useBatteryHealthAnalytics, useEnergyStats, useVampireDrainHistory, useVampireDrainStats } from './useEnergy';
 import { useDriveScorePage } from '@/features/driving/hooks/useDriveScorePage';
 
@@ -110,6 +110,61 @@ describe('vampire-drain history extraction', () => {
 describe('driving exact-range integration', () => {
   const start = '2024-03-10T15:42:19.125Z';
   const end = '2024-03-11T15:42:19.125Z';
+
+  it('scopes both preconditioning sources and caches by each exact bound while retaining the drive cap', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const context = wrapper();
+    const { result, rerender } = renderHook(
+      (window: { start: string; end: string }) => ({
+        climate: useClimateHistory('42', window),
+        drives: useDriveHistory('42', 2000, window),
+      }),
+      { wrapper: context.wrapper, initialProps: { start, end } },
+    );
+    const ranges = [
+      { start, end },
+      { start: '2024-03-09T00:00:00-08:00', end },
+      { start: '2024-03-09T00:00:00-08:00', end: '2024-03-11T00:00:00-07:00' },
+    ];
+    for (const [index, window] of ranges.entries()) {
+      if (index > 0) rerender(window);
+      await waitFor(() => expect(result.current.climate.isSuccess && result.current.drives.isSuccess).toBe(true));
+      expect(context.client.getQueryData(vehicleSystemsKeys.climateHistory('42', window.start, window.end))).toEqual([]);
+      expect(context.client.getQueryData(drivingKeys.history('42', 1000, window))).toEqual([]);
+    }
+    expect(mockedRequest).toHaveBeenCalledTimes(6);
+    mockedRequest.mock.calls.forEach(([path, options], index) => {
+      const url = new URL(path, 'http://fixture.test');
+      const window = ranges[Math.floor(index / 2)];
+      expect(url.pathname).toBe(index % 2 === 0 ? '/climate' : '/drives');
+      expect(url.searchParams.get('vehicle_id')).toBe('42');
+      expect(url.searchParams.get('start')).toBe(window.start);
+      expect(url.searchParams.get('end')).toBe(window.end);
+      expect(url.searchParams.get('limit')).toBe(index % 2 === 0 ? null : '1000');
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+    });
+  });
+
+  it('disables both preconditioning sources without a vehicle and aborts superseded range requests', async () => {
+    mockedRequest.mockImplementation(() => new Promise(() => {}));
+    const context = wrapper();
+    const { rerender, unmount } = renderHook(
+      (props: { vehicleId: string; start: string; end: string }) => ({
+        climate: useClimateHistory(props.vehicleId, props),
+        drives: useDriveHistory(props.vehicleId || undefined, 1000, props),
+      }),
+      { wrapper: context.wrapper, initialProps: { vehicleId: '', start, end } },
+    );
+    expect(mockedRequest).not.toHaveBeenCalled();
+    rerender({ vehicleId: '42', start, end });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    const firstSignals = mockedRequest.mock.calls.map(([, options]) => options?.signal);
+    rerender({ vehicleId: '42', start, end: '2024-03-12T15:42:19.125Z' });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(4));
+    expect(firstSignals.every((signal) => signal?.aborted)).toBe(true);
+    unmount();
+    expect(mockedRequest.mock.calls.every(([, options]) => options?.signal?.aborted)).toBe(true);
+  });
 
   it('scopes battery health requests and cache by both precise bounds without converting raw data', async () => {
     const data = { vehicle_id: 42, current_soh: 91.125, history: [{ capacity_wh: 72500 }] };

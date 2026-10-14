@@ -64,6 +64,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/notifications/inbox',
   '/parking',
   '/power-flow',
+  '/preconditioning-effectiveness',
   '/range-buffer',
   '/regen-efficiency',
   '/route-efficiency',

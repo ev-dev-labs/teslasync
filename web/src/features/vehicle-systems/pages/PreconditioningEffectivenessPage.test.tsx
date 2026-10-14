@@ -34,6 +34,10 @@ const h = vi.hoisted(() => ({
   driveHook: vi.fn(),
   climateRefetch: vi.fn(),
   driveRefetch: vi.fn(),
+  range: {
+    startInstant: '2026-08-01T00:00:00Z',
+    endInstantExclusive: '2026-08-09T00:00:00Z',
+  },
   temperature: '°C' as '°C' | '°F',
   dateLocale: 'en-US',
   dateTimezone: 'UTC',
@@ -65,21 +69,25 @@ vi.mock('react-i18next', () => ({
 }));
 
 vi.mock('@/api/hooks/useDriving', () => ({
-  useDriveHistory: (vehicleId: string | undefined, limit: number) => {
-    h.driveHook(vehicleId, limit);
+  useDriveHistory: (vehicleId: string | undefined, limit: number, range?: { start?: string; end?: string }) => {
+    h.driveHook(vehicleId, limit, range);
     return h.driveQuery;
   },
 }));
 
 vi.mock('@/api/hooks/useVehicleSystems', () => ({
-  useClimateHistory: (vehicleId: string) => {
-    h.climateHook(vehicleId);
+  useClimateHistory: (vehicleId: string, range?: { start?: string; end?: string }) => {
+    h.climateHook(vehicleId, range);
     return h.climateQuery;
   },
 }));
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: h.vehicleId }),
+}));
+
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => h.range,
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -326,6 +334,10 @@ beforeEach(() => {
   originalFormatterPreferences = getFormatterPreferences();
   vi.clearAllMocks();
   h.vehicleId = 7;
+  h.range = {
+    startInstant: '2026-08-01T00:00:00Z',
+    endInstantExclusive: '2026-08-09T00:00:00Z',
+  };
   h.temperature = '°C';
   h.dateLocale = 'en-US';
   h.dateTimezone = 'UTC';
@@ -340,6 +352,27 @@ afterEach(() => {
 });
 
 describe('PreconditioningEffectivenessPage', () => {
+  it('passes shared rolling and timezone-aware custom bounds to both sources without another picker', () => {
+    const view = renderPage();
+    for (const range of [
+      h.range,
+      { startInstant: '2026-08-08T12:42:19.125Z', endInstantExclusive: '2026-08-09T12:42:19.125Z' },
+      { startInstant: '2024-03-09T00:00:00-08:00', endInstantExclusive: '2024-03-11T00:00:00-07:00' },
+    ]) {
+      h.range = range;
+      view.rerender(
+        <MemoryRouter initialEntries={['/preconditioning-effectiveness']}>
+          <PreconditioningEffectivenessPage />
+        </MemoryRouter>,
+      );
+      const window = { start: range.startInstant, end: range.endInstantExclusive };
+      expect(h.climateHook).toHaveBeenLastCalledWith('7', window);
+      expect(h.driveHook).toHaveBeenLastCalledWith('7', 1000, window);
+      expectEverySection();
+      expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /date range|view settings/i })).not.toBeInTheDocument();
+    }
+  });
   it.each([
     ['missing null', null, '—'],
     ['missing undefined', undefined, '—'],
@@ -507,8 +540,9 @@ describe('PreconditioningEffectivenessPage', () => {
       name: 'Preconditioning effectiveness',
     })).toBeInTheDocument();
     expectEverySection();
-    expect(h.climateHook).toHaveBeenLastCalledWith('7');
-    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1000);
+    const window = { start: h.range.startInstant, end: h.range.endInstantExclusive };
+    expect(h.climateHook).toHaveBeenLastCalledWith('7', window);
+    expect(h.driveHook).toHaveBeenLastCalledWith('7', 1000, window);
   });
 
   it('retains every shell without a selected vehicle or redundant control', () => {
@@ -520,8 +554,9 @@ describe('PreconditioningEffectivenessPage', () => {
     expectEverySection();
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh evidence' })).toBeDisabled();
-    expect(h.climateHook).toHaveBeenLastCalledWith('');
-    expect(h.driveHook).toHaveBeenLastCalledWith(undefined, 1000);
+    const window = { start: h.range.startInstant, end: h.range.endInstantExclusive };
+    expect(h.climateHook).toHaveBeenLastCalledWith('', window);
+    expect(h.driveHook).toHaveBeenLastCalledWith(undefined, 1000, window);
     expect(screen.getByText(
       'Select a vehicle to query climate history and up to 1,000 recent drives.',
     )).toBeInTheDocument();

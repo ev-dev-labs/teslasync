@@ -27,6 +27,16 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns preconditioning effectiveness range and vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/preconditioning-effectiveness', '/preconditioning-effectiveness/',
+      '/preconditioning-effectiveness?from=2024-03-10&to=2024-03-11',
+      '/preconditioning-effectiveness#methodology', 'preconditioning-effectiveness',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/preconditioning-effectiveness')).toEqual(['24h', '7d', '30d', '90d']);
+  });
   it('owns HVAC cycling range and vehicle on its normalized route', () => {
     for (const path of [
       '/hvac-cycling', '/hvac-cycling/',
