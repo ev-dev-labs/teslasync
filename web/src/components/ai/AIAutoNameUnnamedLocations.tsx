@@ -34,7 +34,7 @@ export interface AIAutoNameUnnamedLocationsProps {
    * `/api/v1/ai/locations/{locationID}/name/draft`; the SPA url
    * here strips the `/api/v1` prefix per useAiStream contract.
    * The button is disabled (computed, not literal) when the id is
-   * non-positive — defensive against a stale parent prop.
+   * not a positive safe integer — defensive against a stale parent prop.
    */
   locationId: number
   /**
@@ -62,6 +62,7 @@ function InnerSection({
 }: AIAutoNameUnnamedLocationsProps) {
   const { t } = useTranslation()
   const [draft, setDraft] = useState<LocationNameDraft | null>(null)
+  const hasValidLocationId = Number.isSafeInteger(locationId) && locationId > 0
 
   // Body is empty — the backend reads its only input from the
   // {locationID} URL path parameter. Memoised so useAiStream's
@@ -80,7 +81,9 @@ function InnerSection({
         | undefined
       if (
         !data ||
+        !hasValidLocationId ||
         typeof data.location_id !== 'number' ||
+        data.location_id !== locationId ||
         typeof data.proposed_name !== 'string' ||
         typeof data.status !== 'string'
       ) {
@@ -93,7 +96,7 @@ function InnerSection({
         reason: typeof data.reason === 'string' ? data.reason : undefined,
       })
     }
-  }, [])
+  }, [hasValidLocationId, locationId])
 
   const stream = useAiStream({
     url: `/ai/locations/${locationId}/name/draft`,
@@ -124,21 +127,26 @@ function InnerSection({
   const isBusy = stream.state === 'streaming' || stream.state === 'paused-confirm'
 
   const handleSuggest = useCallback(() => {
-    if (isBusy) {
+    if (!hasValidLocationId || isBusy) {
       return // double-submit no-op
     }
     setDraft(null)
     stream.start()
-  }, [isBusy, stream])
+  }, [hasValidLocationId, isBusy, stream])
 
   // A proposal is applicable only when the validator accepted it
-  // (status 'ok') AND it carries a non-empty name. Defensive against
+  // (status 'ok'), belongs to the current valid location AND carries a non-empty name. Defensive against
   // a backend anomaly where an 'ok' envelope arrives with a blank
   // proposed_name: the baseline form must never receive an empty
   // label from the AI panel.
   const canApply = useMemo(
-    () => !!draft && draft.status === 'ok' && draft.proposed_name.trim().length > 0,
-    [draft],
+    () =>
+      hasValidLocationId &&
+      !!draft &&
+      draft.location_id === locationId &&
+      draft.status === 'ok' &&
+      draft.proposed_name.trim().length > 0,
+    [draft, hasValidLocationId, locationId],
   )
 
   const handleApply = useCallback(() => {
@@ -159,14 +167,14 @@ function InnerSection({
       )}
       buttonLabel={t('locations.aiAutoName.suggestButton', 'Suggest name')}
       badgeLabel={t('locations.aiAutoName.badge', 'Helix')}
-      canStart={locationId > 0 && stream.state !== 'paused-confirm'}
+      canStart={hasValidLocationId && stream.state !== 'paused-confirm'}
       stream={stream}
       onAction={handleSuggest}
       buttonPlacement="below"
       buttonTestId="ai-feature-auto-name-unnamed-locations-suggest"
     >
       {currentName && (
-        <p className="text-xs text-[var(--text-muted)]">
+        <p className="min-w-0 break-words text-xs text-[var(--text-muted)]">
           {t('locations.aiAutoName.currentLabel', 'Current label')}:{' '}
           <span className="text-[var(--text-secondary)]">{currentName}</span>
         </p>
@@ -177,8 +185,8 @@ function InnerSection({
           data-testid="ai-feature-auto-name-unnamed-locations-draft"
           aria-live="polite"
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
+          <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
+            <div className="min-w-0 flex-1 space-y-1 break-words">
               <div className="text-xs tracking-wide text-cyan-300">
                 {t('locations.aiAutoName.proposalLabel', 'Proposed name')}
               </div>
@@ -197,10 +205,12 @@ function InnerSection({
                 </div>
               )}
             </div>
-            <div className="flex flex-shrink-0 flex-col gap-1.5">
+            <div className="flex min-w-0 max-w-full flex-shrink-0 flex-col gap-1.5">
               <Button
                 variant="outline"
                 size="sm"
+                wrapLabel
+                className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                 disabled={!canApply}
                 aria-disabled={!canApply ? 'true' : 'false'}
                 onClick={handleApply}
