@@ -24,7 +24,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
 import { MemoryRouter } from 'react-router-dom';
@@ -42,6 +42,7 @@ const h = vi.hoisted(() => ({
   signals: [] as string[],
   pinnedItems: [] as Array<{ item_id: string }>,
   diff: undefined as unknown,
+  pins: undefined as unknown,
 }));
 
 const mockNavigate = vi.fn();
@@ -126,17 +127,16 @@ vi.mock('@/api/hooks/usePinned', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/usePinned')>();
   return {
     ...actual,
-    usePinned: () => ({ data: h.pinnedItems }),
+    usePinned: () => h.pins ?? ({ data: h.pinnedItems }),
     useTogglePin: () => ({ mutateAsync: mockToggleMutateAsync }),
   };
 });
 
 // SavedViewMenu fires its own saved-views query; stub it so the header stays
 // network-free. OperationalBrief + BulkActionsToolbar stay real.
-vi.mock('@/components/data-display', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/components/data-display')>();
-  return { ...actual, SavedViewMenu: () => <div data-testid="saved-view-menu" /> };
-});
+vi.mock('@/components/data-display/SavedViewMenu', () => ({
+  SavedViewMenu: () => <div data-testid="saved-view-menu" />,
+}));
 
 // The two heavy child bands are stubbed to thin harnesses that surface the
 // props the page threads into them (row counts, filter/selection/error state)
@@ -171,6 +171,9 @@ vi.mock('../components/SignalDiffBreakdown', () => ({
   SignalDiffBreakdown: (props: {
     rows: SignalDiffRow[];
     loading?: boolean;
+    unknown?: boolean;
+    pinnedLoading?: boolean;
+    pinnedState?: { hasData: boolean; fatalError: unknown; refreshError: unknown };
     error?: unknown;
     onRetry?: () => void;
   }) => (
@@ -178,6 +181,11 @@ vi.mock('../components/SignalDiffBreakdown', () => ({
       data-testid="signal-diff-breakdown"
       data-rows={props.rows.length}
       data-loading={String(Boolean(props.loading))}
+      data-unknown={String(Boolean(props.unknown))}
+      data-pinned-loading={String(Boolean(props.pinnedLoading))}
+      data-pinned-known={String(Boolean(props.pinnedState?.hasData))}
+      data-pinned-error={String(Boolean(props.pinnedState?.fatalError))}
+      data-pinned-retained={String(Boolean(props.pinnedState?.refreshError))}
       data-error={String(Boolean(props.error))}
     >
       <button type="button" onClick={() => props.onRetry?.()}>
@@ -220,6 +228,7 @@ interface QueryStub {
   isStale: boolean;
   dataUpdatedAt: number;
   refetch: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
 }
 
 function makeQuery(overrides: Partial<QueryStub> = {}): QueryStub {
@@ -259,6 +268,16 @@ function renderPage(route = ROUTE) {
   );
 }
 
+function deferredMutation() {
+  let resolve!: () => void;
+  let reject!: (error: Error) => void;
+  const promise = new Promise<void>((onResolve, onReject) => {
+    resolve = onResolve;
+    reject = onReject;
+  });
+  return { promise, resolve, reject };
+}
+
 /** Read the actual OperationalBrief value whose label is `label`. */
 function kpiValueText(label: string): string {
   const card = screen.getByText(label).closest('[data-operational-metric]');
@@ -277,6 +296,7 @@ beforeEach(() => {
   h.signals = ['battery_level', 'vehicle_speed', 'charge_state', 'climate_keeper_mode'];
   h.pinnedItems = [{ item_id: 'signal:battery_level' }];
   h.diff = makeQuery({ data: diffResponse(ROWS) });
+  h.pins = undefined;
 });
 
 afterEach(() => {
@@ -286,6 +306,52 @@ afterEach(() => {
 /* ── Page render ─────────────────────────────────────────────────── */
 
 describe('SignalDiffPage', () => {
+  it('forwards paused sources as unknown, not loading or resolved empty', () => {
+    h.diff = makeQuery({ fetchStatus: 'paused', isLoading: true });
+    h.pins = { fetchStatus: 'paused', isPending: true };
+    renderPage();
+    const breakdown = screen.getByTestId('signal-diff-breakdown');
+    expect(breakdown).toHaveAttribute('data-unknown', 'true');
+    expect(breakdown).toHaveAttribute('data-loading', 'false');
+    expect(breakdown).toHaveAttribute('data-pinned-loading', 'false');
+    expect(breakdown).toHaveAttribute('data-pinned-known', 'false');
+    expect(kpiValueText('Changed signals')).toBe('—');
+    expect(kpiValueText('Pinned')).toBe('—');
+    expect(screen.queryByText('No signals changed between the two snapshots')).not.toBeInTheDocument();
+  });
+
+  it('does not report cached zero as resolved when snapshot prerequisites are invalid', () => {
+    h.diff = makeQuery({ data: diffResponse([]) });
+    renderPage('/signal-diff?vehicle=7&a=invalid&b=2024-01-01T01:00');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-unknown', 'true');
+    expect(kpiValueText('Changed signals')).toBe('—');
+    expect(diffArgs.mock.calls.at(-1)?.[0]).toMatchObject({ options: { enabled: false } });
+  });
+
+  it('wires independent pin loading, retained failure and recovery', () => {
+    h.pins = { isFetching: true, isLoading: true, fetchStatus: 'fetching' };
+    const view = renderPage();
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-loading', 'true');
+    expect(kpiValueText('Changed signals')).toBe('4');
+    h.pins = { data: h.pinnedItems, error: new Error('pins refresh failed'), refetch: mockRefetch };
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-retained', 'true');
+    expect(kpiValueText('Pinned')).toBe('1');
+    h.pins = { data: [], fetchStatus: 'idle' };
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-retained', 'false');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-pinned-known', 'true');
+    expect(kpiValueText('Pinned')).toBe('0');
+  });
+
   it('uses neutral shared decorative icons without changing comparison actions', () => {
     renderPage();
     const heading = screen.getByRole('heading', { name: /^Signal differences/ });
@@ -313,7 +379,7 @@ describe('SignalDiffPage', () => {
     expect(screen.queryByText('No signals changed between the two snapshots')).not.toBeInTheDocument();
     expect(screen.queryByTestId('signal-diff-table')).not.toBeInTheDocument();
     expect(kpiValueText('Changed signals')).toBe('—');
-    expect(kpiValueText('Pinned')).toBe('1');
+    expect(kpiValueText('Pinned')).toBe(noVehicles ? '—' : '1');
     expect(screen.getByTestId('signal-diff-breakdown')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Vehicle' })).toBeInTheDocument();
   });
@@ -358,6 +424,23 @@ describe('SignalDiffPage', () => {
     expect(within(drawer).getByText('Window span')).toBeInTheDocument();
     expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '4');
     expect(mockRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('recovers a retained diff refresh failure to confirmed zero changes', () => {
+    h.diff = makeQuery({ data: diffResponse(ROWS), error: new Error('refresh failed'), isError: true });
+    const view = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-error', 'false');
+    h.diff = makeQuery({ data: diffResponse([]) });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(kpiValueText('Changed signals')).toBe('0');
+    expect(screen.getByText('No signals changed between the two snapshots')).toBeInTheDocument();
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-unknown', 'false');
   });
   it('renders the header, KPI band, and derived counts when the diff resolves', () => {
     renderPage();
@@ -534,6 +617,162 @@ describe('SignalDiffPage', () => {
       }),
     );
     expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+  });
+
+  it('exports and acts on all selected rows even when search and category hide them', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.change(screen.getByPlaceholderText('Filter signals…'), { target: { value: 'battery' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Battery' }));
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '1');
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Copy CSV' }));
+    await waitFor(() => expect(objectsToCSV).toHaveBeenCalledWith([
+      { signal: 'battery_level', window_a: '80', window_b: '75', source_a: '', source_b: 'l1' },
+      { signal: 'vehicle_speed', window_a: '0', window_b: '30', source_a: '', source_b: 'l1' },
+    ]));
+    fireEvent.click(screen.getByRole('button', { name: 'Add as alert rule' }));
+    await waitFor(() => expect(mockNavigate).toHaveBeenCalledWith(
+      '/alert-studio?signals=battery_level%2Cvehicle_speed&from=signal-diff',
+    ));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    await waitFor(() => expect(mockToggleMutateAsync).toHaveBeenCalledWith({
+      itemId: 'signal:vehicle_speed', context: 'signal-diff:vehicle:7', pin: true,
+    }));
+  });
+
+  it.each(['vehicle', 'a', 'b'])('clears selection when the %s comparison scope changes', (field) => {
+    const { container } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    if (field === 'vehicle') {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), { target: { value: '9' } });
+    } else {
+      const inputs = container.querySelectorAll('input[type="datetime-local"]');
+      fireEvent.change(inputs[field === 'a' ? 0 : 1], { target: { value: '2024-01-02T00:00' } });
+    }
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', '');
+    expect(screen.queryByText('2 selected')).not.toBeInTheDocument();
+  });
+
+  it.each(['vehicle', 'a', 'b'])('ignores stale pin completion after %s changes during pending work', async (field) => {
+    h.pinnedItems = [];
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    const { container } = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level,vehicle_speed');
+    if (field === 'vehicle') {
+      fireEvent.change(screen.getByRole('combobox', { name: 'Vehicle' }), { target: { value: '9' } });
+    } else {
+      const inputs = container.querySelectorAll('input[type="datetime-local"]');
+      fireEvent.change(inputs[field === 'a' ? 0 : 1], { target: { value: '2024-01-02T00:00' } });
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockToggleMutateAsync).toHaveBeenCalledWith({
+      itemId: 'signal:battery_level', context: 'signal-diff:vehicle:7', pin: true,
+    });
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+    expect(screen.getByRole('button', { name: 'Pin selected' })).toBeEnabled();
+  });
+
+  it('does not revive old completion authority when the vehicle changes away and back', async () => {
+    h.pinnedItems = [];
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    const picker = screen.getByRole('combobox', { name: 'Vehicle' });
+    fireEvent.change(picker, { target: { value: '9' } });
+    fireEvent.change(picker, { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it('retains selection on rejection and clears it only after a matching successful retry', async () => {
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    expect(screen.getByRole('button', { name: 'Pin selected' })).toBeDisabled();
+    await act(async () => pending.reject(new Error('pin failed')));
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level,vehicle_speed');
+    expect(screen.getByRole('button', { name: 'Pin selected' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    await waitFor(() => expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', ''));
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not clear a changed selection on successful completion within the same scope', async () => {
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Pin selected' }));
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it.each([
+    { action: 'Pin selected', pin: true },
+    { action: 'Unpin selected', pin: false },
+  ])('clears a matching selection only after every $action write succeeds', async ({ action, pin }) => {
+    h.pinnedItems = pin ? [] : [
+      { item_id: 'signal:battery_level' }, { item_id: 'signal:vehicle_speed' },
+    ];
+    const first = deferredMutation();
+    const second = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: action }));
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    await act(async () => first.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level,vehicle_speed');
+    expect(mockToggleMutateAsync).toHaveBeenLastCalledWith({
+      itemId: 'signal:vehicle_speed', context: 'signal-diff:vehicle:7', pin,
+    });
+    await act(async () => second.resolve());
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', '');
+    expect(screen.queryByRole('region', { name: 'Bulk actions for selected items' })).not.toBeInTheDocument();
+  });
+
+  it('stops pending unpin work after a snapshot change without clearing the new selection', async () => {
+    h.pinnedItems = [{ item_id: 'signal:battery_level' }, { item_id: 'signal:vehicle_speed' }];
+    const pending = deferredMutation();
+    mockToggleMutateAsync.mockReturnValueOnce(pending.promise);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Unpin selected' }));
+    fireEvent.change(screen.getByLabelText('Window B'), { target: { value: '2024-01-02T00:00' } });
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    await act(async () => pending.resolve());
+    expect(mockToggleMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockToggleMutateAsync).toHaveBeenCalledWith({
+      itemId: 'signal:battery_level', context: 'signal-diff:vehicle:7', pin: false,
+    });
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+  });
+
+  it('reconciles selected names against refreshed comparison rows', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-two' }));
+    h.diff = makeQuery({ data: diffResponse([ROWS[0]]) });
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <ToastProvider><MemoryRouter initialEntries={[ROUTE]}><SignalDiffPage /></MemoryRouter></ToastProvider>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
   });
 
   it('clears the selection when Clear selection is pressed', async () => {

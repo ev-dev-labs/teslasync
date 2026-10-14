@@ -10,7 +10,7 @@
  * so this page and the unified workspace stay in lockstep.
  */
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { GitCompare, Bell, Pin, PinOff } from 'lucide-react';
@@ -105,9 +105,6 @@ export default function SignalDiffPage() {
     [setActiveCategoryRaw],
   );
 
-  // Selection state
-  const [selectedSignals, setSelectedSignals] = useState<string[]>([]);
-
   // Pinned-signal state via pinned_items (item_type='widget')
   const pinContext = `signal-diff:vehicle:${vehicleId}`;
   const pinnedQuery = usePinned('widget', pinContext);
@@ -134,17 +131,43 @@ export default function SignalDiffPage() {
   // Server-side diff
   const atAIso = isoOrEmpty(atA);
   const atBIso = isoOrEmpty(atB);
+  // Filters change visibility, not the identity of the selected comparison.
+  const selectionScope = JSON.stringify([vehicleId, atAIso || atA, atBIso || atB]);
+  const scopeIdentity = useMemo(() => Symbol(selectionScope), [selectionScope]);
+  const currentScope = useRef<symbol | null>(scopeIdentity);
+  useLayoutEffect(() => {
+    currentScope.current = scopeIdentity;
+    return () => { currentScope.current = null; };
+  }, [scopeIdentity]);
+  const [selection, setSelection] = useState({ scope: selectionScope, signals: [] as string[] });
+  if (selection.scope !== selectionScope) {
+    setSelection({ scope: selectionScope, signals: [] });
+  }
+  const selectedSignals = selection.scope === selectionScope ? selection.signals : [];
+  const setSelectedSignals = useCallback((signals: string[]) => {
+    setSelection({ scope: selectionScope, signals });
+  }, [selectionScope]);
+  const prerequisitesReady = vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso);
   const diffQuery = useSignalDiffServer(
     vehicleId,
     atAIso,
     atBIso,
     signalsCsv,
-    { enabled: vehicleId > 0 && Boolean(atAIso) && Boolean(atBIso) },
+    { enabled: prerequisitesReady },
   );
   const { data: diffResp, isLoading, refetch } = diffQuery;
   const diffState = useDataState(diffQuery, { provenance: 'historical' });
 
   const allRows: SignalDiffRow[] = diffResp?.data ?? [];
+  useEffect(() => {
+    if (!prerequisitesReady || diffResp == null || diffQuery.isPlaceholderData) return;
+    const names = new Set((diffResp.data ?? []).map((row) => row.name));
+    setSelection((previous) => {
+      if (previous.scope !== selectionScope) return previous;
+      const signals = previous.signals.filter((name) => names.has(name));
+      return signals.length === previous.signals.length ? previous : { ...previous, signals };
+    });
+  }, [diffResp, diffQuery.isPlaceholderData, prerequisitesReady, selectionScope]);
   const filteredRows = useMemo(() => {
     let rows = allRows;
     if (signalFilter.trim()) {
@@ -158,15 +181,14 @@ export default function SignalDiffPage() {
     return rows;
   }, [allRows, signalFilter, activeCategory]);
   const filterActive = signalFilter.trim().length > 0 || activeCategory != null;
-  const initialLoading = isLoading && !diffResp;
-  // A failed diff must not read as "0 changed / 0 numeric / 0 categories" in the
-  // KPI band — that silently reports "nothing changed" for what is actually an
-  // error, which is dangerous on an incident-response surface. When the diff is
-  // unavailable (initial load or fatal error) the diff-derived metrics show "—",
-  // mirroring the table + breakdown, which both switch to their error/loading
-  // UI. Retained results survive refresh failures. Pinned count and window span come from independent sources (the pinned
-  // query and the date inputs) so they stay visible regardless.
-  const metricsUnavailable = initialLoading || diffState.fatalError != null;
+  const initialLoading = prerequisitesReady && !diffState.hasData &&
+    diffQuery.fetchStatus !== 'paused' && (diffQuery.isFetching || isLoading);
+  const diffUnknown = !prerequisitesReady || (!diffState.hasData && !initialLoading && !diffState.fatalError);
+  const pinnedLoading = vehicleId > 0 && !pinnedState.hasData &&
+    pinnedQuery.fetchStatus !== 'paused' && (pinnedQuery.isFetching || pinnedQuery.isLoading);
+  // Unknown and failed comparisons are not confirmed zero changes.
+  // Pins and snapshot span remain independent of the diff source.
+  const metricsUnavailable = diffUnknown || initialLoading || diffState.fatalError != null;
 
   // Derived KPI metrics (from the already-fetched rows — no extra hooks).
   const numericChanges = useMemo(
@@ -189,38 +211,41 @@ export default function SignalDiffPage() {
   }, [atAIso, atBIso]);
 
   // Bulk actions
+  const changePins = useCallback(async (ids: Array<string | number>, pin: boolean) => {
+    const submittedSelection = selection;
+    for (const id of ids) {
+      // An in-flight mutation keeps its original target, but no further writes
+      // or selection resets belong to a comparison the user has left.
+      if (currentScope.current !== scopeIdentity) return;
+      const name = String(id);
+      if (pinnedSignals.has(name) === pin) continue;
+      await togglePin.mutateAsync({ itemId: `signal:${name}`, context: pinContext, pin });
+    }
+    if (currentScope.current !== scopeIdentity) return;
+    setSelection((previous) => previous === submittedSelection
+      ? { ...previous, signals: [] }
+      : previous);
+  }, [selection, scopeIdentity, pinnedSignals, togglePin, pinContext]);
   const bulkActions: BulkAction[] = useMemo(
     () => [
       {
         id: 'pin',
         label: t('signalDiff.bulk.pin', 'Pin selected'),
         icon: <Icon icon={Pin} size="sm" />,
-        onClick: async (ids) => {
-          for (const id of ids) {
-            const name = String(id);
-            if (pinnedSignals.has(name)) continue;
-            await togglePin.mutateAsync({ itemId: `signal:${name}`, context: pinContext, pin: true });
-          }
-        },
+        onClick: (ids) => changePins(ids, true),
       },
       {
         id: 'unpin',
         label: t('signalDiff.bulk.unpin', 'Unpin selected'),
         icon: <Icon icon={PinOff} size="sm" />,
-        onClick: async (ids) => {
-          for (const id of ids) {
-            const name = String(id);
-            if (!pinnedSignals.has(name)) continue;
-            await togglePin.mutateAsync({ itemId: `signal:${name}`, context: pinContext, pin: false });
-          }
-        },
+        onClick: (ids) => changePins(ids, false),
       },
       {
         id: 'csv',
         label: t('signalDiff.bulk.csv', 'Copy CSV'),
         onClick: async (ids) => {
           const idSet = new Set(ids.map(String));
-          const rowsToExport = filteredRows.filter((r) => idSet.has(r.name));
+          const rowsToExport = allRows.filter((r) => idSet.has(r.name));
           const csv = objectsToCSV(
             rowsToExport.map((r) => ({
               signal: r.name,
@@ -243,7 +268,7 @@ export default function SignalDiffPage() {
         },
       },
     ],
-    [filteredRows, navigate, pinContext, pinnedSignals, togglePin, vehicleId, t],
+    [allRows, navigate, changePins, vehicleId, t],
   );
 
   // Permalink
@@ -271,7 +296,7 @@ export default function SignalDiffPage() {
         ? t('telemetry.brief.diffAllRows', 'All returned changed rows before name and category filters.')
         : t('telemetry.brief.diffFiltered', 'Returned changed rows after the current name and category filters; numeric changes retain the existing value coercion.'),
     })),
-    { metricId: 'count', occurrenceId: 'pinned', rawValue: pinnedQuery.data == null ? null : pinnedSignals.size,
+    { metricId: 'count', occurrenceId: 'pinned', rawValue: vehicleId <= 0 || pinnedQuery.data == null ? null : pinnedSignals.size,
       label: t('signalDiff.pinnedCount', 'Pinned'),
       description: t('telemetry.brief.pinSource', 'Independent saved pins for this vehicle; not limited to visible diff rows.'),
       context: pinnedState.refreshError || pinnedState.status === 'stale'
@@ -328,7 +353,7 @@ export default function SignalDiffPage() {
       <FadeIn>
         <TelemetrySummaryBrief title={t('signalDiff.kpisLabel', 'Diff summary')}
           metrics={metrics} testId="signal-diff-page-summary"
-          unavailable={diffState.fatalError != null} unknown={diffResp == null && !initialLoading} sourceStatus={diffState.status}
+          unavailable={diffState.fatalError != null} unknown={diffUnknown} sourceStatus={diffState.status}
           retained={diffResp != null && (diffState.isRefreshing || diffState.status === 'stale' || diffState.refreshError != null)}
           statusLabel={initialLoading ? t('operationalSummary.loading', 'Loading sources') : undefined}
           scope={`${atAIso || '—'} → ${atBIso || '—'}`}
@@ -342,6 +367,11 @@ export default function SignalDiffPage() {
         <SignalDiffBreakdown
           rows={filteredRows}
           loading={initialLoading}
+          unknown={diffUnknown}
+          diffState={diffState}
+          pinnedState={pinnedState}
+          pinnedLoading={pinnedLoading}
+          pinnedUnknown={vehicleId <= 0}
           error={diffState.fatalError}
           onRetry={() => refetch()}
           filterActive={filterActive}
@@ -355,9 +385,10 @@ export default function SignalDiffPage() {
 
       {/* 4 — Bulk actions (sticky) for the current table selection */}
       <BulkActionsToolbar
+        key={selectionScope}
         selectedIds={selectedSignals}
         selectionScope="selected"
-        total={filteredRows.length}
+        total={allRows.length}
         onClear={() => setSelectedSignals([])}
         actions={bulkActions}
       />
@@ -380,7 +411,7 @@ export default function SignalDiffPage() {
             <div className="space-y-2">
               {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} height={36} />)}
             </div>
-          ) : diffResp == null || vehicleId <= 0 || !atAIso || !atBIso ? (
+          ) : diffUnknown ? (
             <Text color="muted">{t('common.unknown', 'Unknown')}</Text>
           ) : allRows.length === 0 && !filterActive ? (
             // no-action: this branch is explicitly gated on !filterActive — filters are confirmed off, so it is genuinely zero diffs, not a filtered-away result.
