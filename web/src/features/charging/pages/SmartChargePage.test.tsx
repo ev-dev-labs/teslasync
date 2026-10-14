@@ -41,7 +41,7 @@ import type { ReactNode } from 'react';
 import { BADGE_VARIANTS } from '@/components/ui';
 import { neonColorMap } from '@/lib/tokens';
 
-import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings } from '@/types/charging';
+import type { ChargePlan, OptimizeChargeResponse, RatePlanInfo, AutopilotProfile, AutopilotSavings, AutopilotPreview } from '@/types/charging';
 import type { OcppChargePoint, OcppSession } from '@/api/hooks/useOcpp';
 
 // ── i18n stub: resolve the string fallback (or options-bag defaultValue) and
@@ -863,6 +863,63 @@ describe('SmartChargePage — plan history', () => {
     ).toBeInTheDocument();
   });
 
+  it.each([
+    ['missing', undefined, '—', false],
+    ['null', null, '—', false],
+    ['NaN', Number.NaN, '—', false],
+    ['positive infinity', Number.POSITIVE_INFINITY, '—', false],
+    ['negative infinity', Number.NEGATIVE_INFINITY, '—', false],
+    ['zero', 0, '$0.00', false],
+    ['positive', 5, '$5.00', true],
+    ['negative', -5, '$-5.00', false],
+    ['positive fraction', 0.125, '$0.13', true],
+    ['negative fraction', -0.125, '$-0.13', false],
+  ] as const)('preserves %s currency in history cells and filter labels', (_label, value, label, positive) => {
+    mockPlans.mockReturnValue(makeQuery({
+      data: [makePlan({ estimated_cost: value, savings: value })],
+    }));
+    renderPage();
+    const table = within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    const cells = within(table.getAllByRole('row')[1]).getAllByRole('cell');
+    expect(cells[3]).toHaveTextContent(label);
+    expect(cells[4]).toHaveTextContent(label);
+    const saved = within(cells[4]).getByText(label);
+    if (positive) expect(saved).toHaveClass(neonColorMap.green.text);
+    else expect(saved).not.toHaveClass(neonColorMap.green.text);
+
+    for (const column of ['Cost', 'Saved']) {
+      fireEvent.click(table.getByRole('button', { name: `${column} filter` }));
+      const dialog = screen.getByRole('dialog', { name: `${column} filter` });
+      expect(within(dialog).getByRole('checkbox', { name: label })).toBeChecked();
+      expect(dialog).not.toHaveTextContent('NaN');
+      expect(dialog).not.toHaveTextContent('Infinity');
+      fireEvent.keyDown(dialog, { key: 'Escape' });
+    }
+  });
+
+  it.each(['Cost', 'Saved'])('keeps unknown %s values distinct from measured zero when filtering', (column) => {
+    const amounts = [undefined, null, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1.25, 1.25];
+    mockPlans.mockReturnValue(makeQuery({
+      data: amounts.map((amount, index) => makePlan({
+        id: index + 1, rate_plan: `Plan ${index + 1}`, estimated_cost: amount, savings: amount,
+      })),
+    }));
+    renderPage();
+    const table = () => within(screen.getByRole('table', { name: 'charging:smart-charge-history' }));
+    fireEvent.click(table().getByRole('button', { name: `${column} filter` }));
+    const dialog = screen.getByRole('dialog', { name: `${column} filter` });
+    const filter = within(dialog);
+    expect(within(filter.getByRole('group', { name: 'Available values' })).getAllByRole('checkbox')).toHaveLength(4);
+    fireEvent.click(filter.getByRole('checkbox', { name: '—' }));
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    expect(table().getAllByRole('row')).toHaveLength(4);
+    expect(table().getByText('Plan 6')).toBeInTheDocument();
+    expect(table().getByText('Plan 7')).toBeInTheDocument();
+    expect(table().getByText('Plan 8')).toBeInTheDocument();
+    expect(table().queryByText('—')).not.toBeInTheDocument();
+    expect(table().getAllByText('$0.00')).toHaveLength(2);
+  });
+
   it('keeps every history field reachable on phones through the existing scrollable table', () => {
     mockPlans.mockReturnValue(makeQuery({ data: [makePlan()] }));
     renderPage();
@@ -1027,6 +1084,31 @@ describe('SmartChargePage — plan history', () => {
     expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
   });
 
+  it.each([false, true])('describes autopilot preview as an estimate without changing historical savings (populated: %s)', populated => {
+    const preview: AutopilotPreview = {
+      effective_target_soc: 80, capped_by_health_guardrail: false, ready_by: '07:30',
+      kwh_needed: RESULT.kwh_needed, estimated_duration_hours: RESULT.estimated_duration_hours,
+      window: RESULT.schedule, ...RESULT.comparison,
+      hourly_rates: RESULT.hourly_rates, explanation: 'Estimated optimal charge window',
+    };
+    mockAutopilotPreview.mockReturnValue(optimizeState({ data: populated ? preview : null }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 12.5, runs: 3 } }));
+    const { container } = renderPage();
+    const previewShell = container.querySelector<HTMLElement>('#smart-charge-autopilot-preview')!;
+    const savingsShell = container.querySelector<HTMLElement>('#smart-charge-autopilot-savings')!;
+    const estimateDescription = 'Estimated next charge window from the current profile and SOC input; not an applied schedule.';
+    const historicalDescription = 'Recorded measurements from the stated charging source and scope.';
+
+    expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(within(previewShell).getAllByText(estimateDescription).length).toBeGreaterThan(0);
+    expect(within(previewShell).queryByText(historicalDescription)).not.toBeInTheDocument();
+    expect(savingsShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(within(savingsShell).getAllByText(historicalDescription).length).toBeGreaterThan(0);
+    expect(within(savingsShell).queryByText(estimateDescription)).not.toBeInTheDocument();
+    expect(within(savingsShell).getByText('$12.50 across 3 runs')).toBeInTheDocument();
+    expect(within(previewShell).queryByText('$5.25') != null).toBe(populated);
+  });
+
   it('preserves autopilot profile controls, preview/run actions and retained realized savings', () => {
     const profile: AutopilotProfile = {
       vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
@@ -1046,6 +1128,112 @@ describe('SmartChargePage — plan history', () => {
     expect(screen.getByRole('button', { name: 'Run now' })).toBeEnabled();
     expect(screen.getByText('$12.50 across 3 runs')).toBeInTheDocument();
     expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+  });
+
+  it.each([
+    ['active loading', { isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching' }, true],
+    ['paused without data', { isPending: true, fetchStatus: 'paused' }, false],
+    ['successful empty', { data: null }, false],
+    ['initial failure', { isError: true, error: new Error('savings unavailable') }, false],
+  ])('keeps independent autopilot evidence shells mounted during %s', (_label, query, busy) => {
+    const refetch = vi.fn();
+    mockAutopilotProfile.mockReturnValue(makeQuery({
+      isPending: true, isLoading: true, isFetching: true, fetchStatus: 'fetching',
+    }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ ...query, refetch }));
+    const { container } = renderPage();
+    const previewShell = container.querySelector('#smart-charge-autopilot-preview')!;
+    const savingsShell = container.querySelector('#smart-charge-autopilot-savings')!;
+    expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(previewShell).not.toHaveAttribute('aria-busy');
+    expect(savingsShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(savingsShell.getAttribute('aria-busy')).toBe(busy ? 'true' : null);
+    expect(within(previewShell as HTMLElement).getByText('No source measurements')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Ready by (daily)')).not.toBeInTheDocument();
+    expect(screen.getByText('24-hour rate timeline')).toBeInTheDocument();
+    if (!busy) {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('retains preview and savings through pending, failed and paused refreshes, then recovers independently', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const preview: AutopilotPreview = {
+      effective_target_soc: 85, capped_by_health_guardrail: false, ready_by: '06:45',
+      kwh_needed: 0, estimated_duration_hours: 0, window: RESULT.schedule,
+      charge_now_cost: 0, optimized_cost: 0, savings: 0, savings_percent: 0,
+      hourly_rates: [], explanation: 'Authoritative zero-energy preview',
+    };
+    const mutate = vi.fn();
+    const refetch = vi.fn();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockAutopilotPreview.mockReturnValue(optimizeState({ data: preview, mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 }, refetch }));
+    const { container, rerenderPage } = renderPage();
+    const shell = (id: string) => container.querySelector(`#smart-charge-autopilot-${id}`)!;
+    expect(within(shell('preview') as HTMLElement).getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    mockAutopilotPreview.mockReturnValue(optimizeState({ isPending: true, mutate }));
+    rerenderPage();
+    expect(screen.getByText(preview.explanation)).toBeInTheDocument();
+    expect(shell('preview')).toHaveAttribute('data-retained', 'true');
+    mockAutopilotPreview.mockReturnValue(optimizeState({ isError: true, error: new Error('preview refresh failed'), mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({
+      data: { total_savings: 0, runs: 0 }, isError: true, error: new Error('savings refresh failed'), refetch,
+    }));
+    rerenderPage();
+    expect(screen.getByText(preview.explanation)).toBeInTheDocument();
+    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    expect(refetch).toHaveBeenCalledOnce();
+    mockAutopilotPreview.mockReturnValue(optimizeState({ data: { ...preview, savings: 5 }, mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 }, fetchStatus: 'paused', refetch }));
+    rerenderPage();
+    expect(within(shell('preview') as HTMLElement).getByText('$5.00')).toBeInTheDocument();
+    expect(shell('preview')).not.toHaveAttribute('data-retained');
+    expect(shell('savings')).toHaveAttribute('data-retained', 'true');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 8, runs: 2 }, refetch }));
+    rerenderPage();
+    expect(screen.getByText('$8.00 across 2 runs')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(shell('savings')).not.toHaveAttribute('data-retained');
+  });
+
+  it.each([
+    ['active loading', { isPending: true }, true],
+    ['paused without data', { isPending: true, isPaused: true }, false],
+    ['successful empty', { data: null, isSuccess: true }, false],
+    ['initial failure', { isError: true, error: new Error('preview unavailable') }, false],
+  ])('keeps preview unknown rather than zero during %s', (_label, state, busy) => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const mutate = vi.fn();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockAutopilotPreview.mockReturnValue(optimizeState({ ...state, mutate }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 } }));
+    const { container } = renderPage();
+    const previewShell = container.querySelector('#smart-charge-autopilot-preview')!;
+    expect(previewShell).toHaveAttribute('data-period-kind', 'unknown');
+    expect(previewShell.getAttribute('aria-busy')).toBe(busy ? 'true' : null);
+    expect(within(previewShell as HTMLElement).queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    if ('isError' in state) {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    }
   });
 
   it('keeps OCPP charger and transaction readings visible after independent refresh failures', () => {

@@ -32,7 +32,7 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
   const savingsQuery = useAutopilotSavings(vehicleId);
   const ratePlansQuery = useRatePlans();
   const profileState = useDataState(profileQuery);
-  const savingsState = useDataState(savingsQuery, { provenance: 'historical' });
+  const savingsState = useDataState({ ...savingsQuery, data: savingsQuery.data ?? undefined }, { provenance: 'historical' });
   const ratePlansState = useDataState(ratePlansQuery);
   const saveMutation = useSaveAutopilotProfile();
   const previewMutation = useAutopilotPreview();
@@ -93,12 +93,27 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
     if (vehicleId && profileReady && enabled) runMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
   };
 
-  const preview = previewMutation.data ?? null;
+  const [retainedPreview, setRetainedPreview] = useState<{
+    vehicleId: number | undefined;
+    data: NonNullable<typeof previewMutation.data>;
+  } | null>(null);
+  useEffect(() => {
+    if (previewMutation.data != null && !previewMutation.isPending && !previewMutation.isError) {
+      setRetainedPreview({ vehicleId, data: previewMutation.data });
+    }
+  }, [previewMutation.data, previewMutation.isPending, previewMutation.isError, vehicleId]);
+  const preview = previewMutation.data ?? (retainedPreview && retainedPreview.vehicleId === vehicleId ? retainedPreview.data : undefined);
+  const previewState = useDataState({
+    data: preview,
+    error: previewMutation.error,
+    isError: previewMutation.isError,
+    isFetching: previewMutation.isPending && !previewMutation.isPaused,
+    fetchStatus: previewMutation.isPaused ? 'paused' : previewMutation.isPending ? 'fetching' : 'idle',
+    refetch: vehicleId && profileReady && !previewMutation.isPending ? handlePreview : undefined,
+  }, { provenance: 'inferred' });
   const savings = savingsState.data;
   const saveError = saveMutation.isError
     ? saveMutation.error?.message || t('autopilot.saveError', 'Failed to save autopilot settings') : '';
-  const previewError = previewMutation.isError
-    ? previewMutation.error?.message || t('autopilot.previewError', 'Preview failed') : '';
   const runError = runMutation.isError
     ? runMutation.error?.message || t('autopilot.runError', 'Run failed') : '';
   const runResult = runMutation.data ?? null;
@@ -132,7 +147,7 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
       {profileState.fatalError && <QueryError error={profileState.fatalError} onRetry={() => void profileQuery.refetch()} />}
         <Grid cols={columns}>
           <div className="min-w-0 space-y-4">
-            {profileQuery.isLoading && !profileState.hasData && <Skeleton height={180} />}
+            {profileQuery.isLoading && profileQuery.fetchStatus !== 'paused' && !stored ? <Skeleton height={180} /> : <>
             {!profileReady && !profileState.fatalError && vehicleId && (
               <Button variant="secondary" onClick={() => void profileQuery.refetch()}
                 disabled={profileQuery.isFetching}>
@@ -160,6 +175,7 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
               <Toggle label={t('autopilot.precondition', 'Precondition before departure')}
                 disabled={!profileReady} checked={precondition} onChange={setPrecondition} size="sm" />
             </div>
+            </>}
             <div className="flex flex-wrap gap-2">
               <Button onClick={handleSave} disabled={!vehicleId || !profileReady || saveMutation.isPending} loading={saveMutation.isPending}>
                 {t('autopilot.save', 'Save Autopilot')}
@@ -186,15 +202,19 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
 
           <div className="min-w-0 space-y-4">
             <ChargingSummaryBrief id="smart-charge-autopilot-preview" metrics={previewMetrics}
+              description={t('chargePlanner.modernization.previewContext', 'Estimated next charge window from the current profile and SOC input; not an applied schedule.')}
+              loading={previewMutation.isPending && !previewMutation.isPaused && !previewState.hasData}
+              retained={previewState.hasData && (previewMutation.isPending || previewState.refreshError != null)}
               period={{ kind: 'unknown', label: t('autopilot.preview', 'Preview next run'),
                 reason: t('chargePlanner.modernization.previewContext', 'Estimated next charge window from the current profile and SOC input; not an applied schedule.') }} />
-            {previewMutation.isPending ? <Skeleton height={120} /> : previewError ? (
-              <ErrorText>{previewError}</ErrorText>
-            ) : !preview ? (
+            <StaleRefreshWarning state={previewState} />
+            {previewState.fatalError && <QueryError error={previewState.fatalError}
+              onRetry={vehicleId && profileReady && !previewMutation.isPending ? handlePreview : undefined} compact />}
+            {!preview && !previewMutation.isPending && !previewState.fatalError ? (
               <EmptyState /* no-action: use the adjacent Save and Preview controls */
                 icon={<Bot className="h-8 w-8" aria-hidden="true" />}
                 message={t('autopilot.runToPreview', 'Save your settings, then preview the next automatic charge window.')} />
-            ) : (
+            ) : preview ? (
               <>
                 {preview.capped_by_health_guardrail && <Badge variant="warning" size="sm" className="gap-1">
                   <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
@@ -210,25 +230,30 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
                     tier: preview.window.rate_tier,
                   })}
                 </Text>
-                <ChartCard title={t('chargePlanner.rateTimeline', '24-hour rate timeline')}
-                  ariaLabel={t('chargePlanner.rateTimelineChart', '24-hour electricity rate timeline')}
-                  data={safeArray(preview.hourly_rates).map(({ hour, rate_cents, tier }) => ({ hour, rate_cents, tier }))}
-                  dataColumns={[
-                    { key: 'hour', label: t('powershare.time', 'Time') },
-                    { key: 'rate_cents', label: t('chargePlanner.modernization.rateCentsPerKwh', 'Rate (cents/kWh)') },
-                    { key: 'tier', label: t('chargePlanner.modernization.rateTier', 'Rate tier') },
-                  ]}>
-                  <RateTimeline rates={safeArray(preview.hourly_rates)}
-                    chargeWindow={{ startHour: new Date(preview.window.start_time).getHours(),
-                      endHour: new Date(preview.window.end_time).getHours() || 24 }} />
-                </ChartCard>
               </>
-            )}
+            ) : null}
+            <ChartCard title={t('chargePlanner.rateTimeline', '24-hour rate timeline')}
+              ariaLabel={t('chargePlanner.rateTimelineChart', '24-hour electricity rate timeline')}
+              data={safeArray(preview?.hourly_rates).map(({ hour, rate_cents, tier }) => ({ hour, rate_cents, tier }))}
+              dataColumns={[
+                { key: 'hour', label: t('powershare.time', 'Time') },
+                { key: 'rate_cents', label: t('chargePlanner.modernization.rateCentsPerKwh', 'Rate (cents/kWh)') },
+                { key: 'tier', label: t('chargePlanner.modernization.rateTier', 'Rate tier') },
+              ]}>
+              {previewMutation.isPending && !previewMutation.isPaused && !preview
+                ? <Skeleton height={120} />
+                : <RateTimeline rates={safeArray(preview?.hourly_rates)}
+                  chargeWindow={preview ? { startHour: new Date(preview.window.start_time).getHours(),
+                    endHour: new Date(preview.window.end_time).getHours() || 24 } : undefined} />}
+            </ChartCard>
             <StaleRefreshWarning state={savingsState} />
-            {savingsState.fatalError ? <QueryError error={savingsState.fatalError} onRetry={() => void savingsQuery.refetch()} /> : (
-              <ChargingSummaryBrief title={t('autopilot.realized', 'Realized savings')}
-                loading={savingsQuery.isLoading && !savingsState.hasData}
-                retained={savingsState.hasData && (savingsState.refreshError != null || savingsState.isRefreshBlocked)}
+            {savingsState.fatalError && <QueryError error={savingsState.fatalError} onRetry={() => void savingsQuery.refetch()} />}
+              <ChargingSummaryBrief id="smart-charge-autopilot-savings" title={t('autopilot.realized', 'Realized savings')}
+                loading={savingsQuery.isLoading && savingsQuery.fetchStatus !== 'paused' && !savingsState.hasData}
+                retained={savingsState.hasData && (savingsState.isRefreshing || savingsState.refreshError != null || savingsState.isRefreshBlocked)}
+                footer={!savingsState.hasData && (savingsState.isRefreshBlocked || savingsQuery.data === null) && !savingsState.fatalError && !savingsQuery.isFetching && vehicleId
+                  ? <Button variant="secondary" onClick={() => void savingsQuery.refetch()}>{t('error.retry', 'Retry')}</Button>
+                  : undefined}
                 metrics={[{ metricId: 'currency', occurrenceId: 'realized-savings',
                   label: t('autopilot.realized', 'Realized savings'), rawValue: savings?.total_savings,
                   display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
@@ -239,7 +264,6 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
                 period={{ kind: 'unknown', label: t('autopilot.realized', 'Realized savings'),
                   reason: t('charging.brief.autopilotSavingsScope',
                     'Independent autopilot savings source; its time bounds are not reported and it is not scoped by the planner departure date.') }} />
-            )}
           </div>
         </Grid>
     </LayoutCard>
