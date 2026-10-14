@@ -76,7 +76,7 @@ export function ColdWarmComparison({
   return (
     <GlassPanel
       className={cn(
-        'h-full overflow-hidden bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-emerald-500/[0.06] p-5 sm:p-6',
+        'h-full overflow-hidden p-5 sm:p-6',
         className,
       )}
       role="region"
@@ -84,7 +84,7 @@ export function ColdWarmComparison({
       data-testid="cold-start-comparison"
     >
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Snowflake className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Snowflake className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('coldStart.duel', 'Cold vs Warm Starts')}
         <HelpTooltip
           size="sm"

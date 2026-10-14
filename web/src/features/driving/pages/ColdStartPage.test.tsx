@@ -273,6 +273,7 @@ import { MonthlyColdStartChart } from '../components/cold-start/MonthlyColdStart
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { summarizeColdStarts } from '../lib/coldStart';
 import { fmtInt } from '@/lib/numberFormat';
+import { CHART_COLORS } from '@/components/charts';
 
 function query(overrides: Record<string, unknown> = {}) {
   return {
@@ -611,6 +612,35 @@ describe('ColdStartPage', () => {
     });
 
     describe('ColdWarmComparison efficiency readings', () => {
+      it('uses the neutral panel surface while retaining populated cohort identities and palette colors', () => {
+        const summary = summarizeColdStarts(supportedDrives());
+        render(
+          <ColdWarmComparison
+            summary={summary}
+            penaltyCostLabel="$0.10"
+            state={{ isLoading: false, error: null, onRetry: vi.fn() }}
+            className="comparison-layout"
+          />,
+        );
+
+        const panel = screen.getByRole('region', { name: 'Cold and warm aggregate comparison' });
+        expect(panel).toHaveClass('bg-[var(--panel-bg)]', 'comparison-layout');
+        expect(panel.className).not.toMatch(/gradient|from-|via-|to-|neon|glow/);
+        expect(panel.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+        for (const [index, cohort] of [summary.cold, summary.warm].entries()) {
+          const bar = screen.getByRole('progressbar', {
+            name: `${index === 0 ? 'Cold' : 'Warm'} starts (${cohort.drives} drives)`,
+          });
+          expect(bar).toHaveAttribute('aria-valuenow', String(cohort.whPerKm));
+          expect(bar).toHaveTextContent(`${cohort.whPerKm} Wh/km`);
+          expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({
+            background: `linear-gradient(90deg, ${CHART_COLORS[index]}99, ${CHART_COLORS[index]})`,
+          });
+        }
+        expect(panel).toHaveTextContent('Aggregate sample ready');
+        expect(panel).toHaveTextContent('about $0.10 at your electricity rate');
+      });
+
       const readings = [
         { name: 'missing', value: null, hasReading: false },
         { name: 'NaN', value: Number.NaN, hasReading: false },
