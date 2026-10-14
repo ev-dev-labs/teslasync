@@ -113,7 +113,10 @@ export function metricOf(drive: Drive, key: CompareMetricKey): number | null {
     case 'socUsed': {
       const start = num(drive.startBatteryPct);
       const end = num(drive.endBatteryPct);
-      return start != null && end != null && start >= end ? start - end : null;
+      return start != null && start >= 0 && start <= 100
+        && end != null && end >= 0 && end <= 100
+        ? start - end
+        : null;
     }
     case 'outsideTempAvgC':
       return num(drive.outsideTempAvgC);

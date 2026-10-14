@@ -114,12 +114,71 @@ describe('metricOf', () => {
     expect(metricOf(drive({ energyUsedWh: 0 }), 'whPerKm')).toBeNull();
     expect(metricOf(drive({ distanceM: 999 }), 'whPerKm')).toBeNull();
     expect(metricOf(drive({ distanceM: 999 }), 'regenShare')).toBeNull();
-    expect(metricOf(drive({ startBatteryPct: 60, endBatteryPct: 70 }), 'socUsed')).toBeNull();
     expect(metricOf(drive({ score: 101 }), 'score')).toBeNull();
   });
+
+  it.each([
+    [80, 70, 10],
+    [60, 70, -10],
+    [70, 70, 0],
+    [0, 0, 0],
+    [100, 100, 0],
+    [100, 0, 100],
+    [0, 100, -100],
+    [80.75, 70.25, 10.5],
+    [70.25, 80.75, -10.5],
+  ])('preserves measured SOC difference from %s to %s as %s', (start, end, expected) => {
+    expect(metricOf(drive({ startBatteryPct: start, endBatteryPct: end }), 'socUsed')).toBe(expected);
+  });
+
+  it.each(['startBatteryPct', 'endBatteryPct'] as const)(
+    'keeps missing %s unknown rather than measured zero',
+    (endpoint) => {
+      expect(metricOf(drive({ [endpoint]: null }), 'socUsed')).toBeNull();
+      const item = drive();
+      Reflect.deleteProperty(item, endpoint);
+      expect(metricOf(item, 'socUsed')).toBeNull();
+      expect(metricOf(drive({ startBatteryPct: null, endBatteryPct: null }), 'socUsed')).toBeNull();
+    },
+  );
+
+  it.each([-0.1, 100.1, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'rejects invalid SOC endpoint %s independently of the difference',
+    (value) => {
+      expect(metricOf(drive({ startBatteryPct: value, endBatteryPct: 0 }), 'socUsed')).toBeNull();
+      expect(metricOf(drive({ startBatteryPct: 100, endBatteryPct: value }), 'socUsed')).toBeNull();
+      expect(metricOf(drive({ startBatteryPct: value, endBatteryPct: value }), 'socUsed')).toBeNull();
+    },
+  );
 });
 
 describe('compareDrives fairness', () => {
+  it('preserves signed SOC values without awarding winners or counting totals', () => {
+    const rows = compareDrives(
+      drive({ distanceM: 0, energyUsedWh: 100, startBatteryPct: 60.25, endBatteryPct: 70.75 }),
+      drive({ distanceM: 0, energyUsedWh: 50, startBatteryPct: 80.75, endBatteryPct: 70.25 }),
+    );
+    expect(rows.find((row) => row.key === 'socUsed')).toEqual({
+      key: 'socUsed', a: -10.5, b: 10.5, better: null, winner: null,
+    });
+    expect(rows.find((row) => row.key === 'energyUsedWh')).toMatchObject({
+      better: null, winner: null,
+    });
+    expect(summarizeComparison(rows)).toEqual({
+      verdict: 'insufficient', aWins: 0, bWins: 0, ties: 0, comparableCount: 0,
+    });
+  });
+
+  it('keeps missing SOC endpoints unknown alongside a measured zero', () => {
+    const rows = compareDrives(
+      drive({ endBatteryPct: null }),
+      drive({ startBatteryPct: 70, endBatteryPct: 70 }),
+    );
+    expect(rows.find((row) => row.key === 'socUsed')).toEqual({
+      key: 'socUsed', a: null, b: 0, better: null, winner: null,
+    });
+  });
+
   it('awards consumption lower, regen share higher, and score higher', () => {
     const a = drive({ energyUsedWh: 1_500, regenEnergyWh: 450, score: 88 });
     const b = drive({ energyUsedWh: 2_500, regenEnergyWh: 250, score: 72 });
