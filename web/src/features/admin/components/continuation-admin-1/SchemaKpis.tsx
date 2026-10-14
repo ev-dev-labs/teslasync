@@ -75,7 +75,7 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
         : t('admin.schemaDrift.driftedBodyUnknownCounts', 'The live schema fingerprint differs from the seed. Object-count comparisons are unavailable; inspect the available fingerprints and confirm migrations before making changes.');
   const attention: OperationalAttention[] = !drift || isDrifted ? [{
     key: 'schema-comparison',
-    title: drift ? t('admin.schemaDrift.statusDrifted', 'Drift detected')
+    title: drift ? t('admin.schemaDrift.guidanceTitle', 'What this means')
       : t('admin.operationalBrief.unmeasured', 'Not measured'),
     description: interpretation,
     tone: drift ? 'warning' : 'neutral',

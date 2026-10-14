@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { SchemaKpis } from './SchemaKpis';
 import type { SchemaDrift } from '@/types/admin-operator-confidence';
 import type { SchemaSectionState } from './schemaPresentation';
@@ -55,7 +56,8 @@ describe('SchemaKpis source and details parity', () => {
     expect(field(drawer, 'What changed')).toBe(countChange);
     expect(field(drawer, 'Recommended response')).toBe(response);
     expect(drawer).not.toHaveTextContent('No current attention items.');
-    expect(within(drawer).getAllByText('Drift detected')).toHaveLength(2);
+    expect(within(drawer).getByText('Drift detected')).toHaveTextContent(/^Drift detected$/);
+    expect(within(drawer).getByText('What this means')).toHaveTextContent(/^What this means$/);
     expect(within(drawer).getByText('+3')).toHaveTextContent(/^\+3$/);
     expect(within(drawer).getByText('-3')).toHaveTextContent(/^-3$/);
     expect(within(drawer).getByText('0')).toHaveTextContent(/^0$/);
@@ -159,5 +161,35 @@ describe('SchemaKpis source and details parity', () => {
     expect(drawer).not.toHaveTextContent('No drift');
     expect(drawer).not.toHaveTextContent('No current attention items.');
     assertUnscored(drawer);
+  });
+
+  it('does not promote a seed capture timestamp into a current-schema observation', () => {
+    render(<SchemaKpis state={state} isDrifted />);
+    const drawer = openDetails();
+    const narrative = within(drawer).getByTestId('operational-narrative');
+    const evidence = within(narrative).getByText('Supporting evidence').nextElementSibling;
+    expect(evidence).not.toBeNull();
+    expect(evidence).toHaveTextContent(countChange);
+    expect(evidence).toHaveTextContent('Current schema vs recorded seed');
+    expect(evidence?.querySelector('span')).toHaveTextContent(/^Current schema vs recorded seed$/);
+    expect(drift.expected_generated_at).toBe('2026-01-01T00:00:00Z');
+    assertUnscored(drawer);
+  });
+
+  it('keeps retained drift and its response visible when a refresh fails and retry remains available', () => {
+    const onRetry = vi.fn();
+    render(<MemoryRouter>
+      <SchemaKpis state={{ ...state, error: new Error('Refresh failed'), onRetry }} isDrifted retained />
+    </MemoryRouter>);
+    expect(values()).toEqual(['Drift detected', '+3', '-3', '0']);
+    const drawer = openDetails();
+    expect(field(drawer, 'What changed')).toBe(countChange);
+    expect(field(drawer, 'Recommended response')).toBe(response);
+    expect(drawer).toHaveTextContent('Retained evidence');
+    expect(drawer).not.toHaveTextContent('No current attention items.');
+    assertUnscored(drawer);
+    fireEvent.click(within(drawer).getByText('Close'));
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });
