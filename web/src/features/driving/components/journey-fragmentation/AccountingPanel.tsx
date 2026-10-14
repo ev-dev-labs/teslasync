@@ -47,11 +47,11 @@ export function AccountingPanel({ result, state, loading = false }: JourneyFragm
           <div className="grid gap-4 lg:grid-cols-2">
             <div>
               <Text as="p" variant="label" className="mb-2">{t('journeyFragmentation.accounting.rows', 'Returned rows: {{count}}', { count: result.returnedRows, replace: { count: fmtInt(result.returnedRows) } })}</Text>
-              <div className="grid grid-cols-2 gap-2">{rows.map(([label, value]) => <div key={label} className="rounded-lg bg-[var(--surface-2)] p-2"><Text as="p" variant="caption">{label}</Text><Text as="p" variant="body">{fmtInt(value)}</Text></div>)}</div>
+              <div className="grid grid-cols-2 gap-2">{rows.map(([label, value]) => <div key={label} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2"><Text as="p" variant="caption">{label}</Text><Text as="p" variant="body">{fmtInt(value)}</Text></div>)}</div>
             </div>
             <div>
               <Text as="p" variant="label" className="mb-2">{t('journeyFragmentation.accounting.pairs', 'Adjacent pairs: {{count}}', { count: result.pairAccounting.totalAdjacentPairs, replace: { count: fmtInt(result.pairAccounting.totalAdjacentPairs) } })}</Text>
-              <div className="grid grid-cols-2 gap-2">{pairs.map(([label, value]) => <div key={label} className="rounded-lg bg-[var(--surface-2)] p-2"><Text as="p" variant="caption">{label}</Text><Text as="p" variant="body">{fmtInt(value)}</Text></div>)}</div>
+              <div className="grid grid-cols-2 gap-2">{pairs.map(([label, value]) => <div key={label} className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-2"><Text as="p" variant="caption">{label}</Text><Text as="p" variant="body">{fmtInt(value)}</Text></div>)}</div>
             </div>
           </div>
           <Text as="p" variant="caption">

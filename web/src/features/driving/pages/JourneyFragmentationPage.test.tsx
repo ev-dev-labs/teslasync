@@ -392,6 +392,41 @@ beforeEach(() => {
 });
 
 describe('JourneyFragmentationPage', () => {
+  it('uses neutral surfaces and subtle borders for every accounting category without changing counts or layout', () => {
+    const result = analyzeJourneyFragmentation(
+      readyHistory(), FROZEN_NOW, 'America/Los_Angeles',
+    );
+    const snapshot = structuredClone(result);
+    render(<AccountingPanel result={result} />);
+
+    const categories = [
+      ['Included', result.rowAccounting.included],
+      ['Incomplete / live', result.rowAccounting.incompleteLive],
+      ['Invalid timestamp / order', result.rowAccounting.invalidTimestampOrder],
+      ['Future', result.rowAccounting.future],
+      ['Invalid duration', result.rowAccounting.invalidDuration],
+      ['Excluded', result.rowAccounting.excluded],
+      ['Linked', result.pairAccounting.linked],
+      ['Unusable / source boundary', result.pairAccounting.unusableSourceBoundary],
+      ['Unlocatable endpoint', result.pairAccounting.unlocatableEndpoint],
+      ['Endpoint mismatch', result.pairAccounting.endpointMismatch],
+      ['Overlap / negative gap', result.pairAccounting.overlapNegativeGap],
+      ['Over selected gap', result.pairAccounting.overSelectedGap],
+    ] as const;
+    for (const [label, value] of categories) {
+      const cell = screen.getByText(label).parentElement!;
+      expect(cell).toHaveClass(
+        'rounded-lg', 'border', 'border-[var(--border-subtle)]',
+        'bg-[var(--surface-2)]', 'p-2',
+      );
+      expect(within(cell).getByText(String(value))).toBeInTheDocument();
+      expect(cell.parentElement).toHaveClass('grid', 'grid-cols-2', 'gap-2');
+    }
+    expect(screen.getByText(`Returned rows: ${result.returnedRows}`)).toBeInTheDocument();
+    expect(screen.getByText(`Adjacent pairs: ${result.pairAccounting.totalAdjacentPairs}`)).toBeInTheDocument();
+    expect(result).toEqual(snapshot);
+  });
+
   it.each(['de-DE', 'en-US'])('formats accounting with saved %s locale and its hour cycle in the source timezone', (locale) => {
     h.locale = locale;
     h.timeZone = 'Asia/Tokyo';
