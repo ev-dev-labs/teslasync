@@ -1,0 +1,345 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-repair-impact-precision",
+  "status": "EXTERNAL_CATALOG_STARTUP_BLOCKED",
+  "runtimeProof": "UNEXECUTED_NOT_PASS",
+  "applicationAcceptance": "NOT_CLAIMED",
+  "nativeAcceptance": "NOTRUN",
+  "attemptAccounting": {
+    "chargeableItemFailures": 0,
+    "externalFailures": 1,
+    "harnessLoaderFailures": 1,
+    "metadataSnapshotFailures": 1,
+    "concurrentExternalInputDriftObservations": 1,
+    "vitestInvocations": 2,
+    "unchangedGenuinePassesRepeated": 0,
+    "reason": "The normal runner stopped at the unmodified catalog startup guard before collection. The earlier optional runner-loader invocation also stopped before collection; its loader option was removed without changing configuration or bypassing a guard."
+  },
+  "clock": {
+    "requestUtc": "2026-10-14T07:40:55.313Z",
+    "returnBeforeUtc": "2026-10-14T08:00:55.313Z",
+    "firstToolUtc": "2026-10-14T07:41:06.3713817Z",
+    "proofStartUtc": "2026-10-14T07:42:42.766Z",
+    "lastProofObservationUtc": "2026-10-14T07:47:43.710Z",
+    "laterInputObservationUtc": "2026-10-14T07:50:13.349Z",
+    "renewed": false
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "queueLineAtRead": 2693,
+    "dependency": "phase6-fix-repair-impact-precision",
+    "changedSourceReferenceFromAssignmentAndQueue": "7a0f3f009d3ff5531cb64c3081964725c3a7ae06",
+    "gitVerification": "NOTRUN; Git prohibited",
+    "queueStatusAtRead": "[ ]",
+    "queueEdits": 0,
+    "workerContract": "docs\\orchestrator-loop.md, Worker contract",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-proof-repair-impact-precision.json",
+      "web\\logs\\phase6-proof-repair-impact-precision.log"
+    ],
+    "sourceTestsFixturesCatalogConfig": "READONLY",
+    "instructionsRead": [
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      "docs\\orchestrator-loop.md, worker contract",
+      "docs\\frontend-mission.md, non-negotiable principles",
+      "docs\\frontend-design-contract.md, numeric, unknown, locale and SI contracts",
+      "docs\\frontend-inventory.md, Data Repair preservation entries"
+    ]
+  },
+  "sourceFixtureIdentity": {
+    "source": {
+      "file": "web\\src\\features\\system\\components\\RepairImpactSummary.tsx",
+      "beforeSha256": "542109c7d44b2fb00412afe57c952227c3b32ccca9edb04d133618ad510bb240",
+      "afterSha256": "542109c7d44b2fb00412afe57c952227c3b32ccca9edb04d133618ad510bb240",
+      "bytes": 4438,
+      "matchesOriginalRepairReceipt": true,
+      "writtenByWorker": false
+    },
+    "testAndEmbeddedFixture": {
+      "file": "web\\src\\features\\system\\components\\RepairImpactSummary.test.tsx",
+      "beforeSha256": "4e3ce97e1e3425122c31b56db5574902416a8edf7413398839d818958d40a9ee",
+      "afterSha256": "4e3ce97e1e3425122c31b56db5574902416a8edf7413398839d818958d40a9ee",
+      "bytes": 7602,
+      "matchesOriginalRepairReceipt": true,
+      "writtenByWorker": false,
+      "fixtureScope": "Existing preview factory and parameter table embedded in the test; unchanged repository test setup."
+    },
+    "inputPins": {
+      "total": 199,
+      "proofEndObservationUtc": "2026-10-14T07:47:43.710Z",
+      "unchangedAtProofEnd": 199,
+      "changedAtProofEnd": 0,
+      "laterObservationUtc": "2026-10-14T07:50:13.349Z",
+      "unchangedAtLaterObservation": 198,
+      "changedAtLaterObservation": 1,
+      "laterExternalChanges": [
+        {
+          "file": "web\\src\\i18n\\en.json",
+          "beforeSha256": "4f3772fdb879f420e513ca411442d48d85b7ca2501f16f6113736e6dd89b8202",
+          "afterSha256": "20b99693ea4207275a05d693ddfb1d4e7e6ea21f0dfa8891fe2d9749b5a9eb61",
+          "workerWrites": 0
+        }
+      ],
+      "sourceAndEmbeddedFixtureUnchangedAtLaterObservation": true,
+      "rawBeforeAndAfterHashes": "proof-start and readonly-end-pins JSON records in the matching log",
+      "includes": "Source, test, numberFormat, dateFormat, test setup, type-only API module, Vite config, tsconfig, package manifests, build identity, normal catalog guard scripts, canonical en.json and every existing JSON file below src\\i18n\\en.",
+      "limit": "This is a bounded input snapshot, not whole-repository cleanliness or a claim that unrelated concurrent writers were absent."
+    }
+  },
+  "commands": [
+    {
+      "classification": "HARNESS_CONFIG_LOADER_STARTUP_FAILURE",
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairImpactSummary.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --no-cache --configLoader=runner",
+      "shellId": "proof-repair-impact-run",
+      "startUtc": "2026-10-14T07:42:42.774Z",
+      "endUtc": "2026-10-14T07:42:43.705Z",
+      "exit": 1,
+      "signal": null,
+      "rawError": "ReferenceError: __dirname is not defined",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "collectedNames": [],
+      "disposition": "The optional experimental loader could not evaluate the unchanged Vite config. Removed only that invocation flag; no config/source fix required or performed. This did not execute a test or produce a genuine pass."
+    },
+    {
+      "classification": "EXTERNAL_NORMAL_CATALOG_STARTUP_FAILURE",
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairImpactSummary.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --no-cache",
+      "shellId": "proof-repair-impact-normal",
+      "startUtc": "2026-10-14T07:43:18.525Z",
+      "endUtc": "2026-10-14T07:47:07.473Z",
+      "exit": 1,
+      "signal": null,
+      "rawError": "Error: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+      "catalogGuardExit": 1,
+      "normalRepositoryConfig": "vite.config.ts, default bundled loader, unchanged plugins, setup and guards",
+      "environment": {
+        "VITE_GIT_SHA": "7a0f3f009d3ff5531cb64c3081964725c3a7ae06",
+        "purpose": "Uses the assigned existing source reference solely to avoid the config's Git discovery callback; does not disable or weaken a guard."
+      },
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "collectedNames": [],
+      "vitestJsonReporterResults": null,
+      "countsBasis": "Actual raw Startup Error before collection; no Test Files/Tests summary or assertionResults emitted. Counts are startup accounting, not a successful JSON reporter summary.",
+      "wrapperExit": 0,
+      "wrapperExitMeaning": "The evidence-capture wrapper completed; the actual Vitest child exit is 1, not 0."
+    }
+  ],
+  "rawEvidence": {
+    "log": "web\\logs\\phase6-proof-repair-impact-precision.log",
+    "contents": "UTC command boundaries, full raw stdout/stderr, actual numeric child exits, before/after SHA256 input pins, loader failure and unchanged normal catalog failure.",
+    "actualRuntimeNames": [],
+    "actualRuntimeNamesMeaning": "NONE COLLECTED OR EXECUTED; authored names below are not runtime evidence."
+  },
+  "metadataValidation": {
+    "initialFinalSnapshot": {
+      "shellId": "5917",
+      "exit": 1,
+      "rawError": "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal: 1 !== 0 at [stdin]:27:8",
+      "cause": "The final metadata check expected zero drift, but one externally owned input changed after the completed proof.",
+      "scope": "Evidence-input snapshot assertion only, not a component assertion, runtime test or typecheck.",
+      "disposition": "Preserved in matching log; reconciled as exact concurrent canonical en.json drift without source/catalog edits or a proof rerun."
+    },
+    "driftReconciliation": {
+      "shellId": "5925",
+      "exit": 0,
+      "utc": "2026-10-14T07:50:13.349Z",
+      "sourceAndFixtureStable": true,
+      "runtimeProofStillUnexecuted": true,
+      "normalGuardFilesMeaning": "Exact invalid outputs reported during the recorded invocation, not a fresh claim about the later catalog snapshot."
+    },
+    "finalArtifactValidation": {
+      "shellId": "5941",
+      "exit": 0,
+      "utc": "2026-10-14T07:51:06.223Z",
+      "result": "PASS_METADATA_ONLY",
+      "scope": "JSON parse; exact saved command/count/name/hash/drift receipt consistency; current unchanged source and embedded fixture only. No tests, types, lint, preservation or catalog checks repeated.",
+      "runtimeProof": "UNEXECUTED_NOT_PASS"
+    }
+  },
+  "authoredButUnexecutedCoverage": {
+    "file": "web\\src\\features\\system\\components\\RepairImpactSummary.test.tsx",
+    "describe": "RepairImpactSummary exact source values",
+    "staticNamedDefinitions": 10,
+    "staticExpandedCases": 15,
+    "definitions": [
+      "keeps sub-cent differences visible alongside the user-rounded presentation",
+      "uses effective locale and precision for integers and floats without changing raw values",
+      "reacts to changed number preferences without replacing the preview or rounding its source",
+      "retains exact differences even when the saved precision is zero",
+      "preserves negative values, negative zero and signed tiny SI numbers",
+      "preserves huge and adjacent representable values without inventing missing integer precision",
+      "keeps %s unknown rather than fabricating zero",
+      "does not guess units or turn a dimensionless confidence into physical or health data",
+      "retains timestamp precision and source strings without changing date-helper presentation",
+      "preserves every status, measured-field name, warning and server-validation section"
+    ],
+    "parameterNames": [
+      "null",
+      "missing float",
+      "missing integer",
+      "NaN",
+      "infinity",
+      "negative infinity"
+    ],
+    "affectedContracts": [
+      {
+        "contract": "Effective saved number format",
+        "authoredAssertions": "en-US precision2; de-DE precision3 for int64/float64; preference subscription updates to de-DE precision4 without replacing the preview; precision0 preserves exact caption.",
+        "runtime": "UNEXECUTED"
+      },
+      {
+        "contract": "Exact visible source values and nonzero differences",
+        "authoredAssertions": "Visible rounded 1.00 → 1.00 with visible exact duration_s: 1.001 → 1.004; precision0 1 → 1 still exposes 1.001 → 1.004; distinct adjacent large representable values retained.",
+        "runtime": "UNEXECUTED"
+      },
+      {
+        "contract": "Physical signs and unknown values",
+        "authoredAssertions": "Exact -0 → -1e-25; null/missing float/missing integer/NaN/positive infinity/negative infinity remain — rather than zero; actual int64 zero remains 0.",
+        "runtime": "UNEXECUTED"
+      },
+      {
+        "contract": "No guessed field-to-unit mapping or fabricated confidence classification",
+        "authoredAssertions": "Dimensionless confidence source values remain exact without percent, physical-unit labels, success or high-confidence inference; no fabricated currency symbol.",
+        "runtime": "UNEXECUTED"
+      },
+      {
+        "contract": "Props, content and dates preserved",
+        "authoredAssertions": "Date-helper presentation plus original millisecond timestamp strings; source strings safely escaped; both statuses, measured fields, warning, server-validation statement, empty changed-field content and immutable preview payload.",
+        "runtime": "UNEXECUTED"
+      }
+    ],
+    "scopeLimit": "The fixture exercises effective global formatter preferences, not real persisted settings/backend loading. No runtime or backend preference acceptance is claimed."
+  },
+  "historicalEvidenceNotRerun": {
+    "receipt": "web\\logs\\phase6-fix-repair-impact-precision.log",
+    "historicalReleaseUtc": "2026-10-14T06:17:54.930Z",
+    "historicalRuntime": {
+      "exit": 1,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "reason": "Normal startup catalog guard failure, not a pass."
+    },
+    "historicalStrictLint": {
+      "exit": 0,
+      "rerun": false
+    },
+    "historicalScopedTypecheck": {
+      "exit": 0,
+      "ownedDiagnostics": 0,
+      "externalDiagnostics": 0,
+      "rerun": false,
+      "currentTypecheckClaim": "NOTRUN; historical unchanged-input result only"
+    },
+    "historicalPreservation": {
+      "exit": 0,
+      "originalSourceSha256": "85d529b77cd44a999de8663fc0b99f6cbfb9ea987f83d0f47e69b850ebe5f4fe",
+      "originalLines": 98,
+      "currentLinesAtOriginalReceipt": 124,
+      "currentSourceMatchesOriginalReceipt": true,
+      "publicProps": "same",
+      "exports": "same",
+      "i18nKeys": "same",
+      "apiAndPersistence": "same",
+      "content": "Original statuses, changed-value list, preserved measured-field names, warnings, empty message and server-revalidation content retained; exact-value caption added.",
+      "sections": {
+        "Badge": "1 -> 1",
+        "SectionTitle": "1 -> 1",
+        "KVList": "1 -> 1",
+        "InlineCallout": "1 -> 1",
+        "Caption": "1 -> 2",
+        "Text": "2 -> 2",
+        "GlassPanel": "0 -> 0",
+        "ChartContainer": "0 -> 0"
+      },
+      "actions": "0 -> 0",
+      "rerun": false
+    },
+    "historicalViolationCounts": {
+      "inlineStyles": 0,
+      "rawControls": 0,
+      "directVendorImports": 0,
+      "oldApiImports": 0,
+      "guessedUnitMappings": 0,
+      "currentAuditClaim": "NOTRUN; historical counts retained without repeating genuine passing checks"
+    }
+  },
+  "externalNeeds": [
+    {
+      "needKey": "repair-impact-normal-generated-catalog-closure",
+      "owner": "Authorized canonical generated-English catalog owner, outside this worker's writable scope",
+      "cause": "Unmodified normal split-i18n-catalog.mjs --check reports invalid generated files and stops Vitest before collection.",
+      "guardReportedInvalidCount": 25,
+      "guardObservationEndUtc": "2026-10-14T07:47:07.473Z",
+      "laterCatalogDrift": "Canonical en.json changed externally by 2026-10-14T07:50:13.349Z; normal guard was not rerun or bypassed and no generated closure is claimed.",
+      "directory": "web\\src\\i18n\\en",
+      "exactReportedFiles": [
+        "locale-detail-errorBoundary.json",
+        "locale-system.json",
+        "locale-notifications.json",
+        "locale-telemetry.json",
+        "locale-unreferenced.json",
+        "locale-battery.json",
+        "locale-driving.json",
+        "locale-analytics.json",
+        "locale-sharing.json",
+        "locale-vehicles.json",
+        "locale-automations.json",
+        "locale-charging.json",
+        "locale-dashboard.json",
+        "locale-settings.json",
+        "locale-admin.json",
+        "locale-vehicle-systems.json",
+        "locale-diagnostics.json",
+        "locale-maps.json",
+        "locale-trips.json",
+        "locale-exports.json",
+        "locale-power-user.json",
+        "locale-driving-route-efficiency.json",
+        "locale-driving-trip-planner.json",
+        "runtime-manifest.json",
+        "usage-manifest.json"
+      ],
+      "requiredOwnerAction": "Restore normal generated-catalog closure against current canonical/source inputs using the existing authorized generator; preserve the strict guard and report exact generated outputs. No generation or catalog edit performed here.",
+      "then": "Execute only the still-unexecuted RepairImpactSummary.test.tsx under normal repository Vitest --pool=forks --maxWorkers=2 and preserve actual raw names/counts/exits. Do not rerun unchanged genuine passes.",
+      "chargedAttempt": false
+    }
+  ],
+  "scopedCorrectionNeeds": [],
+  "scopedCorrectionNeedsMeaning": "No real assertion or new type failure was observed because no test executed and typecheck was not rerun. This is not evidence that assertions would pass. No repair is authorized or performed here.",
+  "prohibitionsObserved": {
+    "gitOperations": 0,
+    "queueWrites": 0,
+    "sourceWrites": 0,
+    "fixtureOrCaseEdits": 0,
+    "catalogWrites": 0,
+    "configOrSchemaWrites": 0,
+    "physicalFieldMappingsOrUnitConversions": 0,
+    "installs": 0,
+    "nestedAgents": 0,
+    "serversStarted": 0,
+    "browserRuns": 0,
+    "dockerRuns": 0,
+    "guardBypasses": 0,
+    "fullSuitesBuildsGlobalTypechecks": "NOTRUN",
+    "normalRunnerCache": "Disabled with supported --no-cache; default config loader's automatically removed internal bundle was not a shipping output.",
+    "normalDefaultBundleRetained": false
+  },
+  "release": {
+    "sourceOrFixtureWriteClaims": "NONE HELD",
+    "proofCommands": "Both Vitest child processes completed with exit1; their evidence wrappers completed with exit0. Later metadata snapshot wrapper5917 exited1 due external catalog drift; reconciliation wrapper5925 exited0.",
+    "backgroundProcessesStarted": 0,
+    "artifactClaim": "RELEASED AT FINAL HANDOFF",
+    "releaseUtc": "2026-10-14T07:51:06.223Z"
+  }
+}
