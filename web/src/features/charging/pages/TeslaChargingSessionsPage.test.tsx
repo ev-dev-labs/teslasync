@@ -41,6 +41,11 @@ vi.mock('@/api/client', async () => {
   }
 })
 
+vi.mock('@/lib/csvExport', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport')
+  return { ...actual, downloadCSV: vi.fn(), downloadJSON: vi.fn() }
+})
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   return {
@@ -78,6 +83,7 @@ vi.mock('./TeslaChargingSessionsMap', () => ({
 }))
 
 import { request } from '@/api/client'
+import { downloadCSV, downloadJSON } from '@/lib/csvExport'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
@@ -240,6 +246,8 @@ function renderPage(initialEntries: string[] = ['/tesla/charging/sessions']) {
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  vi.mocked(downloadCSV).mockClear()
+  vi.mocked(downloadJSON).mockClear()
   window.localStorage.clear()
   // fmtNumber/fmtInt read module-global precision/locale that useSettings
   // seeds in production; pin them so currency/number assertions are stable.
@@ -269,6 +277,15 @@ describe('formatDurationSeconds', () => {
 })
 
 describe('buildMonthlyCost', () => {
+  it('preserves refunds and refuses mixed, missing and unsupported currency totals', () => {
+    const charge = makeSession({ total_cost: 5, currency_code: 'EUR' })
+    const refund = makeSession({ total_cost: -8, currency_code: ' eur ' })
+    expect(buildMonthlyCost([charge, refund])).toEqual([{ month: '2025-01', total: -3 }])
+    for (const currency_code of ['USD', null, '', 'XXX', 'invalid']) {
+      expect(buildMonthlyCost([charge, makeSession({ currency_code })])).toEqual([])
+    }
+  })
+
   it('groups by calendar month, sums cost, and sorts ascending', () => {
     const out = buildMonthlyCost([
       makeSession({ charge_start_datetime: '2025-03-10T12:00:00Z', total_cost: 3 }),
@@ -301,6 +318,17 @@ describe('buildMonthlyCost', () => {
 })
 
 describe('groupSessions', () => {
+  it('retains energy and counts without summing costs across denominations', () => {
+    const sessions = [
+      makeSession({ currency_code: 'EUR', total_cost: 5 }),
+      makeSession({ currency_code: 'USD', total_cost: -8 }),
+    ]
+    expect(groupSessions(sessions, s => s.site_location_name ?? '')).toEqual([
+      { key: 'Fremont Supercharger', count: 2, energyWh: 40000, cost: null },
+    ])
+    expect(groupSessions(sessions.map(s => ({ ...s, currency_code: 'EUR' })), () => 'site')[0].cost).toBe(-3)
+  })
+
   it('rolls up count/energy/cost per key with null-safe sums', () => {
     const buckets = groupSessions(
       [
@@ -325,9 +353,131 @@ describe('groupSessions', () => {
 afterEach(() => {
   onlineManager.setOnline(true)
   vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('TeslaChargingSessionsPage', () => {
+  it('matches built-in CSV and JSON values to display units and each recorded currency without changing cached SI', async () => {
+    const sessions = [
+      makeSession({ currency_code: 'EUR', total_cost: -5, per_kwh_rate: 0.25 }),
+      makeSession({ id: 2, session_id: 2, currency_code: null, total_cost: 0, total_energy_added_wh: 0, charge_duration_s: null }),
+    ]
+    install({ sessions })
+    const { client } = renderPage()
+    await screen.findByTestId('sessions-map')
+    const table = within(screen.getByRole('region', { name: 'Charging sessions table' }))
+    fireEvent.click(table.getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as CSV' }))
+    await waitFor(() => expect(downloadCSV).toHaveBeenCalledOnce())
+    const csv = vi.mocked(downloadCSV).mock.calls[0][1]
+    expect(csv).toContain('Energy (kWh)')
+    expect(csv).toContain(',20,120,30m,-€5.00,')
+    expect(csv).toContain('0.00 · Unknown currency')
+    expect(csv).not.toContain('20000')
+    fireEvent.click(table.getByRole('button', { name: 'Export list' }))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }))
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce())
+    expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual([
+      expect.objectContaining({ energy: 20, peakPower: 120, duration: '30m', cost: '-€5.00' }),
+      expect.objectContaining({ energy: 0, duration: '—', cost: '0.00 · Unknown currency' }),
+    ])
+    expect(client.getQueriesData({ queryKey: ['tesla-charging-sessions'] })[0][1]).toEqual({
+      sessions, summary: defaultSummary,
+    })
+    expect(sessions[0].total_energy_added_wh).toBe(20000)
+    expect(sessions[0].charge_duration_s).toBe(1800)
+    expect(sessions[0].total_cost).toBe(-5)
+  })
+
+  it('preserves the separate raw selected CSV with Wh, seconds and source currency', async () => {
+    install({ sessions: [makeSession({ currency_code: 'EUR', total_cost: -5 })] })
+    const createUrl = vi.fn<(blob: Blob) => string>().mockReturnValue('blob:selected-sessions')
+    vi.stubGlobal('URL', class extends URL {
+      static createObjectURL = createUrl
+      static revokeObjectURL = vi.fn()
+    })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    renderPage()
+    await screen.findByTestId('sessions-map')
+    const table = within(screen.getByRole('region', { name: 'Charging sessions table' }))
+    fireEvent.click(table.getByRole('checkbox', { name: /Fremont Supercharger/ }))
+    fireEvent.click(table.getByRole('button', { name: 'Export CSV' }))
+    expect(createUrl).toHaveBeenCalledOnce()
+    const blob = createUrl.mock.calls[0][0]
+    const csv = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result))
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(blob)
+    })
+    expect(csv).toContain('energy_wh,peak_power_kw,duration_seconds,cost,currency,per_kwh_rate')
+    expect(csv).toContain('"20000","120","1800","-5","EUR","0.25"')
+    expect(downloadCSV).not.toHaveBeenCalled()
+  })
+
+  it('uses source EUR for aggregates and refund labels without changing lifetime scope', async () => {
+    install({
+      sessions: [
+        makeSession({ currency_code: 'EUR', total_cost: 5, idle_fee: 2 }),
+        makeSession({ id: 2, session_id: 2, currency_code: 'EUR', total_cost: -8 }),
+      ],
+      summary: { ...defaultSummary, total_cost: -3 },
+    })
+    const { container } = renderPage()
+    await screen.findByTestId('sessions-map')
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('-€3.00')).toBeInTheDocument()
+    const lifetime = container.querySelector('#tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).getByText('-€3.00')).toBeInTheDocument()
+    expect(within(lifetime).getByText('42')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).toHaveTextContent('-€3.00')
+    expect(screen.getByRole('progressbar', { name: 'Fremont Supercharger' })).not.toHaveAttribute('aria-valuenow')
+    expect(screen.getByText(/€2.00 in idle or congestion fees/)).toBeInTheDocument()
+    expect(screen.queryByText('$99.50')).toBeNull()
+    expect(screen.getByText('Monthly charging cost')).toBeInTheDocument()
+  })
+
+  it.each(['USD', null, '', 'XXX'])('qualifies EUR plus %s instead of inventing a common currency', async currency_code => {
+    install({
+      sessions: [
+        makeSession({ currency_code: 'EUR', total_cost: 5, site_location_name: 'Alpha EUR' }),
+        makeSession({ id: 2, session_id: 2, currency_code, total_cost: -8, site_location_name: 'Beta other' }),
+      ],
+    })
+    const { container } = renderPage()
+    await screen.findByTestId('sessions-map')
+    const brief = screen.getByTestId('charging-operational-brief')
+    const cost = within(brief).getByText('Total cost').closest('[data-operational-metric]')
+    expect(cost).toHaveAttribute('data-value-state', 'missing')
+    expect(screen.getAllByText(/Mixed or unknown currency; monetary totals/).length).toBeGreaterThan(0)
+    for (const site of ['Alpha EUR', 'Beta other']) {
+      expect(screen.getByRole('progressbar', { name: site })).not.toHaveAttribute('aria-valuenow')
+    }
+    const lifetime = container.querySelector('#tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).queryByText('$99.50')).toBeNull()
+    expect(screen.getByText('123.00 kWh')).toBeInTheDocument()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:2')
+    expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
+  })
+
+  it('does not use a single-currency date window to denominate a mixed lifetime summary', async () => {
+    install({
+      sessions: defaultSessions.map((session, index) => ({
+        ...session, currency_code: index === 1 ? 'EUR' : 'USD',
+      })),
+    })
+    const { container } = renderPage(['/tesla-charging-sessions?from=2025-02-01&to=2025-02-28'])
+    await screen.findByText('123.00 kWh')
+    expect(within(screen.getByTestId('charging-operational-brief')).getByText('€7.00')).toBeInTheDocument()
+    const lifetime = container.querySelector('#tesla-fleet-charging-summary')
+    if (!lifetime) throw new Error('Missing lifetime summary')
+    expect(within(lifetime).getByText('42')).toBeInTheDocument()
+    expect(within(lifetime).queryByText('$99.50')).toBeNull()
+    expect(within(lifetime).queryByText('€99.50')).toBeNull()
+    expect(screen.getByTestId('sessions-map')).toHaveTextContent('map:1')
+  })
+
   it('retains lifetime metrics, maps, operational evidence and the sessions table after a background refresh fails', async () => {
     const { client } = renderPage()
     expect(await screen.findByText('123.00 kWh')).toBeInTheDocument()

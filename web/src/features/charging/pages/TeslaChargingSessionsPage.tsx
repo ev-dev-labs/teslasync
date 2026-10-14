@@ -52,13 +52,11 @@ import {
 } from '@/hooks/useVehicleVinFilter';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
-import { useSettings } from '@/hooks/useSettings';
-import { useFormatting } from '@/hooks/useFormatting';
 import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
 
 import { convertEnergyFromSI } from '@/lib/unitConversion';
-import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
+import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { neonColorMap, typography } from '@/lib/tokens';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 
@@ -68,6 +66,16 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { ChargingSummaryBrief } from '../components/operationalbrief-all/ChargingSummaryBrief';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
+
+function sourceCurrency(sessions: TeslaChargingSession[]): string | null {
+  const codes = new Set(sessions.map(session => session.currency_code?.trim().toUpperCase() ?? ''));
+  const code = codes.size === 1 ? [...codes][0] : '';
+  const supported = (Intl as typeof Intl & {
+    supportedValuesOf?: (key: 'currency') => string[];
+  }).supportedValuesOf?.('currency');
+  return /^[A-Z]{3}$/.test(code) && code !== 'XXX' && code !== 'XTS'
+    && supported?.includes(code) ? code : null;
+}
 
 /**
  * Format an SI-seconds duration to "Xh Ym".
@@ -88,12 +96,14 @@ export function formatDurationSeconds(seconds: number | null | undefined): strin
  * malformed timestamp can't pollute the chart with a "NaN-NaN" bucket.
  */
 export function buildMonthlyCost(sessions: TeslaChargingSession[]): { month: string; total: number }[] {
+  if (!sourceCurrency(sessions)) return [];
   const map = new Map<string, number>();
   for (const s of sessions) {
     if (!s.charge_start_datetime) continue;
     const d = new Date(s.charge_start_datetime);
     if (Number.isNaN(d.getTime())) continue;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    if (s.total_cost != null && !Number.isFinite(s.total_cost)) continue;
     map.set(key, (map.get(key) ?? 0) + (s.total_cost ?? 0));
   }
   return Array.from(map.entries())
@@ -105,7 +115,7 @@ export interface GroupBucket {
   key: string;
   count: number;
   energyWh: number;
-  cost: number;
+  cost: number | null;
 }
 
 /** Roll sessions up by a string key, summing count / energy / cost (all null-safe). */
@@ -114,12 +124,13 @@ export function groupSessions(
   keyOf: (s: TeslaChargingSession) => string,
 ): GroupBucket[] {
   const map = new Map<string, GroupBucket>();
+  const currency = sourceCurrency(sessions);
   for (const s of sessions) {
     const key = keyOf(s);
-    const cur = map.get(key) ?? { key, count: 0, energyWh: 0, cost: 0 };
+    const cur = map.get(key) ?? { key, count: 0, energyWh: 0, cost: currency ? 0 : null };
     cur.count += 1;
     cur.energyWh += s.total_energy_added_wh ?? 0;
-    cur.cost += s.total_cost ?? 0;
+    if (cur.cost != null && Number.isFinite(s.total_cost ?? 0)) cur.cost += s.total_cost ?? 0;
     map.set(key, cur);
   }
   return Array.from(map.values());
@@ -129,9 +140,13 @@ export default function TeslaChargingSessionsPage() {
   const { fmtNumber, fmtInt, precision, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
-  const { settings } = useSettings();
-  const { formatCurrency } = useFormatting();
-  const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
+  const currencyUnavailable = t('tesla_sessions.currencyUnavailable', 'Mixed or unknown currency; monetary totals and comparisons are unavailable. See recorded session amounts. No currency conversion is applied.');
+  const unknownCurrency = t('tesla_sessions.unknownCurrency', 'Unknown currency');
+  const formatSourceAmount = useCallback((amount: number, currency: string | null) =>
+    currency
+      ? formatCurrencyValue(amount, currency, locale, precision, { useGrouping: true })
+      : `${fmtNumber(amount)} · ${unknownCurrency}`,
+  [locale, precision, fmtNumber, unknownCurrency]);
   usePageTitle(t('tesla_sessions.title', 'Fleet charging sessions'));
 
   const { isLoading: vehiclesLoading } = useVehicles();
@@ -171,6 +186,10 @@ export default function TeslaChargingSessionsPage() {
     });
   }, [allSessions, startInstant, endInstantExclusive]);
   const summary = response?.summary;
+  const lifetimeCurrency = useMemo(() => sourceCurrency(allSessions), [allSessions]);
+  const scopedCurrency = useMemo(() => sourceCurrency(sessions), [sessions]);
+  const formatCurrency = useCallback((amount: number) => formatSourceAmount(amount, scopedCurrency),
+    [formatSourceAmount, scopedCurrency]);
 
   const vehicleOptions = useMemo(() => {
     const opts = [{
@@ -183,9 +202,9 @@ export default function TeslaChargingSessionsPage() {
     return opts;
   }, [vehicles, t]);
 
-  const monthlyData = useMemo(() => buildMonthlyCost(
+  const monthlyData = useMemo(() => scopedCurrency ? buildMonthlyCost(
     sessions.filter(session => session.total_cost != null && Number.isFinite(session.total_cost)),
-  ), [sessions]);
+  ) : [], [sessions, scopedCurrency]);
 
   const mapPoints = useMemo(() =>
     sessions.filter((s) => s.latitude != null && s.longitude != null),
@@ -201,7 +220,7 @@ export default function TeslaChargingSessionsPage() {
         hasEnergy: sessions.some(session => (session.charger_type || unknown) === bucket.key
           && session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)),
       }))
-      .sort((a, b) => b.energyWh - a.energyWh || b.cost - a.cost);
+      .sort((a, b) => b.energyWh - a.energyWh);
   }, [sessions, t]);
   const maxChargerEnergy = useMemo(
     () => chargerTypeBreakdown.reduce((m, c) => Math.max(m, c.energyWh), 0),
@@ -217,11 +236,13 @@ export default function TeslaChargingSessionsPage() {
         hasCost: sessions.some(session => (session.site_location_name || unknown) === bucket.key
           && session.total_cost != null && Number.isFinite(session.total_cost)),
       }))
-      .sort((a, b) => b.cost - a.cost || b.energyWh - a.energyWh)
+      .sort((a, b) => scopedCurrency
+        ? (b.cost ?? 0) - (a.cost ?? 0) || b.energyWh - a.energyWh
+        : a.key.localeCompare(b.key))
       .slice(0, 6);
-  }, [sessions, t]);
+  }, [sessions, t, scopedCurrency]);
   const maxLocationCost = useMemo(
-    () => topLocations.reduce((m, l) => Math.max(m, l.cost), 0),
+    () => topLocations.reduce((m, l) => Math.max(m, l.cost ?? 0), 0),
     [topLocations],
   );
 
@@ -253,9 +274,10 @@ export default function TeslaChargingSessionsPage() {
 
     for (const session of sessions) {
       totalWh += session.total_energy_added_wh ?? 0;
-      totalCost += session.total_cost ?? 0;
-      totalFees += (session.idle_fee ?? 0) + (session.congestion_fee ?? 0);
-      if (session.total_cost == null) missingCostCount += 1;
+      if (Number.isFinite(session.total_cost ?? 0)) totalCost += session.total_cost ?? 0;
+      totalFees += (Number.isFinite(session.idle_fee ?? 0) ? session.idle_fee ?? 0 : 0)
+        + (Number.isFinite(session.congestion_fee ?? 0) ? session.congestion_fee ?? 0 : 0);
+      if (session.total_cost == null || !Number.isFinite(session.total_cost)) missingCostCount += 1;
       if (session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)) energyCount += 1;
       if (session.total_cost != null && Number.isFinite(session.total_cost)) costCount += 1;
       if (session.charge_duration_s != null && Number.isFinite(session.charge_duration_s) && session.charge_duration_s >= 0) {
@@ -266,15 +288,23 @@ export default function TeslaChargingSessionsPage() {
 
     return {
       totalWh: energyCount > 0 ? totalWh : null,
-      totalCost: costCount > 0 ? totalCost : null,
-      totalFees,
+      totalCost: costCount > 0 && scopedCurrency ? totalCost : null,
+      totalFees: scopedCurrency ? totalFees : 0,
       missingCostCount,
       averageDurationSeconds: durationCount > 0 ? durationSeconds / durationCount : null,
     };
-  }, [sessions]);
+  }, [sessions, scopedCurrency]);
 
   const chargingAttention = useMemo<OperationalAttention[]>(() => {
     const items: OperationalAttention[] = [];
+    if (sessions.length > 0 && !scopedCurrency) {
+      items.push({
+        key: 'currency',
+        title: unknownCurrency,
+        description: currencyUnavailable,
+        tone: 'warning',
+      });
+    }
 
     if (is403) {
       items.push({
@@ -318,7 +348,7 @@ export default function TeslaChargingSessionsPage() {
     }
 
     return items;
-  }, [error, formatCurrency, is403, isLoading, operationalTotals, sessions.length, sourceUnresolved, t]);
+  }, [error, formatCurrency, is403, isLoading, operationalTotals, sessions.length, sourceUnresolved, t, scopedCurrency, currencyUnavailable, unknownCurrency]);
   const narrativeEvidence: OperationalNarrative['evidence'] = sessions
     .slice(0, 5)
     .map((session) => ({
@@ -335,7 +365,7 @@ export default function TeslaChargingSessionsPage() {
           cost:
             session.total_cost == null
               ? t('operations.charging.fleetNarrative.costMissing', 'no')
-              : formatCurrencyValue(session.total_cost, session.currency_code ?? userCurrency, locale, precision, { useGrouping: true }),
+              : formatSourceAmount(session.total_cost, sourceCurrency([session])),
         },
       ),
       observedAt: session.charge_start_datetime,
@@ -399,6 +429,7 @@ export default function TeslaChargingSessionsPage() {
         'No immediate response is indicated; continue reviewing site costs and newly synchronized sessions.',
       ),
     limitations: [
+      ...(!scopedCurrency && sessions.length > 0 ? [currencyUnavailable] : []),
       t(
         'operations.charging.fleetNarrative.accountLimitation',
         'This source is available only to eligible Tesla business accounts.',
@@ -516,13 +547,13 @@ export default function TeslaChargingSessionsPage() {
     {
       key: 'cost',
       align: 'right',
-      filterValue: (row) => row.total_cost == null ? null : `${row.currency_code ?? userCurrency}:${row.total_cost}`,
-      filterValueLabel: (_, row) => row.total_cost != null ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true }) : '—',
+      filterValue: (row) => row.total_cost == null ? null : `${row.currency_code ?? ''}:${row.total_cost}`,
+      filterValueLabel: (_, row) => row.total_cost != null ? formatSourceAmount(row.total_cost, sourceCurrency([row])) : '—',
       header: t('tesla_sessions.col.cost_decimal', 'Cost'),
       render: (row) => (
         <Text size="sm" weight="medium" color="primary">
           {row.total_cost != null
-            ? formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
+            ? formatSourceAmount(row.total_cost, sourceCurrency([row]))
             : '—'}
         </Text>
       ),
@@ -536,7 +567,7 @@ export default function TeslaChargingSessionsPage() {
       render: (row) => (
         <Text size="sm" color="secondary">
           {row.per_kwh_rate != null
-            ? formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true })
+            ? formatSourceAmount(row.per_kwh_rate, sourceCurrency([row]))
             : '—'}
         </Text>
       ),
@@ -552,7 +583,7 @@ export default function TeslaChargingSessionsPage() {
         </Text>
       ),
     },
-  ], [t, userCurrency, locale, precision, fmtNumber]);
+  ], [t, formatSourceAmount, fmtNumber]);
 
   const [sortKey, setSortKey] = useState<string>('date');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
@@ -573,7 +604,8 @@ export default function TeslaChargingSessionsPage() {
           cmp = (a.peak_power_kw ?? 0) - (b.peak_power_kw ?? 0);
           break;
         case 'cost':
-          cmp = (a.total_cost ?? 0) - (b.total_cost ?? 0);
+          cmp = (a.currency_code ?? '').localeCompare(b.currency_code ?? '')
+            || (a.total_cost ?? 0) - (b.total_cost ?? 0);
           break;
         default:
           cmp = a.charge_start_datetime.localeCompare(b.charge_start_datetime);
@@ -659,11 +691,13 @@ export default function TeslaChargingSessionsPage() {
       rawValue: summary?.total_wh,
       display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
     { metricId: 'currency', occurrenceId: 'cost', label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
-      rawValue: summary?.total_cost,
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+      rawValue: lifetimeCurrency ? summary?.total_cost : null,
+      missingReason: lifetimeCurrency ? undefined : currencyUnavailable,
+      display: { formatter: raw => ({ value: formatSourceAmount(raw, lifetimeCurrency), unit: '' }) } },
     { metricId: 'currency', occurrenceId: 'average-cost', label: t('tesla_sessions.stats.avgCost', 'Avg cost/kWh'),
-      rawValue: summary?.avg_cost_per_kwh,
-      display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
+      rawValue: lifetimeCurrency ? summary?.avg_cost_per_kwh : null,
+      missingReason: lifetimeCurrency ? undefined : currencyUnavailable,
+      display: { formatter: raw => ({ value: formatSourceAmount(raw, lifetimeCurrency), unit: '' }) } },
     { metricId: 'power', occurrenceId: 'peak-power', label: t('tesla_sessions.stats.peakPower', 'Peak power'),
       rawValue: summary?.peak_power_kw != null ? summary.peak_power_kw * 1000 : null,
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) } },
@@ -679,7 +713,7 @@ export default function TeslaChargingSessionsPage() {
       display: { formatter: raw => ({ value: formatEnergy(raw), unit: '' }) } },
     { metricId: 'currency', occurrenceId: 'cost', label: t('tesla_sessions.stats.cost_decimal', 'Total cost'),
       rawValue: sourceUnresolved || isLoading || error || sessions.length === 0 ? null : operationalTotals.totalCost,
-      description: t('operations.charging.costDetail', 'Reported session cost; sessions without cost remain flagged as partial.'),
+      description: scopedCurrency ? t('operations.charging.costDetail', 'Reported session cost; sessions without cost remain flagged as partial.') : currencyUnavailable,
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
     { metricId: 'duration', occurrenceId: 'duration', label: t('operations.charging.averageDuration', 'Average duration'),
       rawValue: sourceUnresolved || isLoading || error ? null : operationalTotals.averageDurationSeconds,
@@ -825,16 +859,17 @@ export default function TeslaChargingSessionsPage() {
             <ChartContainer
               title={t('tesla_sessions.monthlyCost', 'Monthly charging cost')}
               ariaLabel={t('tesla_sessions.monthlyCostAria', 'Monthly Tesla charging cost bar chart')}
-              data={monthlyData.map((m) => ({ month: m.month, total: m.total }))}
+              data={monthlyData.map((m) => ({ month: m.month, total: m.total, currency: scopedCurrency }))}
               dataColumns={[
                 { key: 'month', label: t('tesla_sessions.col.month', 'Month') },
-                { key: 'total', label: t('tesla_sessions.col.total', 'Total ($)') },
+                { key: 'total', label: `${t('tesla_sessions.col.cost_decimal', 'Cost')} (${scopedCurrency ?? '—'})` },
+                { key: 'currency', label: t('charging.currency', 'Currency') },
               ]}
               height={280}
               loading={isLoading}
               error={error}
               onRetry={() => { void sessionsQuery.refetch(); }}
-              exportData={monthlyData}
+              exportData={monthlyData.map(m => ({ ...m, currency: scopedCurrency }))}
               exportFilename={`tesla-monthly-cost-${new Date().toISOString().slice(0, 10)}`}
             >
               {isLoading ? (
@@ -848,14 +883,14 @@ export default function TeslaChargingSessionsPage() {
                     {chartGrid}
                     <XAxis dataKey="month" tick={axisTickSm} />
                     <YAxis tick={axisTickSm} tickFormatter={(v: number) => formatCurrency(v)} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="total" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+                    <Tooltip content={<ChartTooltip valueFormatter={value => typeof value === 'number' ? formatCurrency(value) : '—'} />} />
+                    <Bar dataKey="total" name={scopedCurrency ?? '—'} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <EmptyState
                   icon={<Icon icon={DollarSign} size="xl" />}
-                  message={sourceUnresolved ? unavailableMessage : t('tesla_sessions.noChartData', 'No cost data yet. Click "Refresh from Tesla" to sync.')}
+                  message={sourceUnresolved ? unavailableMessage : sessions.length > 0 && !scopedCurrency ? currencyUnavailable : t('tesla_sessions.noChartData', 'No cost data yet. Click "Refresh from Tesla" to sync.')}
                 />
               )}
             </ChartContainer>
@@ -944,15 +979,16 @@ export default function TeslaChargingSessionsPage() {
               />
             ) : topLocations.length > 0 ? (
               <div className="space-y-3">
+                {!scopedCurrency && <Text color="secondary">{currencyUnavailable}</Text>}
                 {topLocations.map((l, i) => (
                   <MetricBar
                     key={l.key}
                     label={l.key}
-                    value={l.hasCost ? l.cost : null}
+                    value={l.hasCost && scopedCurrency && l.cost != null && l.cost >= 0 ? l.cost : null}
                     max={maxLocationCost || 1}
                     color={CHART_COLORS[i % CHART_COLORS.length]}
                     fill="solid"
-                    sublabel={`${l.hasCost ? formatCurrency(l.cost) : '—'} · ${fmtInt(l.count)}×`}
+                    sublabel={`${l.hasCost && l.cost != null ? formatCurrency(l.cost) : '—'} · ${fmtInt(l.count)}×`}
                   />
                 ))}
               </div>
@@ -987,12 +1023,12 @@ export default function TeslaChargingSessionsPage() {
                         : fmtNumber(convertEnergyFromSI(row.total_energy_added_wh, 'kWh'));
                       case 'duration': return formatDurationSeconds(row.charge_duration_s);
                       case 'cost': return row.total_cost == null ? null
-                        : formatCurrencyValue(row.total_cost, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true });
+                        : formatSourceAmount(row.total_cost, sourceCurrency([row]));
                       case 'type': return row.charger_type;
                       case 'vin': return row.vin ? `…${row.vin.slice(-6)}` : null;
                       case 'peakPower': return row.peak_power_kw == null ? null : fmtNumber(row.peak_power_kw);
                       case 'rate': return row.per_kwh_rate == null ? null
-                        : formatCurrencyValue(row.per_kwh_rate, row.currency_code ?? userCurrency, locale, precision, { useGrouping: true });
+                        : formatSourceAmount(row.per_kwh_rate, sourceCurrency([row]));
                       default: return null;
                     }
                   },
@@ -1034,11 +1070,15 @@ export default function TeslaChargingSessionsPage() {
                   date: row.charge_start_datetime,
                   location: row.site_location_name ?? '',
                   vin: row.vin ?? '',
-                  energy: row.total_energy_added_wh ?? null,
+                  energy: row.total_energy_added_wh != null
+                    ? convertEnergyFromSI(row.total_energy_added_wh, 'kWh') : null,
                   peakPower: row.peak_power_kw ?? null,
-                  duration: row.charge_duration_s ?? null,
-                  cost: row.total_cost ?? null,
-                  rate: row.per_kwh_rate ?? null,
+                  duration: formatDurationSeconds(row.charge_duration_s),
+                  cost: row.total_cost != null
+                    ? formatSourceAmount(row.total_cost, sourceCurrency([row])) : null,
+                  currency: row.currency_code ?? '',
+                  rate: row.per_kwh_rate != null
+                    ? formatSourceAmount(row.per_kwh_rate, sourceCurrency([row])) : null,
                   type: row.charger_type ?? '',
                 })}
                 selectable="multi"
