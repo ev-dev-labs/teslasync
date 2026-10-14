@@ -1,21 +1,22 @@
-import { type ReactNode, useMemo } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, CircleCheck, CircleX, CalendarX } from 'lucide-react';
+import { Clock } from 'lucide-react';
 
-import { GlassPanel } from '@/components/ui';
-import { PanelTitle } from '@/components/ui/Typography';
+import { GlassPanel, Icon, PanelTitle } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
 import { Skeleton, EmptyState } from '@/components/feedback';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { typography } from '@/lib/tokens';
 import type { GDPRExportArtifact } from '@/types/admin-operator-confidence';
 
-import { STATUS_COLOR } from './constants';
+import { STATUS_COLOR, STATUS_ICON } from './constants';
 
 interface GDPRLifecyclePanelProps {
   artifact?: GDPRExportArtifact;
   loading?: boolean;
   className?: string;
+  now?: number;
 }
 
 interface LifecycleEntry {
@@ -24,87 +25,101 @@ interface LifecycleEntry {
   subtitle?: string;
   time: string;
   color?: string;
+  instant: number;
+  absolute: string | null;
 }
 
-/** Lifecycle timeline — created → completed/failed → expiry, from artifact timestamps. */
-export function GDPRLifecyclePanel({ artifact, loading, className }: GDPRLifecyclePanelProps) {
+/** Manifest timestamps only; download recording is best effort, not an audit ledger. */
+export function GDPRLifecyclePanel({
+  artifact,
+  loading,
+  className,
+  now: controlledNow,
+}: GDPRLifecyclePanelProps) {
   const { t } = useTranslation();
+  const { formatDateTime, formatRelative } = useDateFormat();
+  const [clockNow, setClockNow] = useState(Date.now);
+  const now = controlledNow ?? clockNow;
   const showLoading = Boolean(loading) && !artifact;
+  const label = t('admin.gdprExport.lifecycleTitle', 'Lifecycle');
 
-  const items = useMemo<LifecycleEntry[]>(() => {
-    if (!artifact) return [];
-    const list: LifecycleEntry[] = [
-      {
-        icon: <Clock className="h-3 w-3" aria-hidden="true" />,
-        title: t('admin.gdprExport.lifecycle.created', 'Created'),
-        subtitle: formatDateTime(artifact.created_at),
-        time: formatRelative(artifact.created_at),
-        color: STATUS_COLOR.queued,
-      },
-    ];
+  useEffect(() => {
+    if (controlledNow !== undefined) return;
+    setClockNow(Date.now());
+    if (!artifact) return;
+    const update = () => setClockNow(Date.now());
+    const interval = window.setInterval(update, 1_000);
+    const remaining = Date.parse(artifact.expires_at) - Date.now();
+    const expiryTimer = remaining > 0 && remaining <= 2_147_483_647
+      ? window.setTimeout(update, remaining)
+      : undefined;
+    return () => {
+      window.clearInterval(interval);
+      window.clearTimeout(expiryTimer);
+    };
+  }, [artifact, controlledNow]);
 
-    // A `failed` export never truly "completed": suppress the green
-    // Completed step so the timeline can't contradict itself. Its terminal
-    // timestamp (if any) is surfaced on the Failed entry instead.
-    if (artifact.completed_at && artifact.status !== 'failed') {
-      list.push({
-        icon: <CircleCheck className="h-3 w-3" aria-hidden="true" />,
-        title: t('admin.gdprExport.lifecycle.completed', 'Completed'),
-        subtitle: formatDateTime(artifact.completed_at),
-        time: formatRelative(artifact.completed_at),
-        color: STATUS_COLOR.complete,
-      });
+  const items: LifecycleEntry[] = [];
+  const addEntry = (
+    event: keyof typeof STATUS_COLOR,
+    title: string,
+    iso: string | null | undefined,
+  ) => {
+    const instant = iso ? Date.parse(iso) : NaN;
+    const absolute = Number.isFinite(instant) ? formatDateTime(iso) : null;
+    items.push({
+      icon: <Icon icon={STATUS_ICON[event]} size="xs" />,
+      title,
+      subtitle: absolute ?? '—',
+      time: formatRelative(iso),
+      color: STATUS_COLOR[event],
+      instant,
+      absolute,
+    });
+  };
+
+  if (artifact) {
+    addEntry('created', t('admin.gdprExport.lifecycle.created', 'Created'), artifact.created_at);
+    if (artifact.downloaded_at?.trim()) {
+      addEntry('downloaded', t('admin.gdprExport.downloadTitle', 'Download'), artifact.downloaded_at);
     }
-
-    if (artifact.status === 'failed') {
-      // `?? fallback` only guards null/undefined — an empty or whitespace-only
-      // error string would slip through and render a blank subtitle, so fall
-      // back to the generic copy for any non-meaningful error.
-      const reason =
-        artifact.error && artifact.error.trim().length > 0
-          ? artifact.error
-          : t('admin.gdprExport.lifecycle.failedGeneric', 'Export did not finish');
-      list.push({
-        icon: <CircleX className="h-3 w-3" aria-hidden="true" />,
-        title: t('admin.gdprExport.lifecycle.failed', 'Failed'),
-        subtitle: reason,
-        time: artifact.completed_at ? formatRelative(artifact.completed_at) : '',
-        color: STATUS_COLOR.failed,
-      });
-    }
-
-    if (artifact.expires_at) {
-      const expired =
-        artifact.status === 'expired' || new Date(artifact.expires_at).getTime() < Date.now();
-      list.push({
-        icon: <CalendarX className="h-3 w-3" aria-hidden="true" />,
-        title: expired
+    if (artifact.expires_at?.trim()) {
+      const expired = Date.parse(artifact.expires_at) <= now;
+      addEntry(
+        expired ? 'expired' : 'expires',
+        expired
           ? t('admin.gdprExport.lifecycle.expired', 'Expired')
           : t('admin.gdprExport.lifecycle.expires', 'Expires'),
-        subtitle: formatDateTime(artifact.expires_at),
-        time: formatRelative(artifact.expires_at),
-        color: expired ? STATUS_COLOR.failed : STATUS_COLOR.expired,
-      });
+        artifact.expires_at,
+      );
     }
-
-    return list;
-  }, [artifact, t]);
+    items.sort((a, b) => {
+      if (!Number.isFinite(a.instant)) return Number.isFinite(b.instant) ? 1 : 0;
+      if (!Number.isFinite(b.instant)) return -1;
+      return a.instant - b.instant;
+    });
+  }
 
   return (
-    <GlassPanel className={cn('p-4 sm:p-5', className)}>
+    <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={showLoading}>
       <PanelTitle className="mb-4 flex items-center gap-2">
-        <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-        {t('admin.gdprExport.lifecycleTitle', 'Lifecycle')}
+        <Icon icon={Clock} className={typography.color.muted} />
+        {label}
       </PanelTitle>
       {showLoading ? (
         <Skeleton height={140} />
       ) : items.length > 0 ? (
-        <Timeline items={items} />
+        <Timeline
+          items={items}
+          label={label}
+          chronology="oldest-first"
+          summaryBounds={{ start: items[0]?.absolute, end: items[items.length - 1]?.absolute }}
+        />
       ) : (
         // no-action: like GDPRArtifactDetails, this is derived purely from
         // the parent's `artifact` prop — use the lookup input above.
         <EmptyState
-          icon={<Clock className="h-8 w-8" />}
+          icon={<Icon icon={Clock} size="xl" />}
           message={t('admin.gdprExport.lifecycleEmpty', 'No lifecycle events recorded yet.')}
         />
       )}
