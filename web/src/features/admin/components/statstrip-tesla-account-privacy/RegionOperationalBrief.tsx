@@ -11,10 +11,11 @@ import { useAccountBriefStatus } from './useAccountBriefStatus';
 interface RegionOperationalBriefProps extends RegionKpiBandProps {
   known: boolean;
   sourceStatus: DataStatus;
+  isPaused?: boolean;
 }
 
 export function RegionOperationalBrief({ known, sourceStatus, regionKey, regionLabel, scheme,
-  fetchedAt, configured, isLoading }: RegionOperationalBriefProps) {
+  fetchedAt, configured, isLoading, isPaused }: RegionOperationalBriefProps) {
   const { t } = useTranslation('settings');
   const { formatRelative } = useDateFormat();
   const period = useAccountSnapshotPeriod(fetchedAt);
@@ -29,7 +30,7 @@ export function RegionOperationalBrief({ known, sourceStatus, regionKey, regionL
       context: t('region.kpi.source', 'Tesla Fleet API') },
     { metricId: 'text', occurrenceId: 'region-protocol', rawValue: known ? scheme?.toUpperCase() : null,
       label: t('region.kpi.protocol', 'Protocol'),
-      context: t('region.kpi.protocolHint', 'Secure transport') },
+      context: scheme === 'https' ? t('region.kpi.protocolHint', 'Secure transport') : undefined },
     { metricId: 'text', occurrenceId: 'region-synced',
       rawValue: known && period.kind === 'snapshot' && period.observedAt
         ? formatRelative(new Date(period.observedAt)) : null,
@@ -42,7 +43,9 @@ export function RegionOperationalBrief({ known, sourceStatus, regionKey, regionL
     eyebrow={t('region.brief.eyebrow', 'Tesla account')}
     title={t('region.brief.title', 'Region and endpoint')}
     description={t('region.brief.description', 'Your account region, Fleet API endpoint and latest synchronization.')}
-    {...status} loading={isLoading}
+    {...status} statusLabel={isPaused
+      ? t('dataSources.status.paused', { ns: 'translation', defaultValue: 'Refresh paused' })
+      : status.statusLabel} loading={isLoading}
     scope={<Text as="span" variant="caption">{period.label}</Text>}
     provenance={period.kind === 'snapshot' ? period.provenance : undefined} />;
 }

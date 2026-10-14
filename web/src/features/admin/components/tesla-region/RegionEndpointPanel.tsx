@@ -1,14 +1,18 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Server } from 'lucide-react'
 import {
   GlassPanel,
   Badge,
-  IconBox,
+  Icon,
   PanelTitle,
   Text,
   Code,
   Label,
   CopyButton,
+  Button,
+  ErrorText,
+  HelperText,
 } from '@/components/ui'
 import { KVList, TimeStamp } from '@/components/data-display'
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback'
@@ -23,6 +27,11 @@ export interface RegionEndpointPanelProps {
   regionLabel: string | null
   fetchedAt: string | null
   isLoading: boolean
+  isInitial?: boolean
+  isPaused?: boolean
+  isRefreshing?: boolean
+  refreshDisabled?: boolean
+  refreshBlockReason?: string | null
   isError: boolean
   error: unknown
   onRetry: () => void
@@ -43,20 +52,24 @@ export function RegionEndpointPanel({
   regionLabel,
   fetchedAt,
   isLoading,
+  isInitial,
+  isPaused,
+  isRefreshing,
+  refreshDisabled,
+  refreshBlockReason,
   isError,
   error,
   onRetry,
   onRefresh,
 }: RegionEndpointPanelProps) {
   const { t } = useTranslation('settings')
+  const [failedCopyUrl, setFailedCopyUrl] = useState<string | null>(null)
   const configured = Boolean(region || baseUrl)
 
   return (
     <GlassPanel className="h-full space-y-4 p-4 sm:p-5">
       <div className="flex items-center gap-3">
-        <IconBox color="green">
-          <Server className="h-5 w-5" aria-hidden="true" />
-        </IconBox>
+        <Icon icon={Server} size="md" />
         <div className="min-w-0">
           <PanelTitle>{t('region.endpoint.title', 'Fleet API endpoint')}</PanelTitle>
           <Text as="p" variant="caption">
@@ -68,7 +81,14 @@ export function RegionEndpointPanel({
         </div>
       </div>
 
-      {isLoading ? (
+      {isPaused && isInitial ? (
+        <div className="space-y-3">
+          <Text as="p" variant="bodySm" role="status">{t('dataSources.status.paused', { ns: 'translation', defaultValue: 'Refresh paused' })}</Text>
+          <Button variant="secondary" wrapLabel className="min-h-11 md:min-h-9" onClick={onRetry}>
+            {t('common.retry', { ns: 'translation', defaultValue: 'Retry' })}
+          </Button>
+        </div>
+      ) : isLoading || isInitial ? (
         <div className="space-y-3">
           <Skeleton height={64} />
           <Skeleton lines={5} height={16} />
@@ -80,15 +100,24 @@ export function RegionEndpointPanel({
           resourceName={t('region.resource', 'Region')}
         />
       ) : !configured ? (
-        <EmptyState
-          icon={<Server className="h-10 w-10" aria-hidden="true" />}
-          title={t('region.empty.title', 'No region on record')}
-          message={t(
-            'region.empty.message',
-            'TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla.',
-          )}
-          action={{ label: t('region.refresh', 'Refresh'), onClick: onRefresh }}
-        />
+        <div className="space-y-3">
+          <EmptyState
+            icon={<Icon icon={Server} size="xl" />}
+            title={t('region.empty.title', 'No region on record')}
+            message={t(
+              'region.empty.message',
+              'TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla.',
+            )}
+          />
+          <div className="flex flex-col items-center gap-2">
+            <Button variant="secondary" wrapLabel className="min-h-11 md:min-h-9" onClick={onRefresh}
+              loading={isRefreshing} disabled={isRefreshing || refreshDisabled}
+              aria-busy={isRefreshing || undefined} title={refreshBlockReason ?? undefined}>
+              {t('region.refresh', 'Refresh')}
+            </Button>
+            {refreshBlockReason && <HelperText>{refreshBlockReason}</HelperText>}
+          </div>
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -104,16 +133,24 @@ export function RegionEndpointPanel({
 
           <div className="space-y-1.5">
             <Label>{t('region.fleetApiUrl', 'Fleet API base URL')}</Label>
-            <div className="flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-3">
-              <Code className="min-w-0 flex-1 break-all">{baseUrl || '—'}</Code>
+            <div className="flex min-w-0 items-start gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
+              <Code className="min-w-0 flex-1 select-text whitespace-pre-wrap break-all">{baseUrl || '—'}</Code>
               {baseUrl && (
                 <CopyButton
                   text={baseUrl}
+                  key={baseUrl}
                   iconOnly
+                  className="h-11 min-h-11 min-w-11 shrink-0 md:h-9 md:min-h-9 md:min-w-0"
+                  onCopy={() => setFailedCopyUrl(null)}
+                  onCopyError={() => setFailedCopyUrl(baseUrl)}
                   ariaLabel={t('region.copyUrl', 'Copy Fleet API base URL')}
                 />
               )}
             </div>
+            {baseUrl && failedCopyUrl === baseUrl && <div className="space-y-1">
+              <ErrorText>{t('common.copyButton.errorToast', { ns: 'translation', defaultValue: 'Failed to copy' })}</ErrorText>
+              <HelperText>{t('totp.copy.manualHint', 'Clipboard unavailable. Select the displayed text and copy it manually.')}</HelperText>
+            </div>}
           </div>
 
           <KVList

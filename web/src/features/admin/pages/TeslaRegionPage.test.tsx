@@ -26,11 +26,20 @@
  * DLQInspectorPage, …).
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, waitFor, within, fireEvent, act } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+
+const operationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}))
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}))
 
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
@@ -105,7 +114,7 @@ function renderPage() {
 
   const rendered = render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/admin/tesla-region']}>
+      <MemoryRouter initialEntries={['/tesla-region']}>
         <ToastProvider>
           <TeslaRegionPage />
         </ToastProvider>
@@ -135,6 +144,13 @@ function headerRefreshButton(): HTMLButtonElement {
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  onlineManager.setOnline(true)
+  operationalMode.canWrite = true
+  operationalMode.writeBlockReason = null
+})
+
+afterEach(() => {
+  onlineManager.setOnline(true)
 })
 
 describe('TeslaRegionPage retained endpoint', () => {
@@ -312,12 +328,118 @@ describe('TeslaRegionPage', () => {
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith('/tesla/user/region/refresh', {
         method: 'POST',
+        requiresLiveMode: true,
       }),
     )
     const postCalls = mockedRequest.mock.calls.filter(
       ([, opts]) => (opts as { method?: string } | undefined)?.method === 'POST',
     )
     expect(postCalls).toHaveLength(1)
+  })
+
+  describe('TeslaRegionPage corrective presentation', () => {
+    it('keeps a cold paused read distinct from an authoritative empty result and retries the GET', async () => {
+      onlineManager.setOnline(false)
+      operationalMode.canWrite = false
+      operationalMode.writeBlockReason = 'Reconnect before making operational changes.'
+      mockedRequest.mockResolvedValue({ data: null, fetched_at: null })
+      const { qc } = renderPage()
+      await waitFor(() => expect(qc.getQueryState(['tesla-user-region'])?.fetchStatus).toBe('paused'))
+
+      expect(within(endpointRegion()).getByText('Refresh paused')).toBeInTheDocument()
+      expect(within(endpointRegion()).queryByText('No region on record')).toBeNull()
+      expect(within(overviewRegion()).queryByText('Not configured')).toBeNull()
+      expect(within(aboutRegion()).getByText(CN_ZONE)).toBeInTheDocument()
+      expect(headerRefreshButton()).toBeDisabled()
+      fireEvent.click(within(endpointRegion()).getByRole('button', { name: 'Retry' }))
+      expect(mockedRequest).not.toHaveBeenCalledWith('/tesla/user/region/refresh', expect.anything())
+
+      await act(async () => { onlineManager.setOnline(true) })
+      await within(endpointRegion()).findByText('No region on record')
+      expect(mockedRequest).toHaveBeenCalledWith('/tesla/user/region', expect.anything())
+    })
+
+    it('interlocks both empty and header refresh actions for the same pending mutation', async () => {
+      let resolveRefresh: (value: RegionEnvelope) => void = () => {}
+      mockedRequest.mockImplementation((_path: string, options?: { method?: string }) =>
+        options?.method === 'POST'
+          ? new Promise<RegionEnvelope>(resolve => { resolveRefresh = resolve })
+          : Promise.resolve({ data: null, fetched_at: null }),
+      )
+      renderPage()
+      await within(endpointRegion()).findByText('No region on record')
+      const header = headerRefreshButton()
+      const empty = within(endpointRegion()).getByRole('button', { name: 'Refresh' })
+      fireEvent.click(empty)
+      await waitFor(() => expect(empty).toBeDisabled())
+      expect(header).toBeDisabled()
+      expect(empty).toHaveAttribute('aria-busy', 'true')
+      fireEvent.click(empty)
+      fireEvent.click(header)
+      expect(mockedRequest.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(1)
+      resolveRefresh({ data: null, fetched_at: null })
+      await waitFor(() => expect(empty).toBeEnabled())
+      expect(header).toBeEnabled()
+    })
+
+    it.each([
+      'Return to live mode before making operational changes.',
+      'Reconnect before making operational changes.',
+    ])('disables both write entry points and exposes the existing mode reason: %s', async reason => {
+      operationalMode.canWrite = false
+      operationalMode.writeBlockReason = reason
+      mockedRequest.mockResolvedValue({ data: null, fetched_at: null })
+      renderPage()
+      await within(endpointRegion()).findByText('No region on record')
+      const empty = within(endpointRegion()).getByRole('button', { name: 'Refresh' })
+      expect(empty).toBeDisabled()
+      expect(headerRefreshButton()).toBeDisabled()
+      expect(headerRefreshButton()).toHaveAttribute('title', reason)
+      expect(within(endpointRegion()).getByText(reason)).toBeInTheDocument()
+      fireEvent.click(empty)
+      fireEvent.click(headerRefreshButton())
+      expect(mockedRequest.mock.calls.filter(([, options]) => options?.method === 'POST')).toHaveLength(0)
+    })
+
+    it('retains HTTP and omits the secure-transport claim from summary details', async () => {
+      const url = 'http://fleet-api.prd.eu.vn.cloud.tesla.com'
+      mockedRequest.mockResolvedValue(envelope('Europe', url))
+      renderPage()
+      await within(endpointRegion()).findByText(url)
+      expect(within(endpointRegion()).getByText('HTTP')).toBeInTheDocument()
+      fireEvent.click(within(overviewRegion()).getByRole('button', { name: 'Review details' }))
+      const drawer = await screen.findByRole('dialog')
+      expect(drawer).toHaveTextContent('HTTP')
+      expect(drawer).not.toHaveTextContent('Secure transport')
+    })
+
+    it('explains read-only mode on a populated endpoint without disabling copy or detail review', async () => {
+      operationalMode.canWrite = false
+      operationalMode.writeBlockReason = 'Return to live mode before making operational changes.'
+      mockedRequest.mockResolvedValue(envelope('North America', NA_URL))
+      renderPage()
+      await within(endpointRegion()).findByText(NA_URL)
+      expect(screen.getByText('Operational changes are read-only')).toBeInTheDocument()
+      expect(screen.getByText(operationalMode.writeBlockReason)).toBeInTheDocument()
+      expect(headerRefreshButton()).toBeDisabled()
+      expect(within(endpointRegion()).getByRole('button', { name: 'Copy Fleet API base URL' })).toBeEnabled()
+      fireEvent.click(within(overviewRegion()).getByRole('button', { name: 'Review details' }))
+      expect(await screen.findByRole('dialog')).toHaveTextContent(NA_ZONE)
+      expect(within(aboutRegion()).getByText(CN_ZONE)).toBeInTheDocument()
+    })
+
+    it.each([
+      'https://service.eu.example.invalid',
+      'malformed .na. endpoint',
+    ])('preserves the raw unknown endpoint and region without a false zone: %s', async url => {
+      mockedRequest.mockResolvedValue(envelope('Raw account region', url))
+      renderPage()
+      await within(endpointRegion()).findByText(url)
+      expect(within(endpointRegion()).getAllByText('Raw account region')).toHaveLength(2)
+      expect(within(endpointRegion()).queryByText(EU_ZONE)).toBeNull()
+      expect(within(endpointRegion()).queryByText(NA_ZONE)).toBeNull()
+      expect(within(endpointRegion()).getByRole('button', { name: 'Copy Fleet API base URL' })).toBeEnabled()
+    })
   })
 
   it('marks the header refresh control disabled and aria-busy while a refresh is in flight', async () => {

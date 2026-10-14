@@ -13,7 +13,9 @@ import { RefreshCw } from 'lucide-react'
 import { PageLayout } from '@/components/layout'
 import { Button, Icon } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
+import { OperationalWriteNotice } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { deriveDataState } from '@/api/dataState'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
 import {
@@ -31,10 +33,14 @@ export default function TeslaRegionPage() {
 
   const regionQuery = useTeslaUserRegion()
   const regionRefresh = useRefreshTeslaRegion()
+  const { canWrite, writeBlockReason } = useOperationalMode()
 
   // The hook already emits success/error toasts — call mutate() bare so a
   // refresh surfaces exactly one toast rather than two.
-  const refresh = () => regionRefresh.mutate()
+  const refresh = () => {
+    if (regionRefresh.isPending || !canWrite) return
+    regionRefresh.mutate()
+  }
 
   const envelope = regionQuery.data
   const region = envelope?.data?.region ?? null
@@ -65,7 +71,8 @@ export default function TeslaRegionPage() {
       icon={<Icon icon={RefreshCw} size="sm" />}
       loading={regionRefresh.isPending}
       onClick={refresh}
-      disabled={regionRefresh.isPending}
+      disabled={regionRefresh.isPending || !canWrite}
+      title={writeBlockReason ?? undefined}
       aria-busy={regionRefresh.isPending || undefined}
     >
       {t('region.refresh', 'Refresh')}
@@ -80,6 +87,7 @@ export default function TeslaRegionPage() {
       query={regionQuery}
       dataSources={[{ id: 'tesla-region', label: title, query: regionQuery }]}
     >
+      <OperationalWriteNotice />
       <FadeIn>
         <section aria-label={t('region.kpi.section', 'Region overview')}>
           <RegionOperationalBrief
@@ -90,7 +98,8 @@ export default function TeslaRegionPage() {
             scheme={scheme}
             fetchedAt={fetchedAt}
             configured={configured}
-            isLoading={regionQuery.isLoading && !source.hasData}
+            isLoading={source.status === 'initial'}
+            isPaused={source.isRefreshBlocked && !source.hasData}
           />
         </section>
       </FadeIn>
@@ -107,10 +116,15 @@ export default function TeslaRegionPage() {
               regionLabel={regionLabel}
               fetchedAt={fetchedAt}
               isLoading={regionQuery.isLoading && !source.hasData}
+              isInitial={source.status === 'initial'}
+              isPaused={source.isRefreshBlocked && !source.hasData}
               isError={Boolean(source.fatalError)}
               error={source.fatalError}
               onRetry={() => regionQuery.refetch()}
               onRefresh={refresh}
+              isRefreshing={regionRefresh.isPending}
+              refreshDisabled={!canWrite}
+              refreshBlockReason={writeBlockReason}
             />
           </section>
           <section className="xl:col-span-1" aria-label={t('region.about.title', 'About your region')}>
