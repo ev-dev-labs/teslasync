@@ -44,9 +44,10 @@ export function durationMinutes(startedAt: string, endedAt: string | null): numb
 }
 
 export function distanceAddedM(s: ChargingSession): number | null {
-  if (s.start_odometer_m == null || s.end_odometer_m == null) return null;
+  if (typeof s.start_odometer_m !== 'number' || !Number.isFinite(s.start_odometer_m)
+    || typeof s.end_odometer_m !== 'number' || !Number.isFinite(s.end_odometer_m)) return null;
   const delta = s.end_odometer_m - s.start_odometer_m;
-  return delta > 0 ? delta : null;
+  return Number.isFinite(delta) ? delta : null;
 }
 
 export function sessionLabel(s: ChargingSession): string {

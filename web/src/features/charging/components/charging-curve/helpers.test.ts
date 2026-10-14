@@ -8,8 +8,8 @@
 //                          high peak → DC Fast, otherwise Home / AC.
 //   durationMinutes      — happy path, null end, non-positive/equal ranges,
 //                          unparseable timestamps and minute rounding.
-//   distanceAddedM       — positive delta, both missing-odometer guards and the
-//                          zero/negative-delta → null branch.
+//   distanceAddedM       — finite signed/fractional deltas, measured zero,
+//                          missing/invalid readings and overflow → null.
 //   sessionLabel         — composed "date — label — energy kWh" string plus the
 //                          "?" fallback when energy is missing.
 //   generateChargingCurve— flat AC curve, tapered DC curve (monotonic, clamped
@@ -212,14 +212,46 @@ describe('distanceAddedM', () => {
     expect(distanceAddedM(makeSession({ start_odometer_m: 1_000_000, end_odometer_m: 1_050_000 }))).toBe(50_000);
   });
 
-  it('returns null when either odometer reading is missing', () => {
-    expect(distanceAddedM(makeSession({ start_odometer_m: null }))).toBeNull();
-    expect(distanceAddedM(makeSession({ end_odometer_m: null }))).toBeNull();
+  it.each([null, undefined])('returns null when either reading is missing (%s)', value => {
+    for (const field of ['start_odometer_m', 'end_odometer_m']) {
+      const session = makeSession();
+      Object.assign(session, { [field]: value });
+      expect(distanceAddedM(session)).toBeNull();
+    }
   });
 
-  it('returns null for a zero or negative delta', () => {
-    expect(distanceAddedM(makeSession({ start_odometer_m: 1_000_000, end_odometer_m: 1_000_000 }))).toBeNull();
-    expect(distanceAddedM(makeSession({ start_odometer_m: 1_050_000, end_odometer_m: 1_000_000 }))).toBeNull();
+  it.each([NaN, Infinity, -Infinity, '', '1000000', false])(
+    'returns null when either reading is invalid (%s)',
+    value => {
+      for (const field of ['start_odometer_m', 'end_odometer_m']) {
+        const session = makeSession();
+        Object.assign(session, { [field]: value });
+        expect(distanceAddedM(session)).toBeNull();
+      }
+    },
+  );
+
+  it.each([
+    [1_000_000, 1_000_000, 0],
+    [0, 0, 0],
+    [0, 1.25, 1.25],
+    [1.25, 0, -1.25],
+    [1_050_000, 1_000_000, -50_000],
+    [1_000_000.25, 1_000_000.75, 0.5],
+    [1_000_000.75, 1_000_000.25, -0.5],
+  ])('preserves the measured delta from %s to %s as %s meters', (start, end, expected) => {
+    expect(distanceAddedM(makeSession({ start_odometer_m: start, end_odometer_m: end }))).toBe(expected);
+  });
+
+  it('returns null when finite readings produce a non-finite delta', () => {
+    expect(distanceAddedM(makeSession({
+      start_odometer_m: -Number.MAX_VALUE,
+      end_odometer_m: Number.MAX_VALUE,
+    }))).toBeNull();
+    expect(distanceAddedM(makeSession({
+      start_odometer_m: Number.MAX_VALUE,
+      end_odometer_m: -Number.MAX_VALUE,
+    }))).toBeNull();
   });
 });
 
