@@ -13,25 +13,13 @@ import type {
   AiUsage,
 } from '@/hooks/useAiStream';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
 
 export interface HelixEvidenceTrailProps {
   activity: AiToolActivity[];
   state: AiStreamState;
   usage?: AiUsage | null;
-}
-
-function toolLabel(name: string): string {
-  const words = name
-    .replace(/^(query|retrieve|detect|draft|validate|calculate|search)_/, '')
-    .split('_')
-    .filter(Boolean);
-  if (words.length === 0) return name;
-  return words
-    .map((word, index) =>
-      index === 0 ? word.charAt(0).toUpperCase() + word.slice(1) : word,
-    )
-    .join(' ');
 }
 
 export function HelixEvidenceTrail({
@@ -41,6 +29,7 @@ export function HelixEvidenceTrail({
 }: HelixEvidenceTrailProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
+  const { fmtInt } = useNumberFormatting();
   if (activity.length === 0) return null;
 
   const succeeded = activity.filter((item) => item.status === 'succeeded').length;
@@ -48,13 +37,10 @@ export function HelixEvidenceTrail({
   const isGathering = activity.some((item) => item.status === 'running');
   const tokenCount = (usage?.in ?? 0) + (usage?.out ?? 0);
 
-  const sourceLabel =
-    succeeded === 1
-      ? t('helix.evidence.source', 'TeslaSync source')
-      : t('helix.evidence.sources', 'TeslaSync sources');
+  // Activity records execution outcomes, not answer attribution or citations.
   const summary =
     succeeded > 0
-      ? `${t('helix.evidence.grounded', 'Grounded in')} ${succeeded} ${sourceLabel}`
+      ? `${fmtInt(succeeded)} ${t('helix.evidence.successful', 'successful')}`
       : t('helix.evidence.limited', 'Limited evidence');
 
   return (
@@ -72,7 +58,7 @@ export function HelixEvidenceTrail({
           </Text>
         </div>
         <Badge
-          variant={isGathering ? 'info' : succeeded > 0 ? 'success' : 'warning'}
+          variant={isGathering || succeeded > 0 ? 'info' : 'warning'}
           dot
         >
           {isGathering
@@ -111,13 +97,13 @@ export function HelixEvidenceTrail({
               />
             )}
             <Text variant="bodySm" className="min-w-0 break-words">
-              {toolLabel(item.name)}
+              {item.name}
             </Text>
             <Text variant="caption" className="min-w-0 break-words">
               {item.status === 'running'
                 ? t('helix.evidence.reading', 'Reading')
                 : item.status === 'succeeded'
-                  ? t('helix.evidence.used', 'Used')
+                  ? t('helix.evidence.successful', 'successful')
                   : t('helix.evidence.unavailable', 'Unavailable')}
             </Text>
           </div>
@@ -126,12 +112,12 @@ export function HelixEvidenceTrail({
 
       {state === 'done' && (
         <Text as="p" variant="caption" className="mt-2 break-words">
-          {succeeded} {t('helix.evidence.successful', 'successful')} · {failed}{' '}
+          {fmtInt(succeeded)} {t('helix.evidence.successful', 'successful')} · {fmtInt(failed)}{' '}
           {t('helix.evidence.unavailable', 'unavailable')}
           {tokenCount > 0 && (
             <>
               {' · '}
-              {tokenCount} {t('helix.evidence.tokens', 'tokens')}
+              {fmtInt(tokenCount)} {t('helix.evidence.tokens', 'tokens')}
             </>
           )}
         </Text>
