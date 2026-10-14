@@ -41,13 +41,24 @@ import { ApiError } from '@/lib/resilience';
 import type { ExportBulkResult, ExportJobSummary } from '@/api/hooks/useExports';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
 import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui';
+import { formatDateTime } from '@/lib/dateFormat';
 
+const datePreferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  timezone_user: 'UTC',
+  tz_display_default: 'user',
+}));
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
-    settings: { decimal_precision: 2, locale: 'en-US', unit_of_length: 'km',
-      unit_of_temp: 'C', unit_of_pressure: 'bar', currency_symbol: '$' },
+    settings: { decimal_precision: 2, unit_of_length: 'km',
+      unit_of_temp: 'C', unit_of_pressure: 'bar', currency_symbol: '$', ...datePreferences },
+    locale: datePreferences.locale,
     settingsUnavailable: false,
   }),
+}));
+
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
 }));
 
 // ── i18n stub: resolve the fallback string (2nd arg) and interpolate {{var}}. ──
@@ -131,7 +142,7 @@ describe('ExportsPage — phase-five contract adoption', () => {
     });
     try {
       renderPage();
-      const mobile = screen.getByRole('group', { name: 'exports:jobs' });
+      const mobile = screen.getByRole('group', { name: 'Export jobs' });
       expect(screen.queryByRole('table')).not.toBeInTheDocument();
       expect(within(mobile).getAllByRole('link', { name: /Download export/ })).toHaveLength(2);
       expect(within(mobile).getByRole('link', { name: 'Download export job-ready-1' }))
@@ -333,6 +344,7 @@ function kpiValue(label: string): string {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', timezone_user: 'UTC', tz_display_default: 'user' });
   window.localStorage.clear();
   vi.mocked(downloadCSV).mockReset();
   vi.mocked(downloadJSON).mockReset();
@@ -347,9 +359,75 @@ beforeEach(() => {
   mockJobs.mockReturnValue(makeQuery({ data: JOBS }));
 });
 
+describe('ExportsPage — saved date preferences', () => {
+  const expectedDate = (value: string) => formatDateTime(value, {
+    locale: datePreferences.locale, tz: datePreferences.timezone_user,
+  });
+
+  it('updates cells, filter labels, row names and KPI freshness without changing raw UTC exports', async () => {
+    const snapshot = structuredClone(JOBS);
+    const updatedAt = '2026-04-24T16:30:00Z';
+    mockJobs.mockReturnValue(makeQuery({ data: JOBS, dataUpdatedAt: Date.parse(updatedAt) }));
+    const view = renderPage();
+    for (const preferences of [
+      { locale: 'en-US-u-hc-h23', timezone_user: 'America/Los_Angeles' },
+      { locale: 'en-US-u-hc-h12', timezone_user: 'Asia/Tokyo' },
+    ]) {
+      Object.assign(datePreferences, preferences);
+      view.rerenderPage();
+      const created = expectedDate(JOBS[0].created_at);
+      expect(within(screen.getByRole('table')).getByText(created)).toBeInTheDocument();
+      expect(screen.getByRole('checkbox', { name: `drives export, ${created}` })).toBeInTheDocument();
+      expect(within(kpiRegion()).getByText(`Last successful load: ${expectedDate(updatedAt)}`)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Created filter' }));
+      const filter = screen.getByRole('dialog', { name: 'Created filter' });
+      expect(within(filter).getByText(created)).toBeInTheDocument();
+      fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
+    expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual(JOBS.map((row) => ({
+      type: row.type, format: row.format, file_size: row.file_size,
+      created_at: row.created_at, status: row.status,
+      actions: row.status === 'ready' ? 'Download' : '—',
+    })));
+    expect(JOBS).toEqual(snapshot);
+  });
+
+  it('updates mobile date summaries, selection names and all-field quick view after preferences change', async () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      width: 375, height: 200, x: 0, y: 0, top: 0, right: 375, bottom: 200, left: 0,
+      toJSON: () => ({}),
+    });
+    try {
+      const view = renderPage();
+      Object.assign(datePreferences, { locale: 'en-GB-u-hc-h23', timezone_user: 'Asia/Tokyo' });
+      view.rerenderPage();
+      const created = expectedDate(JOBS[0].created_at);
+      const mobile = screen.getByRole('group', { name: 'Export jobs' });
+      expect(within(mobile).getByText(created)).toBeInTheDocument();
+      fireEvent.click(within(mobile).getByRole('button', { name: 'Select' }));
+      expect(within(mobile).getByRole('checkbox', { name: `drives export, ${created}` })).toBeInTheDocument();
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0]);
+      const details = await screen.findByRole('dialog');
+      expect(within(details).getByText(created)).toBeInTheDocument();
+      for (const label of ['Type', 'Format', 'Size', 'Created', 'Status', 'Actions']) {
+        expect(within(details).getByText(label)).toBeInTheDocument();
+      }
+      fireEvent.keyDown(window, { key: 'Escape' });
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+});
+
 describe('ExportsPage — loading', () => {
   it('shows skeletons and never flashes the table or the empty state', () => {
-    mockJobs.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
+    mockJobs.mockReturnValue(makeQuery({
+      isLoading: true, isFetching: true, fetchStatus: 'fetching', data: undefined,
+    }));
     const { container } = renderPage();
 
     // Panel scaffolding is always present…
@@ -400,7 +478,107 @@ describe('ExportsPage — empty', () => {
   });
 });
 
+describe('ExportsPage — controlled raw sorting', () => {
+  const rows = [
+    job({ id: 'sort-a', type: 'alpha', format: 'zip', status: 'ready', file_size: 900,
+      created_at: '2026-04-24T10:00:00+02:00' }),
+    job({ id: 'sort-b', type: 'beta', format: 'csv', status: 'failed', file_size: 1024,
+      created_at: '2026-04-24T07:30:00Z' }),
+    job({ id: 'sort-c', type: 'gamma', format: 'json', status: 'queued', file_size: 0,
+      created_at: '2026-04-24T09:00:00Z' }),
+  ];
+  const rowTypes = () => within(screen.getByRole('table'))
+    .getAllByRole('checkbox', { name: /export,/ })
+    .map((checkbox) => checkbox.getAttribute('aria-label')?.split(' export,')[0]);
+
+  it.each([
+    { header: 'Type', descending: ['gamma', 'beta', 'alpha'] },
+    { header: 'Format', descending: ['alpha', 'gamma', 'beta'] },
+    { header: 'Size', descending: ['beta', 'alpha', 'gamma'] },
+    { header: 'Created', descending: ['gamma', 'alpha', 'beta'] },
+    { header: 'Status', descending: ['alpha', 'gamma', 'beta'] },
+  ])('sorts $header in both directions without changing the source or summary', ({ header, descending }) => {
+    const snapshot = structuredClone(rows);
+    mockJobs.mockReturnValue(makeQuery({ data: rows }));
+    renderPage();
+    expect(rowTypes()).toEqual(['alpha', 'beta', 'gamma']);
+    fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: header, exact: true }));
+    expect(rowTypes()).toEqual(descending);
+    expect(within(screen.getByRole('table')).getByRole('columnheader', { name: new RegExp(header) }))
+      .toHaveAttribute('aria-sort', 'descending');
+    fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: header, exact: true }));
+    expect(rowTypes()).toEqual([...descending].reverse());
+    expect(within(screen.getByRole('table')).getByRole('columnheader', { name: new RegExp(header) }))
+      .toHaveAttribute('aria-sort', 'ascending');
+    expect(kpiValue('Total exports')).toBe('3');
+    expect(kpiValue('Ready')).toBe('1');
+    expect(rows).toEqual(snapshot);
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps missing and invalid numeric/date values distinct from valid zero and preserves tied source order', () => {
+    const jobs = [
+      job({ id: 'missing', type: 'missing', status: 'ready', created_at: '' }),
+      job({ id: 'zero', type: 'zero', status: 'ready', file_size: 0, created_at: '1970-01-01T00:00:00Z' }),
+      job({ id: 'invalid', type: 'invalid', status: 'ready', file_size: Number.NaN, created_at: 'invalid' }),
+      job({ id: 'positive', type: 'positive', status: 'ready', file_size: 1, created_at: '2026-04-24T00:00:00Z' }),
+    ];
+    const snapshot = structuredClone(jobs);
+    mockJobs.mockReturnValue(makeQuery({ data: jobs }));
+    renderPage();
+    for (const header of ['Size', 'Created']) {
+      fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: header, exact: true }));
+      expect(rowTypes()).toEqual(['positive', 'zero', 'missing', 'invalid']);
+      fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: header, exact: true }));
+      expect(rowTypes()).toEqual(['missing', 'invalid', 'zero', 'positive']);
+    }
+    expect(jobs).toEqual(snapshot);
+  });
+
+  it('retains sorting, selection and downloads through refresh failure and applies the same sort after recovery', () => {
+    mockJobs.mockReturnValue(makeQuery({ data: rows }));
+    const view = renderPage();
+    fireEvent.click(within(screen.getByRole('table')).getByRole('checkbox', { name: /alpha export,/ }));
+    fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: 'Size', exact: true }));
+    mockJobs.mockReturnValue(makeQuery({ data: rows, error: new Error('refresh failed'), isError: true }));
+    view.rerenderPage();
+    expect(rowTypes()).toEqual(['beta', 'alpha', 'gamma']);
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /alpha export,/ })).toBeChecked();
+    expect(screen.getByRole('link', { name: 'Download export sort-a' }))
+      .toHaveAttribute('href', '/api/v1/export/jobs/sort-a/download');
+
+    mockJobs.mockReturnValue(makeQuery({ data: rows, isFetching: true, fetchStatus: 'fetching' }));
+    view.rerenderPage();
+    expect(rowTypes()).toEqual(['beta', 'alpha', 'gamma']);
+    expect(screen.getByRole('checkbox', { name: /alpha export,/ })).toBeChecked();
+    mockJobs.mockReturnValue(makeQuery({ data: rows.map((row) =>
+      row.id === 'sort-a' ? { ...row, file_size: 2048 } : row) }));
+    view.rerenderPage();
+    expect(rowTypes()).toEqual(['alpha', 'beta', 'gamma']);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('checkbox', { name: /alpha export,/ })).toBeChecked();
+    expect(kpiValue('Total exports')).toBe('3');
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+});
+
 describe('ExportsPage — populated', () => {
+  it('names the jobs table from its existing title without changing its persistence identity', () => {
+    renderPage();
+    const table = screen.getByRole('table', { name: 'Export jobs' });
+    expect(table.querySelector('caption')).toHaveTextContent('Export jobs');
+    expect(screen.queryByRole('table', { name: 'exports:jobs' })).not.toBeInTheDocument();
+    expect(within(table).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(JOBS.length);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reorder or hide columns' }));
+    const menu = screen.getByRole('menu', { name: 'Reorder or hide columns' });
+    fireEvent.click(within(menu).getByRole('checkbox', { name: 'Show or hide Format' }));
+    expect(window.localStorage.getItem('teslasync.table.exports:jobs.columns')).not.toBeNull();
+    expect(window.localStorage.getItem('teslasync.table.Export jobs.columns')).toBeNull();
+    expect(mutateAsyncSpy).not.toHaveBeenCalled();
+  });
+
   it('reviews all summary captions without changing table rows, selection or any job', async () => {
     const snapshot = structuredClone(JOBS);
     renderPage();
@@ -625,7 +803,7 @@ describe('ExportsPage — refresh', () => {
 
       mockJobs.mockReturnValue(makeQuery({ data: JOBS, refetch }));
       view.rerenderPage();
-      expect(screen.getByRole('table', { name: 'exports:jobs' })).toBeInTheDocument();
+      expect(screen.getByRole('table', { name: 'Export jobs' })).toBeInTheDocument();
       expect(kpiValue('Total exports')).toBe('6');
       expect(screen.queryByText('Service unavailable')).not.toBeInTheDocument();
       expect(mutateAsyncSpy).not.toHaveBeenCalled();
@@ -741,12 +919,13 @@ describe('ExportsPage — refresh', () => {
       const snapshot = structuredClone(jobs);
       mockJobs.mockReturnValue(makeQuery({ data: jobs }));
       renderPage();
+      fireEvent.click(within(screen.getByRole('table')).getByRole('button', { name: 'Size', exact: true }));
       const checkboxes = within(screen.getByRole('table')).getAllByRole('checkbox', { name: /export,/ });
       expect(checkboxes).toHaveLength(25);
       fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
       fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
       await waitFor(() => expect(downloadJSON).toHaveBeenCalledOnce());
-      expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual(jobs.map((row) => ({
+      expect(vi.mocked(downloadJSON).mock.calls[0][1]).toEqual([...jobs].reverse().map((row) => ({
         type: row.type, format: 'csv', file_size: row.file_size,
         created_at: row.created_at, status: 'ready', actions: 'Download',
       })));
@@ -759,8 +938,8 @@ describe('ExportsPage — refresh', () => {
       fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
       await waitFor(() => expect(downloadJSON).toHaveBeenCalledTimes(2));
       expect(vi.mocked(downloadJSON).mock.calls[1][1]).toEqual([
-        { type: 'export-0', format: 'csv', file_size: 0, created_at: jobs[0].created_at, status: 'ready', actions: 'Download' },
-        { type: 'export-1', format: 'csv', file_size: 1024, created_at: jobs[1].created_at, status: 'ready', actions: 'Download' },
+        { type: 'export-30', format: 'csv', file_size: 30 * 1024, created_at: jobs[30].created_at, status: 'ready', actions: 'Download' },
+        { type: 'export-29', format: 'csv', file_size: 29 * 1024, created_at: jobs[29].created_at, status: 'ready', actions: 'Download' },
       ]);
 
       await waitFor(() => expect(screen.getByRole('button', { name: 'Export list' })).not.toBeDisabled());

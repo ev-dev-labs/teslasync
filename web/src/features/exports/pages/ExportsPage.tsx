@@ -8,6 +8,7 @@ import {
   BUTTON_BASE,
   BUTTON_VARIANTS,
   DataTable,
+  useSortToggle,
   Text,
   ConfirmDialog,
   type Column,
@@ -30,7 +31,7 @@ import {
   type ExportJobSummary,
 } from '@/api/hooks/useExports';
 import { Icons } from '@/lib/icons';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { cn } from '@/lib/cn';
 
 import { ExportKpiBand } from '../components/ExportKpiBand';
@@ -49,6 +50,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
  */
 export default function ExportsPage() {
   const { formatBytes } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('exportsList.title', 'Exports'));
 
@@ -64,6 +66,22 @@ export default function ExportsPage() {
     : undefined;
   const jobs: ExportJobSummary[] = useMemo(() => jobsRaw ?? [], [jobsRaw]);
   const stats = useMemo(() => deriveExportStats(jobs), [jobs]);
+  const { sortKey, sortDir, onSort, sortFn } = useSortToggle();
+  const sortedJobs = useMemo(() => sortFn(jobs, (job, key) => {
+    switch (key) {
+      case 'type': return job.type ?? '';
+      case 'format': return job.format ?? '';
+      case 'status': return job.status ?? '';
+      case 'file_size':
+        return job.file_size != null && Number.isFinite(job.file_size)
+          ? job.file_size : Number.NEGATIVE_INFINITY;
+      case 'created_at': {
+        const timestamp = Date.parse(job.created_at);
+        return Number.isFinite(timestamp) ? timestamp : Number.NEGATIVE_INFINITY;
+      }
+      default: return '';
+    }
+  }), [jobs, sortFn]);
 
   const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([]);
   const [deleteFailures, setDeleteFailures] = useState<ExportBulkResult['failed']>([]);
@@ -190,7 +208,7 @@ export default function ExportsPage() {
           ),
       },
     ],
-    [t, formatBytes],
+    [t, formatBytes, formatDateTime],
   );
 
   const mobilePresentation = useMemo<MobileDataTablePresentation<ExportJobSummary>>(
@@ -208,7 +226,7 @@ export default function ExportsPage() {
       },
       inlineActions: (job) => columns.find((column) => column.key === 'actions')?.render(job),
     }),
-    [columns, formatBytes, t],
+    [columns, formatBytes, formatDateTime, t],
   );
 
   const actions = (
@@ -283,8 +301,12 @@ export default function ExportsPage() {
               ) : (
                 <DataTable
                   tableId="exports:jobs"
+                  caption={t('exportsList.jobs.title', 'Export jobs')}
                   columns={columns}
-                  data={jobs}
+                  data={sortedJobs}
+                  sortKey={sortKey}
+                  sortDir={sortDir}
+                  onSort={onSort}
                   enableValueFilters
                   keyExtractor={(j) => j.id}
                   mobileColumns={['type', 'status', 'actions']}
