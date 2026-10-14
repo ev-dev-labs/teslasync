@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AutomationHistory } from '@/api/types';
 import '../../../i18n';
 import { AutomationHistoryTable } from './AutomationHistoryTable';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+
+const initialPreferences = getFormatterPreferences();
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ settings: { locale: 'en-US', timezone: 'UTC' } }),
@@ -42,6 +45,63 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
   document.documentElement.removeAttribute('data-mode');
+  setGlobalLocale(initialPreferences.locale);
+  setGlobalPrecision(initialPreferences.precision);
+});
+
+describe('AutomationHistoryTable action count formatting', () => {
+  it.each([
+    ['en-US', '12,345/67,890'],
+    ['de-DE', '12.345/67.890'],
+  ])('formats both exact counts with %s grouping', (locale, expected) => {
+    setGlobalLocale(locale);
+    setGlobalPrecision(4);
+    render(<AutomationHistoryTable rows={[{
+      ...rows[0], actions_succeeded: 12345, actions_total: 67890,
+    }]} onOpen={vi.fn()} />);
+    resize(1440);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it.each([
+    [2, 2, '2/2'],
+    [1, 2, '1/2'],
+    [0, 2, '0/2'],
+    [0, 0, '0/0'],
+    [4, 2, '4/2'],
+    [Number.MAX_SAFE_INTEGER, 0, '9,007,199,254,740,991/0'],
+  ])('preserves the populated ratio %s/%s', (succeeded, total, expected) => {
+    setGlobalLocale('en-US');
+    render(<AutomationHistoryTable rows={[{
+      ...rows[0], actions_succeeded: succeeded, actions_total: total,
+    }]} onOpen={vi.fn()} />);
+    resize(1440);
+    expect(screen.getByText(expected)).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, '2'])(
+    'keeps unknown or invalid count %s distinct from known zero on either side',
+    value => {
+      // Exercise malformed wire values without widening the shared API type.
+      const unknownSucceeded = Object.assign({}, rows[0], { actions_succeeded: value, actions_total: 0 });
+      const unknownTotal = Object.assign({}, rows[1], { actions_succeeded: 0, actions_total: value });
+      render(<AutomationHistoryTable rows={[unknownSucceeded, unknownTotal]} onOpen={vi.fn()} />);
+      resize(1440);
+      expect(screen.getByText('\u2014/0')).toBeInTheDocument();
+      expect(screen.getByText('0/\u2014')).toBeInTheDocument();
+    },
+  );
+
+  it('updates memoized ratios after the locale preference changes', () => {
+    setGlobalLocale('en-US');
+    render(<AutomationHistoryTable rows={[{
+      ...rows[0], actions_succeeded: 1234, actions_total: 5678,
+    }]} onOpen={vi.fn()} />);
+    resize(1440);
+    expect(screen.getByText('1,234/5,678')).toBeInTheDocument();
+    act(() => setGlobalLocale('de-DE'));
+    expect(screen.getByText('1.234/5.678')).toBeInTheDocument();
+  });
 });
 
 describe.each(['light', 'dark'])('AutomationHistoryTable in %s mode', mode => {
