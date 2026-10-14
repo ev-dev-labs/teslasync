@@ -6,12 +6,12 @@
  *
  * Source of truth (read directly from):
  *   - internal/api/dlq/handler.go            (DLQEntrySummary, DLQEntryFull, DLQReplayResponse)
- *   - internal/api/flags_handler.go          (FlagsListResponse, FlagWriteResponse)
- *   - internal/api/ingest_xray_handler.go    (IngestXRayResponse)
+ *   - internal/api/apiflagsh/handler.go      (FlagsListResponse, FlagWriteResponse)
+ *   - internal/api/ingestxray/handler.go     (IngestXRayResponse)
  *   - internal/api/drive_diagnostic_handler.go (DriveDiagnosticResponse)
  *   - internal/database/audit/dlq_replay_repo.go (DLQReplayAuditRecord, result enum)
  *   - internal/database/feature_flag_changes_repo.go (FeatureFlagChange, operation enum)
- *   - internal/database/ingest_xray_repo.go  (IngestXRayFieldStat, IngestXRayBucket)
+ *   - internal/database/observability/ingest_xray_repo.go (IngestXRayFieldStat, IngestXRayBucket)
  *   - internal/database/drive_diagnostic_repo.go (DriveDiagnosticTransition, DriveDiagnosticSignal)
  *
  * If you change any of the Go structs above, update this file in lock-step.
@@ -162,8 +162,8 @@ export function isFeatureFlagOperation(value: unknown): value is FeatureFlagOper
   return isLiteralMember(FEATURE_FLAG_OPERATIONS, value);
 }
 
-/** Flag value is stored as JSON in Postgres and surfaces here as `unknown`. */
-export type FeatureFlagValue = unknown;
+/** Opaque stored text, including empty and JSON-looking strings. */
+export type FeatureFlagValue = string;
 
 export interface FeatureFlagEntry {
   key: string;
@@ -182,7 +182,7 @@ export interface FeatureFlagSetRequest {
 
 export interface FeatureFlagWriteResponse {
   key: string;
-  old_value: FeatureFlagValue | null;
+  old_value?: FeatureFlagValue;
   new_value?: FeatureFlagValue;
   deleted?: boolean;
   audit_id: number;
@@ -254,9 +254,25 @@ export interface IngestXRayResponse {
   vehicle_id: number;
   window: IngestXRayWindow;
   bucket: IngestXRayBucket;
-  generated_at: string;
+  /** Server clock at response generation, not the client's fetch timestamp. */
+  now: string;
+  /** Actual server observation-window cutoff. */
+  window_start: string;
+  /** Omitted when the vehicle has never been observed; may precede the window. */
+  last_seen_at?: string;
+  /** Server-computed age of last_seen_at; zero is a valid fresh observation. */
+  freshness_seconds?: number;
+  /** Optional historical metadata; the current server emits `now` instead. */
+  generated_at?: string;
+  /** Full-window sample total, including fields omitted from the capped ranking. */
   total_samples: number;
-  unique_fields: number;
+  /**
+   * Full-window distinct count only when explicitly supplied by the server.
+   * The current endpoint omits it: absence means unknown, not zero or fields.length.
+   * Neither the capped ranking nor the bucket sample counts prove completeness.
+   */
+  unique_fields?: number;
+  /** Capped per-field ranking, not an exhaustive catalog of the observation window. */
   fields: IngestXRayFieldStat[];
   buckets: IngestXRayBucketPoint[];
 }

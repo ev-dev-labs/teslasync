@@ -3,7 +3,7 @@
  *
  * TanStack Query bindings for the typed feature-flag registry mounted
  * under `/api/v1/system/flags*`. Backed by Go handlers in
- * `internal/api/flags_handler.go`.
+ * `internal/api/apiflagsh/handler.go`.
  *
  * Endpoint summary (router.go ~L3540):
  *   GET /system/flags → FeatureFlagsListResponse
@@ -111,6 +111,9 @@ export function useSetFlag() {
     { key: string; value: FeatureFlagValue; reason: string }
   >({
     mutationFn: ({ key, value, reason }) => {
+      if (typeof value !== 'string') {
+        throw new TypeError('Feature flag values must be strings');
+      }
       const body: FeatureFlagSetRequest = { value, reason };
       return request<FeatureFlagWriteResponse>(
         `/system/flags/${encodeURIComponent(key)}`,

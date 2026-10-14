@@ -109,7 +109,7 @@ export default function FeatureFlagsPage() {
     try {
       await deleteFlag.mutateAsync({
         key: pendingDelete.key,
-        reason: deleteReason.trim(),
+        reason: deleteReason,
       });
       setPendingDelete(null);
       setDeleteReason('');

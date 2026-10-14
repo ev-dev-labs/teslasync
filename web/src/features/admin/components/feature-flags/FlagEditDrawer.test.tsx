@@ -3,24 +3,9 @@
  *
  * FlagEditDrawer is the single form that powers BOTH the "create flag"
  * (`initial={null}`) and "edit flag" (`initial={entry}`) journeys. Its
- * whole job is to gate a Save on three independent conditions — a non-empty
- * key, a non-empty audit reason, and a value textarea that parses as JSON —
- * then hand the parsed value back to the parent. These tests pin the
- * behaviour an operator actually depends on:
- *
- *   1. Create vs edit chrome: title, key mutability, immutable-key helper,
- *      and the pretty-printed JSON seed for an existing value.
- *   2. The three-way Save gate (key / reason / valid-JSON) and the exact
- *      trimmed, parsed payload forwarded to `onSave`.
- *   3. Non-object JSON values (scalars, arrays, null) round-trip verbatim.
- *   4. Invalid JSON and empty value surface an inline error and lock Save.
- *   5. `saving` locks the whole footer and marks Save busy for AT.
- *   6. Cancel, the header Close affordance, and Escape all route to
- *      `onClose` without ever committing.
- *   7. Re-seeding: reopening for a different flag discards the previous
- *      draft instead of clobbering an unrelated row.
- *   8. Regression: a flag whose stored value is `undefined` seeds an empty
- *      editor instead of throwing (JSON.stringify(undefined) === undefined).
+ * job is to gate Save on a non-empty key and audit reason, then hand opaque
+ * text to the parent. Empty, scalar-looking and structured-looking strings
+ * round-trip unchanged. Pending, cancellation and reseeding behavior remain.
  *
  * react-i18next is stubbed to echo the English fallback (with `{{var}}`
  * interpolation) so assertions read against stable, in-repo copy regardless
@@ -60,6 +45,7 @@ vi.mock('react-i18next', async () => {
 });
 
 import { FlagEditDrawer } from './FlagEditDrawer';
+import { classifyFlagValue } from './flagValueKind';
 import type {
   FeatureFlagEntry,
   FeatureFlagValue,
@@ -85,7 +71,7 @@ afterEach(() => cleanup());
 // ── Field / control accessors (accessible-name driven) ──
 const keyField = () => screen.getByLabelText(/Flag key/i) as HTMLInputElement;
 const valueField = () =>
-  screen.getByLabelText(/value \(json\)/i) as HTMLTextAreaElement;
+  screen.getByLabelText(/^Value$/i) as HTMLTextAreaElement;
 const reasonField = () => screen.getByLabelText(/reason/i) as HTMLInputElement;
 const saveButton = () => screen.getByRole('button', { name: /Save flag/i });
 const cancelButton = () => screen.getByRole('button', { name: /^cancel$/i });
@@ -119,6 +105,21 @@ function fillValid(key = 'feature.new', value = '{"enabled":true}', reason = 'wh
 }
 
 describe('FlagEditDrawer', () => {
+  it.each(['', '0042', 'false', ' \n{"enabled":true}\n ', '[1,2]', '{ not json'])(
+    'seeds and saves existing stored text %j without changing it',
+    (value) => {
+      const { onSave } = setup({ initial: { key: 'existing.flag', value } });
+      expect(valueField()).toHaveValue(value);
+      fireEvent.change(reasonField(), { target: { value: '  keep exact text  ' } });
+      fireEvent.click(saveButton());
+      expect(onSave).toHaveBeenCalledWith({
+        key: 'existing.flag',
+        value,
+        reason: '  keep exact text  ',
+      });
+    },
+  );
+
   it('renders nothing while closed', () => {
     setup({ open: false });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
@@ -141,13 +142,12 @@ describe('FlagEditDrawer', () => {
     expect(
       screen.queryByText(/immutable once created/i),
     ).not.toBeInTheDocument();
-    // Empty value is surfaced as a required error, and Save is gated.
-    expect(screen.getByText('Value is required.')).toBeInTheDocument();
+    expect(screen.queryByText('Value is required.')).not.toBeInTheDocument();
     expect(saveButton()).toBeDisabled();
   });
 
-  it('opens in EDIT mode with a disabled key, pretty-printed value, and immutable helper', () => {
-    setup({ initial: { key: 'dlq.replay_enabled', value: { enabled: true } } });
+  it('opens in EDIT mode with a disabled key, exact stored text, and immutable helper', () => {
+    setup({ initial: { key: 'dlq.replay_enabled', value: '{\n  "enabled": true\n}' } });
 
     expect(
       screen.getByText('Edit flag "dlq.replay_enabled"'),
@@ -162,7 +162,7 @@ describe('FlagEditDrawer', () => {
     ).toBeInTheDocument();
   });
 
-  it('enables Save on valid input and forwards the trimmed key + parsed value + trimmed reason', () => {
+  it('enables Save and forwards the trimmed key with unchanged value and reason', () => {
     const { onSave } = setup();
 
     fillValid('  feature.new  ', '{"enabled":true}', '  rolling out  ');
@@ -174,22 +174,26 @@ describe('FlagEditDrawer', () => {
     expect(onSave).toHaveBeenCalledTimes(1);
     expect(onSave).toHaveBeenCalledWith({
       key: 'feature.new',
-      value: { enabled: true },
-      reason: 'rolling out',
+      value: '{"enabled":true}',
+      reason: '  rolling out  ',
     });
   });
 
-  it('round-trips non-object JSON values (scalar, array, string, null)', () => {
+  it('round-trips empty, numeric-looking, boolean-looking and structured text strings', () => {
     const cases: Array<{ raw: string; expected: FeatureFlagValue }> = [
-      { raw: 'false', expected: false },
-      { raw: '42', expected: 42 },
-      { raw: '[1,2,3]', expected: [1, 2, 3] },
-      { raw: '"hi"', expected: 'hi' },
-      { raw: 'null', expected: null },
+      { raw: '', expected: '' },
+      { raw: '   ', expected: '   ' },
+      { raw: 'false', expected: 'false' },
+      { raw: '0042', expected: '0042' },
+      { raw: '[1,2,3]', expected: '[1,2,3]' },
+      { raw: '"hi"', expected: '"hi"' },
+      { raw: 'null', expected: 'null' },
+      { raw: ' \n{"enabled":true}\n ', expected: ' \n{"enabled":true}\n ' },
     ];
 
     for (const { raw, expected } of cases) {
       const { onSave, unmount } = setup();
+      expect(classifyFlagValue(raw)).toBe('string');
       fillValid('k', raw, 'r');
       fireEvent.click(saveButton());
       expect(onSave).toHaveBeenCalledWith({ key: 'k', value: expected, reason: 'r' });
@@ -197,20 +201,19 @@ describe('FlagEditDrawer', () => {
     }
   });
 
-  it('locks Save and shows a parse error when the value is not valid JSON', () => {
+  it('accepts arbitrary text without JSON validation', () => {
     const { onSave } = setup();
 
     fillValid('feature.new', '{ not json', 'reason');
 
-    expect(screen.getByText(/Invalid JSON/i)).toBeInTheDocument();
-    expect(saveButton()).toBeDisabled();
+    expect(screen.queryByText(/Invalid JSON/i)).not.toBeInTheDocument();
+    expect(saveButton()).not.toBeDisabled();
 
-    // Clicking the disabled control must not commit.
     fireEvent.click(saveButton());
-    expect(onSave).not.toHaveBeenCalled();
+    expect(onSave).toHaveBeenCalledWith({ key: 'feature.new', value: '{ not json', reason: 'reason' });
   });
 
-  it('keeps Save disabled until BOTH a value and a reason are supplied', () => {
+  it('keeps Save disabled until a nonblank reason is supplied', () => {
     setup();
 
     // Key + valid value only — reason still empty.
@@ -252,8 +255,8 @@ describe('FlagEditDrawer', () => {
   });
 
   it('re-seeds the form when reopened for a different flag', () => {
-    const flagA: FeatureFlagEntry = { key: 'flag.a', value: 1 };
-    const flagB: FeatureFlagEntry = { key: 'flag.b', value: { mode: 'x' } };
+    const flagA: FeatureFlagEntry = { key: 'flag.a', value: '1' };
+    const flagB: FeatureFlagEntry = { key: 'flag.b', value: '{"mode":"x"}' };
 
     const { rerender } = render(
       <FlagEditDrawer
@@ -290,21 +293,21 @@ describe('FlagEditDrawer', () => {
     );
 
     expect(keyField()).toHaveValue('flag.b');
-    expect(valueField()).toHaveValue(JSON.stringify(flagB.value, null, 2));
+    expect(valueField()).toHaveValue(flagB.value);
     // The stale draft reason is discarded so B's audit row is never mislabeled.
     expect(reasonField()).toHaveValue('');
   });
 
-  it('seeds an empty editor for a flag whose stored value is undefined instead of crashing', () => {
-    const initial: FeatureFlagEntry = { key: 'x.undef', value: undefined };
+  it('seeds and saves an existing empty stored string', () => {
+    const initial: FeatureFlagEntry = { key: 'x.empty', value: '' };
 
-    // Before the null-safety fix, defaultValueJson returned `undefined` and the
-    // first `valueInput.trim()` threw, blank-crashing the drawer on mount.
-    expect(() => setup({ initial })).not.toThrow();
+    const { onSave } = setup({ initial });
 
-    expect(screen.getByText('Edit flag "x.undef"')).toBeInTheDocument();
+    expect(screen.getByText('Edit flag "x.empty"')).toBeInTheDocument();
     expect(keyField()).toBeDisabled();
     expect(valueField()).toHaveValue('');
-    expect(screen.getByText('Value is required.')).toBeInTheDocument();
+    fireEvent.change(reasonField(), { target: { value: 'keep default' } });
+    fireEvent.click(saveButton());
+    expect(onSave).toHaveBeenCalledWith({ key: 'x.empty', value: '', reason: 'keep default' });
   });
 });

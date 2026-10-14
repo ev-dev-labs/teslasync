@@ -10,7 +10,7 @@
  *      KPI band counts (total / boolean / structured / deletes / contributors)
  *      and the value-composition buckets from the flag values.
  *   2. "Add flag" opens the Drawer in CREATE mode (empty, editable key).
- *   3. Filling + saving forwards the parsed JSON value to `setFlag` and closes
+ *   3. Filling + saving forwards opaque stored text to `setFlag` and closes
  *      the drawer on success.
  *   4. A save rejection keeps the drawer open so the operator can retry.
  *   5. Row "Edit" opens the Drawer in EDIT mode with a disabled, pre-filled key.
@@ -127,10 +127,10 @@ if (!window.matchMedia) {
 }
 
 const FLAGS: FeatureFlagEntry[] = [
-  { key: 'dlq.replay_enabled', value: true },
-  { key: 'ui.new_dashboard', value: false },
-  { key: 'limits.config', value: { max: 10 } },
-  { key: 'rollout.buckets', value: [1, 2, 3] },
+  { key: 'dlq.replay_enabled', value: 'true' },
+  { key: 'ui.new_dashboard', value: 'false' },
+  { key: 'limits.config', value: '{"max":10}' },
+  { key: 'rollout.buckets', value: '[1,2,3]' },
   { key: 'banner.text', value: 'hello' },
 ];
 
@@ -143,7 +143,7 @@ const CHANGES: FeatureFlagChange[] = [
     flag_key: 'dlq.replay_enabled',
     operation: 'set',
     old_value: null,
-    new_value: true,
+    new_value: 'true',
     reason: 'enable replay',
     trace_id: 't1',
   },
@@ -154,7 +154,7 @@ const CHANGES: FeatureFlagChange[] = [
     actor_ip: '10.0.0.2',
     flag_key: 'legacy.removed',
     operation: 'delete',
-    old_value: 42,
+    old_value: '42',
     new_value: null,
     reason: 'cleanup legacy',
     trace_id: 't2',
@@ -249,11 +249,10 @@ describe('FeatureFlagsPage', () => {
     expect(screen.getByText('Value composition')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Recent changes' })).toBeInTheDocument();
 
-    // KPI band counts derived from BOTH feeds (5 flags: 2 boolean, 2
-    // structured, 1 string; 2 changes: 1 delete, 2 distinct actors).
+    // Scalar-looking and structured-looking contents are still stored strings.
     expect(metricValue('Total flags')).toBe('5');
-    expect(metricValue('Boolean toggles')).toBe('2');
-    expect(metricValue('Structured')).toBe('2');
+    expect(metricValue('Boolean toggles')).toBe('0');
+    expect(metricValue('Structured')).toBe('0');
     expect(metricValue('Recent changes')).toBe('2');
     expect(metricValue('Deletes')).toBe('1');
     expect(metricValue('Contributors')).toBe('2');
@@ -264,8 +263,8 @@ describe('FeatureFlagsPage', () => {
     expect(screen.getByText('rollout.buckets')).toBeInTheDocument();
 
     // Composition: only non-empty value buckets are drawn (null bucket absent).
-    expect(screen.getByText('Boolean')).toBeInTheDocument();
-    expect(screen.getByText('Object')).toBeInTheDocument();
+    expect(screen.getByText('String')).toBeInTheDocument();
+    expect(screen.queryByText('Object')).not.toBeInTheDocument();
     expect(screen.queryByText('Null')).not.toBeInTheDocument();
 
     // Change-audit log: actors, operations, reasons.
@@ -289,7 +288,7 @@ describe('FeatureFlagsPage', () => {
     expect(hoisted.setFlagMutateAsync).not.toHaveBeenCalled();
   });
 
-  it('forwards the parsed JSON value to setFlag and closes the drawer on save', async () => {
+  it('forwards stored text and exact reason to setFlag and closes the drawer on save', async () => {
     renderPage();
 
     fireEvent.click(screen.getByRole('button', { name: 'Add flag' }));
@@ -297,11 +296,11 @@ describe('FeatureFlagsPage', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
-    fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
+    fireEvent.change(screen.getByLabelText(/^Value$/i), {
       target: { value: '{"enabled":true}' },
     });
     fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
-      target: { value: 'rolling out' },
+      target: { value: '  rolling out  ' },
     });
 
     const save = screen.getByRole('button', { name: /Save flag/i });
@@ -311,8 +310,8 @@ describe('FeatureFlagsPage', () => {
     await waitFor(() =>
       expect(hoisted.setFlagMutateAsync).toHaveBeenCalledWith({
         key: 'feature.new',
-        value: { enabled: true },
-        reason: 'rolling out',
+        value: '{"enabled":true}',
+        reason: '  rolling out  ',
       }),
     );
     await waitFor(() =>
@@ -330,7 +329,7 @@ describe('FeatureFlagsPage', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
       target: { value: 'feature.new' },
     });
-    fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
+    fireEvent.change(screen.getByLabelText(/^Value$/i), {
       target: { value: 'false' },
     });
     fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
@@ -362,7 +361,7 @@ describe('FeatureFlagsPage', () => {
       fireEvent.change(screen.getByRole('textbox', { name: /^Flag key\b/i }), {
         target: { value: 'feature.pending' },
       });
-      fireEvent.change(screen.getByLabelText(/value \(json\)/i), {
+      fireEvent.change(screen.getByLabelText(/^Value$/i), {
         target: { value: '  false  ' },
       });
       fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
@@ -381,17 +380,17 @@ describe('FeatureFlagsPage', () => {
         expect(backdrop).toHaveAttribute('aria-hidden', 'true');
         fireEvent.click(backdrop);
       } else {
-        const editor = within(dialog).getByLabelText(/value \(json\)/i);
+        const editor = within(dialog).getByLabelText(/^Value$/i);
         editor.focus();
         fireEvent.keyDown(editor, { key: 'Escape' });
       }
       expect(screen.getByRole('dialog', { name: 'Create flag' })).toBe(dialog);
-      expect(within(dialog).getByLabelText(/value \(json\)/i)).toHaveValue('  false  ');
+      expect(within(dialog).getByLabelText(/^Value$/i)).toHaveValue('  false  ');
       expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  preserve this draft  ');
       expect(hoisted.setFlagMutateAsync).toHaveBeenCalledExactlyOnceWith({
         key: 'feature.pending',
-        value: false,
-        reason: 'preserve this draft',
+        value: '  false  ',
+        reason: '  preserve this draft  ',
       });
 
       await act(async () => {
@@ -401,7 +400,7 @@ describe('FeatureFlagsPage', () => {
       });
       view.rerenderPage();
       expect(screen.getByRole('dialog', { name: 'Create flag' })).toBe(dialog);
-      expect(within(dialog).getByLabelText(/value \(json\)/i)).toHaveValue('  false  ');
+      expect(within(dialog).getByLabelText(/^Value$/i)).toHaveValue('  false  ');
       expect(within(dialog).getByRole('textbox', { name: /^Reason\b/i })).toHaveValue('  preserve this draft  ');
       expect(within(dialog).getByRole('button', { name: /Save flag/i })).not.toBeDisabled();
       fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
@@ -423,8 +422,8 @@ describe('FeatureFlagsPage', () => {
     const keyInput = screen.getByRole('textbox', { name: /^Flag key\b/i }) as HTMLInputElement;
     expect(keyInput).toBeDisabled();
     expect(keyInput).toHaveValue('ui.new_dashboard');
-    // The stored `false` value is seeded into the JSON editor.
-    expect(screen.getByLabelText(/value \(json\)/i)).toHaveValue('false');
+    // The stored text is seeded without adding JSON quotes.
+    expect(screen.getByLabelText(/^Value$/i)).toHaveValue('false');
   });
 
   it('gates the delete confirm on a reason then forwards { key, reason } to deleteFlag', async () => {
@@ -440,7 +439,7 @@ describe('FeatureFlagsPage', () => {
     expect(screen.getByRole('button', { name: 'Delete flag' })).toBeDisabled();
 
     fireEvent.change(screen.getByRole('textbox', { name: /^Reason\b/i }), {
-      target: { value: 'no longer needed' },
+      target: { value: '  no longer needed  ' },
     });
 
     const confirm = screen.getByRole('button', { name: 'Delete flag' });
@@ -450,7 +449,7 @@ describe('FeatureFlagsPage', () => {
     await waitFor(() =>
       expect(hoisted.deleteFlagMutateAsync).toHaveBeenCalledWith({
         key: 'limits.config',
-        reason: 'no longer needed',
+        reason: '  no longer needed  ',
       }),
     );
     await waitFor(() =>
@@ -542,7 +541,7 @@ describe('FeatureFlagsPage', () => {
     hoisted.state.changes = makeChangesQuery({ data: undefined, error: new Error('audit unavailable'), isError: true });
     renderPage();
     expect(metricValue('Total flags')).toBe('5');
-    expect(metricValue('Boolean toggles')).toBe('2');
+    expect(metricValue('Boolean toggles')).toBe('0');
     expect(metricValue('Recent changes')).toBe('—');
     expect(metricValue('Deletes')).toBe('—');
     expect(metricValue('Contributors')).toBe('—');

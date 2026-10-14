@@ -87,8 +87,8 @@ function calledOpts(i = 0): RequestInit & { requiresLiveMode?: boolean } {
 const listPayload: FeatureFlagsListResponse = {
   count: 2,
   flags: [
-    { key: 'beta.dashboard', value: true },
-    { key: 'rollout.percent', value: { pct: 25 } },
+    { key: 'beta.dashboard', value: 'true' },
+    { key: 'rollout.percent', value: '{"pct":25}' },
   ],
 };
 
@@ -156,6 +156,19 @@ describe('featureFlagKeys', () => {
 
 // ── useFlags ─────────────────────────────────────────────────────────────────
 describe('useFlags', () => {
+  it('keeps all stored string shapes unchanged on reads', async () => {
+    const payload: FeatureFlagsListResponse = {
+      count: 4,
+      flags: ['', '0042', 'false', '{"enabled":true}'].map((value, index) => ({
+        key: `flag.${index}`,
+        value,
+      })),
+    };
+    mockedRequest.mockResolvedValueOnce(payload);
+    const { result } = renderHook(() => useFlags(), { wrapper: wrapperFor(makeClient()) });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+  });
   it('GETs /system/flags, threads an abort signal, and surfaces the registry', async () => {
     mockedRequest.mockResolvedValueOnce(listPayload);
     const { result } = renderHook(() => useFlags(), { wrapper: wrapperFor(makeClient()) });
@@ -178,7 +191,7 @@ describe('useFlags', () => {
 
 // ── useFlag ──────────────────────────────────────────────────────────────────
 describe('useFlag', () => {
-  const entry: FeatureFlagEntry = { key: 'beta.dashboard', value: { rollout: 50 } };
+  const entry: FeatureFlagEntry = { key: 'beta.dashboard', value: '{"rollout":50}' };
 
   it('stays disabled and never fires when the key is null', async () => {
     const { result } = renderHook(() => useFlag(null), { wrapper: wrapperFor(makeClient()) });
@@ -252,10 +265,38 @@ describe('useFlagChanges', () => {
 
 // ── useSetFlag ───────────────────────────────────────────────────────────────
 describe('useSetFlag', () => {
+  it.each(['', '0042', 'false', ' \n{"enabled":true}\n ', '[1,2]', '{ not json'])(
+    'preserves stored text %j and the audit reason',
+    async (value) => {
+      mockedRequest.mockResolvedValueOnce({ key: 'k', audit_id: 1 });
+      const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(makeClient()) });
+      const reason = '  retain this reason  ';
+      await act(async () => {
+        await result.current.mutateAsync({ key: 'k', value, reason });
+      });
+      expect(JSON.parse(calledOpts().body as string)).toEqual({ value, reason });
+    },
+  );
+
+  it.each([true, 42, null, { enabled: true }, [1, 2]])(
+    'rejects unsupported non-string value %j without a request',
+    async (value) => {
+      const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(makeClient()) });
+      await act(async () => {
+        // @ts-expect-error Exercise untyped callers without weakening the public string contract.
+        await expect(result.current.mutateAsync({ key: 'k', value, reason: 'why' }))
+          .rejects.toThrow('Feature flag values must be strings');
+      });
+      expect(mockedRequest).not.toHaveBeenCalled();
+      expect(toastError).toHaveBeenCalled();
+      expect(toastSuccess).not.toHaveBeenCalled();
+    },
+  );
+
   const write: FeatureFlagWriteResponse = {
     key: 'beta.dashboard',
-    old_value: false,
-    new_value: true,
+    old_value: 'false',
+    new_value: 'true',
     audit_id: 12,
   };
 
@@ -266,13 +307,13 @@ describe('useSetFlag', () => {
     const { result } = renderHook(() => useSetFlag(), { wrapper: wrapperFor(client) });
 
     await act(async () => {
-      await result.current.mutateAsync({ key: 'beta/x', value: true, reason: 'enable' });
+      await result.current.mutateAsync({ key: 'beta/x', value: 'true', reason: 'enable' });
     });
 
     expect(calledUrl()).toBe('/system/flags/beta%2Fx');
     expect(calledOpts().method).toBe('PUT');
     expect(calledOpts().requiresLiveMode).toBe(true);
-    expect(JSON.parse(calledOpts().body as string)).toEqual({ value: true, reason: 'enable' });
+    expect(JSON.parse(calledOpts().body as string)).toEqual({ value: 'true', reason: 'enable' });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: featureFlagKeys.flag('beta/x') });
     expect(toastSuccess).toHaveBeenCalledWith(
@@ -289,7 +330,7 @@ describe('useSetFlag', () => {
 
     await act(async () => {
       await result.current
-        .mutateAsync({ key: 'beta.dashboard', value: 1, reason: 'x' })
+        .mutateAsync({ key: 'beta.dashboard', value: '1', reason: 'x' })
         .catch(() => undefined);
     });
 
@@ -303,7 +344,7 @@ describe('useSetFlag', () => {
 
     await act(async () => {
       await result.current
-        .mutateAsync({ key: 'beta.dashboard', value: 1, reason: 'x' })
+        .mutateAsync({ key: 'beta.dashboard', value: '1', reason: 'x' })
         .catch(() => undefined);
     });
 
@@ -316,7 +357,7 @@ describe('useSetFlag', () => {
 describe('useDeleteFlag', () => {
   const write: FeatureFlagWriteResponse = {
     key: 'beta.dashboard',
-    old_value: true,
+    old_value: 'true',
     deleted: true,
     audit_id: 13,
   };
