@@ -1,0 +1,1425 @@
+{
+  "item": "phase6-qa-ownership-model-trust",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_ONLY",
+  "started_at_utc": "2026-10-14T02:27:00.8357910Z",
+  "queue_reserved_at_utc": "2026-10-14T02:22:14.747Z",
+  "return_deadline_utc": "2026-10-14T02:42:14.747Z",
+  "hard_deadline_utc": "2026-10-14T02:47:14.747Z",
+  "writable_files": [
+    "docs/frontend-audits/phase6-qa-ownership-model-trust.json",
+    "web/logs/phase6-qa-ownership-model-trust.log"
+  ],
+  "source_pins": [
+    {
+      "path": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "sha256_before": "7408d51f8428ca3b50ec068a91c008d1391d779cf9476178895649af1dc3135f",
+      "bytes_before": 34751,
+      "lines_before": 883,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "7408d51f8428ca3b50ec068a91c008d1391d779cf9476178895649af1dc3135f",
+      "lines_after": 883,
+      "bytes_after": 34751,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/pages/ModelTrustPage.test.tsx",
+      "sha256_before": "c035865f7efbbc2f37d09b5a52b51d7819952e8bb1cf6299d79c8efb23ec0f6f",
+      "bytes_before": 20721,
+      "lines_before": 385,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "c035865f7efbbc2f37d09b5a52b51d7819952e8bb1cf6299d79c8efb23ec0f6f",
+      "lines_after": 385,
+      "bytes_after": 20721,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/index.ts",
+      "sha256_before": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "bytes_before": 402,
+      "lines_before": 8,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "lines_after": 8,
+      "bytes_after": 402,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256_before": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "bytes_before": 3318,
+      "lines_before": 88,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "lines_after": 88,
+      "bytes_after": 3318,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256_before": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "bytes_before": 10990,
+      "lines_before": 193,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "lines_after": 193,
+      "bytes_after": 10990,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256_before": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "bytes_before": 7754,
+      "lines_before": 194,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "lines_after": 194,
+      "bytes_after": 7754,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256_before": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "bytes_before": 644,
+      "lines_before": 22,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "lines_after": 22,
+      "bytes_after": 644,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "sha256_before": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "bytes_before": 4122,
+      "lines_before": 130,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "lines_after": 130,
+      "bytes_after": 4122,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "sha256_before": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "bytes_before": 6662,
+      "lines_before": 141,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "lines_after": 141,
+      "bytes_after": 6662,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "sha256_before": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "bytes_before": 3450,
+      "lines_before": 81,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "lines_after": 81,
+      "bytes_after": 3450,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "sha256_before": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "bytes_before": 249,
+      "lines_before": 9,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "lines_after": 9,
+      "bytes_after": 249,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/formatters.ts",
+      "sha256_before": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "bytes_before": 6076,
+      "lines_before": 148,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "lines_after": 148,
+      "bytes_after": 6076,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/api/hooks/useOwnership.ts",
+      "sha256_before": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "bytes_before": 28971,
+      "lines_before": 801,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "lines_after": 801,
+      "bytes_after": 28971,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/types/ownership.ts",
+      "sha256_before": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "bytes_before": 27171,
+      "lines_before": 1106,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "lines_after": 1106,
+      "bytes_after": 27171,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes_before": 658,
+      "lines_before": 17,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines_after": 17,
+      "bytes_after": 658,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes_before": 2095,
+      "lines_before": 47,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines_after": 47,
+      "bytes_after": 2095,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes_before": 18863,
+      "lines_before": 462,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines_after": 462,
+      "bytes_after": 18863,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256_before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "bytes_before": 6593,
+      "lines_before": 174,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines_after": 174,
+      "bytes_after": 6593,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/hooks/useHiddenSeries.ts",
+      "sha256_before": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+      "bytes_before": 3062,
+      "lines_before": 88,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+      "lines_after": 88,
+      "bytes_after": 3062,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/hooks/useChartPalette.ts",
+      "sha256_before": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "bytes_before": 2108,
+      "lines_before": 49,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "lines_after": 49,
+      "bytes_after": 2108,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes_before": 15482,
+      "lines_before": 434,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines_after": 434,
+      "bytes_after": 15482,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes_before": 2035,
+      "lines_before": 65,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines_after": 65,
+      "bytes_after": 2035,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "bytes_before": 77157,
+      "lines_before": 1707,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines_after": 1707,
+      "bytes_after": 77157,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256_before": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "bytes_before": 9039,
+      "lines_before": 165,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "lines_after": 165,
+      "bytes_after": 9039,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256_before": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "bytes_before": 41517,
+      "lines_before": 1006,
+      "capture": "first hash inspection tool2612; exact UTC not emitted",
+      "sha256_after": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines_after": 1006,
+      "bytes_after": 41517,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes_before": 10783,
+      "lines_before": 259,
+      "capture": "2026-10-14T02:33:23.167574+00:00",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines_after": 259,
+      "bytes_after": 10783,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256_before": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes_before": 3322,
+      "lines_before": 74,
+      "capture": "2026-10-14T02:33:23.167727+00:00",
+      "sha256_after": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lines_after": 74,
+      "bytes_after": 3322,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "sha256_before": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "bytes_before": 4738,
+      "lines_before": 116,
+      "capture": "2026-10-14T02:33:23.167850+00:00",
+      "sha256_after": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lines_after": 116,
+      "bytes_after": 4738,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256_before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "bytes_before": 4432,
+      "lines_before": 119,
+      "capture": "2026-10-14T02:33:23.167966+00:00",
+      "sha256_after": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lines_after": 119,
+      "bytes_after": 4432,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256_before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes_before": 5174,
+      "lines_before": 93,
+      "capture": "2026-10-14T02:33:23.168086+00:00",
+      "sha256_after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lines_after": 93,
+      "bytes_after": 5174,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes_before": 4411,
+      "lines_before": 168,
+      "capture": "2026-10-14T02:33:23.168200+00:00",
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines_after": 168,
+      "bytes_after": 4411,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256_before": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "bytes_before": 6443,
+      "lines_before": 172,
+      "capture": "2026-10-14T02:33:23.168333+00:00",
+      "sha256_after": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "lines_after": 172,
+      "bytes_after": 6443,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256_before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes_before": 5230,
+      "lines_before": 148,
+      "capture": "2026-10-14T02:33:23.168463+00:00",
+      "sha256_after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines_after": 148,
+      "bytes_after": 5230,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256_before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes_before": 1493,
+      "lines_before": 39,
+      "capture": "2026-10-14T02:33:23.168712+00:00",
+      "sha256_after": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lines_after": 39,
+      "bytes_after": 1493,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+      "sha256_before": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "bytes_before": 836,
+      "lines_before": 16,
+      "capture": "2026-10-14T02:33:23.168890+00:00",
+      "sha256_after": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "lines_after": 16,
+      "bytes_after": 836,
+      "unchanged": true,
+      "after_capture_utc": "2026-10-14T02:41:07.689444+00:00"
+    }
+  ],
+  "confirmed_issues": [
+    {
+      "id": "MT01",
+      "classification": "confirmed-source",
+      "rule": "scoring-context",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 804,
+      "title": "Scoring editor loses the prediction quantity and canonical unit",
+      "mechanism": "Score it captures only prediction ID, vehicle ID and a numeric draft at281-285. The mounted outcome form804-846 identifies vehicle but not model, target, prediction ID, forecast/reference or SI unit. Observed value819-830 has no unit hint/suffix; different range_m, soc_pct, cost_minor and energy_wh outcomes use the identical field.",
+      "source_repro": "Source trace: select an unscored energy_wh or cost_minor row, then inspect the outcome form. It cannot tell a user whether 10 means Wh, metres, percent or minor units. Switch selected vehicle away and back: only the captured vehicle is explained, not the original prediction quantity. No scoring action performed.",
+      "repro_executed": false,
+      "fix": "Capture an immutable scoring context and render its model/target/prediction identity, raw SI unit and reference alongside the observation input. Do not convert the submitted raw value or guess currency.",
+      "owner_need": "ownership-model-trust-editor",
+      "related_sites": [
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 284
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 819
+        }
+      ],
+      "dedup": "New bounded source finding; no source repair attempted."
+    },
+    {
+      "id": "MT02",
+      "classification": "confirmed-source",
+      "rule": "ledger-evidence-projection",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 184,
+      "title": "Ledger does not expose stored row provenance or signed raw error",
+      "mechanism": "PredictionColumns184-297 render model, forecast, observation, absolute percentage error, interval membership, horizon, prediction time and an action. Prediction.reference and Prediction.error_value are never read by the page after recording; mobile full details reuse those same columns, not full raw Prediction fields.",
+      "source_repro": "Source trace with a row having reference=\"sensor validation batch\" and error_value=-5: neither field has a visible/detail column. For predicted_value=0 and observed_value=5, abs_error_pct may be null while a raw signed error exists; Error column renders an em dash instead of the available signed raw difference. This is a projection defect, not proof of what a live backend computes.",
+      "repro_executed": false,
+      "fix": "Use current DataTable columns/allDetails to retain per-row reference and the separately labelled signed source error with si_unit. Keep absolute percentage error distinct, zero and null distinct, and preserve existing rows/order/actions.",
+      "owner_need": "ownership-model-trust-evidence",
+      "related_sites": [
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 751
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 754
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 226
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 857
+        }
+      ],
+      "dedup": "New bounded source finding; no source repair attempted."
+    },
+    {
+      "id": "MT03",
+      "classification": "confirmed-source",
+      "rule": "calibration-evidence-projection",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 587,
+      "title": "Calibration fallback omits bin coverage and selected-model quality",
+      "mechanism": "CalibrationData keeps bin.coverage_pct at139, but dataColumns587-604 exposes only name,error,bias,samples and the chart only error/bias. ChartContainer fallback maps dataColumns at905/922, so neither null nor zero coverage is represented. Selected ModelScorecard.quality at types791 is never passed to the page evidence trailer; trailer867-868 uses report-wide quality/evidence only.",
+      "source_repro": "Source trace with coverage_pct=null,0 or65.123456 and selectedCard.quality insufficient/reasons while report.quality is sufficient: the bin coverage and model-specific quality window/reasons have no rendering path. Raw sample_count is retained but does not replace those facts. No chart/browser action performed.",
+      "repro_executed": false,
+      "fix": "Expose coverage as a separately labelled percent with unknown fallback in the existing accessible/detail data path; expose the selected model quality/window/reasons without relabelling portfolio evidence as model evidence. Keep raw bin values and existing series.",
+      "owner_need": "ownership-model-trust-evidence",
+      "related_sites": [
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 139
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 867
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 791
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "line": 922
+        }
+      ],
+      "dedup": "New bounded source finding; no source repair attempted."
+    },
+    {
+      "id": "MT04",
+      "classification": "confirmed-source",
+      "rule": "pending-edit-retention",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "high",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 163,
+      "title": "Successful older submission hides edits made during pending state",
+      "mechanism": "Submit handlers snapshot payloads and only compare open-instance counters on success163/179. Pending disables Submit/Cancel/row actions, but forecast Input/Select fields694-794 and outcome Input819-830 remain editable. Draft edits do not advance the instance counter, so a successful earlier payload closes the editor containing newer, unsent values.",
+      "source_repro": "Source state trace: dispatch forecast value10, leave isPending=true, change a still-enabled input to20, fulfill the original request. The same instance passes the success guard and setPredictOpen(false) hides20 although only10 was sent. The scoring form has the same mechanism at179. No request or mutation was executed.",
+      "repro_executed": false,
+      "fix": "Either freeze all fields for the active submission or compare a submitted draft revision and retain newer unsent edits visibly on success. Preserve genuine success-only invalidation/toasts, failed-draft retention and captured vehicle/prediction identity.",
+      "owner_need": "ownership-model-trust-editor",
+      "related_sites": [
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 179
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 751
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 825
+        }
+      ],
+      "dedup": "New bounded source finding; no source repair attempted."
+    },
+    {
+      "id": "MT05",
+      "classification": "confirmed-source",
+      "rule": "date-preferences-bypassed",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 266,
+      "title": "Prediction and evidence dates ignore saved locale/timezone",
+      "mechanism": "Page imports the pure formatDateTime at33 and calls it with no options for predicted_at,observed_at and first/last_scored_at. OwnershipBrief62/68/71 and EvidencePanel99/143/145 do likewise. lib/dateFormat.ts54-62 defaults to browser locale/timezone, whereas useDateFormat.ts73-95 supplies the effective saved locale/tz.",
+      "source_repro": "Source trace: browser zoneAmerica/Los_Angeles, saved tz_display_default=utc and a saved non-browser locale. All cited calls omit opts and therefore use browser rendering rather than the saved setting. No preference or browser operation performed. 12/24-hour compliance is unverified, not assumed fixed by the existing hook.",
+      "repro_executed": false,
+      "fix": "Use the existing preference-aware date boundary at page and shared ownership consumers, keeping raw instants and last-load time distinct from source observation. Name interpretation zone where necessary; do not change the pure helper default globally.",
+      "owner_need": "ownership-date-preferences",
+      "related_sites": [
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 62
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 71
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 99
+        }
+      ],
+      "dedup": "Shared duplicate: CR11 in charging-reconciliation, CL003 date sites in consumables-lifecycle, and insurance-telematics F07. One existing ownership date-preference need, not one task per caller."
+    },
+    {
+      "id": "MT06",
+      "classification": "confirmed-source",
+      "rule": "workspace-range-contract",
+      "contract": [
+        "MDC-032"
+      ],
+      "severity": "medium",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 88,
+      "title": "Analysis window remains page-local with no exact workspace bounds",
+      "mechanism": "Page owns90-day window and30/60/90/180/365 Select at449-457. useModelTrust563 sends only vehicle_id/window_days, query key includes no absolute bounds. RANGE_ENABLED_PATHS23-77 excludes /ownership/model-trust. No useRangeState is imported.",
+      "source_repro": "Source trace: inspect the exact route registry and hook signature. Header custom startInstant/endInstantExclusive cannot express this query or server aggregate; page analysis window does not consume shared scope. No header/API action performed.",
+      "repro_executed": false,
+      "fix": "Retain current rolling choices/default and report bounds until the existing integration owner establishes exact start/end filtering semantics for both whole-range scorecards and ledger. Register route/adopt header only with real typed/backend bounds support; no loaded-row filtering substitute.",
+      "owner_need": "ownership-model-trust-range-integration",
+      "related_sites": [
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 563
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23
+        }
+      ],
+      "dedup": "Inherited audit-page-159 architecture finding at93/requiredSharedChanges; Phase5 terminal also reports range integration need. No existing exact repair queue row found; parent owns reservation, backend contract remains UNKNOWN."
+    },
+    {
+      "id": "MT07",
+      "classification": "confirmed-source",
+      "rule": "initial-paused-trust",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "line": 43,
+      "title": "Initial paused trust brief labels a nonfetching query as loading",
+      "mechanism": "Without retained data, isPending=true/fetchStatus=paused derives isRefreshBlocked=true/statusinitial. OwnershipBrief statusLabel tests source.isLoading||source.isPending and loading76 also uses those flags without checking isRefreshBlocked. It therefore declares Loading source and suppresses metrics although the request is deferred.",
+      "source_repro": "Source trace: enabled=true,data=undefined,isPending=true,isLoading=false,isFetching=false,fetchStatus=paused. OwnershipPanel separately announces an initial pause, but its preserved brief announces Loading source rather than paused. No render/test executed.",
+      "repro_executed": false,
+      "fix": "Give initial refresh-blocked state precedence and render the existing explicit paused/unknown presentation without claiming a network cause, successful empty response or fabricated zeros. Preserve retained-pause handling and source-specific retry.",
+      "owner_need": "ownership-source-state",
+      "related_sites": [
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 75
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 193
+        }
+      ],
+      "dedup": "Duplicate of consumables-lifecycle CL004, owner ownership-source-state; reuse that shared need."
+    },
+    {
+      "id": "MT08",
+      "classification": "confirmed-source",
+      "rule": "editor-source-trust",
+      "contract": [
+        "MDC-026",
+        "MDC-033",
+        "MDC-044",
+        "MDC-045",
+        "MDC-046"
+      ],
+      "severity": "medium",
+      "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "line": 52,
+      "title": "Independent editor masks initial read failure/pause and removes retry",
+      "mechanism": "Editing with no retained register data sets independentEditor=true at38. Its ready state wins before fatalError/isRefreshBlocked at51-54; errorRecovery71 is explicitly removed. In ModelTrustPage ledger editing is predictOpen||outcomeFor!=null at664. Editors survive, but that source shell stops exposing its fatal/pause reason and own retry. Other panels/header are not erased.",
+      "source_repro": "Source trace: initial trust query error or paused, open Record prediction. The ledger switches from source failure/pause to ready and removes source retry despite the read remaining unavailable. This does not imply a write failed or authorize offline save. Existing OwnershipPanel.test.tsx165-175 actually asserts no retry for this branch; tests were only read.",
+      "repro_executed": false,
+      "fix": "Preserve the independent editor while showing source read trust/fatal-or-pause context and its individual recovery separately. Keep failed query, failed mutation and unsaved user input as distinct states; do not blank the form or gate all panels.",
+      "owner_need": "ownership-source-state",
+      "related_sites": [
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line": 70
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 664
+        }
+      ],
+      "dedup": "Duplicate of consumables-lifecycle CL005, same ownership-source-state root as MT07; no additional shared task."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "MTC01",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 284,
+      "title": "Forecast-derived default can be submitted as an observation",
+      "mechanism": "Score it seeds observed_value from row.predicted_value; required input is already nonempty and submit168-179 has no measurement-entry/provenance acknowledgement. Test377 expects the12345 forecast default.",
+      "source_repro": "Open an unscored row and submit unchanged: payload observation equals its forecast. No action performed.",
+      "why_candidate": "An explicit Score prediction action could be intended user confirmation of an equal real observation; product policy not established. Do not call this an automatic fabricated measurement or proved backend contamination.",
+      "needs": "Define observed-evidence entry/confirmation policy; retain real measured0.",
+      "owner_need": "ownership-model-trust-editor"
+    },
+    {
+      "id": "MTC02",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 176,
+      "title": "Observation time is dispatch time, not independently supplied evidence time",
+      "mechanism": "observed_at is new Date().toISOString(); form contains no observation date/time input.",
+      "source_repro": "Scoring a historical real outcome would send now, not its original observation instant; no request executed.",
+      "why_candidate": "Backend meaning of observed_at versus recorded-at needs existing contract validation; no backend/data/API reads or actions performed.",
+      "needs": "Resolve timestamp semantics before any narrow UI change; do not manufacture a historical time.",
+      "owner_need": "ownership-model-trust-editor"
+    },
+    {
+      "id": "MTC03",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 357,
+      "title": "Default fixed precision still conceals tiny nonzero specialist values",
+      "mechanism": "fmtScientificNumber119-121 in numberFormat.ts is fixed-decimal fmtNumber(max(saved_precision,3)), not exponent/adaptive output. Default saved2 therefore formats tiny4.56e-5 and-1.23e-5 at3decimals; page test218 forces saved7. Raw chart inputs remain unchanged, unlike the repaired original toFixed defect.",
+      "source_repro": "Trace savedprecision2/minimum3 with these source values; labels round to0.000/-0.000 while chart remains raw. No application formatter execution or test performed.",
+      "why_candidate": "Saved-precision preservation is intentional; adaptive specialist display policy is not approved. This is not a renewed failed precision objective or a request to globally change formatting.",
+      "needs": "Bounded diagnostic precision policy/evidence at existing formatter owner; preserve signs/raw data/preferences.",
+      "owner_need": "existing-number-format-policy"
+    },
+    {
+      "id": "MTC04",
+      "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "line": 767,
+      "title": "Partial/inverted uncertainty bounds are neither explained nor locally cross-validated",
+      "mechanism": "Each optional bound independently maps empty to null, accepts stepany, and both values are submitted directly. Table displays interval only when both are present at206.",
+      "source_repro": "A low-only draft or low>high reaches the submit payload; returned one-sided bounds have no visible interval branch. No submission executed.",
+      "why_candidate": "Server acceptance/validation and allowed one-sided-bound semantics were not inspected. Native required/min do not establish those backend semantics.",
+      "needs": "Resolve existing interval contract then add owned field/form validation if required; preserve nullable bounds and all valid signed values.",
+      "owner_need": "ownership-model-trust-editor"
+    },
+    {
+      "id": "MTC05",
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "line": 73,
+      "title": "Known quality status localization requires technical-ID versus human-label disposition",
+      "mechanism": "quality.status is rendered directly; known labels already exist in VerdictBadge. Prior CL002/DG-07/insuranceF12 call this hardcoded-string.",
+      "why_candidate": "The current I18N_GUIDELINES explicitly exempts technical database enum values. Returned status text is not a hardcoded JSX English literal; prior report counts are not adopted blindly. Human-label intent needs bounded disposition.",
+      "source_repro": "Trace statuslimited directly into badge under Data quality; no locale/browser action performed.",
+      "needs": "One shared ownership-evidence-label owner; map only approved user-facing labels, preserve technical IDs and arbitrary source strings.",
+      "owner_need": "ownership-evidence-label",
+      "dedup": "CL002 in consumables, DG-07 in data-governance, F12 in insurance; not added to confirmed hardcoded-string total."
+    }
+  ],
+  "native_needs": [
+    {
+      "id": "MTN01",
+      "owner": "existing phase6-fix-model-trust-scoped-regressions; attempts2 exhausted",
+      "classification": "historical-failure/unresolved-mobile-proof",
+      "sites": [
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 543
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.tsx",
+          "line": 854
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 507
+        },
+        {
+          "file": "web/src/features/ownership/pages/ModelTrustPage.test.tsx",
+          "line": 350
+        }
+      ],
+      "need": "Actual narrow-container Quick view and full details/calibration/scoring reachability remain unaccepted. ResizeObserver source and allColumns full-details mechanism exist; historical test at350 failed before downstream assertions. Do not diagnose fixture versus product without authorized new evidence. No automatic retry/reset, helper or passing-file rerun.",
+      "status": "NOTRUN this attempt; queue narrative only, historical raw log unavailable"
+    },
+    {
+      "id": "MTN02",
+      "owner": "future authorized mounted acceptance, evidence-only",
+      "classification": "unrun-native-matrix",
+      "need": "Mission widths320/375/390/430/768/1024/1280/1440/1920/2560, narrow allocated containers, light/dark/custom/forced-colors, RTL/long labels/200%text, reducedmotion/lowbandwidth, native safeareas, keyboard/focus/restore, screenreader announcements, field-error association, 44px target rectangles, timezone and12/24h display. Input md default min-h-10 is40px at16px root, not measured44; page gives actions44, Select defaults44 belowmd. Actual CSS/geometry/contrast and operational-mode/permission/write guards remain unverified.",
+      "status": "NOTRUN; no browser/API/model/provider/job/data/network action authorized"
+    }
+  ],
+  "lexical_check": {
+    "scope": [
+      "web/src/features/ownership/pages/ModelTrustPage.tsx",
+      "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "web/src/features/ownership/components/EvidencePanel.tsx",
+      "web/src/features/ownership/components/MutationError.tsx",
+      "web/src/features/ownership/components/VerdictBadge.tsx",
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "web/src/features/ownership/formatters.ts"
+    ],
+    "patterns": {
+      "static-inline-style": "style\\s*=\\s*\\{\\{[^}]*var\\(--",
+      "raw-html": "<(?:button|input|textarea|select|table)\\b",
+      "direct-library-import": "from\\s*[\\x27\\x22](?:recharts|react-leaflet|framer-motion)[\\x27\\x22]",
+      "old-api-import": "from\\s*[\\x27\\x22](?:\\.\\./)+api[\\x27\\x22]",
+      "double-prefix": "[\\x27\\x22`]/api/v1/",
+      "camelcase-param": "[?&][a-z]+[A-Z][A-Za-z]*=",
+      "hidden-section": "\\w+\\s*&&\\s*<(?:GlassPanel|OwnershipPanel|EvidencePanel)\\b",
+      "hardcoded-string": ">\\s*[A-Za-z][^<>{}\\n]*<",
+      "fetch-useeffect": "\\bfetch\\s*\\(|\\buseEffect\\s*\\("
+    },
+    "raw_match_counts": {
+      "static-inline-style": 0,
+      "raw-html": 1,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "fetch-useeffect": 0,
+      "missing-page-container": 0
+    },
+    "matches": [
+      {
+        "rule": "raw-html",
+        "file": "web/src/features/ownership/formatters.ts",
+        "line": 135,
+        "text": "/** ISO date-time string for `<input type=\"datetime-local\">` round-tripping. */"
+      }
+    ],
+    "classification": [
+      "Only raw-html match is a JSDoc Input example at formatters.ts:135, not JSX; acceptable exception.",
+      "PageLayout delegates to PageContainer; no missing wrapper.",
+      "Incoming model_name/target/si_unit/reference/narrative/evidence source text is data, not hardcoded English.",
+      "Technical SI unit symbols and allowed target IDs remain untranslated.",
+      "Dynamic palette array props, calculated calibration data and supported building-block HTML/imports are acceptable."
+    ],
+    "frontend_rule_confirmed_counts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "fetch-useeffect": 0,
+      "missing-page-container": 0
+    },
+    "backend_rules": "NOT_APPLICABLE: no internal/**/*.go audit scope"
+  },
+  "i18n_source_lookup": {
+    "literal_call_count": 122,
+    "unique_literal_keys": 108,
+    "missing": [],
+    "limits": "Source JSON lookup only; no catalog guard, generated namespace loading, locale mount or dynamic-key validation executed."
+  },
+  "test_source_inventory": [
+    {
+      "file": "web/src/features/ownership/pages/ModelTrustPage.test.tsx",
+      "declaration_sites": 9,
+      "lines": [
+        144,
+        156,
+        177,
+        198,
+        214,
+        254,
+        280,
+        302,
+        318
+      ],
+      "static_expect_calls": 74,
+      "executed": 0,
+      "status": "NOTRUN",
+      "parameterized_expansions": "Not counted as runner discovery"
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "declaration_sites": 18,
+      "lines": [
+        20,
+        27,
+        34,
+        48,
+        61,
+        70,
+        77,
+        91,
+        108,
+        118,
+        127,
+        134,
+        143,
+        152,
+        158,
+        165,
+        177,
+        183
+      ],
+      "static_expect_calls": 57,
+      "executed": 0,
+      "status": "NOTRUN",
+      "parameterized_expansions": "Not counted as runner discovery"
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "declaration_sites": 8,
+      "lines": [
+        46,
+        56,
+        68,
+        82,
+        89,
+        106,
+        116,
+        127
+      ],
+      "static_expect_calls": 32,
+      "executed": 0,
+      "status": "NOTRUN",
+      "parameterized_expansions": "Not counted as runner discovery"
+    }
+  ],
+  "tool_failures": [
+    {
+      "tool": "view",
+      "path": "web/src/lib/numberFormat.ts",
+      "range": [
+        400,
+        510
+      ],
+      "exit_code": null,
+      "raw": "Invalid view_range: start line (400) is beyond the end of the file. The file has 173 lines.",
+      "resolution": "Read actual range [1,173]; no source/helper change."
+    },
+    {
+      "tool_shell_id": "2644",
+      "exit_code": 1,
+      "raw": "UnicodeEncodeError: charmap codec cannot encode character U+2192 in position128: character maps to <undefined>; stdout cp1252 while printing source ModelTrustPage.tsx:567.",
+      "resolution": "Source-only read receipt corrected with UTF-8 stdout, not a test/lint/build rerun; failed command reached no artifact writes."
+    },
+    {
+      "check": "historical model-trust runner raw log presence",
+      "exit_code": 0,
+      "raw": "exists False; RECEIPT FILENAMES: no local web/logs/*model-trust* files before this audit",
+      "resolution": "Queue history only; 9/8/1/0 historical counts are not newly verified or passing."
+    },
+    {
+      "tool_shell_id": "2919",
+      "exit_code": 1,
+      "raw": "AssertionError: ('web/src/types/ownership.ts', '  reference: string;', [731, 751])",
+      "resolution": "Exact-citation finalization incorrectly assumed unique text across request and response types; narrowed to actual Prediction lines751/754. No write was reached; no application test executed."
+    }
+  ],
+  "queue_line": 132,
+  "queue_row": "| [~] | 6 | phase6-qa-ownership-model-trust | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-ownership-model-trust.json; web\\logs\\phase6-qa-ownership-model-trust.log | phase5-page-ownership-model-trust | 1 | reserved02:22:14.747Z; actor pending | - | ModelTrustPage/direct supports; source-only, no actual model/provider/job/data/API/browser actions or fresh tests/lint/build/helpers. |",
+  "dedup_active_source_claims": [],
+  "related_shared_qa_references": [
+    {
+      "report": "phase6-qa-ownership-charging-reconciliation.json",
+      "json_path": "$.findings[10]",
+      "fields": {
+        "id": "CR11",
+        "rule": "date-preferences-bypassed",
+        "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+        "line": 190
+      },
+      "excerpt": "CR11 date-preferences-bypassed medium web/src/features/ownership/pages/ChargingReconciliationPage.tsx 190 Pure formatDateTime has no effective opts; dateFormat.ts:44-63 uses browser locale/timezone. OwnershipBrief.tsx:62,68,71 and"
+    },
+    {
+      "report": "phase6-qa-ownership-charging-reconciliation.json",
+      "json_path": "$.findings[11]",
+      "fields": {
+        "id": "CR12",
+        "rule": "hardcoded-string",
+        "file": "web/src/features/ownership/pages/ChargingReconciliationPage.tsx",
+        "line": 363
+      },
+      "excerpt": "CR12 hardcoded-string medium web/src/features/ownership/pages/ChargingReconciliationPage.tsx 363 Two controlled reason-code labels replace underscores into untranslated English; EvidencePanel.tsx:72 prints closed QualityStatus suf"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[1]",
+      "fields": {
+        "id": "CL002",
+        "rule": "hardcoded-string",
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 72,
+        "title": "Quality badge renders raw known English status"
+      },
+      "excerpt": "CL002 hardcoded-string medium ownership-evidence-label web/src/features/ownership/components/EvidencePanel.tsx 72 Quality badge renders raw known English status quality.status is rendered directly even though sufficient/limited/in"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[10]",
+      "fields": {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 99
+      },
+      "excerpt": "web/src/features/ownership/components/EvidencePanel.tsx 99 1 ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[11]",
+      "fields": {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 99
+      },
+      "excerpt": "web/src/features/ownership/components/EvidencePanel.tsx 99 2 ? `${formatDateTime(quality.window_start)} – ${formatDateTime(quality.window_end)}`"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[12]",
+      "fields": {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 143
+      },
+      "excerpt": "web/src/features/ownership/components/EvidencePanel.tsx 143 date: formatDateTime(item.observed_at),"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[13]",
+      "fields": {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 145
+      },
+      "excerpt": "web/src/features/ownership/components/EvidencePanel.tsx 145 : formatDateTime(item.observed_at)}"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[14]",
+      "fields": {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "line": 62
+      },
+      "excerpt": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx 62 1 from: formatDateTime(window.from), to: formatDateTime(window.to),"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[15]",
+      "fields": {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "line": 62
+      },
+      "excerpt": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx 62 2 from: formatDateTime(window.from), to: formatDateTime(window.to),"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[16]",
+      "fields": {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "line": 68
+      },
+      "excerpt": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx 68 ? t('ownership.brief.observedAt', 'Source as of {{date}}', { date: formatDateTime(observedAt) })"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[2].sites[17]",
+      "fields": {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "line": 71
+      },
+      "excerpt": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx 71 date: formatDateTime(new Date(state.updatedAt).toISOString()),"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[3]",
+      "fields": {
+        "id": "CL004",
+        "rule": "initial-paused-trust",
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "line": 43,
+        "title": "Initial paused summary is labelled loading rather than paused"
+      },
+      "excerpt": "CL004 initial-paused-trust medium ownership-source-state web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx 43 Initial paused summary is labelled loading rather than paused deriveDataState returns initia"
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.confirmed_findings[4]",
+      "fields": {
+        "id": "CL005",
+        "rule": "editor-source-trust",
+        "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+        "line": 52,
+        "title": "Independent editor masks initial register failure/pause and source retry"
+      },
+      "excerpt": "CL005 editor-source-trust medium ownership-source-state web/src/features/ownership/components/OwnershipPanel.tsx 52 Independent editor masks initial register failure/pause and source retry editing && !hasData forces SourceContent "
+    },
+    {
+      "report": "phase6-qa-ownership-consumables-lifecycle.json",
+      "json_path": "$.section_inventory[6]",
+      "fields": {
+        "file": "web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx"
+      },
+      "excerpt": "Evidence, quality, limitations web/src/features/ownership/pages/ConsumablesLifecyclePage.tsx web/src/features/ownership/components/EvidencePanel.tsx"
+    },
+    {
+      "report": "phase6-qa-ownership-data-governance.json",
+      "json_path": "$.confirmedIssues[6]",
+      "fields": {
+        "id": "DG-07",
+        "rule": "hardcoded-string",
+        "owner": "ownership-evidence",
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 72
+      },
+      "excerpt": "DG-07 medium hardcoded-string MDC-044 ownership-evidence web/src/features/ownership/components/EvidencePanel.tsx 72 Quality badge renders raw sufficient/limited/insufficient enum; limited fixture status is unlocalized English whil"
+    },
+    {
+      "report": "phase6-qa-ownership-insurance-telematics.json",
+      "json_path": "$.findings[6]",
+      "fields": {
+        "id": "F07",
+        "rule": "date-preferences",
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "line": 59,
+        "title": "Ownership dates bypass saved locale and timezone"
+      },
+      "excerpt": "F07 confirmed-source date-preferences medium web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx 59 70 Ownership dates bypass saved locale and timezone The page trend/coverage, OwnershipBrief bounds/fresh"
+    },
+    {
+      "report": "phase6-qa-ownership-insurance-telematics.json",
+      "json_path": "$.findings[11]",
+      "fields": {
+        "id": "F12",
+        "rule": "hardcoded-string",
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 72,
+        "title": "Quality enum is rendered as unlocalized English"
+      },
+      "excerpt": "F12 confirmed-source hardcoded-string medium web/src/features/ownership/components/EvidencePanel.tsx 72 72 Quality enum is rendered as unlocalized English quality.status is the closed sufficient/limited/insufficient enum. Existing"
+    },
+    {
+      "report": "phase6-qa-ownership-insurance-telematics.json",
+      "json_path": "$.findings[12]",
+      "fields": {
+        "id": "F13",
+        "rule": "hardcoded-string",
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 106,
+        "title": "Fixed model-quality reasons bypass i18n"
+      },
+      "excerpt": "F13 confirmed-source hardcoded-string medium web/src/features/ownership/components/EvidencePanel.tsx 106 106 Fixed model-quality reasons bypass i18n The reason rows include fixed English no-drive/sample-count/no-policy strings fro"
+    },
+    {
+      "report": "phase6-qa-ownership-insurance-telematics.json",
+      "json_path": "$.findings[13]",
+      "fields": {
+        "id": "F14",
+        "rule": "hardcoded-string",
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 137,
+        "title": "Authored evidence summaries bypass i18n"
+      },
+      "excerpt": "F14 confirmed-source hardcoded-string medium web/src/features/ownership/components/EvidencePanel.tsx 137 137 Authored evidence summaries bypass i18n The service builds English exposure/policy summary templates; the trailer renders"
+    },
+    {
+      "report": "phase6-qa-ownership-insurance-telematics.json",
+      "json_path": "$.candidates[2]",
+      "fields": {
+        "id": "C03",
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "line": 85,
+        "title": "Coverage denominator and observation-window disclosure"
+      },
+      "excerpt": "C03 candidate web/src/features/ownership/components/EvidencePanel.tsx 85 99 Coverage denominator and observation-window disclosure Coverage is usable drives / all returned drives, not elapsed-window or all-sensor coverage. The tra"
+    }
+  ],
+  "historical_evidence": {
+    "original_source_audit": "docs/frontend-audits/audit-page-159.json",
+    "inventory_line": 210,
+    "source_migration_queue_line": 2141,
+    "failed_regression_queue_line": 2258,
+    "failed_regression_owner": "phase6-fix-model-trust-scoped-regressions",
+    "failed_regression_status": "[!] attempts2",
+    "queue_reported_run": {
+      "discovered": 9,
+      "executed": 9,
+      "passed": 8,
+      "failed": 1,
+      "skipped": 0,
+      "exit_code": 1
+    },
+    "failure": "Quick view absent at350; following full-details and calibration/scoring assertions unreached.",
+    "evidence_limit": "Queue narrative inspected, historical raw log missing from this checkout; no current runner execution, no renewed retry or acceptance."
+  },
+  "owner_needs": [
+    {
+      "id": "ownership-model-trust-editor",
+      "confirmed": [
+        "MT01",
+        "MT04"
+      ],
+      "candidates": [
+        "MTC01",
+        "MTC02",
+        "MTC04"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/ModelTrustPage.tsx",
+        "web/src/features/ownership/pages/ModelTrustPage.test.tsx"
+      ],
+      "status": "Unqueued need; parent alone may reserve exact scope. No source writes."
+    },
+    {
+      "id": "ownership-model-trust-evidence",
+      "confirmed": [
+        "MT02",
+        "MT03"
+      ],
+      "files": [
+        "web/src/features/ownership/pages/ModelTrustPage.tsx",
+        "web/src/features/ownership/pages/ModelTrustPage.test.tsx"
+      ],
+      "status": "Unqueued; serialize with editor owner, same page/test claim. No overlapping dispatch."
+    },
+    {
+      "id": "ownership-date-preferences",
+      "confirmed": [
+        "MT05"
+      ],
+      "dedup": [
+        "charging-reconciliation CR11",
+        "consumables-lifecycle CL003",
+        "insurance-telematics F07"
+      ],
+      "status": "Existing shared QA need; one integration root plus page caller evidence, not per-report repair."
+    },
+    {
+      "id": "ownership-model-trust-range-integration",
+      "confirmed": [
+        "MT06"
+      ],
+      "dedup": [
+        "audit-page-159 range requiredSharedChanges",
+        "phase5-page-ownership-model-trust terminal need"
+      ],
+      "status": "Existing integration obligation; absolute server bounds/route support UNKNOWN. Preserve local analysis until proper authority."
+    },
+    {
+      "id": "ownership-source-state",
+      "confirmed": [
+        "MT07",
+        "MT08"
+      ],
+      "dedup": [
+        "consumables-lifecycle CL004",
+        "consumables-lifecycle CL005"
+      ],
+      "status": "Existing shared need, one root for OwnershipBrief and OwnershipPanel; no new duplicate owner."
+    },
+    {
+      "id": "existing-number-format-policy",
+      "candidates": [
+        "MTC03"
+      ],
+      "status": "Disposition only; no new formatter engine or renewed precision repair."
+    },
+    {
+      "id": "ownership-evidence-label",
+      "candidates": [
+        "MTC05"
+      ],
+      "dedup": [
+        "CL002",
+        "DG-07",
+        "insurance F12"
+      ],
+      "status": "Disposition only; technical enum exception preserved until human-label policy resolved."
+    }
+  ],
+  "section_action_inventory": [
+    {
+      "section": "Trust explanation",
+      "line": 465,
+      "state": "Always declared; model predictions count only after recorded outcomes; naive-baseline meaning is explanatory copy, not independent scoring verification."
+    },
+    {
+      "section": "Portfolio trust",
+      "line": 477,
+      "state": "Five raw metrics portfolio/trusted/watch/unreliable/scored; missing portfolio remainsunknown; real0 model counts retained; countTotal preserves denominator; source freshnessunknown and client-loaded separate."
+    },
+    {
+      "section": "Model scorecards",
+      "line": 531,
+      "state": "11 columns; trust grade/score, scored/pending, MAPE/median, signed bias, RMSE, coverage, signed skill, drift text/ratio, calibration action; stable tableIdownership-trust-scorecards."
+    },
+    {
+      "section": "Calibration",
+      "line": 561,
+      "state": "Raw error,bias,coverage,samples retained; error/bias palette series, chartKey/hidden-series identity, SI axis/title/tooltip/accessible units, selected narrative andfirst/last scored; coverage/modelquality omissions MT03."
+    },
+    {
+      "section": "Prediction ledger/editors",
+      "line": 665,
+      "state": "8 table columns; forecast/optional interval, nullable observed/APE/in_interval, horizon, timestamps, Score it; prediction/score forms andCancel; tableIdownership-trust-predictions; snapshot guards prevent cross-vehicle submissions but not newer pending edits."
+    },
+    {
+      "section": "Evidence/quality/limitations",
+      "line": 860,
+      "state": "Portfolio quality/samplecount/coverage/window/reasons, nullable source samples/observation times, absent evidence explicit, unsupported retraining/causal drift claims preserved. No retrain/job/provider actions exist on this page."
+    }
+  ],
+  "source_state_matrix": {
+    "loading": "All four OwnershipPanel shells plus EvidencePanel remain; initial payloadless reads source-shaped skeletons, portfolio preserveSummary shows unknown-aware brief. PageLayout delegates wrapper and does not forward fatal error/loading to replace all children.",
+    "fatal": "Per-source ErrorDisplay/retry with no retained data; portfolio summary remains unknown. Unsaved independent editor survives; source-trust masking MT08 remains.",
+    "retained_error": "deriveDataState keeps payload, mapsrefreshError/stale; OwnershipPanel retains rows/empty evidence and nonblockingwarning/retry. Numeric results remain returned model diagnostics, not fresh verification.",
+    "retained_paused": "SourceContent retained cached-pause wording, rows retained and retry; brief labels Retained source. No server failure synthesized.",
+    "initial_paused": "No authoritativeempty response inferred; OwnershipPanel pausedmessage and no ordinary body; preserveSummary brief incorrectLoading MT07. Initial pause fallback asserts networkunavailable, whose exact cause remains unknown without runtime proof.",
+    "authoritative_empty": "scorecards/calibration/ledger have explicit reason-specific empty panels; selectedCard absent no fabricatedbins; portfolio count fields only from report, no fake zeros.",
+    "no_selection": "Typedquery disabled without positivevehicle; panel sourceEnabledvehicleId!=null; briefSelectionrequired; Recordprediction mayopen but scope guard disables submit when no capturedvehicle. Invalidpositive-integer edge not asserted as live integration.",
+    "unknown_zero_signs": "Optional numeric values use !=null; nullobservedpending vs measured0; nullintervalunknown vs falseoutside; signedbias/skill/rawcalibration retained. Percent0 is realzero; unknown denominator staysdash. CandidateMTC03 only displayrounding, not source mutation.",
+    "population_bounds": "Portfolio total_scored/total_predictions distinct from loaded recent_predictions; model scored/pending and bin samples retained. Recent ledger has no full-history total/pagination claim, but actual source truncation is UNKNOWN. Returnedreport.window shown separately from chosenwindowDays; quality window has ownbounds, modelquality missingMT03.",
+    "identity": "Captured prediction ID/vehicle and opening generation retained; vehicle changes disable current drafts and explain originalvehicle. No API retargeting. Modelselection uses model_name::target, fallbackfirst scorecard; saved hidden-series and table IDs stable. Report/selectedvehicle identity cross-check or exactcanonical targetmap backend parity not executed."
+  },
+  "preferences_i18n_a11y": {
+    "number": "useNumberFormatting subscribes to savedlocale/precision and recomputes chartnames; percentages use global formatter from a subscribed page. No wire conversion; canonical SI diagnostic units retained intentionally, minor currency not guessed.",
+    "i18n": "122 literal t calls/108 unique keys resolve in canonical en.json; regex/source lookup only. Incoming narratives/reasons/source identifiers not proven authored English literals. MTC05 preserves technical-ID exception and duplicate reports instead of a fabricated new hardcoded count.",
+    "palette_motion": "Existing useChartPalette honors savedpalette/light-theme context; dynamic fill array indices acceptable. FadeIn source reads useMotionPreference; reducedinitialfalse, zero delay, no loop. Actual savedtheme/chart/lowbandwidth behavior NOTRUN.",
+    "mobile": "Two existing mobilePresentation declarations map summaries plus inlineactions; MobileDataTableAdapter full detail uses allColumns so original column renderers remain reachable in source. It does not restore unprojected reference/rawerror fields. Existing mobile test remains failed/unaccepted; no native acceptance inferred.",
+    "a11y": "Localized windowaria-label, labelled requiredInput/Select with opaqueuseId/native refs, sharedfocusstyles, chartalternative+units, drift text badges andinside/outside text; wrapped44px action minima, form row wrapping. No positive tabindex seen. Query/header announcements depend on actual flags; page passesquery notbusy so complete loading SR outcomes not established. Two forms lack explicitfieldset/legend grouping and scoring quantity contextMT01. Keyboard/contrast/focus/screenreader/actualhitareas NOTRUN."
+  },
+  "notrun": [
+    "All Vitest or other tests (executed0; runner discovery not performed)",
+    "All lint/audit helper commands, preservation helpers, generated catalog checks",
+    "npx tsc --noEmit, scoped/compiler checks, build/full suites, docs build",
+    "All network/API/browser/dev-server/provider/model/job/data actions, fixture injection, mutations or settings changes",
+    "All native visual/responsive/keyboard/focus/axe/screenreader/contrast/safearea checks",
+    "No Git writes, code/test/catalog/source writes, subagents, installs, server starts or helper implementation/execution"
+  ],
+  "contract_reads": {
+    "orchestrator": "docs/orchestrator-loop.md fully (root playbook authority; root orchestrator-loop.md does not exist in root inventory)",
+    "design_contract": "docs/frontend-design-contract.md fully1-2539; initial truncated overlap260-282 recovered; no implementation or acceptance implied",
+    "mission": "0-2 and27-31 plus42-45 relevantQA/DoD read",
+    "inventory": "docs/frontend-inventory.md:210 and relevant audit-page-159 report1-200; not entire1.7MB inventory or full historical report",
+    "handoff": "Current recovery1-130, conventions2219-2300, final55lines; not all historical163KB prose",
+    "queue": "Exact currentrow132, sourceaccepted2141, exhaustedregression2258; sharedexactsourceclaims search",
+    "instructions": [
+      ".github/copilot-instructions.md frontend/identity/preservation portions1-390",
+      ".github/instructions/react-frontend.instructions.md fully",
+      ".github/instructions/frontend-si-cutover.instructions.md fully",
+      ".github/instructions/unit-conversion.instructions.md fully (legacy examples superseded by SI contract)",
+      ".github/instructions/observability.instructions.md fully",
+      "docs/CONTRIBUTING.md",
+      "docs/I18N_GUIDELINES.md",
+      "docs/A11Y_GUIDELINES.md",
+      "docs/MOBILE_GUIDELINES.md",
+      "docs/FORM_GUIDELINES.md"
+    ],
+    "local_ancestor_AGENTS": "No ancestor AGENTS.md exists at the explicitly checked root/web/src/features/ownership/pages/docs audit paths; no custom helper search performed."
+  },
+  "audit_scope_limit": "Every listed local page/direct ownership support and existing matching local test was read. Shared large utilities/hooks were inspected only in direct relevant ranges/symbols; no repository-wide code audit, backend audit or actual behavior acceptance claimed.",
+  "counts": {
+    "confirmed_issues": 8,
+    "new_bounded_source_issues": 4,
+    "inherited_or_shared_duplicate_issues": 4,
+    "candidates": 5,
+    "native_needs": 2,
+    "deduplicated_owner_needs": 7,
+    "confirmed_issues_by_rule": {
+      "scoring-context": 1,
+      "ledger-evidence-projection": 1,
+      "calibration-evidence-projection": 1,
+      "pending-edit-retention": 1,
+      "date-preferences-bypassed": 1,
+      "workspace-range-contract": 1,
+      "initial-paused-trust": 1,
+      "editor-source-trust": 1
+    },
+    "primary_files_with_most_issues": {
+      "web/src/features/ownership/pages/ModelTrustPage.tsx": 6,
+      "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx": 1,
+      "web/src/features/ownership/components/OwnershipPanel.tsx": 1
+    },
+    "test_executed": 0,
+    "test_passed": 0,
+    "test_failed_this_attempt": 0,
+    "test_status": "NOTRUN, not a zero-failure pass"
+  },
+  "acceptance": "NOT_ACCEPTED: source findings and native/application evidence remain open",
+  "priority_fixes": [
+    "Scoring quantity/SI/prediction context and pending-edit retention (MT01/MT04)",
+    "Evidence reference/signederror/bincoverage/modelquality projection (MT02/MT03)",
+    "Existing shared date/state and range integration needs; do not duplicate owners",
+    "Retain exhausted mobile failure; no automatic helper/test/native retry"
+  ],
+  "commands": "Exact complete source-check scripts, raw outputs and exits are in authorized log; exploratory view/read invocations and initial raw output are also in caller tool transcript. No fresh passing application check rerun.",
+  "release": {
+    "source_write_claim": "NONE: page/direct supports/tests were always READONLY",
+    "authorized_artifact_claim": "RELEASED: both documentation artifacts final; no further writes or commands after this verification",
+    "background_commands": "All audit commands bounded/synchronous and exited; no service or async helper started",
+    "release_timestamp_utc": "2026-10-14T02:41:50.812994+00:00",
+    "final_pin_check": "All before/after pins matched"
+  },
+  "final_document_validation": {
+    "pin_count": 35,
+    "unchanged_pin_count": 35,
+    "confirmed_count_consistent": true,
+    "candidate_count_consistent": true,
+    "native_count_consistent": true,
+    "only_authorized_files_written": [
+      "docs/frontend-audits/phase6-qa-ownership-model-trust.json",
+      "web/logs/phase6-qa-ownership-model-trust.log"
+    ],
+    "independent_parse_status": "PASS: separate final JSON parse, counts, ID uniqueness, citation bounds and35 pins checked; postwrite reparsed",
+    "validated_at_utc": "2026-10-14T02:41:50.812994+00:00"
+  }
+}
