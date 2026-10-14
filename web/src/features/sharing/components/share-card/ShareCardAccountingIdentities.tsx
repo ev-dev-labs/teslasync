@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, Table, Text } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
+import { fmtScientificNumber } from '@/lib/numberFormat';
 import { ShareCardSectionBody } from './ShareCardSectionBody';
 import type { ShareCardSectionProps } from './types';
 
@@ -44,7 +45,11 @@ export function ShareCardAccountingIdentities({
         </Text>
         <ShareCardSectionBody state={state}>
           <ul className="grid gap-2 lg:grid-cols-2">
-            {analysis.identities.map((check) => (
+            {analysis.identities.map((check) => {
+              const formatOperand = check.tolerance > 0
+                ? (value: number) => fmtScientificNumber(value, 12)
+                : display.formatNumber;
+              return (
               <li
                 key={check.id}
                 className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
@@ -63,25 +68,26 @@ export function ShareCardAccountingIdentities({
                   <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.expected', 'Expected')}
                   </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
-                    {display.formatNumber(check.expected)}
+                    {formatOperand(check.expected)}
                   </Text></td></tr>
                   <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.actual', 'Actual')}
                   </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
-                    {display.formatNumber(check.actual)}
+                    {formatOperand(check.actual)}
                   </Text></td></tr>
                   <tr><th scope="row"><Text as="span" variant="caption">
                     {t('shareCard.accounting.residual', 'Residual / tolerance')}
                   </Text></th><td className="text-right"><Text as="span" variant="caption" mono>
                     {t('shareCard.accounting.residualValue', '{{residual}} / {{tolerance}}', {
-                      residual: display.formatNumber(check.residual),
-                      tolerance: display.formatNumber(check.tolerance),
+                      residual: formatOperand(check.residual),
+                      tolerance: formatOperand(check.tolerance),
                     })}
                   </Text></td></tr>
                   </tbody>
                 </Table>
               </li>
-            ))}
+              );
+            })}
           </ul>
         </ShareCardSectionBody>
       </LayoutCard>
