@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next'
 import { UsageCard } from '@/components/data-display'
 import type { APIUsage, TeslaUsageCycle } from '@/api/types'
 
-import { useFormatting } from '@/hooks/useFormatting'
+import { formatCurrencyValue } from '@/lib/currencyFormat'
 import { TeslaUsageContractError } from '@/api/hooks/useTeslaUsage'
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat'
 import { SystemSummaryBrief } from '../operationalbrief-all/SystemSummaryBrief'
 
 interface Props {
@@ -16,17 +17,17 @@ interface Props {
 }
 
 export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }: Props) {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, locale, precision } = useNumberFormatting();
+  const { formatDate: date, tz } = useDateFormat()
   const { t } = useTranslation()
-  const { formatCurrency } = useFormatting()
+  const formatUsd = (amount: number) => formatCurrencyValue(amount, 'USD', locale, precision, { useGrouping: true })
   const currentSource = apiUsage?.current
-  const date = (iso: string) => new Date(iso).toLocaleDateString(undefined, { timeZone: 'UTC' })
   const disclaimer = t('teslaUsage.disclaimer', 'Estimate from locally observed Tesla Fleet traffic; not a Tesla invoice. Missing deliveries or logging failures may undercount.')
   const summary = (
     <SystemSummaryBrief
       title={t('teslaUsage.brief.cycleTitle', 'Cycle usage evidence')}
       description={disclaimer}
-      scope={currentSource ? `${date(currentSource.start)} – ${date(currentSource.end)} UTC`
+      scope={currentSource ? `${date(currentSource.start)} – ${date(currentSource.end)} ${tz}`
         : t('teslaUsage.cycleCaveat', 'These are fixed UTC 30-day windows, not Tesla calendar-month billing cycles. No monthly credit, rounding or invoice adjustments are assumed.')}
       available={!!currentSource} loading={!!loading && !currentSource} retained={!!error && !!currentSource}
       statusLabel={t('teslaUsage.estimated', 'Estimated')}
@@ -34,7 +35,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
         { metricId: 'currency', occurrenceId: 'estimate', rawValue: currentSource?.estimated_usd,
           label: t('teslaUsage.cycle', 'Current 30-day cycle'),
           context: t('teslaUsage.notInvoice', 'Local estimate, not an invoice'),
-          display: { formatter: (raw) => ({ value: formatCurrency(raw), unit: '' }) } },
+          display: { formatter: (raw) => ({ value: formatUsd(raw), unit: '' }) } },
         { metricId: 'count', occurrenceId: 'signals', rawValue: currentSource?.signals,
           label: t('teslaUsage.signals', 'Streaming signals'), context: t('teslaUsage.signalRate', '150,000 / $1') },
         { metricId: 'count', occurrenceId: 'api-calls', rawValue: currentSource
@@ -82,7 +83,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
         { label: t('teslaUsage.commands', 'Commands · 1,000 / $1'), value: fmtInt(current.commands) },
         { label: t('teslaUsage.data', 'Data requests · 500 / $1'), value: fmtInt(current.data_requests) },
         { label: t('teslaUsage.wakes', 'Wakes · 50 / $1'), value: fmtInt(current.wakes) },
-        { label: t('teslaUsage.reset', 'Next cycle (UTC)'), value: date(current.end) },
+        { label: t('teslaUsage.reset', 'Next cycle (UTC)'), value: `${date(current.end)} (${tz})` },
       ]}
       topLists={[
         {
@@ -92,7 +93,7 @@ export function TeslaApiUsageCard({ apiUsage, loading, error, compact = false }:
             ? apiUsage.history.map(c => ({
                 key: c.start,
                 label: `${date(c.start)} – ${date(c.end)} · ${fmtInt(count(c))} ${t('teslaUsage.eventsShort', 'events')}`,
-                value: formatCurrency(c.estimated_usd),
+                value: formatUsd(c.estimated_usd),
               }))
             : [{ key: 'none', label: t('teslaUsage.noHistory', 'No prior cycles recorded'), value: '—' }],
         },
