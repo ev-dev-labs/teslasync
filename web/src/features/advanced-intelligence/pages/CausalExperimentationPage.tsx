@@ -6,6 +6,7 @@ import {
   useCreateCausalExperiment,
 } from '@/api/hooks/useAdvancedIntelligence';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { ValidationSummary } from '@/components/forms';
 import { KVList, StatGroup, type StatMetric } from '@/components/data-display';
 import { PageLayout, SourceContent } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -30,6 +31,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 const PAGE_SIZE = 10;
 type ExperimentForm = Omit<CreateCausalExperimentRequest, 'vehicle_id' | 'confirmed'>;
 const windowFields = ['baseline_start', 'baseline_end', 'treatment_start', 'treatment_end'] as const;
+type WindowField = (typeof windowFields)[number];
 const windowLabels = ['baselineStart', 'baselineEnd', 'treatmentStart', 'treatmentEnd'] as const;
 const windowDefaults = ['Baseline start', 'Baseline end', 'Treatment start', 'Treatment end'] as const;
 
@@ -52,6 +54,7 @@ export default function CausalExperimentationPage() {
   const [review, setReview] = useState<CreateCausalExperimentRequest | null>(null);
   const [validationAttempted, setValidationAttempted] = useState(false);
   const submitting = useRef(false);
+  const windowInputs = useRef<Partial<Record<WindowField, HTMLInputElement | null>>>({});
   const [form, setForm] = useState<ExperimentForm>({
     intervention_kind: 'charging_schedule',
     metric: 'charging_success_pct',
@@ -129,7 +132,10 @@ export default function CausalExperimentationPage() {
   const getWindowErrors = (values: ExperimentForm) => {
     const instants = windowFields.map((field) => new Date(values[field]).getTime());
     const [baselineStart, baselineEnd, treatmentStart, treatmentEnd] = instants;
-    const errors: Partial<Record<(typeof windowFields)[number], string>> = {};
+    const errors: Partial<Record<WindowField, string>> = {};
+    const addError = (field: WindowField, message: string) => {
+      errors[field] = errors[field] ? `${errors[field]} ${message}` : message;
+    };
     const day = 24 * 60 * 60 * 1000;
     windowFields.forEach((field, index) => {
       if (!Number.isFinite(instants[index])) {
@@ -146,10 +152,10 @@ export default function CausalExperimentationPage() {
       }
     });
     if (Number.isFinite(baselineEnd) && Number.isFinite(treatmentStart) && treatmentStart < baselineEnd) {
-      errors.treatment_start ??= t('advancedIntelligence.causal.form.validation.overlap', 'Treatment start must be at or after baseline end.');
+      addError('treatment_start', t('advancedIntelligence.causal.form.validation.overlap', 'Treatment start must be at or after baseline end.'));
     }
     if (Number.isFinite(treatmentEnd) && treatmentEnd > Date.now() + 60 * 1000) {
-      errors.treatment_end ??= t('advancedIntelligence.causal.form.validation.future', 'Treatment end must not be more than 1 minute in the future.');
+      addError('treatment_end', t('advancedIntelligence.causal.form.validation.future', 'Treatment end must not be more than 1 minute in the future.'));
     }
     return errors;
   };
@@ -166,7 +172,7 @@ export default function CausalExperimentationPage() {
     setValidationAttempted(true);
     const invalidField = windowFields.find((field) => errors[field] !== undefined);
     if (invalidField) {
-      event.currentTarget.querySelector<HTMLInputElement>(`#causal-${invalidField}`)?.focus();
+      windowInputs.current[invalidField]?.focus();
       return;
     }
     mutation.reset();
@@ -246,6 +252,14 @@ export default function CausalExperimentationPage() {
           description={windowHint}
         >
           <form className="space-y-4" onSubmit={requestConfirmation}>
+            <ValidationSummary focusOnError={false} errors={windowFields.flatMap((field, index) => {
+              const message = windowErrors[field];
+              return message ? [{
+                fieldId: `causal-${field}`,
+                label: t(`advancedIntelligence.causal.form.${windowLabels[index]}`, windowDefaults[index]),
+                message,
+              }] : [];
+            })} />
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <Select
                 id="causal-intervention"
@@ -268,6 +282,7 @@ export default function CausalExperimentationPage() {
                 }))}
               />
               {windowFields.map((field, index) => <Input key={field} id={`causal-${field}`}
+                ref={(input) => { windowInputs.current[field] = input; }}
                 className="min-h-11 md:min-h-10" type="datetime-local"
                 label={t(`advancedIntelligence.causal.form.${windowLabels[index]}`, windowDefaults[index])}
                 value={form[field]} required

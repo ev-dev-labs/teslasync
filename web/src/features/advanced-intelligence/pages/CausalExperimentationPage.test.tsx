@@ -450,6 +450,36 @@ describe('Causal window field validation', () => {
   const dates = (offsets: number[]) => offsets.map((offset) => localMinute(now + offset));
   const standard = dates([-9 * day, -7 * day, -6 * day, -4 * day]);
 
+  it('retains every violated bound under stable field IDs and links the summary to the actual controls', () => {
+    mocks.translations['advancedIntelligence.causal.form.treatmentStart'] = 'Localized start';
+    mocks.translations['advancedIntelligence.causal.form.treatmentEnd'] = 'Localized end';
+    renderPage();
+    const values = dates([-9 * day, -7 * day, -400 * day, 2 * minute]);
+    values.forEach((value, index) => {
+      const input = document.getElementById(`causal-${['baseline_start', 'baseline_end', 'treatment_start', 'treatment_end'][index]}`);
+      if (!input) throw new Error('Expected the existing window control');
+      fireEvent.change(input, { target: { value } });
+    });
+    submitReview();
+    const start = screen.getByLabelText('Localized start', { exact: false });
+    const end = screen.getByLabelText('Localized end', { exact: false });
+    expect(start).toHaveFocus();
+    expect(document.getElementById(`${start.id}-error`)).toHaveTextContent(`${durationError} ${overlapError}`);
+    expect(document.getElementById(`${end.id}-error`)).toHaveTextContent(`${durationError} ${futureError}`);
+    const summary = screen.getByRole('alert', { name: 'Fix 2 problems before continuing' });
+    fireEvent.click(within(summary).getByRole('button', { name: `Localized end: ${durationError} ${futureError}` }));
+    expect(end).toHaveFocus();
+    fireEvent.change(end, { target: { value: standard[3] } });
+    expect(end).toHaveFocus();
+    expect(document.getElementById(`${end.id}-error`)).toHaveTextContent(durationError);
+    expect(document.getElementById(`${end.id}-error`)).not.toHaveTextContent(futureError);
+    fireEvent.click(within(summary).getByRole('button', { name: `Localized start: ${durationError} ${overlapError}` }));
+    expect(start).toHaveFocus();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.reset).not.toHaveBeenCalled();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+  });
+
   it.each([
     { case: 'missing baseline start', values: ['', ...standard.slice(1)], bad: [0], message: dateError },
     { case: 'missing baseline end', values: [standard[0], '', ...standard.slice(2)], bad: [1], message: dateError },
