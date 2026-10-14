@@ -455,6 +455,68 @@ describe('LifetimeStatsPage', () => {
     expect(screen.getByText(/0\.00 kg CO₂ avoided/)).toBeInTheDocument();
   });
 
+  it.each([
+    { electric: 543.21, savings: -543.21, co2: 12.75 },
+    { electric: 0, savings: 0, co2: 0 },
+    { electric: -0.25, savings: 0.25, co2: -0.5 },
+  ])('keeps supplied scalars visible with a zero gasoline baseline: %j', ({ electric, savings, co2 }) => {
+    h.query = makeQuery({ data: makeStats({
+      total_charging_cost: electric, gas_equivalent_cost: 0,
+      total_savings: savings, co2_offset_kg: co2,
+    }) });
+    renderPage();
+
+    const panel = screen.getByText('Savings vs gasoline').closest('[data-card]');
+    expect(panel).not.toBeNull();
+    const scope = within(panel!);
+    for (const [label, value] of [
+      ['Electric cost', `$${electric.toFixed(2)}`],
+      ['Gasoline equivalent', '$0.00'],
+      ['You saved', `$${savings.toFixed(2)}`],
+      ['CO₂ offset', `${co2.toFixed(2)} kg`],
+    ]) {
+      expect(within(scope.getByText(label).closest('div')!).getByText(value)).toBeInTheDocument();
+    }
+    expect(scope.getByText(/Baseline comparison unavailable — Gasoline equivalent:/)).toHaveTextContent('$0.00');
+    expect(scope.queryByText('Complete some drives to see savings')).not.toBeInTheDocument();
+  });
+
+  it.each(['missing', 'null', 'nan', 'infinity'] as const)(
+    'keeps %s savings readings unknown while preserving supplied fractional and signed values',
+    (invalid) => {
+      const stats = makeStats({ total_charging_cost: -0.25, total_savings: 0.125 });
+      for (const field of ['gas_equivalent_cost', 'co2_offset_kg'] as const) {
+        if (invalid === 'missing') Reflect.deleteProperty(stats, field);
+        else Reflect.set(stats, field, invalid === 'null' ? null : invalid === 'nan' ? Number.NaN : Number.POSITIVE_INFINITY);
+      }
+      h.query = makeQuery({ data: stats });
+      renderPage();
+
+      const panel = screen.getByText('Savings vs gasoline').closest('[data-card]');
+      expect(panel).not.toBeNull();
+      const scope = within(panel!);
+      expect(scope.getByText('$-0.25')).toBeInTheDocument();
+      expect(scope.getByText('$0.13')).toBeInTheDocument();
+      for (const label of ['Gasoline equivalent', 'CO₂ offset']) {
+        expect(within(scope.getByText(label).closest('div')!).getByText('—')).toBeInTheDocument();
+      }
+      expect(scope.queryByText('$0.00')).not.toBeInTheDocument();
+      expect(scope.queryByText(/Baseline comparison unavailable/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('preserves signed fractional savings with a valid positive gasoline baseline', () => {
+    h.query = makeQuery({ data: makeStats({
+      total_charging_cost: 1.75, gas_equivalent_cost: 0.5,
+      total_savings: -1.25, co2_offset_kg: -0.125,
+    }) });
+    renderPage();
+    expect(screen.getByText('$1.75')).toBeInTheDocument();
+    expect(screen.getByText('$0.50')).toBeInTheDocument();
+    expect(screen.getAllByText('$-1.25').length).toBeGreaterThan(0);
+    expect(screen.getByText(/-0\.13 kg CO₂ avoided/)).toBeInTheDocument();
+  });
+
   it('retains all-time metrics and individual record values through a refresh failure with a working retry', () => {
     h.query = makeQuery({ data: makeStats(), isError: true, error: new Error('refresh failed') });
     renderPage();

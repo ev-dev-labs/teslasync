@@ -85,7 +85,8 @@ export default function LifetimeStatsPage() {
   const heroDistance = hasReading(stats?.total_distance_km) ? fromKm(stats.total_distance_km) : null;
   const hasSavingsComparison = hasReading(stats?.total_charging_cost)
     && hasReading(stats?.gas_equivalent_cost) && hasReading(stats?.total_savings)
-    && hasReading(stats?.co2_offset_kg);
+    && hasReading(stats?.co2_offset_kg)
+    && stats.total_charging_cost >= 0 && stats.gas_equivalent_cost > 0;
 
   // Deep-link `?achievement={id}`.
   // When the lifetime page mounts (or the query param changes) with a target
@@ -251,7 +252,7 @@ export default function LifetimeStatsPage() {
           <SectionCard
             title={t('lifetime.savingsComparison', 'Savings vs gasoline')}
             icon={<Icon icon={DollarSign} size="lg" className={typography.color.secondary} />}
-            state={sectionState(!stats || (hasReading(stats.gas_equivalent_cost) && stats.gas_equivalent_cost <= 0))}
+            state={sectionState(!stats)}
             error={error}
             onRetry={retry}
             emptyMessage={t('lifetime.noSavingsData', 'Complete some drives to see savings')}
@@ -265,12 +266,21 @@ export default function LifetimeStatsPage() {
                 co2Kg={stats.co2_offset_kg}
               />
             ) : (
-              <KVList layout="responsive" items={[
-                { id: 'electric-cost', label: t('lifetime.electricCost', 'Electric cost'), value: <Currency value={stats?.total_charging_cost} precision={displayPrecision} /> },
-                { id: 'gas-cost', label: t('lifetime.gasCost', 'Gasoline equivalent'), value: <Currency value={stats?.gas_equivalent_cost} precision={displayPrecision} /> },
-                { id: 'savings', label: t('lifetime.youSaved', 'You saved'), value: <Currency value={stats?.total_savings} precision={displayPrecision} /> },
-                { id: 'co2', label: t('lifetime.co2Offset', 'CO₂ offset'), value: hasReading(stats?.co2_offset_kg) ? `${fmtNumber(stats.co2_offset_kg)} kg` : '—' },
-              ]} />
+              <div className="space-y-4">
+                <KVList layout="responsive" items={[
+                  { id: 'electric-cost', label: t('lifetime.electricCost', 'Electric cost'), value: <Currency value={stats?.total_charging_cost} precision={displayPrecision} /> },
+                  { id: 'gas-cost', label: t('lifetime.gasCost', 'Gasoline equivalent'), value: <Currency value={stats?.gas_equivalent_cost} precision={displayPrecision} /> },
+                  { id: 'savings', label: t('lifetime.youSaved', 'You saved'), value: <Currency value={stats?.total_savings} precision={displayPrecision} /> },
+                  { id: 'co2', label: t('lifetime.co2Offset', 'CO₂ offset'), value: hasReading(stats?.co2_offset_kg) ? `${fmtNumber(stats.co2_offset_kg)} kg` : '—' },
+                ]} />
+                {stats?.gas_equivalent_cost === 0 && (
+                  <Text as="p" color="muted">
+                    {t('carbon.evidence.netUnavailable', 'Baseline comparison unavailable')}
+                    {' — '}{t('lifetime.gasCost', 'Gasoline equivalent')}{': '}
+                    <Currency value={stats.gas_equivalent_cost} precision={displayPrecision} />
+                  </Text>
+                )}
+              </div>
             )}
           </SectionCard>
           ) },
