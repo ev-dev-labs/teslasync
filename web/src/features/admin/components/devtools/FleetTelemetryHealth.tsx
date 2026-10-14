@@ -1,9 +1,10 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, AlertCircle, RefreshCw } from 'lucide-react'
 import { Badge, Button as UiButton, DataTable, type Column } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
-import { Skeleton, QueryError } from '@/components/feedback'
+import { Skeleton, QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback'
+import { useDataState } from '@/hooks/useDataState'
 import { cn } from '@/lib/cn'
 import {
   useFleetTelemetryErrorVINs, useFleetTelemetryErrors,
@@ -16,16 +17,15 @@ export function FleetTelemetryHealth() {
   const { t } = useTranslation()
   const [selectedVin, setSelectedVin] = useState('')
 
-  const { data: errorVINs, isLoading: vinsLoading, isError: vinsIsError, error: vinsError, refetch: refetchVINs } = useFleetTelemetryErrorVINs()
-  const { data: errors, isLoading: errorsLoading, isError: errorsIsError, error: errorsError, refetch: refetchErrors } = useFleetTelemetryErrors(selectedVin || undefined)
+  const vinsQuery = useFleetTelemetryErrorVINs()
+  const errorsQuery = useFleetTelemetryErrors(selectedVin || undefined)
+  const vinsState = useDataState(vinsQuery)
+  const errorsState = useDataState(errorsQuery)
   const refreshVINs = useRefreshFleetTelemetryErrorVINs()
   const refreshErrors = useRefreshFleetTelemetryErrors()
 
-  const vinList = errorVINs ?? []
-  const errorList = errors ?? []
-
-  const handleRetryVINs = useCallback(() => { void refetchVINs() }, [refetchVINs])
-  const handleRetryErrors = useCallback(() => { void refetchErrors() }, [refetchErrors])
+  const vinList = vinsState.data ?? []
+  const errorList = errorsState.data ?? []
 
   const isRecent = (dateStr: string | null) => {
     if (!dateStr) return false
@@ -111,9 +111,17 @@ export function FleetTelemetryHealth() {
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
-            <Badge variant={vinList.length > 0 ? 'danger' : 'success'} size="sm">
-              {vinList.length} {t('devtools.health.affectedVehicles', 'affected')}
+            <Badge
+              variant={!vinsState.hasData ? 'neutral' : vinsState.status === 'stale' ? 'warning' : vinList.length > 0 ? 'danger' : 'success'}
+              size="sm"
+            >
+              {vinsState.hasData ? vinList.length : t('common.unknown', 'Unknown')} {t('devtools.health.affectedVehicles', 'affected')}
             </Badge>
+            {vinsState.isRefreshing && (
+              <Badge variant="info" size="sm" role="status">
+                {t('dataSources.status.refreshing', 'Refreshing')}
+              </Badge>
+            )}
             {selectedVin && (
               <Badge variant="info" size="sm">
                 {t('devtools.health.filteredBy', 'Filtered')}: {selectedVin}
@@ -140,14 +148,31 @@ export function FleetTelemetryHealth() {
               {t('devtools.health.refreshVins', 'Refresh from Tesla')}
             </UiButton>
           </div>
-          {vinsLoading ? (
-            <Skeleton className="h-24" />
-          ) : vinsIsError ? (
+          <StaleRefreshWarning
+            state={vinsState}
+            label={t('devtools.health.errorVinsResource', 'telemetry error VINs')}
+            message={vinsState.isRefreshBlocked && !vinsState.refreshError ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+          />
+          {!vinsState.hasData && vinsState.isRefreshBlocked && (
+            <DataStateNotice
+              state="partial"
+              role="status"
+              title={t('dataSources.status.paused', 'Refresh paused')}
+              message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+            >
+              <UiButton type="button" variant="ghost" size="sm" onClick={vinsState.retry ?? undefined}>
+                {t('common.retry', 'Retry')}
+              </UiButton>
+            </DataStateNotice>
+          )}
+          {vinsState.fatalError ? (
             <QueryError
-              error={vinsError}
-              onRetry={handleRetryVINs}
+              error={vinsState.fatalError}
+              onRetry={vinsState.retry ?? undefined}
               resourceName={t('devtools.health.errorVinsResource', 'telemetry error VINs')}
             />
+          ) : !vinsState.hasData ? (
+            <Skeleton className="h-24" />
           ) : vinList.length > 0 ? (
             <DataTable
               tableId="admin:fleet-health-vins"
@@ -175,6 +200,11 @@ export function FleetTelemetryHealth() {
       >
         <div className="space-y-3">
           <div className="flex items-center gap-3">
+            {errorsState.isRefreshing && (
+              <Badge variant="info" size="sm" role="status">
+                {t('dataSources.status.refreshing', 'Refreshing')}
+              </Badge>
+            )}
             <UiButton
               type="button"
               variant="secondary"
@@ -186,14 +216,31 @@ export function FleetTelemetryHealth() {
               {t('devtools.health.refreshErrors', 'Refresh from Tesla')}
             </UiButton>
           </div>
-          {errorsLoading ? (
-            <Skeleton className="h-40" />
-          ) : errorsIsError ? (
+          <StaleRefreshWarning
+            state={errorsState}
+            label={t('devtools.health.errorLogResource', 'telemetry error log')}
+            message={errorsState.isRefreshBlocked && !errorsState.refreshError ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+          />
+          {!errorsState.hasData && errorsState.isRefreshBlocked && (
+            <DataStateNotice
+              state="partial"
+              role="status"
+              title={t('dataSources.status.paused', 'Refresh paused')}
+              message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+            >
+              <UiButton type="button" variant="ghost" size="sm" onClick={errorsState.retry ?? undefined}>
+                {t('common.retry', 'Retry')}
+              </UiButton>
+            </DataStateNotice>
+          )}
+          {errorsState.fatalError ? (
             <QueryError
-              error={errorsError}
-              onRetry={handleRetryErrors}
+              error={errorsState.fatalError}
+              onRetry={errorsState.retry ?? undefined}
               resourceName={t('devtools.health.errorLogResource', 'telemetry error log')}
             />
+          ) : !errorsState.hasData ? (
+            <Skeleton className="h-40" />
           ) : errorList.length > 0 ? (
             <DataTable
               tableId="admin:fleet-health-errors"
