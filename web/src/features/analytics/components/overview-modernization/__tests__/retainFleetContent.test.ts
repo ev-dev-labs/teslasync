@@ -1,6 +1,7 @@
 import { QueryClient, QueryObserver } from '@tanstack/react-query';
 import { describe, expect, it } from 'vitest';
 import type { FleetAnalytics } from '@/api/types';
+import { analyticsKeys } from '@/api/hooks/useAnalytics';
 import { retainFleetContent } from '../retainFleetContent';
 import { fleetFixture } from './fleetFixture';
 
@@ -16,6 +17,42 @@ function observer(initialData?: FleetAnalytics) {
 }
 
 describe('retained analytics content view', () => {
+  it('retains failed-refresh content only in its exact instant-bounded cache entry', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    const start = '2026-10-13T16:59:07.544Z';
+    const end = '2026-10-14T16:59:07.544Z';
+    const originalKey = analyticsKeys.fleet(undefined, start, end);
+    const fixture = fleetFixture();
+    client.setQueryData(originalKey, fixture);
+    const source = new QueryObserver<FleetAnalytics, Error>(client, {
+      queryKey: originalKey,
+      queryFn: async () => { throw new Error('Refresh unavailable'); },
+      retry: false,
+    });
+    expect(retainFleetContent(await source.refetch()).data).toBe(fixture);
+
+    for (const key of [
+      analyticsKeys.fleet(undefined, '2026-10-13T17:00:07.544Z', end),
+      analyticsKeys.fleet(undefined, start, '2026-10-14T17:00:07.544Z'),
+    ]) {
+      expect(key).not.toEqual(originalKey);
+      source.setOptions({
+        queryKey: key,
+        queryFn: async () => { throw new Error('New range unavailable'); },
+        retry: false,
+      });
+      const pending = source.getCurrentResult();
+      expect(pending.data).toBeUndefined();
+      expect(retainFleetContent(pending)).toBe(pending);
+      const failed = await source.refetch();
+      expect(retainFleetContent(failed)).toBe(failed);
+      expect(failed.data).toBeUndefined();
+      expect(client.getQueryData(key)).toBeUndefined();
+    }
+    expect(client.getQueryData(originalKey)).toBe(fixture);
+    client.clear();
+  });
+
   it('keeps pending, successful and initial-failure query objects unchanged', async () => {
     const pending = observer();
     const initial = pending.source.getCurrentResult();

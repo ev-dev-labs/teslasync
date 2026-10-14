@@ -2,7 +2,7 @@
  * AnalyticsPage contract + hardening tests.
  *
  * AnalyticsPage is a thin orchestration shell: it owns the active-tab state,
- * threads a single `useFleetAnalytics({ start, end })` query object down to a
+ * threads a single instant-bounded `useFleetAnalytics` query object down to a
  * KPI band (HeroGauges) plus one of four domain tabs, and consumes the header
  * range through `useRangeState`. Its five chart-heavy children are
  * mocked with prop-capturing stubs so the tests can assert the page's own
@@ -24,9 +24,8 @@
  *   6. a11y — the KPI region, the tab nav, and the four named tab buttons
  *      expose accessible names; no duplicate range picker renders in the page.
  *   7. Range contract — the fleet request is scoped by the URL range using
- *      snake_case `start`/`end` calendar-date params, with NO `/api/v1`
- *      double-prefix (the backend `/analytics/fleet` handler parses
- *      `YYYY-MM-DD`, so instants would be wrong).
+ *      `start`/`end` RFC 3339 params, with NO `/api/v1` double-prefix.
+ *      The upper bound is exclusive, including for non-UTC calendar ranges.
  *   8. Range interaction — changing the header range re-scopes the
  *      query and re-fetches with the new window.
  *
@@ -34,7 +33,7 @@
  * seam FleetAPIPage / SchemaDriftPage use) so nothing touches the real network.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -102,7 +101,9 @@ vi.mock('../components/analytics', () => {
 });
 vi.mock('../components/operationalbrief-a-m/FleetOverviewBrief', async () => {
   const { HeroGauges } = await import('../components/analytics');
-  return { FleetOverviewBrief: HeroGauges };
+  return { FleetOverviewBrief: ({ query, scope }: {
+    query: Parameters<typeof HeroGauges>[0]['query']; scope: string;
+  }) => <><HeroGauges query={query} /><span>{scope}</span></> };
 });
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it. Guarded
@@ -122,7 +123,9 @@ if (typeof window.matchMedia !== 'function') {
 
 import { request } from '@/api/client';
 import { getDatePreset } from '@/lib/datePresets';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 import { useRangeState } from '@/hooks/useRangeState';
+import { analyticsKeys } from '@/api/hooks/useAnalytics';
 import AnalyticsPage from './AnalyticsPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
@@ -150,14 +153,14 @@ function renderPage(initialEntries: string[] = ['/analytics']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  return { client, ...render(
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <HeaderRangeChange />
         <AnalyticsPage />
       </QueryClientProvider>
     </MemoryRouter>,
-  );
+  ) };
 }
 
 function HeaderRangeChange() {
@@ -174,7 +177,22 @@ function fleetPaths(): string[] {
 
 beforeEach(() => {
   mockedRequest.mockReset();
+  window.localStorage.clear();
 });
+
+afterEach(() => vi.restoreAllMocks());
+
+function fleetPath(start: string, end: string) {
+  return `/analytics/fleet?${new URLSearchParams({ start, end })}`;
+}
+
+function calendarFleetPath(start: string, end: string) {
+  const bounds = calendarRangeToInstants({
+    startDate: start, endDate: end,
+    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+  });
+  return fleetPath(bounds.startInstant, bounds.endInstantExclusive);
+}
 
 describe('AnalyticsPage', () => {
   it('renders the shell: heading, subtitle, labelled KPI region, tab nav, default tab + title', async () => {
@@ -303,14 +321,14 @@ describe('AnalyticsPage', () => {
     }
   });
 
-  it('scopes the fleet request to the URL range with snake_case calendar-date params (no /api/v1)', async () => {
+  it('scopes the fleet request to the URL range with exact exclusive instant bounds (no /api/v1)', async () => {
     installFleet();
 
     renderPage(['/analytics?from=2025-03-01&to=2025-03-15']);
 
     await waitFor(() =>
       expect(
-        fleetPaths().some((p) => p === '/analytics/fleet?start=2025-03-01&end=2025-03-15'),
+        fleetPaths().some((p) => p === calendarFleetPath('2025-03-01', '2025-03-15')),
       ).toBe(true),
     );
     // Regression guards: the request client adds /api/v1 itself, so the hook
@@ -323,19 +341,56 @@ describe('AnalyticsPage', () => {
   it('re-scopes and re-fetches the query when the header range changes', async () => {
     installFleet();
 
-    renderPage(['/analytics?from=2025-03-01&to=2025-03-15']);
+    const { client } = renderPage(['/analytics?from=2025-03-01&to=2025-03-15']);
 
     // Initial request uses the URL window.
     await waitFor(() =>
-      expect(fleetPaths()).toContain('/analytics/fleet?start=2025-03-01&end=2025-03-15'),
+      expect(fleetPaths()).toContain(calendarFleetPath('2025-03-01', '2025-03-15')),
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Change header range' }));
 
     const expected = getDatePreset('7d')!.resolve();
-    const expectedPath = `/analytics/fleet?start=${expected.start}&end=${expected.end}`;
+    const expectedPath = calendarFleetPath(expected.start, expected.end);
     await waitFor(() => expect(fleetPaths()).toContain(expectedPath));
     // The window actually changed (a new request was issued, not the URL one).
-    expect(expectedPath).not.toBe('/analytics/fleet?start=2025-03-01&end=2025-03-15');
+    expect(expectedPath).not.toBe(calendarFleetPath('2025-03-01', '2025-03-15'));
+    const initialParams = new URL(calendarFleetPath('2025-03-01', '2025-03-15'), 'http://localhost').searchParams;
+    const updatedParams = new URL(expectedPath, 'http://localhost').searchParams;
+    const initialKey = analyticsKeys.fleet(undefined, initialParams.get('start')!, initialParams.get('end')!);
+    const updatedKey = analyticsKeys.fleet(undefined, updatedParams.get('start')!, updatedParams.get('end')!);
+    expect(updatedKey).not.toEqual(initialKey);
+    await waitFor(() => expect(client.getQueryData(updatedKey)).toBeDefined());
+    expect(client.getQueryData(initialKey)).toBeDefined();
+  });
+
+  it('preserves non-UTC custom boundaries across daylight saving time in both the request and cache key', async () => {
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolvedOptions.call(this), timeZone: 'America/Los_Angeles' };
+    });
+    installFleet();
+    const { client } = renderPage(['/analytics?from=2025-03-08&to=2025-03-09']);
+    const start = '2025-03-08T08:00:00.000Z';
+    const end = '2025-03-10T07:00:00.000Z';
+    await waitFor(() => expect(fleetPaths()).toContain(fleetPath(start, end)));
+    await waitFor(() => expect(client.getQueryData(analyticsKeys.fleet(undefined, start, end))).toBeDefined());
+    expect(screen.getByText('2025-03-08 – 2025-03-09')).toBeInTheDocument();
+    expect(Date.parse(end) - Date.parse(start)).toBe(47 * 60 * 60_000);
+  });
+
+  it.each([
+    ['24h', 24 * 60 * 60_000],
+    ['live', 5 * 60_000],
+  ])('uses the exact rolling %s window rather than whole calendar days', async (preset, duration) => {
+    const now = new Date('2026-10-14T16:59:07.544Z').getTime();
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    installFleet();
+    const { client } = renderPage([`/analytics?from=2026-10-13&to=2026-10-14&time_scope=${preset}`]);
+    const start = new Date(now - duration).toISOString();
+    const end = new Date(now).toISOString();
+    await waitFor(() => expect(fleetPaths()).toContain(fleetPath(start, end)));
+    await waitFor(() => expect(client.getQueryData(analyticsKeys.fleet(undefined, start, end))).toBeDefined());
+    expect(new URL(fleetPaths().at(-1)!, 'http://localhost').searchParams.get('end')).toBe(end);
   });
 });

@@ -19,11 +19,9 @@ export default function AnalyticsPage() {
 
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  const { start, end } = useRangeState({
-    persistKey: 'analytics.range',
-  });
+  const { start, end, startInstant, endInstantExclusive } = useRangeState();
 
-  const fleetQuery = useFleetAnalytics({ start, end });
+  const fleetQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
   const contentQuery = retainFleetContent(fleetQuery);
 
   const tabs = useMemo(
