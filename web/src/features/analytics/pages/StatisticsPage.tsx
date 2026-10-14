@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { RefreshCw, Car, Clock } from 'lucide-react';
 
 import { PageLayout, Section, CardGrid, ChartCard } from '@/components/layout';
-import { Button } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
   ChartTooltip, ChartLegend,
@@ -12,7 +12,7 @@ import {
   BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
 } from '@/components/charts';
-import { Skeleton, EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, StaleRefreshWarning, DataStateNotice, DataSourceNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -38,6 +38,13 @@ import { StatisticsBatteryBrief } from '../components/operationalbrief-n-z/Stati
 
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
+
+type StatisticsFleet = NonNullable<ReturnType<typeof useFleetAnalytics>['data']> & {
+  partial_result?: {
+    is_partial: boolean;
+    reasons: string[] | null;
+  } | null;
+};
 
 const STATE_SERIES: Record<string, number> = {
   driving: 1,
@@ -82,7 +89,7 @@ export default function StatisticsPage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
-  const { start: startDate, end: endDate } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'statistics.range',
     defaultPresetId: '1y',
   });
@@ -106,8 +113,9 @@ export default function StatisticsPage() {
   const mileageQuery = useMileageStats(activeId);
   const stateQuery = useStateSummary(activeId);
   const { data: stateSummary, isLoading: stateLoading } = stateQuery;
-  const fleetQuery = useFleetAnalytics({ start: startDate, end: endDate });
-  const { data: fleet, isLoading: fleetLoading } = fleetQuery;
+  const fleetQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
+  const { data: fleetResponse, isLoading: fleetLoading } = fleetQuery;
+  const fleet: StatisticsFleet | undefined = fleetResponse;
   const stateSource = useDataState(stateQuery, { provenance: 'historical' });
   const fleetSource = useDataState(fleetQuery, { provenance: 'historical' });
 
@@ -213,11 +221,14 @@ export default function StatisticsPage() {
             <StatisticsSource
               hasData={stateSummary != null}
               emptyWhen={stateData.length === 0}
-              loading={stateLoading}
+              loading={stateLoading && stateQuery.fetchStatus !== 'paused'}
               error={stateSource.fatalError}
               onRetry={() => { void stateQuery.refetch(); }}
-              skeleton={<Skeleton className="h-full w-full rounded-xl" />}
+              skeleton={<Skeleton data-testid="statistics-state-loading" className="h-full w-full rounded-xl" />}
               empty={
+                stateQuery.fetchStatus === 'paused' && stateSummary == null ? (
+                  <DataSourceNotice sources={[{ id: 'statistics-state', label: t('statistics.stateDistribution', 'State distribution'), query: stateQuery }]} />
+                ) :
                 <EmptyState
                   icon={<Clock className="h-8 w-8" aria-hidden="true" />}
                   message={t('statistics.noStates', 'No state distribution data')}
@@ -251,6 +262,16 @@ export default function StatisticsPage() {
             { id: 'statistics-fleet', size: 'half', content: (
           <StatisticsChartPlacement>
           <StaleRefreshWarning state={fleetSource} label={t('statistics.vehicleComparison', 'Vehicle comparison')} />
+          {fleet?.partial_result?.is_partial && (
+            <DataStateNotice state="partial" role="status" data-testid="statistics-fleet-partial">
+              <Text as="p" variant="bodySm" color="secondary">
+                {t('dataState.partial.message', 'Some sources did not respond. Available results remain visible and are not treated as complete.')}
+              </Text>
+              {(fleet.partial_result.reasons ?? []).map((reason, index) => (
+                <Text as="p" variant="bodySm" color="secondary" key={`${reason}-${index}`}>{reason}</Text>
+              ))}
+            </DataStateNotice>
+          )}
           <ChartCard
             size="standard"
             title={t('statistics.vehicleComparison', 'Vehicle comparison')}
@@ -270,11 +291,14 @@ export default function StatisticsPage() {
             <StatisticsSource
               hasData={fleet != null}
               emptyWhen={compData.length <= 1}
-              loading={fleetLoading}
+              loading={fleetLoading && fleetQuery.fetchStatus !== 'paused'}
               error={fleetSource.fatalError}
               onRetry={() => { void fleetQuery.refetch(); }}
-              skeleton={<Skeleton className="h-full w-full rounded-xl" />}
+              skeleton={<Skeleton data-testid="statistics-fleet-loading" className="h-full w-full rounded-xl" />}
               empty={
+                fleetQuery.fetchStatus === 'paused' && fleet == null ? (
+                  <DataSourceNotice sources={[{ id: 'statistics-fleet', label: t('statistics.vehicleComparison', 'Vehicle comparison'), query: fleetQuery }]} />
+                ) :
                 <EmptyState
                   icon={<Car className="h-8 w-8" aria-hidden="true" />}
                   message={t('statistics.singleVehicle', 'Add more vehicles to compare')}

@@ -27,7 +27,7 @@
  *     empty (+ error where the source surfaces one).
  *   - `total_min` snake_case fallback for the deleted state-summary endpoint.
  *   - Bug-fix regression guard: the fleet comparison is scoped by BOTH the URL
- *     `from` AND `to` dates (previously the end date was silently dropped).
+ *     header instants, including the exclusive end and rolling 24-hour scope.
  *   - Request contract: snake_case `vehicle_id`, no `/api/v1` double-prefix.
  *   - Interactions: refresh re-fetches; picking a vehicle dispatches selection.
  *   - Imperial unit conversion of distance + efficiency.
@@ -171,6 +171,7 @@ import { request } from '@/api/client';
 import { useMileageStats, useStateSummary, useFleetAnalytics } from '@/api/hooks/useAnalytics';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ThemeProvider } from '@/components/ui/ThemeProvider';
 import StatisticsPage from './StatisticsPage';
@@ -278,7 +279,7 @@ function renderPage(initialEntries: string[] = ['/statistics']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const page = () => (
     <MemoryRouter initialEntries={initialEntries}>
       <QueryClientProvider client={client}>
         <ThemeProvider>
@@ -289,6 +290,8 @@ function renderPage(initialEntries: string[] = ['/statistics']) {
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  const result = render(page());
+  return { ...result, client, rerenderPage: () => result.rerender(page()) };
 }
 
 /** Every request path issued so far (drops the non-string signal arg). */
@@ -318,6 +321,136 @@ beforeEach(() => {
 });
 
 describe('StatisticsPage', () => {
+  it('renders recorded state shares from the real summary hook and restored seconds envelope', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockStateSummary.mockImplementation(actual.useStateSummary);
+    const response = {
+      vehicle_id: 1,
+      days: 7,
+      start: '2026-10-01T00:00:00Z',
+      end: '2026-10-08T00:00:00Z',
+      total_seconds: 28_800,
+      by_state: [
+        { state: 'driving', total_seconds: 7_200, percentage: 25, transition_count: 10 },
+        { state: 'parked', total_seconds: 18_000, percentage: 62.5, transition_count: 5 },
+        { state: 'charging', total_seconds: 3_600, percentage: 12.5, transition_count: 3 },
+      ],
+    };
+    mockedRequest.mockImplementation((path: unknown) => {
+      if (path === '/vehicle-states/summary?vehicle_id=1') return Promise.resolve(response);
+      if (typeof path === 'string' && path.startsWith('/analytics/period-stats')) return periodStatsHandler();
+      if (typeof path === 'string' && path.startsWith('/annotations')) return Promise.resolve([]);
+      return Promise.resolve({});
+    });
+    renderPage();
+    await screen.findByText('500 km');
+
+    await waitFor(() => {
+      const table = screen.getByRole('table', { name: 'State distribution — data table' });
+      for (const [state, share] of [['driving', '25'], ['parked', '63'], ['charging', '13']]) {
+        const row = within(table).getAllByRole('row').find(candidate => within(candidate).queryByText(state));
+        expect(row).toBeDefined();
+        expect(within(row!).getByText(share)).toBeInTheDocument();
+      }
+    });
+    const call = mockedRequest.mock.calls.find(args => args[0] === '/vehicle-states/summary?vehicle_id=1');
+    expect(call?.[1]?.signal).toBeInstanceOf(AbortSignal);
+    expect(response.by_state[0]).toEqual({
+      state: 'driving', total_seconds: 7_200, percentage: 25, transition_count: 10,
+    });
+  });
+
+  it('discloses capped and partial reasons beside retained comparison rows through failure and recovery', async () => {
+    const partial = {
+      is_partial: true,
+      reasons: ['drive_record_cap_reached', 'charging_record_cap_reached', 'future_source_reason'],
+    };
+    const data = { ...makeFleet(2), partial_result: partial };
+    const retry = vi.fn();
+    mockFleet.mockReturnValue(qr({ data, isSuccess: true, refetch: retry }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+
+    const assertRetained = () => {
+      const notice = screen.getByTestId('statistics-fleet-partial');
+      expect(notice).toHaveAttribute('data-data-state', 'partial');
+      expect(notice).toHaveTextContent('Available results remain visible and are not treated as complete.');
+      for (const reason of partial.reasons) expect(within(notice).getByText(reason)).toBeInTheDocument();
+      const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
+      expect(within(table).getByText('Car 1')).toBeInTheDocument();
+      expect(within(table).getByText('Car 2')).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Distance and energy bar chart comparing all vehicles in the fleet' })).toBeInTheDocument();
+      expect(notice.parentElement).toContainElement(table);
+    };
+    assertRetained();
+    mockFleet.mockReturnValue(qr({ data, error: new Error('refresh failed'), isError: true, refetch: retry }));
+    rerenderPage();
+    assertRetained();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    mockFleet.mockReturnValue(qr({ data, isFetching: true, fetchStatus: 'fetching', refetch: retry }));
+    rerenderPage();
+    assertRetained();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+
+    mockFleet.mockReturnValue(qr({ data: { ...makeFleet(2), partial_result: { is_partial: false, reasons: [] } }, isSuccess: true }));
+    rerenderPage();
+    expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('table', { name: 'Vehicle comparison — data table' })).toHaveTextContent('Car 2');
+  });
+
+  it('retains a partial notice when the producer supplies no reason list', async () => {
+    mockFleet.mockReturnValue(qr({ data: { ...makeFleet(2), partial_result: { is_partial: true, reasons: null } } }));
+    renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getByTestId('statistics-fleet-partial')).toHaveTextContent('not treated as complete');
+  });
+
+  it('shows active chart loading without claiming successful empty results', async () => {
+    mockStateSummary.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
+    mockFleet.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'fetching' }));
+    renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getByTestId('statistics-state-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('statistics-fleet-loading')).toBeInTheDocument();
+    expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
+  });
+
+  it('explains paused first chart loads without claiming empty history or a vehicle outage', async () => {
+    mockStateSummary.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'paused' }));
+    mockFleet.mockReturnValue(qr({ isLoading: true, isPending: true, fetchStatus: 'paused' }));
+    renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getAllByText('Refresh paused')).toHaveLength(2);
+    expect(screen.queryByTestId('statistics-state-loading')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('statistics-fleet-loading')).not.toBeInTheDocument();
+    expect(screen.queryByText('No state distribution data')).not.toBeInTheDocument();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes successful empty fleet results from measured zero comparison values', async () => {
+    mockFleet.mockReturnValue(qr({ data: makeFleet(0), isSuccess: true }));
+    const { rerenderPage } = renderPage();
+    await screen.findByText('500 km');
+    expect(screen.getByText('Add more vehicles to compare')).toBeInTheDocument();
+    expect(screen.queryByTestId('statistics-fleet-partial')).not.toBeInTheDocument();
+
+    const data = makeFleet(2);
+    data.vehicle_comparison.forEach(vehicle => { vehicle.distance = 0; vehicle.energy = 0; });
+    mockFleet.mockReturnValue(qr({ data, isSuccess: true }));
+    rerenderPage();
+    expect(screen.queryByText('Add more vehicles to compare')).not.toBeInTheDocument();
+    const table = screen.getByRole('table', { name: 'Vehicle comparison — data table' });
+    expect(within(table).getAllByText('0')).toHaveLength(4);
+    expect(within(table).queryByText('—')).not.toBeInTheDocument();
+  });
+
   it('keeps all three sections and both charts visible during independent retained refresh failures', async () => {
     mockStateSummary.mockReturnValue(qr({ data: makeStateSummary(), error: new Error('state refresh failed') }));
     mockFleet.mockReturnValue(qr({ data: makeFleet(2), error: new Error('fleet refresh failed') }));
@@ -634,13 +767,51 @@ describe('StatisticsPage', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 
-  it('scopes the fleet comparison to BOTH the URL from and to dates', async () => {
-    renderPage(['/statistics?from=2025-03-01&to=2025-03-15']);
+  it.each(['2025-03-15', '2025-03-16'])('passes calendar instants through the fleet request and key with exclusive end %s', async (endDate) => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockFleet.mockImplementation(actual.useFleetAnalytics);
+    mockedRequest.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith('/analytics/fleet') ? makeFleet(2) : makeStats(),
+    ));
+    const { startInstant, endInstantExclusive } = calendarRangeToInstants({
+      startDate: '2025-03-01',
+      endDate,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    const { client } = renderPage([`/statistics?from=2025-03-01&to=${endDate}`]);
     await screen.findByRole('region', { name: 'Statistics' });
 
-    // Regression guard: the end date must reach the fleet query. Previously the
-    // page called useFleetAnalytics(30, startDate), silently dropping `to`.
-    expect(mockFleet).toHaveBeenCalledWith({ start: '2025-03-01', end: '2025-03-15' });
+    const params = new URLSearchParams({ start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(issuedPaths()).toContain(`/analytics/fleet?${params}`));
+    expect(mockFleet).toHaveBeenCalledWith({ start: startInstant, end: endInstantExclusive });
+    await waitFor(() => expect(client.getQueryData(
+      actual.analyticsKeys.fleet(undefined, startInstant, endInstantExclusive),
+    )).toEqual(makeFleet(2)));
+    expect(screen.getByRole('group', {
+      name: 'Distance and energy bar chart comparing all vehicles in the fleet',
+    })).toBeInTheDocument();
+  });
+
+  it('preserves precise rolling 24-hour bounds in the fleet request and key', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAnalytics')>('@/api/hooks/useAnalytics');
+    mockFleet.mockImplementation(actual.useFleetAnalytics);
+    mockedRequest.mockImplementation((path: string) => Promise.resolve(
+      path.startsWith('/analytics/fleet') ? makeFleet(2) : makeStats(),
+    ));
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-14T17:45:46.022Z'));
+    try {
+      const start = '2026-10-13T17:45:46.022Z';
+      const end = '2026-10-14T17:45:46.022Z';
+      const { client } = renderPage(['/statistics?time_scope=24h']);
+      const params = new URLSearchParams({ start, end });
+      await waitFor(() => expect(issuedPaths()).toContain(`/analytics/fleet?${params}`));
+      expect(mockFleet).toHaveBeenCalledWith({ start, end });
+      await waitFor(() => expect(client.getQueryData(
+        actual.analyticsKeys.fleet(undefined, start, end),
+      )).toEqual(makeFleet(2)));
+    } finally {
+      now.mockRestore();
+    }
   });
 
   it('requests period stats with a snake_case vehicle_id and no /api/v1 prefix', async () => {
