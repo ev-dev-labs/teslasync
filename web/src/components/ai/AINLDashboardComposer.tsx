@@ -13,7 +13,8 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Button, Textarea } from '@/components/ui'
+import { Button } from '@/components/ui/Button'
+import { Textarea } from '@/components/ui/Textarea'
 import { useAiStream, type AiStreamEvent } from '@/hooks/useAiStream'
 
 /**
@@ -126,6 +127,10 @@ export function parseDashboardLayoutDraft(data: unknown): DashboardLayoutDraft |
 function InnerSection(props: AINLDashboardComposerProps) {
   const { onApply } = props
   const { t } = useTranslation()
+  const description = t(
+    'powerDashboards.aiDrafter.description',
+    'Describe the dashboard you want in plain English (e.g. "give me an overview dashboard with daily drives, current battery, and recent alerts"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.',
+  )
 
   const [prompt, setPrompt] = useState('')
   const [draft, setDraft] = useState<DashboardLayoutDraft | null>(null)
@@ -170,10 +175,7 @@ function InnerSection(props: AINLDashboardComposerProps) {
   return (
     <AIFeatureCard
       title={t('powerDashboards.aiDrafter.title', 'Helix natural-language dashboard composer')}
-      description={t(
-        'powerDashboards.aiDrafter.description',
-        'Describe the dashboard you want in plain English (e.g. "give me an overview dashboard with daily drives, current battery, and recent alerts"). Helix proposes a typed dashboard JSON draft built from the in-scope curated panel catalog you can apply to the editor with one click; it never pushes the dashboard to Grafana directly.',
-      )}
+      description={description}
       buttonLabel={t('powerDashboards.aiDrafter.button', 'Draft dashboard')}
       badgeLabel={t('powerDashboards.aiDrafter.badge', 'Helix')}
       canStart={hasPrompt}
@@ -189,6 +191,7 @@ function InnerSection(props: AINLDashboardComposerProps) {
           )}
           rows={2}
           aria-label={t('powerDashboards.aiDrafter.promptLabel', 'Dashboard request')}
+          title={description}
         />
       }
     >

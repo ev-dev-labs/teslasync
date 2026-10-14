@@ -688,3 +688,65 @@ describe('AINLDashboardComposer — draft capture + apply (propose-only contract
     )
   })
 })
+
+describe('AINLDashboardComposer — associated existing guidance', () => {
+  it('exposes the existing visible propose-only guidance as the prompt accessible description without duplicating it', () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const onApply = vi.fn<(draft: DashboardLayoutDraft) => void>()
+
+    render(<AINLDashboardComposer onApply={onApply} />)
+
+    const guidance = screen.getByText(DESCRIPTION)
+    const textarea = screen.getByRole('textbox', { name: /Dashboard request/i })
+    expect(textarea).toHaveAccessibleDescription(guidance.textContent ?? '')
+    expect(textarea).toHaveAttribute('title', guidance.textContent)
+    expect(guidance).toHaveTextContent(/it never pushes the dashboard to Grafana directly/)
+    expect(textarea).not.toHaveAttribute('aria-describedby')
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('retains the field identity, raw prompt and associated guidance through edits and rerenders without applying a draft', () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const onApply = vi.fn<(draft: DashboardLayoutDraft) => void>()
+    const { rerender } = render(<AINLDashboardComposer onApply={onApply} />)
+    const textarea = screen.getByRole('textbox', { name: /Dashboard request/i })
+    const guidance = screen.getByText(DESCRIPTION).textContent ?? ''
+    const fieldId = textarea.id
+
+    fireEvent.change(textarea, { target: { value: '  overview dashboard  ' } })
+    rerender(<AINLDashboardComposer onApply={onApply} />)
+
+    expect(screen.getByRole('textbox', { name: /Dashboard request/i })).toBe(textarea)
+    expect(textarea.id).toBe(fieldId)
+    expect(textarea).toHaveValue('  overview dashboard  ')
+    expect(textarea).toHaveAccessibleDescription(guidance)
+    expect(screen.getByRole('button', { name: DRAFT_BUTTON })).not.toBeDisabled()
+    expect(screen.queryByRole('button', { name: APPLY_BUTTON })).not.toBeInTheDocument()
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(onApply).not.toHaveBeenCalled()
+  })
+
+  it('uses the same localized guidance for the card and accessible prompt description', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const translations = await import('react-i18next')
+    const readTranslations = translations.useTranslation
+    const response = readTranslations()
+    const localizedGuidance = 'Beschreibe dein Dashboard. Der Entwurf wird erst nach deiner Bestätigung in den Editor übernommen.'
+    const translated = new Proxy(response.t, {
+      apply(target, thisArg, args: unknown[]) {
+        return args[0] === 'powerDashboards.aiDrafter.description'
+          ? localizedGuidance
+          : Reflect.apply(target, thisArg, args)
+      },
+    })
+    vi.spyOn(translations, 'useTranslation').mockReturnValue(Object.assign(response, { t: translated }))
+
+    render(<AINLDashboardComposer onApply={() => {}} />)
+
+    expect(screen.getByText(localizedGuidance)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /Dashboard request/i }))
+      .toHaveAccessibleDescription(localizedGuidance)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+})
