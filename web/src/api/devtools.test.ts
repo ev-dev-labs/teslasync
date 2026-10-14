@@ -34,6 +34,7 @@ vi.mock('@/api/client', async () => {
 
 import { request, apiUrl, ApiError } from '@/api/client'
 import type { ChargingSession, Drive } from '@/api/types'
+import type { RedisSignalsResponse } from './devtools'
 import {
   getCaptureStats,
   getRedisSignals,
@@ -153,6 +154,100 @@ describe('getExtendedHealth', () => {
 // ---------------------------------------------------------------------------
 
 describe('Redis signal cache', () => {
+  it('preserves omitted Go metadata fields without inventing timestamps or VIN', async () => {
+    const payload = {
+      vehicle_id: 7,
+      signal_count: 0,
+      signals: {},
+      meta: {
+        live_signal_store_mode: 'local',
+        redis_key: 'vehicle:7:signals',
+        redis_field_count: 0,
+        l1_signal_count: 0,
+      },
+    } satisfies RedisSignalsResponse
+    mockedRequest.mockResolvedValueOnce(payload)
+
+    const result = await getRedisSignals(7)
+
+    expect(result).toBe(payload)
+    expect(result.meta).not.toHaveProperty('l1_last_seen_at')
+    expect(result.meta).not.toHaveProperty('l2_last_seen_at')
+    expect(result.meta).not.toHaveProperty('vehicle_vin')
+    expect(result.meta?.redis_field_count).toBe(0)
+    expect(result.meta?.l1_signal_count).toBe(0)
+  })
+
+  it('preserves a response with no metadata or measured signals', async () => {
+    const payload = {
+      vehicle_id: 7,
+      signal_count: 0,
+      signals: {},
+    } satisfies RedisSignalsResponse
+    mockedRequest.mockResolvedValueOnce(payload)
+
+    const result = await getRedisSignals(7)
+
+    expect(result).toBe(payload)
+    expect(result).not.toHaveProperty('meta')
+    expect(result.signals).not.toHaveProperty('Power')
+  })
+
+  it.each([0, -12, 12, -0.125, 0.125])(
+    'preserves the measured numeric signal %s without rounding or clamping',
+    async (value) => {
+      const payload = {
+        vehicle_id: 7,
+        signal_count: 1,
+        signals: { Power: { value, type: 'number' } },
+        meta: {
+          live_signal_store_mode: 'hybrid',
+          redis_key: 'vehicle:7:signals',
+          redis_field_count: 1,
+          l1_signal_count: 1,
+          l1_last_seen_at: '2026-10-14T16:00:00.123Z',
+          l2_last_seen_at: '2026-10-14T16:00:01.456Z',
+          vehicle_vin: 'test-vehicle-vin',
+        },
+      } satisfies RedisSignalsResponse
+      mockedRequest.mockResolvedValueOnce(payload)
+
+      const result = await getRedisSignals(7)
+
+      expect(result).toBe(payload)
+      expect(result.signals.Power.value).toBe(value)
+      expect(result.meta).toEqual(payload.meta)
+    },
+  )
+
+  it.each([null, undefined, '', 'not-a-number'])(
+    'does not replace missing or invalid boundary values (%s) with measured zero',
+    async (value) => {
+      const payload = {
+        vehicle_id: 7,
+        signal_count: 1,
+        signals: { Power: { value, type: 'number' } },
+        meta: {
+          live_signal_store_mode: 'hybrid',
+          redis_key: 'vehicle:7:signals',
+          redis_field_count: 1,
+          l1_signal_count: 0,
+          l1_last_seen_at: 'invalid-timestamp',
+        },
+      }
+      mockedRequest.mockResolvedValueOnce(payload)
+
+      const result = await getRedisSignals(7)
+
+      expect(result).toBe(payload)
+      expect(result.signals.Power.value).toBe(value)
+      expect(result.signals.Power.value).not.toBe(0)
+      expect(result.meta?.l1_last_seen_at).toBe('invalid-timestamp')
+      expect(result.meta).not.toHaveProperty('l2_last_seen_at')
+      expect(result.meta).not.toHaveProperty('vehicle_vin')
+    },
+  )
+
   it('getRedisSignals threads the vehicle id as a snake_case query param', async () => {
     mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, signal_count: 0, signals: {} })
     await getRedisSignals(7)

@@ -42,9 +42,9 @@ export interface RedisSignalsMeta {
   redis_key: string
   redis_field_count: number
   l1_signal_count: number
-  l1_last_seen_at: string | null
-  l2_last_seen_at: string | null
-  vehicle_vin: string
+  l1_last_seen_at?: string
+  l2_last_seen_at?: string
+  vehicle_vin?: string
 }
 
 export interface RedisSignalsResponse {
@@ -66,11 +66,11 @@ export interface RedisSignalKeysResponse {
   total: number
 }
 
-export const getRedisSignals = (vehicleId: number) =>
-  request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`)
+export const getRedisSignals = (vehicleId: number, opts?: { signal?: AbortSignal }) =>
+  request<RedisSignalsResponse>(`/dev-tools/redis-signals?vehicle_id=${vehicleId}`, opts)
 
-export const getRedisSignalKeys = (limit = 50) =>
-  request<RedisSignalKeysResponse>(`/dev-tools/redis-signals/keys?limit=${limit}`)
+export const getRedisSignalKeys = (limit = 50, opts?: { signal?: AbortSignal }) =>
+  request<RedisSignalKeysResponse>(`/dev-tools/redis-signals/keys?limit=${limit}`, opts)
 
 export interface RedisSignalsPurgeResponse {
   vehicle_id: number
