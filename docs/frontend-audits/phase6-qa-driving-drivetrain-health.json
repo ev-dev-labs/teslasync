@@ -1,0 +1,1729 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-drivetrain-health",
+  "attempt": 1,
+  "actor": "da0874de-619d-45b5-b181-62cea5180bb6",
+  "phase": 6,
+  "status": "SOURCE_QA_REPORTED_WITH_FINDINGS",
+  "taskOutcome": "DONE: report-only source QA delivered with9confirmed findings/6candidates; native/runtime/page PASS NOTRUN",
+  "repo": "D:/repos/teslasync",
+  "cwd": "web",
+  "page": "web/src/features/driving/pages/DrivetrainHealthPage.tsx",
+  "routes": [
+    "/drivetrain-health"
+  ],
+  "clock": {
+    "rule": "Earlier reservation boundary wins over actual+20/+25; clocks not reset",
+    "firstObservedCommandUtc": "2026-10-14T01:06:12.7295138Z",
+    "returnByUtc": "2026-10-14T01:24:13.296Z",
+    "targetMinutes": 10,
+    "hardByUtc": "2026-10-14T01:29:13.296Z",
+    "reservationUtc": "2026-10-14T01:04:13.296Z"
+  },
+  "firstCheck": {
+    "result": "no source change authorized or performed",
+    "alreadyAcceptedThinOrchestrator": true,
+    "reason": "Use current accepted page/direct parts; no repeat migration. Remaining confirmed mechanisms are reported to parent only."
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-driving-drivetrain-health.json",
+    "web/logs/phase6-qa-driving-drivetrain-health.log"
+  ],
+  "sourceWrites": 0,
+  "sourceSnapshotUtc": "2026-10-14T01:11:27.5508374Z",
+  "sourcePins": [
+    {
+      "path": "web/src/features/driving/pages/DrivetrainHealthPage.tsx",
+      "lines": 123,
+      "sha256": "eee8bc0a0b0e688e73fa719a6f5905b05d3a3da84b756b92f1355f0584272612",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5689235Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/ChartPanels.tsx",
+      "lines": 48,
+      "sha256": "458d37caec32d3947766dcfa91e4f2f76e3faabe85f486619136f774f74d9527",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5021194Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/DetailPanels.tsx",
+      "lines": 80,
+      "sha256": "7424e65d76b76e002884ab6fe610c9018fd8caccc5ab89dd3d9ce20edc21726a",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5021194Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/HistoryRecords.tsx",
+      "lines": 77,
+      "sha256": "ec1a01a5ca432734e09bd520d748053f7dbb221a61f9863110ef491e1989cf37",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5021194Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "lines": 203,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5021194Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
+      "lines": 115,
+      "sha256": "2e42e757ee818adaefc068ba1b5631d86cae54a91aacb09d9a5112beb336d5fb",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5021194Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/PowerHistory.tsx",
+      "lines": 72,
+      "sha256": "6021af956d4fb9f99c1c45d745b14a30df12f4d03a007aa57cd1fae16c3e5b5a",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.505815Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/PreservedChartFrame.tsx",
+      "lines": 30,
+      "sha256": "84a9fd1d04c7ed00e578c8a08fedce18e8ac1835bf7ce7d249ec9f8408a669bb",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.505815Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/RecommendationsPanel.tsx",
+      "lines": 61,
+      "sha256": "64d71fcf060706ce18059c91828a6ab3a89db632769d0f29c62d87492ff79f59",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.505815Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/SourceBoundary.tsx",
+      "lines": 31,
+      "sha256": "3a999df71f2579a88231c9bd331e84188af5d8c1b2c3947d5a62e4f75b175632",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.505815Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/StatorHistory.tsx",
+      "lines": 99,
+      "sha256": "ebf6630fd173f77aa063f7a73e90eab8cd4678145c32cdc7bcfe6891950c8824",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.505815Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/TemperatureHistory.tsx",
+      "lines": 78,
+      "sha256": "9b89329bfb0b8888767a53bc85d22457cf7ee7c543e70555ecae1e9c4c1d45c1",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5079449Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx",
+      "lines": 119,
+      "sha256": "61ed0475de92e72970a92dc0eb11bb4c7eb2a93e48fad1e17927faadf217d82d",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5079449Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/TorqueHistory.tsx",
+      "lines": 56,
+      "sha256": "797f047940d20c2260d632b944eff8bc583c83f33953e2d1a0fcc8326755f0d4",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5079449Z"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "lines": 134,
+      "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "lines": 53,
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "lines": 63,
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/model.ts",
+      "lines": 130,
+      "sha256": "ed93180e0bb323f237e7661c8bc10bc475b2848a76162f536b95d7e6dd5fa715",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5079449Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/index.ts",
+      "lines": 7,
+      "sha256": "a9dbe4917b48eaa5d9234ff58463952b6341dbb8fd3c88ca032aafd96bf1294a",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5079449Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health-modernization/chartTypes.ts",
+      "lines": 14,
+      "sha256": "8f2b57c3e57a276f054e7d1cb8ad8dc19b01b385fb9d05ab9fb93c4fc973035d",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-14T00:29:41.5079449Z"
+    },
+    {
+      "path": "web/src/features/driving/components/drivetrain-health/constants.ts",
+      "lines": 66,
+      "sha256": "fd15d467333ccf9df2235d43066c2ad060f16986fe2c937b26b7350bd74e6c8b",
+      "sourceReadUtc": "2026-10-14T01:11:27.5508374Z",
+      "lastWriteUtc": "2026-10-13T06:09:18.2471732Z"
+    }
+  ],
+  "supportPins": [
+    {
+      "path": "web/src/api/hooks/useDriving.ts",
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "lines": 454,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lines": 1898,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/types/driving.ts",
+      "sha256": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "lines": 411,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lines": 694,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useVehicleLive.ts",
+      "sha256": "a8f6a847d81a1a5ee0dfec6ab4c2cc16c957d15107a25b0c35efcdcd9e65141d",
+      "lines": 519,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines": 148,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/lib/routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "lines": 289,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lines": 127,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lines": 919,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/layout/index.ts",
+      "sha256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642",
+      "lines": 27,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/ChartCard.tsx",
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "lines": 48,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lines": 42,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines": 1006,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/charts/chartDefaults.tsx",
+      "sha256": "e2955bbdc7d9e73f00c6ba4b6473033a6dd5c77b3edf82cabb192307792e6fc6",
+      "lines": 103,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/charts/LinearGauge.tsx",
+      "sha256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a",
+      "lines": 251,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "lines": 1707,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "internal/api/drivetrain/handler.go",
+      "sha256": "7ebe81af28ae6e9c7b7c0218fb85496af2dd324e0e3225035c1c9fdfda3d161b",
+      "lines": 160,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "internal/api/drives/listing.go",
+      "sha256": "da0d6486c0f98e9f911825ce2e7bcaee8e9ac4a6993ea77eda90f0a789cd53c1",
+      "lines": 606,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "internal/api/drives/handler.go",
+      "sha256": "035d0b01c24bde0480d8e6e3942a83865777a195d78fd6fa2aeab4a8e195aa70",
+      "lines": 108,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "internal/database/drive/stats.go",
+      "sha256": "7292c7227617dbe87f97c0625c43784a6ffaa2a751c9701268f5eada847eed7f",
+      "lines": 87,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "internal/api/apiparams/params.go",
+      "sha256": "5526c81eaff016243772398b88b003112f3d0c0921b484c0de3008b7d2656add",
+      "lines": 142,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "lines": 38994,
+      "sourceReadUtc": "2026-10-14T01:16:57.745512Z",
+      "scope": "Supporting declarations or necessary ranges only; not full unrelated-file semantic audit"
+    }
+  ],
+  "instructionPins": [
+    {
+      "path": "docs/orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "lines": 296,
+      "readExtent": "full"
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "lines": 2539,
+      "readExtent": "full"
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "lines": 2460,
+      "readExtent": "1-155: latest current handoff"
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "lines": 1593,
+      "readExtent": "1414-1518: mission43-45"
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "lines": 94,
+      "readExtent": "full"
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "lines": 629,
+      "readExtent": "full"
+    },
+    {
+      "path": ".github/instructions/observability.instructions.md",
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "lines": 45,
+      "readExtent": "full"
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "lines": 221,
+      "readExtent": "full"
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-112.json",
+      "sha256": "49a4a9da361bb289663e830fe15992ef61c7acb49c83c176b85f4bfd55419a99",
+      "lines": 681,
+      "readExtent": "native parsed preservation/identity; historical only"
+    }
+  ],
+  "queue": {
+    "path": "migration-queue.md",
+    "sha256": "8ea0d1bb05bf8472dbc4e0cb57fce1bb1e787d2e86e98418681bc2e256affbf8",
+    "capturedUtc": "2026-10-14T01:22:02.092362Z",
+    "rows": [
+      {
+        "line": 2032,
+        "status": "[x]",
+        "item": "phase6-drivetrain-stator-chart",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-stator-chart | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\StatorHistory.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\StatorHistory.test.tsx | - | 1 | 2026-10-12T23:21:08.778Z | 0ead1c8fa991bada23c16a0a2d5ec462c42fbca7 | Verified original Drivetrain receipt: saturated/hardcoded chart colors,10px ticks/category import adoption. Existing restrained chart palette/typography; preserve series/IDs/references/tables/exports/units and unknown-versus-zero. Exact one-file correction, not page re-migration. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=9ed40bb4-6619-47d8-86c6-b36f7632265f; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; SAME already-read terminal0 (notreread) labeledFAILED ONLYexternalcatalogstartup; SOURCEONLY peroriginalexternalrule. Exactcomponent/testpair restrainedchartroles/scaledtypography/SI/allthree series/IDs/thresholds/table-export logic preserved, source99/94. OwnVitest1 ZEROdiscovery/sixauthoredcasesUNRUN; ESLint0/stylescan0/candidate0, no retries/nativeclaim. Parentexistingroot NOWnormal BEFORE1/GENERATE0/AFTER0/knownmissing0 fromactual3490, historicalownstartupnotretroactivelypass. No shared/wire/helper changes.; commit=0ead1c8fa991bada23c16a0a2d5ec462c42fbca7; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2033,
+        "status": "[x]",
+        "item": "phase6-drivetrain-torque-chart",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-torque-chart | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TorqueHistory.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TorqueHistory.test.tsx | - | 1 | 2026-10-12T23:21:08.779Z | bb459c3b50dd7d25f66815e3362c5fe812beea24 | Verified original Drivetrain receipt: saturated/hardcoded chart colors,10px ticks/category import adoption. Existing restrained chart palette/typography; preserve torque series/IDs/references/tables/exports/source units and unknown-versus-zero. Exact one-file correction. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=d0e12356-2124-48f1-8b31-1e524dd03f46; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 FAILED ONLYexternal parentcatalogstartup; classifySOURCEONLY originalexternalrule, not own behavioral failure. Exclusive TorqueHistory.tsx/testpair restraint/charttokens/scaledcaptionticks/8percenttint preserving torqueNm/data/IDs/references/table/export. FINAL_LINT0/sourceviolations0. OwnTEST1 ZEROdiscovery/execution; authoredcasesUNRUN, mapping raw logs phase6-drivetrain-torque-chart.log. Parent3490normalclosure1/0/0knownmissing0 doesnotretroactivelypass tests. No native/type/fullgate/helper/budgetclaim or sharedchanges.; commit=bb459c3b50dd7d25f66815e3362c5fe812beea24; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2034,
+        "status": "[x]",
+        "item": "phase6-drivetrain-temperature-chart",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-temperature-chart | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TemperatureHistory.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TemperatureHistory.test.tsx | - | 1 | 2026-10-12T23:21:08.780Z | 039fa0f76cc012242271f347fa4632c5d49d4d85 | Verified original Drivetrain receipt: saturated/hardcoded chart colors,10px ticks/category import adoption. Existing restrained chart palette/typography; preserve temperature series/IDs/references/tables/exports/SI-display boundaries and unknown-versus-zero. Exact one-file correction. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=fc7f062c-b2d9-40c2-9b2d-2e53a7eb73e4; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 FAILED ONLYexternal staleparentcatalog guard; SOURCEONLY originalexternalrule. Exact TemperatureHistory/testpair reused restrainedtokens/scaledtypography preserving SI/series/references/IDs/table/export/zero-null, source78/71. OwnVitest1 ZEROdiscovery/testsUNEXECUTED; ownESLint0/finaltestlint0/hex-tinyticks-unsupportedimports0. Raw namedmapping logs phase6-drivetrain-temperature-chart.log. No ownrunnerretry/catalogrepair, no compiler/fullsuite/native/helperclaim; parent3490closure1/0/0notretroactivepass.; commit=039fa0f76cc012242271f347fa4632c5d49d4d85; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2035,
+        "status": "[x]",
+        "item": "phase6-drivetrain-power-chart",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-power-chart | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PowerHistory.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PowerHistory.test.tsx | - | 1 | 2026-10-12T23:21:08.780Z | f2997e7e8c711ca993b167704c407b0d2251b51d | Verified original Drivetrain receipt lines35-36,51,59: saturated/hardcoded chart colors,tiny ticks, selected-power-unit/provenance labels. Existing restrained chart palette/typography/useUnits display boundary, preserve power series/IDs/references/tables/exports/rawSI/source truth; no mislabelled display scaling. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=e91428d4-b1d2-4b2f-aa52-f199d6f0cf80; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 labeledFAILED ONLYexternalcatalogstartup; SOURCEONLY originalexternalrule. ExactPowerHistory/testpair restrainedroles/captionticks/selectedunit-provenancelabels preservingrawSI/chart fields/legend IDs/gradient-zero/export/historicalretention. OwnVitest1 ZEROdiscovery/all authoredcasesUNRUN; ESLint0/scopedviolations0/missingkeys0. Exact named units-export/rawSIimmutability/seriespreservation/retained-paused cases logs phase6-drivetrain-power-chart.log. No guard/catalogrepair/compiler/nativeclaim; parent3490closure1/0/0notretroactivepassingproof.; commit=f2997e7e8c711ca993b167704c407b0d2251b51d; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2036,
+        "status": "[x]",
+        "item": "phase6-drivetrain-thermal-source-trust",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-thermal-source-trust | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.test.tsx | - | 1 | 2026-10-12T23:21:08.780Z | 3852e322d0af07f3955aca7d35df4367fedaf354 | Verified original Drivetrain receipt84/98: independent drive/stats initial/empty source trust missing; unsupported root import2. Own supported additive source-state props/rendering, preserve every thermal field/metric; if caller wiring needed, report exact inputs to queued caller item, never edit it silently. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=7af0c421-bf9c-47ab-bdab-5012b3773412; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 SOURCEONLY/FAILED ONLYexternal stalegeneratedcatalog startup originalexternalrule. ExactThermalPanels/testpair ADDITIVEOPTIONAL independentloading-emptyprops/supportedlayoutimports/retainedsourcequalification;13 authoredregressionsUNRUN. FINAL_ESLint0/11scopedviolationcounts0/Vitest1 ZEROdiscovery. CallerUNTOUCHED exactneeds drivesLoading=drivesQuery.isLoading; drivesEmpty=drivesState.hasData&&chartData.length===0; statsLoading=statsQuery.isLoading; statsEmpty=statsState.status===unavailable;;(statsQuery.isSuccess&&stats==null), toexistingcallerwiringqueue onlyafterDetail. Rawmapping logs phase6-drivetrain-thermal-source-trust.log. No compiler/fullsuite/native/helperclaim; parent3490closuredoesnotretroactivelypass.; commit=3852e322d0af07f3955aca7d35df4367fedaf354; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2037,
+        "status": "[x]",
+        "item": "phase6-drivetrain-detail-source-trust",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-detail-source-trust | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\DetailPanels.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\DetailPanels.test.tsx | - | 1 | 2026-10-12T23:21:08.780Z | e84b1e892454748cb13103cab00eabfad6a94131 | Verified original Drivetrain receipt38/47: independent drive/stats initial/empty source trust missing; unsupported root imports4. Own supported additive source-state props/rendering, preserve all detail fields/actions; if caller wiring needed, report exact inputs to queued caller item. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=6c089477-68aa-4870-a477-21442a1f878a; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 FAILED ONLYexternalcatalogguard; SOURCEONLY originalexternalrule. ExactDetailPanels/testpair additiveOPTIONAL drivesLoading/statsLoading/drivesEmpty/statsEmpty defaultfalse independentrendering/supportedimports preserving details-actions. TwelveplannedcasesUNRUN; ESLint0/scopedviolations0/Vitest1 DISCOVERED0/JSONnotcreated explicit. No newtranslationkeys/caller touched or catalogrepair/bypass. Caller mappings/namedcases/hashes raw logs phase6-drivetrain-detail-source-trust.log; BOTHactualchild imports now sourceaccepted unblocks EXISTINGcaller-source-trust wiring, not fullQA. Parent3490closure1/0/0notretroactivetestpass.; commit=e84b1e892454748cb13103cab00eabfad6a94131; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2038,
+        "status": "[x]",
+        "item": "phase6-drivetrain-live-isolation-trust",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-live-isolation-trust | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.test.tsx | - | 1 | 2026-10-12T23:21:08.780Z | 918e8f0306424f2947c690886f97b9a32fc2e19a | Verified original Drivetrain receipt155-168: independent isolation is hidden behind motor fatal/loading/empty gate, root imports4. Separate real source trust so retained/independent isolation remains visible; preserve all motor/isolation measurements,zeros,unknowns and provenance. Shared hook identity-reset root is separate; no fabricated trust. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=59622bb0-d5ac-44fd-93c7-cf545281c9c7; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 FAILED ONLYexternalcatalogstartup, SOURCEONLY originalexternalrule. ExactLiveMotorPanel/testpair independentisolationrendering/all13fieldsretained/additiveOPTIONAL isolationState-isolationPeriod forGENUINE per-signalevidence. OwnVitest1 ZEROdiscovery/21authoredcasesUNRUN; ESLint0/scan0/candidates0. Hookcurrentlydefault-filledstate/connected DOESNOTprove isolationpresence-freshness; caller mustnotfabricatefromconnected. Parentexactcopyneeds drivetrain.modernization.isolationSignalScope AND isolationMeasuredPolicy, textrecordin logs phase6-drivetrain-live-isolation-trust.log; queueexistingcatalog/callerintegration beforeedits, no broadhook/wirechange. No compiler/fullsuite/native/helperclaim; parent3490closuredoesnotretroactivelypass.; commit=918e8f0306424f2947c690886f97b9a32fc2e19a; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2039,
+        "status": "[x]",
+        "item": "phase6-drivetrain-chart-imports",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-chart-imports | specific-reported-fix | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ChartPanels.tsx; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ChartPanels.test.tsx | - | 1 | 2026-10-12T23:21:08.780Z | c9ecdf632b82feb790c076c4fa63b372f3dfb845 | Verified original Drivetrain receipt2: presenter bypasses supported category barrels. Surgical supported import adoption only, preserve four chart mounts/public APIs/state/error boundaries/preferences/units. No shared barrel edits or page wrapper overrides. Evidence logs\\phase5-page-driving-drivetrain-health.log, terminal original scope unchanged21/21passed. Parent approves named test extension only at reservation; original assertions preserved. No source/native acceptance inferred. Fresh actual21-worker census opens11 targetslots; only actual verified one-file fixes, parent-approved exact colocatedtest extension. No whole-page/provenance/reaudit tasks, catalogue/shared/caller mutation or assumed native acceptance. Actor pending launch. Actual fresh actor=ca0bd3f0-7ccd-41a4-bf97-ace3a54b23d5; exact narrow objective launched; no source/test/native acceptance yet. Last proposed11th actor refused by harness32, not invented. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 FAILED ONLYexternalparenti18nguard, SOURCEONLY originalexternalrule. ExactChartPanels/testpair supportedlayoutcategoryimport ONLYproductiondelta; IMPORT_ONLY_PRESERVATIONtrue/source48of48/fourmountsof4. Seven authoredpublicbehaviorcasesUNEXECUTED; finalESLint0/allscopedviolations0/Vitest1 DISCOVERED0/PASSED0/FAILED0/SKIPPED0. Raw names/commands logs phase6-drivetrain-chart-imports.log. No sharedrepair/compiler/native/helperclaim; parent3490normalclosure1/0/0notretroactiveexecution.; commit=c9ecdf632b82feb790c076c4fa63b372f3dfb845; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2041,
+        "status": "[x]",
+        "item": "phase6-drivetrain-source-trust-wiring",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-source-trust-wiring | specific-reported-integration | web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx; web\\src\\features\\driving\\pages\\DrivetrainHealthPage.test.tsx | phase6-drivetrain-thermal-source-trust; phase6-drivetrain-detail-source-trust | 1 | 2026-10-13T01:51:11.595Z | 3f7fa5f85e2b7d6f798a3cc1957050618507c65d | Actual caller wiring required by independently owned Thermal/Detail source-state props; blocked on exact imported child corrections, not every feature item. Preserve original health/drive/stats independence,21case assertions/18sections/4charts. No unchanged whole-page re-migration or native acceptance. UNBLOCKING: actual Thermal+Detail imported child source APIs now[x] at1640/1641. Exact caller/test source-trust integration ONLY; no overlap with pending model-range item. Preserve all21original cases/18sections/4charts; no fabricated isolation presence/freshness from connected/default-filled live state. Fresh actor pending, not native accepted. Actual fresh actor=2bdd9836-d21c-467b-bb06-2d4c1175255b successfully launched, exact existing fresh-existing-caller-fix; source/native/behavioral evidence not yet delivered. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual NEWterminal0 FAILED ONLYexternalusage-manifeststartupguard; SOURCEONLY originalexternalrule. ExactDrivetrainHealth/testpair independentrealdrive-statsloading-emptyflags wired againstacceptedThermal+Detailchildren; all21originalcasesretained PLUS11authoredUNRUN/source122of116/18outersections4charts preserved. OwnVitest1 DISCOVERY0/EXECUTION0/PASS0/FAIL0/SKIP0; ESLint0/scopedscans0-0. Raw requirementnames/needs logs phase6-drivetrain-source-trust-wiring.log. IsolationResistancepresence-observationtimestamp-freshness UNSUPPORTED/notfabricated; no rerun/generator/type/nativeclaim. PendingexactrangeintegrationnowexclusivePage/testclaimfree, no remigration/helperbudgetreset.; commit=3f7fa5f85e2b7d6f798a3cc1957050618507c65d; pushed. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      },
+      {
+        "line": 2042,
+        "status": "[x]",
+        "item": "phase6-drivetrain-exact-range-integration",
+        "attempts": "1",
+        "fullRow": "| [x] | 6 | phase6-drivetrain-exact-range-integration | specific-reported-integration | web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts; web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.test.ts; web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx; web\\src\\features\\driving\\pages\\DrivetrainHealthPage.test.tsx; web\\src\\api\\hooks\\useDriving.ts; web\\src\\api\\hooks\\useDriving.test.ts; internal\\api\\drives\\listing.go; internal\\api\\drives\\listing_test.go; internal\\api\\drives\\handler.go; internal\\database\\drive\\stats.go; internal\\database\\drive\\stats_test.go | - | 1 | actual terminal collected/sourcewritesreleased | 520c65d4bd8e0d6f7a54d3281e608357468159c8 | Actual verified model58-66 uses inclusive whole-day cutoff/final-second loss. Required coupled model/caller/test integration: exact shared startInstant/endInstantExclusive, rolling/custom/timezone semantics and BOTH server bounds, not filtering only current30loaded drives. Inspect typed hooks/router before changes and report/extend exact API-hook scope if needed; do not silently change intended cap or global TSlib. No overlap with queued caller source-trust wiring when dispatching. One bounded real integration defect, not a provenance task. Actual caller trust1669 accepted/sourceclaimreleased; genuine exact-range integration nowexclusive4files. ONLY lowerinclusive-upperexclusive sharedinstants/rollingcustomtimezone BOTHserverbounds/fullrangetruth. Verifytypedhooks/router first and report exact scope extension BEFOREotherwrites; no loaded30-onlyproxy/capchange/backendunownededits. Actorpending; refusal consumesnoattempt. Actual sole bounded test-engineer actor=e6c88810-6d94-4c38-9fa3-9a8c65521c73 launched after real4file reservation; exact range defect only/no wholepage remigration. Testagent artifacts sessiononly if required; hook/backend scope extension must be reported before otherwrites. Evidence pending, not acceptance. Consumed actual cachedterminal0 ONCE/NOWIDLE before sourceedits. External missingtypedhook/serverboundedstats capability, no attempt charged/sourcefileschanged; existing defect scope explicitlyextended to exact reported4hook-server-repo files and coveringtests, ratherthan duplicatefix campaign. drives/stats currentlyIGNORESbounds; implementlowerinclusive-upperexclusive started_at fullcompleteddriveaggregate, sameunits/null/cap/policy, BOTHhookkey+params, originalmodel/caller exactinstants. model.test.ts plannedabsent. Report raw logs phase6-drivetrain-exact-range-integration.log; no tests/native proof claimed. Claimreleased actualidle; preserve accepted caller122lines/21original+11authoredtests. Exact exclusive reservation for supported fresh task start; real actor metadata follows, not a running-count projection. Actualfreshactor=60a7ed75-47eb-4731-8437-b2ed0f95c611; harddeadline=2026-10-13T05:29:35.092Z; attempt=1; continue retained WIP/no remigration; previous owner archived; lastConsumed=-1. Restart killed all workers; runtime list empty. Exact disk scope and existing receipt checked; preserved work is incomplete/unproven, NOT a pass. Reset pending with attempts UNCHANGED (restart or false heartbeat stop, not failure). Continue retained source and covering proof, never remodernize. Necessary owned reruns allowed; old unknown startup timeouts are not catalog diagnoses. Fresh continuation must retain this same attempt. Exact partial files committed as WIP d9cd7c375a872d8bd37f492e0ab053ba416394b7. Built-in-only fresh continuation after user restart; same retained attempt unchanged; reservation is NOT an actor/count. No custom tools/status-file enforcement/external messages.20min return/25min hard limit, bounded commands under15min; actual actor metadata follows launch. Actual built-in actor=7481096c-5747-4e03-8b04-b3a384752d28; running verified in32actor census; age atcensus=720s (recorded 2026-10-13T06:53:24.343Z, not a fabricated exact start);20min conclude/25min cap measured by real runtime elapsed; LastConsumed=-1; original attempts unchanged. Current individual scoped intake: Actual LAST corrected covering run2files40passed/Vitest0; lint0/ninescans0. Log consolidated52 invalid historical duplication: accept ONLY40 current cases, not52. Model earlier proof/backend unchanged named-race proof retained separately, never summed/re-run. TypeScript2 solelyexternal errors; no liveDB/browser acceptance; source writes/commands released. Original worker labeled partial due to bookkeeping/external limits; final owned proof actually passes. Rawlog=logs\\phase6-drivetrain-exact-range-integration.log; attempts=1 preserved/status=[x]. Owned source+covering proof accepted, NOTnative/fullapp/gate acceptance. Actualreceiptcommit=520c65d4bd8e0d6f7a54d3281e608357468159c8; pushed=true. |",
+        "capturedUtc": "2026-10-14T01:22:02.092362Z"
+      }
+    ],
+    "dedupPolicy": "Exact file-line mechanism, not shared feature name. Related completed rows stay closed; none automatically redispatched. This changing parent-owned queue is a timestamped read snapshot."
+  },
+  "routeEvidence": {
+    "wrapper": "PageLayout.tsx:9-14 forwards to PageContainer; not a missing-page-container violation",
+    "registry": "web/src/lib/routeRegistry.ts:118",
+    "workspace": "web/src/lib/workspaceScope.ts:41,157-168 enables both range and vehicle",
+    "mount": "web/src/App.tsx:124,824",
+    "lazyLoader": "web/src/lib/routeLoaders.ts:42"
+  },
+  "counts": {
+    "confirmedFileLineOccurrences": 15,
+    "presentationLines": 1319,
+    "pageLines": 123,
+    "candidates": 6,
+    "namedOuterSections": 18,
+    "historical": {
+      "auditSectionCount": 18,
+      "freshTestsExecuted": 0,
+      "auditPageLines": 116,
+      "originalPreMigrationLineCount": null,
+      "seventyPercentParity": "UNVERIFIED; no Git/history access or baseline regeneration",
+      "acceptedCoveringCases": 40,
+      "warning": "Historical40cases are not a fresh40/52pass. Original21+11authored trust cases and historical other suites are not summed or rerun.",
+      "invalidHistoricalConsolidatedCount": 52
+    },
+    "presentationFiles": 16,
+    "closureLines": 1659,
+    "countDefinition": "12LayoutCards +4chart host surfaces +2standalone metric briefs =18named outer surfaces. Third summary brief and all nested briefs/tables are not double-counted. Source gauge3occurrences instantiate1health+8thermal gauges; not3measured sensors.",
+    "closureFiles": 21,
+    "pagePlusPresentationLines": 1442,
+    "dataTables": 3,
+    "sourceOccurrences": {
+      "CardGrid": 4,
+      "LinearGauge": 3,
+      "SourceBoundary": 16,
+      "LayoutCard": 12,
+      "NestedDrivingBrief": 3,
+      "PreservedChartFrame": 4,
+      "recommendationProducers": 9,
+      "DrivingSummaryBrief": 3
+    },
+    "charts": 4,
+    "confirmedFindings": 9
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "rule": "scope-provenance",
+      "severity": "medium",
+      "title": "Completed-drive statistics are bounded, but the current copy says unbounded",
+      "mechanism": "Page passes the same start/end to useDrives and useDrivingStats. The latter aggregates all completed drives by started_at in [start,end), yet statsScope and historyScope deny this date filtering.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+          "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+          "line": 121,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "          description={t('drivetrain.modernization.statsScope', 'Unbounded vehicle statistics; independent of the chart date filter.')}"
+        },
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+          "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+          "line": 123,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "          provenance={t('drivetrain.modernization.statsScope', 'Unbounded vehicle statistics; independent of the chart date filter.')}"
+        },
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
+          "sha256": "2e42e757ee818adaefc068ba1b5631d86cae54a91aacb09d9a5112beb336d5fb",
+          "line": 98,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "          'Motor history uses the existing 200-snapshot request in source order. The date range filters returned drives, not motor history or vehicle drive statistics.',"
+        }
+      ],
+      "evidence": [
+        "DrivetrainHealthPage.tsx:34,38-39",
+        "useDriving.ts:222-234",
+        "internal/api/drives/listing.go:90-108,156-170",
+        "internal/database/drive/stats.go:23-33,71-85"
+      ],
+      "fix": "Correct only the misleading statistics scope/provenance copy and describe the completed-drive population and exact selected bounds/timezone. Preserve the separate last30 drive subset and unbounded200 motor-history policy.",
+      "dedup": {
+        "disposition": "distinct copy mechanism, not a repeat of the accepted range implementation",
+        "reopenClosedItem": false,
+        "relatedItems": [
+          "phase6-drivetrain-exact-range-integration"
+        ]
+      }
+    },
+    {
+      "id": "F02",
+      "rule": "async-state",
+      "severity": "high",
+      "title": "Unresolved initial-paused data is presented as an empty source",
+      "mechanism": "SourceBoundary selects skeletons from caller loading (query.isLoading), not status=initial. A no-retained paused query has status initial/isRefreshBlocked=true but isLoading=false; StaleRefreshWarning returns null without data, then empty=!health or !motorLatest renders No data. Similar isLoading-fed chart branches label unresolved rows empty.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/SourceBoundary.tsx",
+          "sha256": "3a999df71f2579a88231c9bd331e84188af5d8c1b2c3947d5a62e4f75b175632",
+          "line": 22,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "    ) : loading && !state.hasData ? ("
+        }
+      ],
+      "evidence": [
+        "SourceBoundary.tsx:18-28",
+        "DrivetrainHealthPage.tsx:80-106",
+        "api/dataState.ts:188-230",
+        "StaleRefreshWarning.tsx:61-62"
+      ],
+      "fix": "Keep permanent shells and independent recovery; distinguish initial/paused or selection-disabled sources before any authoritative empty branch using existing DataState/feedback. Do not invent offline/error, spin indefinitely, or fabricate zero. Include retained/initial-paused covering proof only after separately authorized source changes.",
+      "dedup": {
+        "disposition": "distinct initial-paused branch; accepted caller wiring only forwards current isLoading/empty flags",
+        "reopenClosedItem": false,
+        "relatedItems": [
+          "phase6-drivetrain-thermal-source-trust",
+          "phase6-drivetrain-detail-source-trust",
+          "phase6-drivetrain-source-trust-wiring"
+        ]
+      }
+    },
+    {
+      "id": "F03",
+      "rule": "missing-gap",
+      "severity": "high",
+      "title": "Outside-temperature history drops unknown records before plotting and exporting",
+      "mechanism": "rows.filter(outsideTemp!=null) removes the entire timestamp and row. LineChart receives only known samples, defeating AREA_DEFAULTS.connectNulls=false; the formatted accessible/export table also omits unknown plotted-population records.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/TemperatureHistory.tsx",
+          "sha256": "9b89329bfb0b8888767a53bc85d22457cf7ee7c543e70555ecae1e9c4c1d45c1",
+          "line": 20,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "  const tempRows = rows.filter(row => row.outsideTemp != null);"
+        }
+      ],
+      "evidence": [
+        "TemperatureHistory.tsx:20-23,33-42,49-55",
+        "chartDefaults.tsx:28-31",
+        "HistoryRecords.tsx:58-75 retains original driveRows separately"
+      ],
+      "fix": "Keep source rows and null gaps in chart/table/export, formatting null as unknown; decide empty from genuine measured coverage without silently sampling away records. Preserve raw SI, chronological ordering, caps, reference lines and actions.",
+      "dedup": {
+        "disposition": "new row-filter/gap mechanism, not the accepted palette/typography correction",
+        "reopenClosedItem": false,
+        "relatedItems": [
+          "phase6-drivetrain-temperature-chart"
+        ]
+      }
+    },
+    {
+      "id": "F04",
+      "rule": "thermal-sign",
+      "severity": "high",
+      "title": "Both thermal gauge groups clip negative or over-ceiling readings into printed/accessible0-100 values",
+      "mechanism": "Celsius/ceiling ratios are passed to LinearGauge without preserveReadingAndScale. That shared default clamps both displayValue and aria-valuenow. Negative physical temperatures become printed/spoken0%, and ratios above100 become100%, although the adjacent formatted Celsius/Fahrenheit text preserves the original reading.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx",
+          "sha256": "61ed0475de92e72970a92dc0eb11bb4c7eb2a93e48fad1e17927faadf217d82d",
+          "line": 54,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "                value={sensor.value == null ? null : sensor.value / sensor.maxTemp * 100}"
+        },
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx",
+          "sha256": "61ed0475de92e72970a92dc0eb11bb4c7eb2a93e48fad1e17927faadf217d82d",
+          "line": 76,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "                value={sensor.value == null ? null : sensor.value / sensor.maxTemp * 100} max={100} unit=\"%\""
+        }
+      ],
+      "evidence": [
+        "LinearGauge.tsx:118,129-141,145-148,179-199"
+      ],
+      "fix": "Use the existing preserveReadingAndScale capability or equivalent existing truthful presentation, keeping visual fill bounded and out-of-range numeric/accessible values truthful. Preserve signs, unknown/null versus measured zero, source Celsius thresholds and65/85 bands. No shared API/token or threshold redesign is needed.",
+      "dedup": {
+        "disposition": "different sign/accessible-number mechanism from accepted source loading/empty correction",
+        "reopenClosedItem": false,
+        "relatedItems": [
+          "phase6-drivetrain-thermal-source-trust"
+        ]
+      }
+    },
+    {
+      "id": "F05",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Dynamic health status labels refer to three absent canonical keys",
+      "mechanism": "t(`drivetrain.health.${status}`, capitalized English status) falls back to Good/Warning/Critical because canonical en.json lacks drivetrain.health.good/warning/critical. The same computed label feeds badge and key/value fields.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+          "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+          "line": 29,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "  const statusLabel = status ? t(`drivetrain.health.${status}`, status.charAt(0).toUpperCase() + status.slice(1)) : '—';"
+        }
+      ],
+      "missingKeys": [
+        "drivetrain.health.good",
+        "drivetrain.health.warning",
+        "drivetrain.health.critical"
+      ],
+      "evidence": [
+        "Q09 safe dynamic lookup:11checked/3missing/exit0"
+      ],
+      "fix": "Reuse verified existing equivalent status copy where semantically correct, or obtain a separately leased precise canonical-copy prerequisite for these three labels and generated outputs. Do not ship fallback-only localization or invent catalog ownership.",
+      "dedup": {
+        "disposition": "no exact missing-key/file-line mechanism in current queue",
+        "reopenClosedItem": false,
+        "relatedItems": []
+      }
+    },
+    {
+      "id": "F06",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Backend-produced English motor-state labels bypass localization",
+      "mechanism": "The overview and motor-details cells print health.motorStatus directly. The inspected producer returns Normal, Warm, Overheating or Idle; these are application-generated user-facing states, not private user-entered names.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+          "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+          "line": 77,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "          { label: t('drivetrain.motorState', 'Motor state'), value: health?.motorStatus?.trim() || '—' },"
+        },
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+          "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+          "line": 111,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "            { label: t('drivetrain.motorStatus', 'Motor Status'), value: health?.motorStatus?.trim() || '—' },"
+        }
+      ],
+      "evidence": [
+        "internal/api/drivetrain/handler.go:132-153"
+      ],
+      "fix": "Localize recognized producer-owned motor-state values through actual canonical labels, preserving unmapped raw source values and unknown as unknown. Do not alter the backend state, raw payload or score policy.",
+      "dedup": {
+        "disposition": "no exact motorStatus localization mechanism in current queue",
+        "reopenClosedItem": false,
+        "relatedItems": []
+      }
+    },
+    {
+      "id": "F07",
+      "rule": "category-import",
+      "severity": "low",
+      "title": "HistoryRecords bypasses the public layout category barrel",
+      "mechanism": "Runtime LayoutCard import uses layout/layout-reference even though components/layout already exports the same component.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/HistoryRecords.tsx",
+          "sha256": "ec1a01a5ca432734e09bd520d748053f7dbb221a61f9863110ef491e1989cf37",
+          "line": 3,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "import { LayoutCard } from '@/components/layout/layout-reference';"
+        }
+      ],
+      "evidence": [
+        "components/layout/index.ts:12"
+      ],
+      "fix": "Use @/components/layout without changing tables, state or mobile details.",
+      "dedup": {
+        "disposition": "different file/import from accepted ChartPanels import-only item",
+        "reopenClosedItem": false,
+        "relatedItems": [
+          "phase6-drivetrain-chart-imports"
+        ]
+      }
+    },
+    {
+      "id": "F08",
+      "rule": "category-import",
+      "severity": "low",
+      "title": "MethodologyPanel bypasses the public layout category barrel",
+      "mechanism": "Runtime LayoutCard import uses layout/layout-reference even though components/layout already exports the same component.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
+          "sha256": "2e42e757ee818adaefc068ba1b5631d86cae54a91aacb09d9a5112beb336d5fb",
+          "line": 2,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "import { LayoutCard } from '@/components/layout/layout-reference';"
+        }
+      ],
+      "evidence": [
+        "components/layout/index.ts:12"
+      ],
+      "fix": "Use @/components/layout; preserve every methodology statement except independently confirmed copy correction F01.",
+      "dedup": {
+        "disposition": "different file/import from accepted ChartPanels import-only item",
+        "reopenClosedItem": false,
+        "relatedItems": [
+          "phase6-drivetrain-chart-imports"
+        ]
+      }
+    },
+    {
+      "id": "F09",
+      "rule": "i18n-fallback-parity",
+      "severity": "low",
+      "title": "Three substantive fallback defaults disagree with their existing canonical strings",
+      "mechanism": "driving.brief.retained defaults to Retained evidence in two places while canonical copy is Retained source; driving.brief.loading defaults to Loading evidence while canonical is Loading source. Exact case-sensitive lookup also finds78case-only differences, separated as candidate C06 rather than silently counted as functional defects.",
+      "sites": [
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+          "sha256": "879066b35d9464f72a7ce5413f45f09a4e55dd95a52aeb44434c3eac50fce793",
+          "line": 94,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "      statusLabel={drivesState.refreshError != null ? t('driving.brief.retained', 'Retained evidence') : undefined}"
+        },
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+          "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+          "line": 43,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "          ? t('driving.brief.loading', 'Loading evidence')"
+        },
+        {
+          "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+          "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+          "line": 45,
+          "sourceUtc": "2026-10-14T01:11:27.5508374Z",
+          "exactSourceLine": "            ? t('driving.brief.retained', 'Retained evidence')"
+        }
+      ],
+      "evidence": [
+        "Q06 static236calls/161keys/0missing",
+        "Q15 exact81different:3substantive/78case-only"
+      ],
+      "fix": "Align these three fallback literals to the already-owned canonical messages; no catalog expansion or source-state policy change.",
+      "dedup": {
+        "disposition": "no exact fallback literals/mechanism queued",
+        "reopenClosedItem": false,
+        "relatedItems": []
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "needs": "Parent identifies an existing genuine per-signal source before any separately reserved integration; do not redispatch the completed presenter migration.",
+      "relatedItems": [
+        "phase6-drivetrain-live-isolation-trust",
+        "phase6-drivetrain-source-trust-wiring"
+      ],
+      "lines": [
+        36,
+        39,
+        158,
+        189
+      ],
+      "kind": "known capability limit, not a new duplicate repair",
+      "whyNotConfirmedNew": "Already explicitly retained by accepted live-isolation/source-trust queue receipts. No signal evidence may be fabricated from connected or fetch time.",
+      "subject": "The current caller supplies only the legacy isolation scalar, not isolationState/isolationPeriod. Positive retained isolation can be shown, but presence/observation/freshness and genuinely measured zero are unsupported.",
+      "id": "C01",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx"
+    },
+    {
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "lines": [
+        172,
+        173
+      ],
+      "kind": "semantic trust candidate",
+      "whyNotConfirmedNew": "Could intentionally describe transport only; the adjacent motor period already disclaims observation freshness. No mounted interpretation or live session was authorized.",
+      "subject": "Real-time telemetry active is driven by connected from an enabled global realtime transport, not proof of selected-vehicle or per-reading freshness.",
+      "needs": "Clarify transport versus selected-reading semantics with an authorized source/interaction owner; do not infer motor observation from connection.",
+      "id": "C02"
+    },
+    {
+      "subject": "All four chart empty predicates exclude a one-row history, suppressing plot/table/export toolbar capabilities for that chart.",
+      "lines": [
+        36,
+        28,
+        33,
+        32
+      ],
+      "kind": "preserved policy candidate",
+      "whyNotConfirmedNew": "This is the disclosed existing minimum-history policy and original history tables retain records. Original runtime/visual intent was not available; no policy change or whole-page remigration is authorized.",
+      "needs": "Parent decides whether one observed point should receive insufficient-history rather than no-data copy, preserving source/table access.",
+      "files": [
+        "web/src/features/driving/components/drivetrain-health-modernization/StatorHistory.tsx",
+        "web/src/features/driving/components/drivetrain-health-modernization/TorqueHistory.tsx",
+        "web/src/features/driving/components/drivetrain-health-modernization/TemperatureHistory.tsx",
+        "web/src/features/driving/components/drivetrain-health-modernization/PowerHistory.tsx"
+      ],
+      "id": "C03"
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "lines": [
+        43,
+        46
+      ],
+      "kind": "display-preference candidate",
+      "whyNotConfirmedNew": "UTC source-bound text can be intentionally technical. No mounted preference/long-label/RTL evidence was granted; the chart labels already use useDateFormat.",
+      "subject": "Snapshot/analysis brief scope strings retain raw ISO instants; the summary response-received time is also UTC ISO rather than the existing localized date/time formatter.",
+      "needs": "Clarify required display semantics before any separately owned locale/timezone rendering correction; never change wire bounds or observation meaning.",
+      "id": "C04"
+    },
+    {
+      "file": "internal/api/drivetrain/handler.go",
+      "lines": [
+        27,
+        39,
+        50,
+        61
+      ],
+      "kind": "out-of-scope backend observability observation",
+      "needs": "Parent deduplicates and reserves a separate backend observability scope if warranted; frontend RUM remains main.tsx-only.",
+      "subject": "The context-only health handler has no handler-created tracing span and its two Error logs carry no trace_id.",
+      "whyNotConfirmedPageFinding": "Backend was read only to establish proxy provenance and units. This is not a frontend source fix or application trace audit, and no backend tests/trace gates were permitted.",
+      "id": "C05"
+    },
+    {
+      "subject": "Q15 finds78case-only differences between source fallbacks and existing English canonical strings.",
+      "needs": "Serialized canonical owner decides exact casing policy and narrowly scopes any approved source correction; full raw tuples are in the ignored log.",
+      "kind": "copy/case parity candidate",
+      "whyNotConfirmedNew": "Unlike the three substantive F09 differences, these preserve words/meaning and may reflect existing canonical sentence-case modernization. No mass catalog rewrite or repeated migration is authorized.",
+      "occurrenceCount": 78,
+      "id": "C06"
+    }
+  ],
+  "sections": [
+    {
+      "ordinal": 1,
+      "name": "Health overview",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "source": "health",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 2,
+      "name": "Temperature metric brief",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "source": "health",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 3,
+      "name": "Power metric brief",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "source": "drives",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 4,
+      "name": "Health score",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "source": "health",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 5,
+      "name": "Motor details",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "source": "health",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 6,
+      "name": "Drive statistics",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "source": "stats",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 7,
+      "name": "Temperature gauges",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx",
+      "source": "health",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 8,
+      "name": "Thermal load indicators",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx",
+      "source": "health + independent drives/stats",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 9,
+      "name": "Live motor status",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "source": "motor latest + separate isolation",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 10,
+      "name": "Stator temperature history",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/StatorHistory.tsx",
+      "source": "motor history",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 11,
+      "name": "Motor torque history",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/TorqueHistory.tsx",
+      "source": "motor history",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 12,
+      "name": "Outside temperature trend",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/TemperatureHistory.tsx",
+      "source": "drive subset",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 13,
+      "name": "Power output history",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/PowerHistory.tsx",
+      "source": "drive subset",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 14,
+      "name": "History record details",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/HistoryRecords.tsx",
+      "source": "motor history + drive subset",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 15,
+      "name": "Temperature details",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/DetailPanels.tsx",
+      "source": "health",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 16,
+      "name": "Power details",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/DetailPanels.tsx",
+      "source": "drive subset + independent stats",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 17,
+      "name": "Health recommendations",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/DetailPanels.tsx",
+      "source": "health + unconditional general advice",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    },
+    {
+      "ordinal": 18,
+      "name": "Health methodology and source limits",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
+      "source": "static source-backed explanation",
+      "shell": "permanently mounted in source",
+      "acceptance": "Source inspection only; mounted/native/render acceptance NOTRUN"
+    }
+  ],
+  "actions": [
+    {
+      "name": "Header vehicle/range selection",
+      "declaration": "Existing workspace ownership; page has no local duplicated picker",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "name": "Source refresh/retry",
+      "declaration": "fatal, retained and empty source recovery supplied by each DataState retry/SourceBoundary; header query refers to health only",
+      "status": "SOURCE_ONLY; initial-paused concern F02"
+    },
+    {
+      "name": "Brief source/details drawer",
+      "declaration": "DrivingSummaryBrief/NestedDrivingBrief reuse OperationalBrief",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "name": "Chart toolbar/image/CSV/data alternatives",
+      "declaration": "Four PreservedChartFrame calls carry formatted data/dataColumns/exportData; toolbar/exportable true",
+      "status": "SOURCE_ONLY; F03 incomplete temperature row alternative"
+    },
+    {
+      "name": "Persisted series toggles",
+      "declaration": "stator-temp-chart3series; drivetrain-power-output2series. Torque/temperature use static Legend, not inferred toggles",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "name": "History pagination/mobile details",
+      "declaration": "Three stable tableIds;2history tables explicitly pagination; mobile adapter receives allColumns while summaries use mobileColumns",
+      "status": "SOURCE_ONLY"
+    },
+    {
+      "name": "Fullscreen/brush/zoom/annotation",
+      "declaration": "No explicit fullscreen/brush/zoom/annotation producer in these leaf callers; EmbeddedChart default fullscreen=false",
+      "status": "NOTDECLARED; do not claim original-action loss without an original/runtime proof"
+    },
+    {
+      "name": "Vehicle commands/mutations",
+      "declaration": "This page has read-only queries and informational advice, no vehicle command or mutation action",
+      "status": "NOT EXECUTED"
+    }
+  ],
+  "sourceSemantics": {
+    "zeros": "finite preserves measured zero, valid signed Celsius/torque/power and rejects NaN/Infinity. Missing regen/direct power remains null. The two vehicleId??0 values disable motor queries, not fake physical measurements. Legacy isolation zero remains unknown without real per-signal evidence (C01).",
+    "power": "Raw average drive Watts, no measured per-drive peak or regen/direct motor-history power; null signals remain null. peakPower=max of included finite averages. Arithmetic average divides by all included rows only when every power is present; incomplete coverage remains unknown.",
+    "provenance": "Health uses inferred; drives/stats/history historical. Response-received timestamp is explicitly a fetch timestamp, not a measurement. Motor snapshot exposes ts/source and disclaims continuous coverage. No source-ready status establishes fresh backend/vehicle health.",
+    "health": "Inferred battery-module proxies: front=min, rear=max, inverter=max+7C, battery=available average/single value. Overall backend warning>60/critical>80 uses its proxy max; display score95/60/25 is a coarse rating, not measured percentage. healthScore requires finite temperature evidence. No health observation timestamp or coverage is supplied.",
+    "identity": "Selected vehicle keys appear in all five queries; useVehicleLive resets before new-identity consumption and rejects old callback tokens, preserving closed identity-reset repair.",
+    "units": "useDriving/useVehicles keep raw responses. statsSI intentionally converts documented legacy km/kmh response fields to SI; motorPowerSI bridges explicitly documented kW snapshot fields. Existing useUnits chooses distance/temp/speed/locale/precision at display, default kW/kWh. Torque Nm/RPM and separate isolation kOhm are specialist units; no deprecated useSettings conversion block.",
+    "populations": "Drive list default50server rows, chronological last30within selected exact bounds for plots/power. Aggregate stats covers all completed drives by started_at in same window, without list cap. Motor history stays source-order200/latest snapshot, outside workspace date filtering. History tables cannot establish full-range totals.",
+    "thermal": "Four sensors, ceilings150/150/120/60C and65/85percent bands. Convert only at display. F04 clipped gauge representation is separate from underlying finite signed Celsius."
+  },
+  "stateReview": {
+    "initial": "Caller isLoading and SourceBoundary skeletons are declared; paused/disabled unresolved-vs-empty remains F02.",
+    "independence": "Five distinct query DataStates; no page-wide loading/error/empty replacement. Thermal/detail parts take separate drive/stats flags.",
+    "retry": "Source refetch is forwarded; no retry/refresh action executed during this audit.",
+    "fatal": "DataState.fatalError only without retained data; SourceBoundary/PreservedChartFrame retry replaces only that source body. Neighbor shells and isolation section stay mounted.",
+    "empty": "Returned empty arrays/null health/latest receive local empty recovery; unknown numeric readings stay em dash/null. Empty is not proven by an unexecuted query.",
+    "retained": "deriveDataState keeps payload and refreshError; StaleRefreshWarning beside source content exposes independent retry. Nested briefs include isRefreshBlocked when retained."
+  },
+  "declarations": {
+    "imports": "No vendor/oldAPI/rawHTML hits in corrected21-file scan. Two avoidable LayoutCard subbarrel imports confirmed; type-only stat-reference imports erased, and containerPolicy lacks category export, so those are not automatically counted.",
+    "mobile": "min-w-0/w-full, CardGrid/container sizing, @sm sensor reflow, chart mobileHeight and mobilePresentation/mobileColumns declarations present. DataTable forwards allColumns for mobile details. No measured44px/viewport/RTL/safe-area/screenreader/native acceptance.",
+    "accessibility": "Shared semantic cards, source-specific resource names, chart aria labels/descriptions and formatted data alternatives, three captioned DataTables, no raw controls or positive tabIndex in page closure. F04 misleading meter values remain. No actual focus/contrast/keyboard acceptance.",
+    "i18n": {
+      "literalCalls": 236,
+      "uniqueLiteralKeys": 161,
+      "missingLiteralKeys": 0,
+      "exactFallbackDifferences": 81,
+      "nonCaseFallbackDifferences": 3,
+      "caseOnlyFallbackDifferences": 78,
+      "dynamicKeysChecked": 11,
+      "missingDynamicKeys": [
+        "drivetrain.health.good",
+        "drivetrain.health.warning",
+        "drivetrain.health.critical"
+      ]
+    },
+    "tokens": "Shared chartTokens, Typography/Text, LayoutCard/CardGrid/LinearGauge, semantic references and restrained8percent area tint. Recharts label/tick props are valid API exceptions, not static inline style violations. Unused legacy HEALTH_COLOR/HEALTH_GLOW constants are not actual rendered chrome."
+  },
+  "checks": {
+    "pagePass": "NOTRUN",
+    "tests": {
+      "executed": 0,
+      "skipped": 0,
+      "discovered": 0,
+      "meaning": "No runner invoked; these are current-task counts, not an attempted empty successful suite",
+      "passed": 0,
+      "failed": 0,
+      "status": "NOTRUN"
+    },
+    "invalidOrFailed": [
+      {
+        "exitCode": 0,
+        "reason": "Scope1instead of21; all zero counts excluded from acceptance. Replaced byQ05.",
+        "id": "Q04",
+        "status": "INVALID"
+      },
+      {
+        "exitCode": 1,
+        "id": "shell695",
+        "reason": "Malformed original pin-prefix null diagnostic; replaced by explicit V2 source paths/pins."
+      },
+      {
+        "exitCode": 1,
+        "id": "Q06 dynamic tail",
+        "reason": "Unsafe missing-key indexing; successful static236rows retained. SafeQ09 proves3missing."
+      },
+      {
+        "exitCode": 1,
+        "id": "shell785",
+        "reason": "ValidQ09 completed, subsequent guessed lib/chartConfig.ts read failed; actual chartDefaults.tsx subsequently read."
+      },
+      {
+        "exitCode": 0,
+        "reason": "Nonterminating missing .github/prompts/chartUtils.ts/utils.ts paths; view chartDefaults.ts failed. No pass inferred; resolved exact paths read later.",
+        "id": "exploratory path probes",
+        "status": "READ_ERRORS"
+      }
+    ],
+    "native": "NOTRUN",
+    "rawLog": "web/logs/phase6-qa-driving-drivetrain-health.log",
+    "lint": "NOTRUN",
+    "backendContextScans": [
+      {
+        "id": "Q14/sql-interpolation-candidates",
+        "pattern": "fmt\\.Sprintf\\(\\s*\"(?:SELECT|INSERT|UPDATE|DELETE)|fmt\\.Sprintf\\(\\s*`(?:SELECT|INSERT|UPDATE|DELETE)",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q14/fmt-println",
+        "pattern": "\\b(?:fmt|log)\\.Println\\(",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q14/bare-panic",
+        "pattern": "\\bpanic\\(",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q14/db-context-sites",
+        "pattern": "Pool\\.(Query|QueryRow|Exec)\\(",
+        "exitCode": 0,
+        "matchedLines": 8,
+        "rawOutput": [
+          "D:\\repos\\teslasync\\internal\\api\\drivetrain\\handler.go:94:\t\terr = h.db.Pool.QueryRow(ctx, `",
+          "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go:203:\terr = h.db.Pool.QueryRow(ctx, `",
+          "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go:238:\terr = h.db.Pool.QueryRow(ctx, `",
+          "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go:320:\t\t\t_ = h.db.Pool.QueryRow(ctx, `",
+          "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go:331:\t\t\t_ = h.db.Pool.QueryRow(ctx, `",
+          "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go:412:\terr = h.db.Pool.QueryRow(ctx, `",
+          "D:\\repos\\teslasync\\internal\\api\\drives\\listing.go:556:\trows, err := h.db.Pool.Query(ctx, `",
+          "D:\\repos\\teslasync\\internal\\database\\drive\\stats.go:53:\terr := r.db.Pool.QueryRow(ctx, query, args...).Scan("
+        ]
+      },
+      {
+        "id": "Q14/http-request-sites",
+        "pattern": "http\\.NewRequest(?:WithContext)?\\(",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      }
+    ],
+    "runtime": "NOTRUN",
+    "globalTypeScript": "NOTRUN",
+    "backendScope": "Four necessary context files only;8matched Pool calls have ctx first;0HTTPconstructor sites. Parameterized static SQL construction is acceptable. Regex/sql scan is not a complete backend/API runtime audit.",
+    "rawScanCountMeaning": "Matching source lines/calls, not automatic violations. Q06 initial case-insensitive3mismatch count is substantive only; Q15 exact81=3substantive+78case-only.",
+    "frontendScans": [
+      {
+        "id": "Q05/static-inline-style",
+        "command": "COMMAND Q05/static-inline-style: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern style=\\{\\{",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/raw-html",
+        "command": "COMMAND Q05/raw-html: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern <(button|input|textarea|select|table)(\\s|>)",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/direct-library-import",
+        "command": "COMMAND Q05/direct-library-import: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern from\\s+['\"`](recharts|react-leaflet|framer-motion)['\"`]",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/old-api-import",
+        "command": "COMMAND Q05/old-api-import: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern from\\s+['\"`](\\.\\./)+api['\"`]",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/double-prefix",
+        "command": "COMMAND Q05/double-prefix: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern /api/v1/",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/camelcase-param",
+        "command": "COMMAND Q05/camelcase-param: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern (vehicleId|driveId|startDate|endDate)=",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/hidden-section",
+        "command": "COMMAND Q05/hidden-section: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern \\{\\s*\\w+\\s*&&\\s*<(GlassPanel|LayoutCard|ChartContainer|ChartCard)",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/hardcoded-string-candidates",
+        "command": "COMMAND Q05/hardcoded-string-candidates: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern >\\s*[A-Za-z][A-Za-z ,.!?()-]*\\s*<",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/page-wrapper",
+        "command": "COMMAND Q05/page-wrapper: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern <(PageLayout|PageContainer)",
+        "exitCode": 0,
+        "matchedLines": 1,
+        "rawOutput": [
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx:69:    <PageLayout"
+        ]
+      },
+      {
+        "id": "Q05/fetch-useeffect-candidates",
+        "command": "COMMAND Q05/fetch-useeffect-candidates: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern \\b(fetch|useEffect)\\s*\\(",
+        "exitCode": 0,
+        "matchedLines": 0,
+        "rawOutput": []
+      },
+      {
+        "id": "Q05/category-bypass",
+        "command": "COMMAND Q05/category-bypass: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern from ['\"]@/components/(?!ui['\"]|layout['\"]|charts['\"]|feedback['\"]|motion['\"]|data-display['\"]|maps['\"]|forms['\"])",
+        "exitCode": 0,
+        "matchedLines": 6,
+        "rawOutput": [
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx:3:import { LayoutCard } from '@/components/layout/layout-reference';",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\MethodologyPanel.tsx:2:import { LayoutCard } from '@/components/layout/layout-reference';",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PreservedChartFrame.tsx:6:import { containerPolicy, useCardPlacement } from '@/components/layout/layout-reference';",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivetrainSummary.tsx:5:import type { StatMetric } from '@/components/data-display/stat-reference';",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:4:import type { StatMetric } from '@/components/data-display/stat-reference';",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:4:import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';"
+        ]
+      },
+      {
+        "id": "Q05/responsive-declarations",
+        "command": "COMMAND Q05/responsive-declarations: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern mobileColumns|mobilePresentation|mobileHeight|@sm|md:|min-w-0",
+        "exitCode": 0,
+        "matchedLines": 17,
+        "rawOutput": [
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx:74:      className=\"w-full min-w-0\"",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx:76:      <FadeIn className=\"min-w-0 space-y-6\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx:48:        pagination mobileColumns={['time', 'stator', 'torque']}",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx:49:        mobilePresentation={{ roles: { time: 'title', stator: 'primary', torque: 'meta' },",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx:64:        pagination mobileColumns={['date', 'powerMax', 'outsideTemp']}",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\HistoryRecords.tsx:65:        mobilePresentation={{ roles: { date: 'title', powerMax: 'primary', outsideTemp: 'meta' },",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx:187:    <section aria-label={isolationLabel} className=\"min-w-0\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx:197:        mobileColumns={['label', 'value']} mobilePresentation={{",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PreservedChartFrame.tsx:22:  return <div className={cn('min-w-0', placement?.className ?? 'col-span-1', className)}>",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PreservedChartFrame.tsx:24:    <ChartCard {...props} height={height} mobileHeight={responsiveHeight}",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\RecommendationsPanel.tsx:45:  return <div className=\"min-w-0 space-y-3\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\RecommendationsPanel.tsx:50:      className={cn('min-w-0 space-y-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3',",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx:49:        <div className=\"grid min-w-0 grid-cols-1 gap-4 @sm:grid-cols-2\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx:52:            return <div key={sensor.key} className=\"min-w-0 space-y-2\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx:74:            return <div key={sensor.key} className=\"min-w-0\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivetrainSummary.tsx:65:        <div className=\"flex min-w-0 flex-wrap items-center justify-between gap-3\">",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:54:    scope={<Text as=\"span\" size=\"xs\" color=\"muted\" className=\"min-w-0 break-words\">{scope}</Text>}"
+        ]
+      },
+      {
+        "id": "Q05/null-zero-review",
+        "command": "COMMAND Q05/null-zero-review: Select-String -LiteralPath exact21 SOURCE_PINS_V2_JSON paths -Pattern \\?\\? 0|powerMin: null|speed: null|slice\\(-30\\)|filter\\(row",
+        "exitCode": 0,
+        "matchedLines": 11,
+        "rawOutput": [
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx:40:  const motorLatestQuery = useMotorLatest(vehicleId ?? 0, 5_000);",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\DrivetrainHealthPage.tsx:41:  const motorHistoryQuery = useMotorHistory(vehicleId ?? 0, 200);",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\DetailPanels.tsx:67:            { label: t('drivetrain.co2Label', 'CO₂ Saved'), value: finite(stats?.co2SavedKg) != null ? `${fmtNumber(stats?.co2SavedKg ?? 0)} kg` : '—' },",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\LiveMotorPanel.tsx:34:    finite(value) != null ? `${integer ? fmtInt(value ?? 0) : fmtNumber(value ?? 0)} ${unit}` : '—';",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\PreservedChartFrame.tsx:21:  const responsiveHeight = containerPolicy(placement?.width ?? 0).chartHeight;",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\TemperatureHistory.tsx:20:  const tempRows = rows.filter(row => row.outsideTemp != null);",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\ThermalPanels.tsx:113:          { label: t('drivetrain.regenRatio', 'Regen Ratio'), value: finite(stats?.regenRatio) != null ? `${fmtNumber((stats?.regenRatio ?? 0) * 100)}%` : '—' },",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts:54:  speed: null;",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts:71:    .slice(-30)",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts:77:      powerMin: null,",
+          "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\drivetrain-health-modernization\\model.ts:93:    speed: null,"
+        ]
+      }
+    ],
+    "browser": "NOTRUN",
+    "build": "NOTRUN",
+    "i18n": {
+      "literalCalls": 236,
+      "uniqueLiteralKeys": 161,
+      "missingLiteralKeys": 0,
+      "exactFallbackDifferences": 81,
+      "nonCaseFallbackDifferences": 3,
+      "caseOnlyFallbackDifferences": 78,
+      "dynamicKeysChecked": 11,
+      "missingDynamicKeys": [
+        "drivetrain.health.good",
+        "drivetrain.health.warning",
+        "drivetrain.health.critical"
+      ]
+    }
+  },
+  "preciseNeeds": [
+    {
+      "owner": "parent canonical-copy and separately reserved caller scope",
+      "files": [
+        "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+        "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx"
+      ],
+      "forFindings": [
+        "F01"
+      ],
+      "need": "Correct completed-drive selected-window scope after existing bounded backend acceptance; reserve only actual needed English/generated outputs with serialized owner. Do not redo backend range work.",
+      "canonicalKeys": [
+        "drivetrain.modernization.statsScope",
+        "drivetrain.modernization.historyScope"
+      ],
+      "id": "N01"
+    },
+    {
+      "forFindings": [
+        "F02"
+      ],
+      "need": "Resolve no-data initial-paused/disabled query semantics using existing DataState before empty branches, then identify actual covering callers/chart clauses. Parent leases exact matching tests after confirming paths; none authored or run here.",
+      "owner": "narrow source-state/feedback owner",
+      "id": "N02",
+      "files": [
+        "web/src/features/driving/components/drivetrain-health-modernization/SourceBoundary.tsx"
+      ]
+    },
+    {
+      "forFindings": [
+        "F03"
+      ],
+      "need": "Preserve null rows in plot/table/export and honest measured-coverage emptiness. Existing TemperatureHistory.test.tsx is the directly matching future test scope, not writable here.",
+      "owner": "narrow temperature-history owner",
+      "id": "N03",
+      "files": [
+        "web/src/features/driving/components/drivetrain-health-modernization/TemperatureHistory.tsx"
+      ]
+    },
+    {
+      "forFindings": [
+        "F04"
+      ],
+      "need": "Adopt existing truthful signed/out-of-range reading capability at both gauge groups; preserve fill scale and bands. Existing ThermalPanels.test.tsx would require authorized covering evidence.",
+      "owner": "narrow thermal-gauge consumer owner",
+      "id": "N04",
+      "files": [
+        "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx"
+      ]
+    },
+    {
+      "forFindings": [
+        "F05",
+        "F06",
+        "F09"
+      ],
+      "need": "Localize three missing health labels and four recognized backend motor states, preserve unrecognized raw source; align three existing substantive fallbacks. No broad catalog rewrite or78case-only repair campaign.",
+      "owner": "summary/helper source owner plus conditional precise canonical prerequisite",
+      "id": "N05",
+      "files": [
+        "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+        "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx"
+      ]
+    },
+    {
+      "forFindings": [
+        "F07",
+        "F08"
+      ],
+      "need": "Use existing layout category exports. Keep closed ChartPanels item closed.",
+      "owner": "exact import-only feature owner",
+      "id": "N06",
+      "files": [
+        "web/src/features/driving/components/drivetrain-health-modernization/HistoryRecords.tsx",
+        "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx"
+      ]
+    }
+  ],
+  "limits": [
+    "Read-only report/log assignment; all source/tests/backend/catalog/config/queue/handoff remained untouched by this actor. Pin checks prove scoped stability, not global worktree exclusivity; Git forbidden.",
+    "Phases0-5 remain closed. Phase6 unfinished; Phase7 and page/application completion are not advanced by this report.",
+    "No real-drive/identity/location/API/device data was accessed; no mutation, browser, screenshot, tests, lint, build, globalTSC, Git, subagent, install, server, Docker, helper, extension or heartbeat execution.",
+    "Parent preview5173 was not contacted or probed; no browser grant. Installed Edge channel msedge only if later separately authorized; no download or competing server.",
+    "Supporting full-file SHA pins accompany only necessary declaration/range reads; not a claim of auditing every unrelated hook/router/backend line. Original70percent preservation/visual/runtime parity unavailable.",
+    "Code-conditional findings and logical arithmetic are not invented fresh fixtures or tests. Historical40case receipt remains historical; invalid52consolidation is not accepted.",
+    "Candidate observations require separate decisions/proofs; do not automatically queue duplicate completed objectives or fabricate per-signal trust.",
+    "Raw failed/invalid probes remain in log/tool transcript. No TypeScript/test/native/pagePASS assertion is made."
+  ],
+  "release": {
+    "state": "RELEASED",
+    "utc": "2026-10-14T01:22:52.6197952Z",
+    "beforeReturnDeadline": true,
+    "files": [
+      "docs/frontend-audits/phase6-qa-driving-drivetrain-health.json",
+      "web/logs/phase6-qa-driving-drivetrain-health.log"
+    ],
+    "sourceWrites": 0,
+    "reportLeaseReleased": true,
+    "logLeaseReleased": true,
+    "commandLeaseReleased": true,
+    "sourceLeaseHeld": false,
+    "allReportLogCommandOwnershipReleased": true,
+    "furtherWrites": "NONE after this terminal verification command",
+    "servicesStarted": 0,
+    "backgroundWorkRemaining": 0,
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pagePASS": "NOTRUN",
+    "note": "This release completes only the reserved report assignment, not source remediation or page/application acceptance."
+  },
+  "byRule": [
+    {
+      "rule": "",
+      "findings": 9,
+      "fileLineOccurrences": 15
+    }
+  ],
+  "filesWithMostIssues": [
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivetrainSummary.tsx",
+      "fileLineOccurrences": 6,
+      "findings": [
+        "F01",
+        "F05",
+        "F06",
+        "F09"
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/MethodologyPanel.tsx",
+      "fileLineOccurrences": 2,
+      "findings": [
+        "F01",
+        "F08"
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/ThermalPanels.tsx",
+      "fileLineOccurrences": 2,
+      "findings": [
+        "F04"
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "fileLineOccurrences": 2,
+      "findings": [
+        "F09"
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/HistoryRecords.tsx",
+      "fileLineOccurrences": 1,
+      "findings": [
+        "F07"
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/SourceBoundary.tsx",
+      "fileLineOccurrences": 1,
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/TemperatureHistory.tsx",
+      "fileLineOccurrences": 1,
+      "findings": [
+        "F03"
+      ]
+    }
+  ],
+  "candidateLinePins": [
+    {
+      "candidate": "C01",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "line": 36,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "exactSourceLine": "  const isolation = finite(isolationState ? isolationState.data : isolationResistance);"
+    },
+    {
+      "candidate": "C01",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "line": 39,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "exactSourceLine": "  const isolationValue = isolation != null && (isolation > 0 || (isolationState?.hasData && isolation === 0))"
+    },
+    {
+      "candidate": "C01",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "line": 158,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "exactSourceLine": "    ),"
+    },
+    {
+      "candidate": "C01",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "line": 189,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "exactSourceLine": "      {isolationState ? <SourceBoundary state={isolationState} label={isolationLabel}"
+    },
+    {
+      "candidate": "C02",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "line": 172,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "exactSourceLine": "    description={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}"
+    },
+    {
+      "candidate": "C02",
+      "file": "web/src/features/driving/components/drivetrain-health-modernization/LiveMotorPanel.tsx",
+      "line": 173,
+      "sha256": "c832ec0919a7e24f84aaef05a6fc62cbea581b913d0494b41b011f7b0fe1ec7b",
+      "exactSourceLine": "    period={isolationScope} retained={isolationRetained} />;"
+    },
+    {
+      "candidate": "C04",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "line": 43,
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "exactSourceLine": "    : period.kind === 'event'"
+    },
+    {
+      "candidate": "C04",
+      "file": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "line": 46,
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "exactSourceLine": "        ? `${period.label} · ${period.observedAt ?? t('driving.brief.observationUnknown', 'Source observation time not provided')}`"
+    },
+    {
+      "candidate": "C05",
+      "file": "internal/api/drivetrain/handler.go",
+      "line": 27,
+      "sha256": "7ebe81af28ae6e9c7b7c0218fb85496af2dd324e0e3225035c1c9fdfda3d161b",
+      "exactSourceLine": ""
+    },
+    {
+      "candidate": "C05",
+      "file": "internal/api/drivetrain/handler.go",
+      "line": 39,
+      "sha256": "7ebe81af28ae6e9c7b7c0218fb85496af2dd324e0e3225035c1c9fdfda3d161b",
+      "exactSourceLine": ""
+    },
+    {
+      "candidate": "C05",
+      "file": "internal/api/drivetrain/handler.go",
+      "line": 50,
+      "sha256": "7ebe81af28ae6e9c7b7c0218fb85496af2dd324e0e3225035c1c9fdfda3d161b",
+      "exactSourceLine": "\t\tif err != nil {"
+    },
+    {
+      "candidate": "C05",
+      "file": "internal/api/drivetrain/handler.go",
+      "line": 61,
+      "sha256": "7ebe81af28ae6e9c7b7c0218fb85496af2dd324e0e3225035c1c9fdfda3d161b",
+      "exactSourceLine": "\t\tif err != nil {"
+    }
+  ],
+  "finalVerification": {
+    "command": "Q17: native ConvertFrom-Json; recompute SHA256 for21page/closure+34support files; compare15exact confirmed source lines and report counts; verify captured related queue rows remain accepted; final on-disk parse",
+    "exitCode": 0,
+    "sourcePinsChecked": 21,
+    "supportPinsChecked": 34,
+    "sourceDrifts": 0,
+    "confirmedLinePinsChecked": 15,
+    "lineDrifts": 0,
+    "reportCountsVerified": true,
+    "jsonParse": "PASS: final native on-disk parse exit0, conditioned on successful command completion",
+    "utc": "2026-10-14T01:22:52.6197952Z"
+  }
+}
