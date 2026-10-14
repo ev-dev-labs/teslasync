@@ -1,17 +1,93 @@
 import { cleanup, fireEvent, render, renderHook, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
-import type { DataState } from '@/api/dataState';
+import type { DataProvenance, DataState } from '@/api/dataState';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
 import { MapsOperationalBrief } from './MapsOperationalBrief';
+
+const preferences = vi.hoisted(() => ({
+  locale: 'en-US',
+  language: 'en',
+  mode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+  userZone: 'America/Los_Angeles',
+  vehicleZone: 'UTC',
+  timezoneSpy: vi.fn(),
+}));
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: () => ({
+      locale: preferences.locale,
+      settings: {
+        locale: preferences.locale,
+        tz_display_default: preferences.mode,
+        unit_of_length: 'km',
+        unit_of_temp: 'C',
+        unit_of_pressure: 'bar',
+        decimal_precision: 2,
+        currency_symbol: '$',
+      },
+    }),
+  };
+});
+
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return {
+    ...actual,
+    useTimezone: (mode: 'vehicle' | 'user' | 'utc') => {
+      preferences.timezoneSpy(mode);
+      return mode === 'utc' ? 'UTC' : mode === 'user' ? preferences.userZone : preferences.vehicleZone;
+    },
+  };
+});
+
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  const { createInstance } = await import('i18next');
+  const i18n = createInstance();
+  await i18n.init({
+    lng: 'en',
+    fallbackLng: 'en',
+    interpolation: { escapeValue: false },
+    resources: {
+      en: { translation: {} },
+      de: { translation: {
+        provenance: {
+          live: 'Live-Daten', cached: 'Zwischengespeichert', historical: 'Historisch',
+          inferred: 'Geschätzt', repaired: 'Korrigiert', unknown: 'Unbekannte Quelle',
+        },
+        mapsBrief: { freshness: {
+          received: 'Empfangen {{time}} (keine Beobachtung oder letzter Besuch)',
+          unknown: 'Empfangszeit unbekannt',
+        } },
+      } },
+    },
+  });
+  return { ...actual, useTranslation: () => ({ t: i18n.getFixedT(preferences.language), i18n }) };
+});
+
+beforeEach(() => {
+  preferences.locale = 'en-US';
+  preferences.language = 'en';
+  preferences.mode = 'vehicle';
+  preferences.userZone = 'America/Los_Angeles';
+  preferences.vehicleZone = 'UTC';
+  preferences.timezoneSpy.mockClear();
+});
 
 afterEach(cleanup);
 
 const scope = 'Vehicle 7 · latest 50 positions, not a complete route window';
 const sourceLabel = 'Latest position';
+const provenanceLabels: Record<DataProvenance, string> = {
+  live: 'Live', cached: 'Cached', historical: 'Historical',
+  inferred: 'Estimated', repaired: 'Repaired', unknown: 'Unknown source',
+};
 const state = deriveDataState({
   data: { speed: 0 },
   error: new Error('refresh failed'),
@@ -121,7 +197,7 @@ describe('maps OperationalBrief source contract', () => {
     fireEvent.click(within(band).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' });
     expect(within(drawer).queryByText('0.00 km/h')).not.toBeInTheDocument();
-    expect(within(drawer).getByText(`${sourceLabel}: unknown`)).toBeInTheDocument();
+    expect(within(drawer).getByText(`${sourceLabel}: Unknown source`)).toBeInTheDocument();
   });
 
   it('infers initial loading when the explicit activity flag is unspecified', () => {
@@ -145,12 +221,12 @@ describe('maps OperationalBrief source contract', () => {
     const band = screen.getByRole('region', { name: 'Vehicle status' });
     expect(within(band).getByText('Independent sources incomplete')).toBeInTheDocument();
     expect(within(band).getByText('0.00 km/h')).toBeInTheDocument();
-    const receipt = `${sourceLabel}: ${formatDateTime('2026-10-06T20:00:00.000Z')}`;
+    const receipt = `${sourceLabel}: Received Oct 6, 2026, 08:00 PM (not observation or last visit)`;
     expect(within(band).getByText(receipt)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' });
     expect(within(drawer).getByText(receipt)).toBeInTheDocument();
-    expect(within(drawer).getByText(`${sourceLabel}: cached; Route history: ${otherState.provenance}`)).toBeInTheDocument();
+    expect(within(drawer).getByText(`${sourceLabel}: Cached; Route history: ${provenanceLabels[otherState.provenance]}`)).toBeInTheDocument();
     expect(within(drawer).getByRole('link', { name: 'Navigation route' })).toHaveAttribute('href', '#/maps/navigation-route');
   });
 
@@ -168,6 +244,88 @@ describe('maps OperationalBrief source contract', () => {
     expect(within(band).getByText('0.00 km/h')).toBeInTheDocument();
     expect(band).not.toHaveAttribute('aria-busy');
     fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
-    expect(within(screen.getByRole('dialog', { name: 'Vehicle status details' })).getByText(`${sourceLabel}: ${retainedState.provenance}`)).toBeInTheDocument();
+    expect(within(screen.getByRole('dialog', { name: 'Vehicle status details' })).getByText(`${sourceLabel}: ${provenanceLabels[retainedState.provenance]}`)).toBeInTheDocument();
+  });
+
+  it('reacts to saved locale and timezone across a day boundary in the band and open drawer', () => {
+    const receivedAt = Date.parse('2026-01-01T00:30:00Z');
+    const observationAt = '2025-12-20T10:00:00Z';
+    const lastVisitAt = '2025-12-18T09:00:00Z';
+    const sourceState = Object.freeze(deriveDataState({
+      data: Object.freeze({ speed_mps: 0, observed_at: observationAt, last_visit_at: lastVisitAt }),
+      dataUpdatedAt: receivedAt,
+    }, { provenance: 'historical' }));
+    const sources = Object.freeze([{ label: 'signal_log / locations:last_visit', state: sourceState }]);
+    preferences.mode = 'user';
+    const { rerender } = renderBrief(false, sources);
+    const usReceipt = 'signal_log / locations:last_visit: Received Dec 31, 2025, 04:30 PM (not observation or last visit)';
+    expect(within(screen.getByRole('region', { name: 'Vehicle status' })).getByText(usReceipt)).toBeInTheDocument();
+    expect(preferences.timezoneSpy).toHaveBeenCalledWith('user');
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog', { name: 'Vehicle status details' })).getByText(usReceipt)).toBeInTheDocument();
+
+    preferences.locale = 'de-DE';
+    preferences.language = 'de';
+    preferences.mode = 'utc';
+    rerender(
+      <MemoryRouter>
+        <MapsOperationalBrief title="Vehicle status" description="Independent position evidence"
+          scope={scope} metrics={metrics} sources={sources} loading={false} />
+      </MemoryRouter>,
+    );
+    const germanReceipt = 'signal_log / locations:last_visit: Empfangen 1. Jan. 2026, 00:30 (keine Beobachtung oder letzter Besuch)';
+    expect(within(screen.getByRole('region', { name: 'Vehicle status' })).getByText(germanReceipt)).toBeInTheDocument();
+    const drawer = screen.getByRole('dialog', { name: 'Vehicle status details' });
+    expect(within(drawer).getByText(germanReceipt)).toBeInTheDocument();
+    expect(within(drawer).queryByText(usReceipt)).not.toBeInTheDocument();
+    expect(within(drawer).getByText('signal_log / locations:last_visit: Historisch')).toBeInTheDocument();
+    expect(preferences.timezoneSpy).toHaveBeenCalledWith('utc');
+    expect(sourceState.updatedAt).toBe(receivedAt);
+    expect(sourceState.provenance).toBe('historical');
+    expect(sourceState.data).toEqual({ speed_mps: 0, observed_at: observationAt, last_visit_at: lastVisitAt });
+    expect(screen.queryByText(observationAt, { exact: false })).not.toBeInTheDocument();
+    expect(screen.queryByText(lastVisitAt, { exact: false })).not.toBeInTheDocument();
+  });
+
+  it('uses the saved vehicle-zone mode without a browser-timezone override', () => {
+    preferences.vehicleZone = 'Asia/Tokyo';
+    const sourceState = deriveDataState({ data: { speed_mps: 0 }, dataUpdatedAt: Date.parse('2026-01-01T00:30:00Z') });
+    renderBrief(false, [{ label: sourceLabel, state: sourceState }]);
+    expect(screen.getByText(`${sourceLabel}: Received Jan 1, 2026, 09:30 AM (not observation or last visit)`)).toBeInTheDocument();
+    expect(preferences.timezoneSpy).toHaveBeenCalledWith('vehicle');
+  });
+
+  it.each([
+    ['live', 'Live-Daten'],
+    ['cached', 'Zwischengespeichert'],
+    ['historical', 'Historisch'],
+    ['inferred', 'Geschätzt'],
+    ['repaired', 'Korrigiert'],
+    ['unknown', 'Unbekannte Quelle'],
+  ] as const)('localizes %s provenance without changing raw source identities or SI values', (provenance, label) => {
+    preferences.language = 'de';
+    const rawLabel = 'signal_log / Position:last_seen';
+    const sourceState = Object.freeze(deriveDataState({ data: Object.freeze({ speed_mps: 25 }) }, { provenance }));
+    const rawMetrics = Object.freeze([{ metricId: 'speed', rawValue: 25, label: 'SI speed' }] as const);
+    const { container } = renderBrief(false, [{ label: rawLabel, state: sourceState }], undefined, rawMetrics);
+    const receipt = container.querySelector('[data-source-label]');
+    expect(receipt).toHaveAttribute('data-source-label', rawLabel);
+    expect(receipt).toHaveAttribute('data-provenance', provenance);
+    expect(receipt).toHaveTextContent(`${rawLabel}: Empfangszeit unbekannt`);
+    expect(screen.getByText('90.00 km/h')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog', { name: 'Vehicle status details' })).getByText(`${rawLabel}: ${label}`)).toBeInTheDocument();
+    expect(sourceState.provenance).toBe(provenance);
+    expect(sourceState.data?.speed_mps).toBe(25);
+    expect(rawMetrics[0].rawValue).toBe(25);
+  });
+
+  it.each([null, Number.NaN, Number.POSITIVE_INFINITY, 8.64e15 + 1])('keeps an absent or invalid receipt %s explicitly unknown', (updatedAt) => {
+    renderBrief(false, [{ label: sourceLabel, state: { ...state, updatedAt } }]);
+    expect(screen.getByText(`${sourceLabel}: Receipt time unknown`)).toBeInTheDocument();
+    expect(screen.getByText('Retained source data')).toBeInTheDocument();
+    expect(screen.getByText('0.00 km/h')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog', { name: 'Vehicle status details' })).getByText(`${sourceLabel}: Receipt time unknown`)).toBeInTheDocument();
   });
 });

@@ -1,11 +1,11 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import type { DataState } from '@/api/dataState';
+import type { DataProvenance, DataState } from '@/api/dataState';
 import { OperationalBrief } from '@/components/data-display';
 import { Button, Text } from '@/components/ui';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
 
 interface MapsOperationalBriefProps {
   title: string;
@@ -19,6 +19,7 @@ interface MapsOperationalBriefProps {
 
 export function MapsOperationalBrief({ title, description, scope, metrics, sources, loading, onRetry }: MapsOperationalBriefProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const operationalMetrics = useOperationalMetrics(metrics);
   const states = sources.map(({ state }) => state);
   const usable = states.filter((state) => state.hasData && state.status !== 'unavailable');
@@ -39,6 +40,14 @@ export function MapsOperationalBrief({ title, description, scope, metrics, sourc
     partial: t('mapsBrief.status.partial', 'Independent sources incomplete'),
     available: t('mapsBrief.status.available', 'Source data available'),
   };
+  const provenanceLabels: Record<DataProvenance, string> = {
+    live: t('provenance.live', 'Live'),
+    cached: t('provenance.cached', 'Cached'),
+    historical: t('provenance.historical', 'Historical'),
+    inferred: t('provenance.inferred', 'Estimated'),
+    repaired: t('provenance.repaired', 'Repaired'),
+    unknown: t('provenance.unknown', 'Unknown source'),
+  };
 
   return (
     <OperationalBrief
@@ -51,14 +60,20 @@ export function MapsOperationalBrief({ title, description, scope, metrics, sourc
       metrics={operationalMetrics}
       scope={scope}
       loading={isLoading}
-      freshness={sources.map(({ label, state }) => (
-        <Text as="span" key={label} size="xs" color="muted" className="min-w-0 break-words">
-          {label}: {state.updatedAt != null
-            ? formatDateTime(new Date(state.updatedAt).toISOString())
-            : t('mapsBrief.freshness.unknown', 'Receipt time unknown')}
-        </Text>
-      ))}
-      provenance={sources.map(({ label, state }) => `${label}: ${state.provenance}`).join('; ')}
+      freshness={sources.map(({ label, state }) => {
+        const receivedAt = state.updatedAt != null ? new Date(state.updatedAt) : null;
+        return (
+          <Text as="span" key={label} size="xs" color="muted" className="min-w-0 break-words"
+            data-source-label={label} data-provenance={state.provenance}>
+            {label}: {receivedAt != null && Number.isFinite(receivedAt.getTime())
+              ? t('mapsBrief.freshness.received', 'Received {{time}} (not observation or last visit)', {
+                time: formatDateTime(receivedAt),
+              })
+              : t('mapsBrief.freshness.unknown', 'Receipt time unknown')}
+          </Text>
+        );
+      })}
+      provenance={sources.map(({ label, state }) => `${label}: ${provenanceLabels[state.provenance] ?? provenanceLabels.unknown}`).join('; ')}
       actions={onRetry && (
         <Button size="sm" variant="outline" wrapLabel className="min-h-11 md:min-h-9" onClick={onRetry}>
           {t('common.retry', 'Retry')}
