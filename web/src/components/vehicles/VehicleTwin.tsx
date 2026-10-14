@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useId, useMemo, useRef, useState 
 import { motion, AnimatePresence } from '@/components/motion';
 import { Lock, Unlock, Shield } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { motion as motionTokens } from '@/lib/tokens';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { Button } from '@/components/ui/Button';
 import { Text } from '@/components/ui/Typography';
@@ -23,7 +24,7 @@ const VIEWBOX_WIDTH = 560;
 const VIEWBOX_MIN_Y = 52;
 const VIEWBOX_HEIGHT = 220;
 const ASPECT_RATIO = VIEWBOX_HEIGHT / VIEWBOX_WIDTH;
-const DRIVE_IN_DURATION = 1.35;
+const ENTRY_DURATION = Number.parseFloat(motionTokens.duration.normal) / 1000;
 
 export type VehicleTwinSize = keyof typeof SIZE_MAP;
 
@@ -101,6 +102,7 @@ const WHEEL_CY = 221;
 export interface VehicleTwinProps extends VehicleTwinState {
   size?: VehicleTwinSize;
   interactive?: boolean;
+  /** Cosmetic, bounded entrance only; never supplies measured vehicle state. */
   driveIn?: boolean;
   className?: string;
   /**
@@ -221,7 +223,6 @@ const C = {
   headlightBeam: 'rgba(255,255,220,0.08)',
   headlightGlow: 'var(--semantic-info-border)',
   taillightBase: 'rgba(239,68,68,0.45)',
-  taillightActive: 'rgba(239,68,68,0.85)',
   amber: 'rgba(251,191,36,0.78)',
   amberFill: 'var(--semantic-warning-bg)',
   chargeGreen: 'var(--semantic-info)',
@@ -345,17 +346,14 @@ function ChargingUnderglow() {
 function WheelSVG({
   cx,
   cy,
-  driveIn = false,
   driving = false,
 }: {
   cx: number;
   cy: number;
-  driveIn?: boolean;
   driving?: boolean;
 }) {
   const { ids } = useTwinCtx();
   const spokes = [0, 72, 144, 216, 288];
-  const shouldSpin = driveIn || driving;
 
   return (
     <g>
@@ -367,13 +365,13 @@ function WheelSVG({
       <circle cx={cx} cy={cy} r={34} fill={C.wheelSidewall} stroke="rgba(255,255,255,0.06)" strokeWidth={0.7} />
       <motion.g
         data-svg-wheel-rotor={cx === FRONT_WHEEL_CX ? 'front' : 'rear'}
-        initial={shouldSpin ? { rotate: 0 } : false}
-        animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
+        initial={driving ? { rotate: 0 } : false}
+        animate={{ rotate: driving ? -360 : 0 }}
         transition={
-          shouldSpin
+          driving
             ? {
-              duration: driving ? 0.9 : DRIVE_IN_DURATION,
-              repeat: driving ? Infinity : 0,
+              duration: 0.9,
+              repeat: Infinity,
               ease: 'linear',
             }
             : { duration: 0, repeat: 0 }
@@ -927,18 +925,16 @@ function HeadlightGlows({
   on,
   hazards,
   turnSignal,
-  driveIn = false,
   photo,
 }: {
   on: boolean | null;
   hazards: boolean | null;
   turnSignal: TurnSignalState;
-  driveIn?: boolean;
   photo?: boolean;
 }) {
   const { ids } = useTwinCtx();
   const flashing = hazards === true || turnSignal === 'left' || turnSignal === 'both';
-  const headlightsActive = on === true || driveIn;
+  const headlightsActive = on === true;
 
   return (
     <g>
@@ -996,12 +992,10 @@ function HeadlightGlows({
 function TaillightGlows({
   hazards,
   turnSignal,
-  driveIn = false,
   photo,
 }: {
   hazards: boolean | null;
   turnSignal: TurnSignalState;
-  driveIn?: boolean;
   photo?: boolean;
 }) {
   const { ids } = useTwinCtx();
@@ -1037,26 +1031,6 @@ function TaillightGlows({
           animate={ambientFrames({ opacity: [1, 0.15, 1] })}
           transition={ambientLoop({ duration: 0.8, repeat: Infinity })}
         />
-      )}
-      {driveIn && (
-        <>
-          <ellipse
-            cx={543}
-            cy={148}
-            rx={18}
-            ry={9}
-            fill={C.taillightActive}
-            opacity={0.18}
-          />
-          <path
-            d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5"
-            fill="none"
-            stroke={C.taillightActive}
-            strokeWidth={3.6}
-            strokeLinecap="round"
-            opacity={0.35}
-          />
-        </>
       )}
     </g>
   );
@@ -1191,8 +1165,8 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
  * Spins the photo's own wheel: a circular crop of the compositor image,
  * centered on the wheel, rotating in place over the base photo. Because it
  * is the same bitmap and the wheel design is 5-fold symmetric, the crop is
- * invisible while parked and the drive-in spin (−1080° = 15 × −72°) ends
- * pixel-identical to the photo.
+ * invisible while parked. Rotation indicates only source-confirmed driving,
+ * not measured speed or distance.
  */
 function PhotoWheelSpinner({
   wheel,
@@ -1201,7 +1175,6 @@ function PhotoWheelSpinner({
   imgLeft,
   imgTop,
   photoUrl,
-  driveIn,
   driving,
 }: {
   wheel: keyof typeof COMPOSITOR_METRICS.wheels;
@@ -1210,7 +1183,6 @@ function PhotoWheelSpinner({
   imgLeft: number;
   imgTop: number;
   photoUrl: string;
-  driveIn: boolean;
   driving: boolean;
 }) {
   const { x: cx, y: cy } = COMPOSITOR_METRICS.wheels[wheel];
@@ -1224,7 +1196,6 @@ function PhotoWheelSpinner({
   const size = 2 * radius * imgScale;
   const left = imgLeft + (cx - radius) * imgScale;
   const top = imgTop + (cy - radius) * imgScale;
-  const shouldSpin = driveIn || driving;
 
   return (
     <div
@@ -1245,13 +1216,13 @@ function PhotoWheelSpinner({
       <motion.div
         data-wheel-rotor={wheel}
         className="absolute inset-0 origin-center overflow-hidden"
-        initial={shouldSpin ? { rotate: 0 } : false}
-        animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
+        initial={driving ? { rotate: 0 } : false}
+        animate={{ rotate: driving ? -360 : 0 }}
         transition={
-          shouldSpin
+          driving
             ? {
-              duration: driving ? 0.9 : DRIVE_IN_DURATION,
-              repeat: driving ? Infinity : 0,
+              duration: 0.9,
+              repeat: Infinity,
               ease: 'linear',
             }
             : { duration: 0, repeat: 0 }
@@ -1433,7 +1404,7 @@ export function VehicleTwin({
   // call the scene would keep animating until some unrelated state
   // change happened to repaint it.
   const { reduce } = useMotionPreference();
-  const animateDriving = isDriving && !reduce;
+  const animateDriving = isDriving === true && !reduce;
   const animateEntry = driveIn && !reduce;
   const containerRef = useRef<HTMLDivElement>(null);
   const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
@@ -1466,13 +1437,6 @@ export function VehicleTwin({
   const [photoState, setPhotoState] = useState<'loading' | 'ready' | 'failed'>('loading');
   const photoUrl = useMemo(() => buildCompositorUrl(paint.id, model), [paint.id, model]);
   const photoOn = photoState === 'ready';
-
-  // Entry spin only makes sense while the drive-in slide is still running.
-  // If the photo arrives late (slow network), the car is already parked —
-  // spinning the wheels then would look broken.
-  const [mountedAt] = useState(() => performance.now());
-  const [entrySpinOk, setEntrySpinOk] = useState(false);
-
 
   // Align the photo with the SVG overlay: the twin geometry was traced from
   // this exact render, so image carLeft..carRight ↔ viewBox x 43..556 and
@@ -1522,9 +1486,9 @@ export function VehicleTwin({
         style={{ width: SIZE_MAP[size], height }}
         role={interactive ? 'group' : 'img'}
         aria-label={t('digitalTwin.title')} aria-describedby={summaryId}
-        initial={animateEntry ? { x: '115%', opacity: 0.18, scale: 0.96 } : false}
-        animate={driveIn ? { x: 0, opacity: 1, scale: 1 } : undefined}
-        transition={driveIn ? { duration: reduce ? 0 : DRIVE_IN_DURATION, ease: 'easeOut' } : undefined}
+        initial={animateEntry ? { opacity: 0 } : false}
+        animate={driveIn ? { opacity: 1 } : undefined}
+        transition={driveIn ? { duration: reduce ? 0 : ENTRY_DURATION, ease: 'easeOut' } : undefined}
       >
         {photoState !== 'failed' && (
           <img
@@ -1535,7 +1499,6 @@ export function VehicleTwin({
             style={imgStyle}
             onLoad={() => {
               setPhotoState('ready');
-              setEntrySpinOk(performance.now() - mountedAt < 700);
             }}
             onError={() => setPhotoState('failed')}
           />
@@ -1549,7 +1512,6 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={animateEntry && entrySpinOk}
               driving={animateDriving}
             />
             <PhotoWheelSpinner
@@ -1559,7 +1521,6 @@ export function VehicleTwin({
               imgLeft={imgLeft}
               imgTop={imgTop}
               photoUrl={photoUrl}
-              driveIn={animateEntry && entrySpinOk}
               driving={animateDriving}
             />
           </>
@@ -1619,13 +1580,13 @@ export function VehicleTwin({
               interactive={interactive}
               photo={photoOn}
             />
-            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} driveIn={animateEntry} photo={photoOn} />
-            <TaillightGlows hazards={hazards} turnSignal={turnSignal} driveIn={animateEntry} photo={photoOn} />
+            <HeadlightGlows on={headlights} hazards={hazards} turnSignal={turnSignal} photo={photoOn} />
+            <TaillightGlows hazards={hazards} turnSignal={turnSignal} photo={photoOn} />
           </g>
           {!photoOn && (
             <g id="wheels">
-              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driveIn={animateEntry} driving={animateDriving} />
-              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driveIn={animateEntry} driving={animateDriving} />
+              <WheelSVG cx={FRONT_WHEEL_CX} cy={WHEEL_CY} driving={animateDriving} />
+              <WheelSVG cx={REAR_WHEEL_CX} cy={WHEEL_CY} driving={animateDriving} />
             </g>
           )}
           <SecurityOverlay locked={locked} sentryMode={sentryMode} interactive={interactive} />

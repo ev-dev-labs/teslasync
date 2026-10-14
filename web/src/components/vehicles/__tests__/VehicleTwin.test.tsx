@@ -296,7 +296,7 @@ describe('VehicleTwin', () => {
     const assertStatic = () => {
       for (const [index, [selector, opacity]] of emissions.entries()) {
         const emission = container.querySelector(selector);
-        if (index >= 2 && motionPreference.reduce) {
+        if (index >= 2) {
           expect(emission).toBeNull();
           continue;
         }
@@ -323,9 +323,41 @@ describe('VehicleTwin', () => {
       for (const [selector] of emissions) expect(container.querySelector(selector)).toBeNull();
     }
     rerender(<VehicleTwin {...baseTwinState} headlights={null} driveIn />);
-    if (motionPreference.reduce) {
-      for (const [selector] of emissions) expect(container.querySelector(selector)).toBeNull();
-    } else assertStatic();
+    for (const [selector] of emissions) expect(container.querySelector(selector)).toBeNull();
+  });
+
+  it.each(['photo', 'svg'] as const)('keeps cosmetic entry separate from measured lights and driving in %s mode', async variant => {
+    const { container, rerender } = render(<VehicleTwin {...baseTwinState} driveIn headlights={null} />);
+    const root = container.querySelector<HTMLDivElement>('div')!;
+    const photo = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]')!;
+    if (variant === 'photo') fireEvent.load(photo);
+    else fireEvent.error(photo);
+    const selector = variant === 'photo' ? '[data-wheel-rotor]' : '[data-svg-wheel-rotor]';
+    const rotors = () => Array.from(container.querySelectorAll<HTMLElement | SVGElement>(selector));
+    await waitFor(() => expect(rotors()).toHaveLength(2));
+    const assertStationary = () => {
+      expect(root.style.transform).not.toMatch(/translate|scale/);
+      for (const rotor of rotors()) {
+        expect(rotor.style.transform === '' || rotor.style.transform === 'none' || rotor.style.transform === 'rotate(0deg)').toBe(true);
+      }
+      expect(container.querySelector('ellipse[cx="66"][cy="181"]')).toBeNull();
+      expect(container.querySelector('ellipse[cx="543"][cy="148"][rx="18"]')).toBeNull();
+    };
+    assertStationary();
+    await waitFor(() => expect(root.style.opacity).toBe('1'), { timeout: 600 });
+    assertStationary();
+    rerender(<VehicleTwin {...baseTwinState} driveIn headlights={false} />);
+    assertStationary();
+    rerender(<VehicleTwin {...baseTwinState} driveIn headlights isDriving />);
+    expect(container.querySelector('ellipse[cx="66"][cy="181"]')).toHaveAttribute('opacity', '0.28');
+    await waitFor(() => {
+      for (const rotor of rotors()) expect(rotor.style.transform).toMatch(/rotate\(-[1-9]/);
+    });
+    rerender(<VehicleTwin {...baseTwinState} driveIn headlights={null} />);
+    await waitFor(assertStationary);
+    // A late image-load event must not restart cosmetic wheel or light feedback.
+    if (variant === 'photo') fireEvent.load(photo);
+    assertStationary();
   });
 
   it('retains real turn feedback and reduced-mode static SVG opacity', async () => {
