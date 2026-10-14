@@ -1,4 +1,5 @@
 import { act, render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   DataFreshness,
@@ -229,6 +230,75 @@ describe('DataFreshness', () => {
     expect(root).toHaveClass('disabled:!bg-transparent')
     fireEvent.click(root)
     expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it.each([false, true])('keeps mobile refresh targets with compact=%s', (compact) => {
+    const { rerender } = render(
+      <DataFreshness
+        updatedAt={Date.now() - 60_000}
+        isFetching={false}
+        isStale
+        isError={false}
+        compact={compact}
+        onRefresh={vi.fn()}
+        source="Battery analytics"
+      />,
+    )
+    const refresh = screen.getByRole('button')
+    expect(refresh).toHaveClass('!min-h-11', '!min-w-11', 'md:!min-h-0', 'md:!min-w-0')
+    expect(refresh).not.toHaveClass('!min-h-0')
+    expect(refresh).toHaveAccessibleName(
+      'Refresh data · Stale · 1m ago · Source: Battery analytics',
+    )
+    expect(refresh).toHaveAttribute('title', expect.stringContaining('Source: Battery analytics'))
+    expect(refresh).toHaveClass(...(compact ? ['!p-0'] : ['!px-0', '!py-1.5']))
+
+    rerender(
+      <DataFreshness
+        updatedAt={Date.now() - 60_000}
+        isFetching
+        isStale
+        isError={false}
+        compact={compact}
+        onRefresh={vi.fn()}
+      />,
+    )
+    expect(refresh).toBeDisabled()
+    expect(refresh).toHaveClass('!min-h-11', '!min-w-11', 'md:!min-h-0', 'md:!min-w-0')
+  })
+
+  it.each([false, true])('does not enlarge read-only status with compact=%s', (compact) => {
+    render(
+      <DataFreshness
+        updatedAt={Date.now() - 1000}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+        compact={compact}
+      />,
+    )
+    expect(screen.getByRole('status')).not.toHaveClass('!min-h-11', '!min-w-11')
+    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+  })
+
+  it.each([false, true])('refreshes via Enter and Space with compact=%s', async (compact) => {
+    vi.useRealTimers()
+    const user = userEvent.setup()
+    const onRefresh = vi.fn()
+    render(
+      <DataFreshness
+        updatedAt={Date.now() - 1000}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+        compact={compact}
+        onRefresh={onRefresh}
+      />,
+    )
+    await user.tab()
+    expect(screen.getByRole('button')).toHaveFocus()
+    await user.keyboard('{Enter} ')
+    expect(onRefresh).toHaveBeenCalledTimes(2)
   })
 
   it('spells out stale status instead of relying on the amber dot alone', () => {

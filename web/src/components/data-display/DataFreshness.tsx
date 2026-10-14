@@ -243,7 +243,8 @@ export function DataFreshness({
         size="sm"
         className={cn(
           rootClassName,
-          compact ? '!h-auto !min-h-0 !p-0' : '!h-auto !px-0 !py-1.5',
+          '!min-h-11 !min-w-11 md:!min-h-0 md:!min-w-0',
+          compact ? '!h-auto !p-0' : '!h-auto !px-0 !py-1.5',
           'hover:!bg-transparent disabled:!bg-transparent disabled:!opacity-100',
         )}
         onClick={handleClick}
