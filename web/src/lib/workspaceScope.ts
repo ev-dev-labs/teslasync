@@ -22,6 +22,7 @@ export type WorkspaceScopedComponent = {
  */
 export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/activity',
+  '/admin/audit-log',
   '/analytics',
   '/analytics/carbon',
   '/api-logs',
