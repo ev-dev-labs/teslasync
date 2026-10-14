@@ -23,11 +23,11 @@ const {
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
-      Object.entries(values ?? {}).reduce(
+    t: (_key: string, fallback: string | Record<string, unknown>, values?: Record<string, unknown>) =>
+      Object.entries(values ?? (typeof fallback === 'string' ? {} : fallback)).reduce(
         (text, [name, value]) =>
           text.replaceAll(`{{${name}}}`, String(value)),
-        fallback,
+        typeof fallback === 'string' ? fallback : String(fallback.defaultValue ?? _key),
       ),
   }),
 }));
@@ -85,10 +85,9 @@ vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
 }));
 
 vi.mock('../components/odometer-milestones', async () => {
-  const { Input } =
-    await vi.importActual<typeof import('@/components/ui')>(
-      '@/components/ui',
-    );
+  const { MilestoneControls } = await vi.importActual<
+    typeof import('../components/odometer-milestones/MilestoneControls')
+  >('../components/odometer-milestones/MilestoneControls');
   type State = { isLoading: boolean; error: unknown };
   type SectionProps = {
     summary: OdometerMilestoneResult;
@@ -114,24 +113,15 @@ vi.mock('../components/odometer-milestones', async () => {
         summary.segment.nextMilestoneKm / summary.method.milestoneUnitKm
       }
       data-as-of={summary.asOfMs}
+      data-base-km={summary.baseOdometerKm}
+      data-current-km={summary.currentOdometerKm}
     >
       {status(state, summary)}
     </section>
   );
 
   return {
-    MilestoneControls: (props: {
-      baseDisplay: number;
-      distanceUnit: string;
-      onBaseChange: (value: string) => void;
-    }) => (
-      <Input
-        aria-label="Odometer immediately before the chronologically first eligible returned drive"
-        defaultValue={props.baseDisplay}
-        onChange={(event) => props.onBaseChange(event.target.value)}
-        suffix={props.distanceUnit}
-      />
-    ),
+    MilestoneControls,
     MilestoneKpis: (props: {
       summary: OdometerMilestoneResult;
       isLoading: boolean;
@@ -309,10 +299,11 @@ describe('MilestonesPage', () => {
     const input = screen.getByLabelText(
       'Odometer immediately before the chronologically first eligible returned drive',
     );
-    expect(input).toHaveValue('10000');
+    expect(input).toHaveValue(10000);
     expect(screen.getByText('mi')).toBeInTheDocument();
 
     fireEvent.change(input, { target: { value: '12345' } });
+    fireEvent.blur(input);
     expect(setStoredNumberMock).toHaveBeenCalledOnce();
     expect(setStoredNumberMock.mock.calls[0]?.[0]).toBeCloseTo(
       12_345 * kmPerMile,
@@ -373,9 +364,12 @@ describe('MilestonesPage', () => {
       .getAttribute('data-as-of');
 
     fireEvent.change(input, { target: { value: rejected } });
+    fireEvent.blur(input);
 
     expect(setStoredNumberMock).not.toHaveBeenCalled();
-    expect(storedNumberMock).toHaveBeenCalledWith('teslasync:milestones-base-km:v1', 0);
+    expect(storedNumberMock).toHaveBeenCalledWith(
+      'teslasync:milestones-base-km:v2:vehicle:42:origin:1785585600000:1', 0,
+    );
     expect(screen.getByRole('alert')).toHaveTextContent('Enter a valid number');
     expect(screen.getByRole('group', { name: 'Window-start odometer' })).toContainElement(input);
     for (const id of SECTION_IDS) {
@@ -385,10 +379,116 @@ describe('MilestonesPage', () => {
     }
 
     fireEvent.change(input, { target: { value: '12345' } });
+    fireEvent.blur(input);
 
     expect(setStoredNumberMock).toHaveBeenCalledOnce();
     expect(setStoredNumberMock.mock.calls[0]?.[0]).toBeCloseTo(expectedKm, 8);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(historyMock).toHaveBeenCalledWith('42', 1_000);
+  });
+});
+
+describe('MilestonesPage persisted calibration contract', () => {
+  const inputName = 'Odometer immediately before the chronologically first eligible returned drive';
+  const firstKey = 'teslasync:milestones-base-km:v2:vehicle:42:origin:1785585600000:1';
+
+  beforeEach(async () => {
+    localStorage.clear();
+    const { useStoredNumber } = await vi.importActual<
+      typeof import('@/hooks/useStoredNumber')
+    >('@/hooks/useStoredNumber');
+    storedNumberMock.mockImplementation(useStoredNumber);
+  });
+
+  afterEach(() => {
+    localStorage.clear();
+    storedNumberMock.mockReset();
+  });
+
+  it('keeps the global saved value unassigned and recoverable without inventing its owner', () => {
+    localStorage.setItem('teslasync:milestones-base-km:v1', '12345.678901234');
+    render(<MilestonesPage />);
+    expect(screen.getByRole('alert')).toHaveTextContent('without a vehicle or history-window assignment');
+    expect(screen.getByText('12345.678901234')).toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('error');
+    const input = screen.getByRole('spinbutton', { name: inputName });
+    expect(input).toHaveValue(null);
+    fireEvent.change(input, { target: { value: '9876.54321' } });
+    fireEvent.blur(input);
+    expect(localStorage.getItem(firstKey)).toBe('9876.54321');
+    expect(localStorage.getItem('teslasync:milestones-base-km:v1')).toBe('12345.678901234');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+  });
+
+  it('isolates vehicles, changed eligible origins, and restores exact saved calibration on return', () => {
+    localStorage.setItem(firstKey, '12345.678901234');
+    const view = render(<MilestonesPage />);
+    expect(screen.getByTestId('milestone-progress')).toHaveAttribute('data-base-km', '12345.678901234');
+    const input = screen.getByRole('spinbutton', { name: inputName });
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(localStorage.getItem(firstKey)).toBe('12345.678901234');
+    selectedVehicleMock.mockReturnValue({ vehicleId: 43 });
+    historyMock.mockReturnValue(query({ data: [{ ...eligibleDrive(), vehicleId: 43, id: 2 }] }));
+    view.rerender(<MilestonesPage />);
+    expect(screen.getByRole('spinbutton', { name: inputName })).toHaveValue(0);
+    expect(screen.getByTestId('milestone-progress')).toHaveAttribute('data-base-km', '0');
+    selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
+    historyMock.mockReturnValue(query({ data: [{ ...eligibleDrive(), id: 3, startTs: '2026-08-02T12:00:00.000Z' }] }));
+    view.rerender(<MilestonesPage />);
+    expect(screen.getByTestId('milestone-progress')).toHaveAttribute('data-base-km', '0');
+    historyMock.mockReturnValue(query({ data: [eligibleDrive()] }));
+    view.rerender(<MilestonesPage />);
+    expect(screen.getByRole('spinbutton', { name: inputName })).toHaveValue(12345.678901234);
+  });
+
+  it.each(['1000000000', '-1', 'Infinity', 'not-a-number', ''])(
+    'preserves invalid stored %j, shows recovery, and accepts a valid replacement',
+    (raw) => {
+      localStorage.setItem(firstKey, raw);
+      render(<MilestonesPage />);
+      expect(screen.getByRole('alert')).toHaveTextContent('saved calibration cannot be used');
+      expect(localStorage.getItem(firstKey)).toBe(raw);
+      const input = screen.getByRole('spinbutton', { name: inputName });
+      expect(input).toHaveAttribute('aria-invalid', 'true');
+      expect(document.getElementById(input.getAttribute('aria-describedby')!)).toHaveTextContent('saved calibration');
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('error');
+      fireEvent.change(input, { target: { value: '321.987654' } });
+      fireEvent.blur(input);
+      expect(localStorage.getItem(firstKey)).toBe('321.987654');
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    },
+  );
+
+  it('validates cross-tab commits, preserves rejected drafts, and synchronizes external recovery', () => {
+    localStorage.setItem(firstKey, '456.789');
+    render(<MilestonesPage />);
+    const input = screen.getByRole('spinbutton', { name: inputName });
+    fireEvent.change(input, { target: { value: '1000000000' } });
+    fireEvent.blur(input);
+    expect(input).toHaveValue(1000000000);
+    expect(screen.getByTestId('milestone-progress')).toHaveAttribute('data-base-km', '456.789');
+    fireEvent(window, new StorageEvent('storage', { key: firstKey, newValue: '1000000000' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('saved calibration cannot be used');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('error');
+    fireEvent(window, new StorageEvent('storage', { key: firstKey, newValue: '789.1234567' }));
+    expect(input).toHaveValue(789.1234567);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByTestId('milestone-progress')).toHaveAttribute('data-base-km', '789.1234567');
+  });
+
+  it('anchors only to the model-admitted first drive and never writes an unresolved source', () => {
+    const excluded = { ...eligibleDrive(), id: 0, startTs: '2020-01-01T00:00:00Z', distanceM: 0 };
+    historyMock.mockReturnValue(query({ data: [excluded, eligibleDrive()] }));
+    const view = render(<MilestonesPage />);
+    fireEvent.change(screen.getByRole('spinbutton', { name: inputName }), { target: { value: '123.456' } });
+    fireEvent.blur(screen.getByRole('spinbutton', { name: inputName }));
+    expect(localStorage.getItem(firstKey)).toBe('123.456');
+    historyMock.mockReturnValue(query({ data: undefined, isLoading: true }));
+    view.rerender(<MilestonesPage />);
+    expect(screen.getByRole('spinbutton', { name: inputName })).toBeDisabled();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    expect(localStorage.getItem(firstKey)).toBe('123.456');
   });
 });
