@@ -1,9 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief, type StatMetric, type StatPeriod } from '@/components/data-display';
 import { Text } from '@/components/ui';
-import { VisuallyHidden } from '@/components/a11y';
 import type { APICallLogStats } from '@/api/types';
 import type { DataState } from '@/api/dataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { sourceBriefStatus } from './sourceBriefStatus';
 
@@ -18,6 +18,7 @@ interface Props {
 
 export function ApiLogsSummary({ state, loading, start, endExclusive, timezone, allTime }: Props) {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
   const stats = state.data;
   const provenance = t('apiLogs.summary.rangeScope', 'Totals, error rate, and average duration use the View settings range; request-list filters do not change these metrics.');
   const period: StatPeriod = allTime
@@ -31,9 +32,7 @@ export function ApiLogsSummary({ state, loading, start, endExclusive, timezone, 
       label: t('apiLogs.errorRate', 'Error rate'), description: t('apiLogs.errorRate', 'Error rate'),
       comparisonContent: stats && stats.error_rate > 5 && stats.error_count != null
         ? <Text as="div" size="xs" weight="medium" className="flex items-center gap-1 text-rose-700 dark:text-rose-300">
-          <span aria-hidden="true">↑</span>
-          <VisuallyHidden>{t('statCard.trend.increased', 'increased')}</VisuallyHidden>
-          <span>{String(stats.error_count)}</span>
+          <span>{fmtInt(stats.error_count)}</span>
         </Text> : undefined },
     { metricId: 'latency', occurrenceId: 'api-average-duration',
       rawValue: stats?.avg_duration_ms == null ? null : stats.avg_duration_ms / 1000,
