@@ -9,6 +9,8 @@ import {
 } from '@/store/selectedVehicle';
 import { useSelectedVehicle } from '../useSelectedVehicle';
 import type { Vehicle } from '@/types/vehicle';
+import type { DataStateSource } from '@/api/dataState';
+import { request } from '@/api/client';
 
 const STORAGE_KEY = __SELECTED_VEHICLE_STORAGE_KEY__;
 
@@ -43,13 +45,20 @@ const FLEET: Vehicle[] = [
   },
 ];
 
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: () => ({ data: FLEET }),
-}));
+let vehiclesQuery: DataStateSource<Vehicle[]> | undefined;
+
+vi.mock('@/api/client', () => ({ request: vi.fn() }));
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
+  return {
+    ...original,
+    useVehicles: () => vehiclesQuery ?? original.useVehicles(),
+  };
+});
 
 function makeWrapper(initialEntries: string[]) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return function Wrapper({ children }: { children: ReactNode }) {
-    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return (
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={initialEntries}>
@@ -63,6 +72,8 @@ function makeWrapper(initialEntries: string[]) {
 describe('useSelectedVehicle', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    vehiclesQuery = { data: FLEET, isSuccess: true };
+    vi.mocked(request).mockReset();
   });
 
   it('defaults to the first vehicle when nothing is selected', async () => {
@@ -255,5 +266,219 @@ describe('useSelectedVehicle', () => {
 
     await waitFor(() => expect(result.current.vehicleId).toBe(2));
     expect(result.current.location.search).toBe('?vehicle_id=1,2');
+  });
+
+  it('exposes an unresolved prerequisite without inventing a confirmed empty fleet', () => {
+    vehiclesQuery = { isPending: true, isFetching: true, fetchStatus: 'fetching' };
+    const { result } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehicles).toEqual([]);
+    expect(result.current.vehicleId).toBeNull();
+    expect(result.current.vehicle).toBeNull();
+    expect(result.current.vehiclesState).toMatchObject({
+      data: undefined,
+      hasData: false,
+      status: 'initial',
+      provenance: 'unknown',
+      fatalError: null,
+      refreshError: null,
+    });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBeNull();
+  });
+
+  it('keeps a persisted id while the fleet is unknown and repairs it only after resolution', async () => {
+    window.localStorage.setItem(STORAGE_KEY, '999');
+    vehiclesQuery = { isPending: true };
+    const { result, rerender } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehicleId).toBe(999);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('999');
+    vehiclesQuery = { data: FLEET, isSuccess: true };
+    rerender();
+
+    await waitFor(() => expect(result.current.vehicleId).toBe(1));
+    expect(result.current.vehiclesState.data).toBe(FLEET);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('1');
+  });
+
+  it('preserves an unresolved URL selection through fatal failure until a known fleet can repair it', async () => {
+    const error = new Error('Fleet unavailable');
+    const refetch = vi.fn();
+    vehiclesQuery = { isError: true, error, refetch };
+    const { result, rerender } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      return { ...selected, location: useLocation() };
+    }, {
+      wrapper: makeWrapper(['/battery?vehicle_id=999&signal=BatteryLevel']),
+    });
+
+    expect(result.current.vehicleId).toBe(999);
+    expect(result.current.location.search).toBe('?vehicle_id=999&signal=BatteryLevel');
+    expect(result.current.vehiclesState).toMatchObject({
+      data: undefined,
+      hasData: false,
+      status: 'initialFailure',
+      fatalError: error,
+      refreshError: null,
+    });
+    act(() => result.current.vehiclesState.retry?.());
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('999');
+
+    vehiclesQuery = { data: FLEET, isSuccess: true };
+    rerender();
+    await waitFor(() => expect(result.current.vehicleId).toBe(1));
+    expect(result.current.location.search).toBe('?vehicle_id=1&signal=BatteryLevel');
+  });
+
+  it('marks a successful empty fleet unavailable without erasing sticky selection', async () => {
+    window.localStorage.setItem(STORAGE_KEY, '2');
+    vehiclesQuery = { data: [], isSuccess: true };
+    const { result, rerender } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehicleId).toBeNull();
+    expect(result.current.vehicle).toBeNull();
+    expect(result.current.vehiclesState).toMatchObject({
+      data: [],
+      hasData: true,
+      status: 'unavailable',
+      provenance: 'cached',
+      fatalError: null,
+    });
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('2');
+    vehiclesQuery = { data: FLEET, isSuccess: true };
+    rerender();
+    await waitFor(() => expect(result.current.vehicleId).toBe(2));
+  });
+
+  it('retains the fleet record selection timestamp and retry on background failure', () => {
+    window.localStorage.setItem(STORAGE_KEY, '2');
+    const error = new Error('Refresh failed');
+    const refetch = vi.fn();
+    vehiclesQuery = { data: FLEET, isError: true, error, dataUpdatedAt: 1234, refetch };
+    const { result } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehicleId).toBe(2);
+    expect(result.current.vehicle).toBe(FLEET[1]);
+    expect(result.current.vehicles).toBe(FLEET);
+    expect(result.current.vehiclesState).toMatchObject({
+      data: FLEET,
+      hasData: true,
+      status: 'stale',
+      provenance: 'cached',
+      fatalError: null,
+      refreshError: error,
+      updatedAt: 1234,
+    });
+    act(() => result.current.vehiclesState.retry?.());
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('2');
+  });
+
+  it('exposes background fetching while retaining selected records and stable trust identity', () => {
+    vehiclesQuery = { data: FLEET, isSuccess: true, isFetching: true };
+    const { result, rerender } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+    const state = result.current.vehiclesState;
+
+    expect(state).toMatchObject({ status: 'ok', isRefreshing: true, fatalError: null });
+    expect(result.current.vehicle).toBe(FLEET[0]);
+    rerender();
+    expect(result.current.vehiclesState).toBe(state);
+  });
+
+  it.each([undefined, FLEET, []])('keeps paused trust cause-neutral for retained payload %j', (data) => {
+    vehiclesQuery = { data, isPending: data === undefined, fetchStatus: 'paused' };
+    const { result } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehiclesState).toMatchObject({
+      data,
+      status: data === undefined ? 'initial' : 'stale',
+      isRefreshBlocked: true,
+      fatalError: null,
+      refreshError: null,
+    });
+  });
+
+  it('does not relabel a retained empty fleet with refresh failure as a successful empty response', () => {
+    const error = new Error('Empty cache refresh failed');
+    vehiclesQuery = { data: [], isError: true, error };
+    const { result } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehiclesState).toMatchObject({
+      data: [],
+      hasData: true,
+      status: 'stale',
+      fatalError: null,
+      refreshError: error,
+    });
+  });
+
+  it('forwards actual useVehicles loading failure retry and recovery with cancellation intact', async () => {
+    vehiclesQuery = undefined;
+    let rejectFirst: (error: Error) => void = () => {};
+    vi.mocked(request).mockReturnValueOnce(new Promise<Vehicle[]>((_resolve, reject) => {
+      rejectFirst = reject;
+    })).mockResolvedValue(FLEET);
+    window.localStorage.setItem(STORAGE_KEY, '2');
+    const { result } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+
+    expect(result.current.vehiclesState.status).toBe('initial');
+    expect(result.current.vehicleId).toBe(2);
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    expect(request).toHaveBeenCalledWith('/vehicles', { signal: expect.any(AbortSignal) });
+    const error = new Error('Initial request rejected');
+    await act(async () => rejectFirst(error));
+    await waitFor(() => expect(result.current.vehiclesState.fatalError).toBe(error));
+    expect(result.current.vehiclesState.data).toBeUndefined();
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('2');
+
+    act(() => result.current.vehiclesState.retry?.());
+    await waitFor(() => expect(result.current.vehiclesState.status).toBe('ok'));
+    expect(request).toHaveBeenCalledTimes(2);
+    expect(result.current.vehiclesState.data).toBe(FLEET);
+    expect(result.current.vehicle).toBe(FLEET[1]);
+  });
+
+  it('forwards actual useVehicles retained refresh failure and successful retry without dropping the selection', async () => {
+    vehiclesQuery = undefined;
+    const error = new Error('Background request rejected');
+    vi.mocked(request).mockResolvedValueOnce(FLEET).mockRejectedValueOnce(error).mockResolvedValue(FLEET);
+    window.localStorage.setItem(STORAGE_KEY, '2');
+    const { result } = renderHook(() => useSelectedVehicle(), {
+      wrapper: makeWrapper(['/dashboard']),
+    });
+    await waitFor(() => expect(result.current.vehiclesState.status).toBe('ok'));
+    const updatedAt = result.current.vehiclesState.updatedAt;
+
+    act(() => result.current.vehiclesState.retry?.());
+    await waitFor(() => expect(result.current.vehiclesState.refreshError).toBe(error));
+    expect(result.current.vehiclesState.fatalError).toBeNull();
+    expect(result.current.vehiclesState.status).toBe('stale');
+    expect(result.current.vehiclesState.updatedAt).toBe(updatedAt);
+    expect(result.current.vehicleId).toBe(2);
+    expect(result.current.vehicle).toBe(FLEET[1]);
+    expect(result.current.vehicles).toBe(FLEET);
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('2');
+
+    act(() => result.current.vehiclesState.retry?.());
+    await waitFor(() => expect(result.current.vehiclesState.status).toBe('ok'));
+    expect(result.current.vehiclesState.refreshError).toBeNull();
+    expect(request).toHaveBeenCalledTimes(3);
   });
 });
