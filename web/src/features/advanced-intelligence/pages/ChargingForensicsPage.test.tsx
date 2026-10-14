@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DataStateSource } from '@/api/dataState';
@@ -14,11 +14,13 @@ const mocks = vi.hoisted(() => ({
   query: vi.fn(),
   refetch: vi.fn(),
   fetchAll: vi.fn(),
+  request: vi.fn(),
 }));
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
   useChargingForensics: mocks.query,
   fetchAllChargingForensics: mocks.fetchAll,
 }));
+vi.mock('@/api/client', () => ({ request: mocks.request }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: mocks.vehicleId }),
 }));
@@ -84,8 +86,9 @@ function query(data?: ForensicsResponse, overrides: DataStateSource<ForensicsRes
   };
 }
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const clients: QueryClient[] = [];
+function renderPage(client = new QueryClient({ defaultOptions: { queries: { retry: false } } })) {
+  clients.push(client);
   return render(<ChargingForensicsPage />, { wrapper: ({ children }) => (
     <MemoryRouter><QueryClientProvider client={client}>{children}</QueryClientProvider></MemoryRouter>
   ) });
@@ -110,7 +113,13 @@ beforeEach(() => {
     disconnect() {}
   });
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  cleanup();
+  clients.forEach(client => client.clear());
+  clients.length = 0;
+  onlineManager.setOnline(true);
+  vi.unstubAllGlobals();
+});
 
 describe('ChargingForensicsPage', () => {
   it('preserves all nine reconciliation columns and source disclosures under a localized table name', () => {
@@ -118,7 +127,7 @@ describe('ChargingForensicsPage', () => {
     const table = within(screen.getByRole('table', { name: 'Session reconciliation' }));
     for (const label of ['Session', 'Started', 'Vehicle energy', 'Meter energy', 'Estimated loss',
       'Recorded cost', 'Expected cost', 'Cost discrepancy', 'Status']) {
-      expect(table.getByRole('columnheader', { name: label, exact: true })).toBeInTheDocument();
+      expect(table.getByRole('columnheader', { name: label })).toBeInTheDocument();
     }
     for (const value of ['#44', '2 Jun 2026, 00:30', '12 kWh', '15 kWh', '3 kWh (2 kWh–4 kWh)',
       '$4.50', '$4.20', '$0.30', 'recorded_only']) expect(table.getByText(value)).toBeInTheDocument();
@@ -145,7 +154,7 @@ describe('ChargingForensicsPage', () => {
     expect(detail.getByText('1 samples · 2 Jun 2026, 00:30')).toBeInTheDocument();
     const footer = dialog.querySelector<HTMLElement>('[data-modal-footer="true"]');
     expect(footer).not.toBeNull();
-    fireEvent.click(within(footer!).getByRole('button', { name: 'Close', exact: true }));
+    fireEvent.click(within(footer!).getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     resize(1440);
     expect(screen.getByRole('table', { name: 'Session reconciliation' })).toBeInTheDocument();
@@ -217,7 +226,7 @@ describe('ChargingForensicsPage', () => {
     expect(screen.getByText('#44')).toBeInTheDocument();
     expect(screen.getByText('test-ledger')).toBeInTheDocument();
     expect(screen.getByText(message)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh', exact: true }));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(mocks.refetch).toHaveBeenCalledOnce();
   });
 
@@ -272,5 +281,199 @@ describe('ChargingForensicsPage', () => {
       expect(vi.mocked(downloadCSV).mock.calls[0]?.[1]).toContain('vehicle_energy_wh,meter_energy_wh,estimated_loss_wh');
       expect(vi.mocked(downloadCSV).mock.calls[0]?.[1]).toContain('12000,15000,-1000,2000,4000,450,420,-30,USD,recorded_only');
     }
+  });
+
+  describe('actual charging-forensics query evidence source', () => {
+    async function useActualHook() {
+      const actual = await vi.importActual<typeof import('@/api/hooks/useAdvancedIntelligence')>(
+        '@/api/hooks/useAdvancedIntelligence',
+      );
+      mocks.query.mockImplementation(actual.useChargingForensics);
+      return actual.advancedIntelligenceKeys;
+    }
+
+    function evidenceSource() {
+      const source = screen.getByRole('region', { name: 'Data quality' }).parentElement;
+      expect(source).not.toBeNull();
+      return source!;
+    }
+
+    function expectUnknownEvidence(status: 'initial' | 'initialFailure') {
+      expect(evidenceSource()).toHaveAttribute('data-source-status', status);
+      expect(evidenceSource()).toHaveAttribute('data-source-provenance', 'unknown');
+      for (const label of ['Data quality', 'Evidence sources', 'Limitations']) {
+        expect(within(screen.getByRole('region', { name: label })).getByText('Unknown')).toBeVisible();
+      }
+      expect(screen.queryByText('Quality metadata is unsupported.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
+      expect(screen.queryByText('No additional limitations were returned.')).not.toBeInTheDocument();
+      expect(screen.getByText('Explicitly unsupported')).toBeVisible();
+      expect(screen.getByText(/Meter energy when no meter source is recorded/)).toBeVisible();
+      expect(screen.getByText(/Expected cost without supported tariff and currency data/)).toBeVisible();
+    }
+
+    it('uses only the actual current-page metadata, evidence and limitations when pagination changes', async () => {
+      await useActualHook();
+      const secondPage = payload({
+        items: [session({
+          session_id: 99,
+          evidence: [{ source: 'second-page-ledger', summary: 'Test-only second-page observation.',
+            sample_count: 0, observed_at: null }],
+          limitations: ['Test-only second-page uncertainty.'],
+        })],
+        total: 30, offset: 15,
+        data_quality: { status: 'insufficient', sample_count: 0, coverage_pct: 0,
+          window_start: null, window_end: null, reasons: ['Test-only second-page quality.'] },
+      });
+      mocks.request.mockImplementation(async (path: string) =>
+        path.endsWith('offset=15') ? secondPage : payload({ total: 30 }));
+      renderPage();
+      await screen.findByText('test-ledger');
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok');
+      expect(evidenceSource()).toHaveAttribute('data-source-provenance', 'cached');
+      fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+      await screen.findByText('second-page-ledger');
+      expect(mocks.request.mock.calls.map(([path]) => path)).toEqual([
+        '/advanced-intelligence/charging-forensics?vehicle_id=4&limit=15&offset=0',
+        '/advanced-intelligence/charging-forensics?vehicle_id=4&limit=15&offset=15',
+      ]);
+      const quality = within(screen.getByRole('region', { name: 'Data quality' }));
+      expect(quality.getByText('insufficient')).toBeVisible();
+      expect(quality.getByText('0')).toBeVisible();
+      expect(quality.getByText('0.00%')).toBeVisible();
+      expect(quality.getByText(/Test-only second-page quality/)).toBeVisible();
+      expect(screen.getByText(/Test-only second-page uncertainty/)).toBeVisible();
+      expect(screen.queryByText('test-ledger')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Test-only page-scoped evidence/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Test-only tariff coverage is absent/)).not.toBeInTheDocument();
+      expect(screen.getByText('#99')).toBeVisible();
+    });
+
+    it('shows loading shells without returned-empty claims until the real request resolves', async () => {
+      await useActualHook();
+      let resolve!: (value: ForensicsResponse) => void;
+      mocks.request.mockImplementation(() => new Promise<ForensicsResponse>(done => { resolve = done; }));
+      renderPage();
+      for (const label of ['Data quality', 'Evidence sources', 'Limitations']) {
+        expect(screen.getByRole('status', { name: `Loading ${label}` })).toBeVisible();
+      }
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'initial');
+      expect(evidenceSource()).toHaveAttribute('data-source-provenance', 'unknown');
+      expect(evidenceSource()).toHaveAttribute('aria-busy', 'true');
+      expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
+      expect(screen.getByText('Explicitly unsupported')).toBeVisible();
+      await act(async () => resolve(payload()));
+      await screen.findByText('test-ledger');
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok');
+      expect(evidenceSource()).toHaveAttribute('aria-busy', 'false');
+    });
+
+    it('keeps a real cold-paused request unknown rather than claiming unsupported or empty readings', async () => {
+      await useActualHook();
+      onlineManager.setOnline(false);
+      mocks.request.mockResolvedValue(payload());
+      renderPage();
+      expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeVisible();
+      expectUnknownEvidence('initial');
+      expect(mocks.request).not.toHaveBeenCalled();
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    });
+
+    it('leaves a genuinely disabled no-vehicle query unknown and performs no reading', async () => {
+      await useActualHook();
+      mocks.vehicleId = null;
+      renderPage();
+      expect(screen.getByText('Select a vehicle to load intelligence.')).toBeVisible();
+      expectUnknownEvidence('initial');
+      expect(mocks.request).not.toHaveBeenCalled();
+      expect(screen.queryByRole('navigation', { name: 'Pagination' })).not.toBeInTheDocument();
+    });
+
+    it('retries a real initial rejection and retains the actual response through refresh failure and recovery', async () => {
+      const keys = await useActualHook();
+      const retained = payload();
+      const recovered = payload({ items: [session({ session_id: 45 })] });
+      mocks.request.mockRejectedValueOnce(new Error('Test-only initial read failure'))
+        .mockResolvedValueOnce(retained)
+        .mockRejectedValueOnce(new Error('Test-only retained refresh failure'))
+        .mockResolvedValueOnce(recovered);
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      renderPage(client);
+      await screen.findByText('Intelligence evidence could not be loaded.');
+      expectUnknownEvidence('initialFailure');
+      const retry = screen.getAllByRole('button', { name: 'Retry' });
+      expect(retry).toHaveLength(1);
+      fireEvent.click(retry[0]);
+      await screen.findByText('test-ledger');
+      expect(screen.getByText('#44')).toBeVisible();
+      const key = keys.chargingForensics(4, 15, 0);
+      const successfulAt = client.getQueryState(key)?.dataUpdatedAt;
+      await act(async () => { await client.refetchQueries({ queryKey: key }); });
+      await screen.findByText('The refresh failed; the most recently loaded evidence remains visible.');
+      expect(client.getQueryData(key)).toBe(retained);
+      expect(client.getQueryState(key)?.dataUpdatedAt).toBe(successfulAt);
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'stale');
+      expect(evidenceSource()).toHaveAttribute('data-source-provenance', 'cached');
+      expect(screen.getByText('test-ledger')).toBeVisible();
+      expect(screen.getByText('#44')).toBeVisible();
+      expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+      const refresh = screen.getAllByRole('button', { name: 'Refresh' });
+      expect(refresh).toHaveLength(1);
+      fireEvent.click(refresh[0]);
+      await screen.findByText('#45');
+      await waitFor(() => expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok'));
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(mocks.request).toHaveBeenCalledTimes(4);
+      expect(client.getQueryData(key)).toBe(recovered);
+    });
+
+    it('retains real page evidence when an offline refresh is paused with one caller-owned recovery action', async () => {
+      const keys = await useActualHook();
+      mocks.request.mockResolvedValue(payload());
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      renderPage(client);
+      await screen.findByText('test-ledger');
+      onlineManager.setOnline(false);
+      act(() => { void client.refetchQueries({ queryKey: keys.chargingForensics(4, 15, 0) }); });
+      await screen.findByText('Cached evidence remains visible while its refresh is paused.');
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'stale');
+      expect(evidenceSource()).toHaveAttribute('data-source-provenance', 'cached');
+      expect(screen.getByText('#44')).toBeVisible();
+      expect(screen.getByText('test-ledger')).toBeVisible();
+      expect(screen.getByText(/Test-only page-scoped evidence/)).toBeVisible();
+      expect(screen.getByText(/Test-only tariff coverage is absent/)).toBeVisible();
+      expect(screen.getAllByRole('button', { name: 'Refresh' })).toHaveLength(1);
+      expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+      expect(mocks.request).toHaveBeenCalledOnce();
+    });
+
+    it('claims returned-empty evidence only after a real empty response and retains its metadata on error', async () => {
+      const keys = await useActualHook();
+      const empty = payload({ items: [], total: 0,
+        data_quality: { status: 'insufficient', sample_count: 0, coverage_pct: null,
+          window_start: null, window_end: null, reasons: ['Test-only authoritative empty page.'] } });
+      mocks.request.mockResolvedValueOnce(empty).mockRejectedValueOnce(new Error('Test-only empty refresh failure'));
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      renderPage(client);
+      await screen.findByText('No supporting evidence was returned.');
+      expect(screen.getByText('No charging sessions are available for reconciliation.')).toBeVisible();
+      expect(screen.getByText('No additional limitations were returned.')).toBeVisible();
+      expect(screen.getByText('insufficient')).toBeVisible();
+      expect(within(screen.getByRole('region', { name: 'Data quality' })).getByText('0')).toBeVisible();
+      expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok');
+      await act(async () => {
+        await client.refetchQueries({ queryKey: keys.chargingForensics(4, 15, 0) });
+      });
+      await screen.findByText('The refresh failed; the most recently loaded evidence remains visible.');
+      expect(evidenceSource()).toHaveAttribute('data-source-status', 'stale');
+      expect(screen.getByText('No supporting evidence was returned.')).toBeVisible();
+      expect(screen.getByText(/Test-only authoritative empty page/)).toBeVisible();
+      expect(screen.getByText('No additional limitations were returned.')).toBeVisible();
+      expect(screen.getAllByRole('button', { name: 'Refresh' })).toHaveLength(2);
+      expect(within(evidenceSource()).queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+      expect(client.getQueryData(keys.chargingForensics(4, 15, 0))).toBe(empty);
+    });
   });
 });

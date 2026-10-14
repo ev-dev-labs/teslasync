@@ -220,6 +220,7 @@ export default function ChargingForensicsPage() {
 
       <FadeIn delay={0.05}>
         <EvidencePanel
+          query={query}
           quality={query.data?.data_quality}
           evidence={items.flatMap((item) => item.evidence ?? [])}
           limitations={items.flatMap((item) => item.limitations ?? [])}
