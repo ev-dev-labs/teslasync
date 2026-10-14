@@ -63,18 +63,28 @@ export default function WhatIfPage() {
   const { formatDistance, formatEnergy, formatDuration, formatTemperature } = useUnits();
 
   const drivesQuery = useDrives(vehicleIdStr);
-  const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
+  const listResolved = vehicleIdStr != null && !drivesQuery.isPlaceholderData &&
+    (drivesQuery.data !== undefined || drivesQuery.isSuccess);
+  const drives = useMemo<Drive[]>(() => listResolved ? drivesQuery.data ?? [] : [], [drivesQuery.data, listResolved]);
 
-  const [selectedId, setSelectedId] = useState('');
-  const activeId = selectedId || (drives[0] ? String(drives[0].id) : '');
+  const [selection, setSelection] = useState({ vehicleId: vehicleIdStr, id: '' });
+  const selectedId = selection.vehicleId === vehicleIdStr ? selection.id : '';
+  const activeId = listResolved
+    ? String((drives.find((drive) => String(drive.id) === selectedId) ?? drives[0])?.id ?? '')
+    : '';
+  if (selection.vehicleId !== vehicleIdStr || (listResolved && selection.id !== activeId)) {
+    setSelection({ vehicleId: vehicleIdStr, id: listResolved ? activeId : selectedId });
+  }
 
   const driveQuery = useDrive(activeId);
   const telemetryQuery = useDriveTelemetry(activeId);
+  const driveData = activeId ? driveQuery.data : undefined;
+  const telemetryData = activeId ? telemetryQuery.data : undefined;
 
   const [knobs, setKnobs] = useState<WhatIfKnobs>(DEFAULT_KNOBS);
   const result = useMemo(
-    () => simulateWhatIf(driveQuery.data, telemetryQuery.data, knobs),
-    [driveQuery.data, telemetryQuery.data, knobs],
+    () => simulateWhatIf(driveData, telemetryData, knobs),
+    [driveData, telemetryData, knobs],
   );
 
   const driveOptions = useMemo(
@@ -106,11 +116,15 @@ export default function WhatIfPage() {
       : null;
   const maxTotal = Math.max(result.baseline.total, result.scenario.total, 1);
   const saves = result.energyDeltaWh <= 0;
-  const baselineDurationS = driveQuery.data?.durationS;
+  const baselineDurationS = driveData?.durationS;
   const drivesState = useDataState(drivesQuery);
   const driveState = useDataState(driveQuery);
   const telemetryState = useDataState(telemetryQuery);
-  const loading = driveQuery.isLoading && !driveState.hasData;
+  const loading = (!listResolved && drivesQuery.isLoading) ||
+    (Boolean(activeId) && driveQuery.isLoading && !driveState.hasData);
+  const missingEnergyMessage = activeId && driveState.hasData
+    ? t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')
+    : t('whatIf.brief.noDrive', 'No selected recorded drive');
   const summaryMetrics: readonly StatMetric[] = [
     {
       metricId: 'energy', occurrenceId: 'scenario-energy',
@@ -148,7 +162,7 @@ export default function WhatIfPage() {
               className="min-w-0 max-w-full"
               aria-label={t('whatIf.pickDrive', 'Choose a drive')}
               value={activeId}
-              onChange={(e) => setSelectedId(e.target.value)}
+              onChange={(e) => setSelection({ vehicleId: vehicleIdStr, id: e.target.value })}
               options={driveOptions}
             />
           )}
@@ -162,7 +176,7 @@ export default function WhatIfPage() {
           title={t('whatIf.kpis', 'Simulated drive outcome')}
           description={t('whatIf.brief.description', 'Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.')}
           metrics={summaryMetrics}
-          scope={driveQuery.data ? formatDateShort(driveQuery.data.startTs) : t('whatIf.brief.noDrive', 'No selected recorded drive')}
+          scope={driveData ? formatDateShort(driveData.startTs) : t('whatIf.brief.noDrive', 'No selected recorded drive')}
           provenance={t('whatIf.brief.provenance', 'Selected drive and telemetry, recomputed locally with the current simulation knobs.')}
           loading={loading}
           unavailable={!activeId || !result.ok}
@@ -179,7 +193,7 @@ export default function WhatIfPage() {
         <GlassPanel className="p-4 sm:p-5">
           <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} />
         </GlassPanel>
-      ) : !activeId && !drivesQuery.isLoading ? (
+      ) : listResolved && drives.length === 0 ? (
         <GlassPanel className="p-4 sm:p-5">
           <EmptyState icon={<FlaskConical className="h-8 w-8" />} message={t('whatIf.noDrives', 'No drives found for this vehicle yet.')}
             actionTo={{ label: t('whatIf.browseDrives', 'Browse drives'), to: '/drives' }} />
@@ -266,12 +280,12 @@ export default function WhatIfPage() {
 
                   {driveState.fatalError ? (
                     <QueryError error={driveState.fatalError} onRetry={() => driveQuery.refetch()} />
-                  ) : loading || (!activeId && drivesQuery.isLoading) ? (
+                  ) : loading ? (
                     <Skeleton height={200} />
                   ) : !result.ok ? (
                     <EmptyState /* no-action: choose another recorded drive using the picker. */
                       icon={<FlaskConical className="h-8 w-8" />}
-                      message={t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')} />
+                      message={missingEnergyMessage} />
                   ) : (
                   <div className="space-y-4">
                     <WhatIfEnergyBreakdown
@@ -326,7 +340,7 @@ export default function WhatIfPage() {
                   </Badge>
                   </>
                   ) : loading ? <Skeleton height={40} /> : (
-                    <Text variant="bodySm">{t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')}</Text>
+                    <Text variant="bodySm">{missingEnergyMessage}</Text>
                   )}
                 </GlassPanel>
                 </SectionErrorBoundary>
