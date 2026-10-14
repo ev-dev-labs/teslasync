@@ -109,7 +109,7 @@ export function FsdShareTrend({ insights, state }: FsdShareTrendProps) {
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={rows} margin={{ top: 12, right: 8, left: -16, bottom: 0 }}>
             <defs>
-              <ChartGradient id="fsdShareFill" color={CHART_COLORS[2]} opacity={0.45} />
+              <ChartGradient id="fsdShareFill" color={CHART_COLORS[2]} opacity={0.08} />
             </defs>
             {chartGrid}
             <XAxis
