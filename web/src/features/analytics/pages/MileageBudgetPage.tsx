@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageLayout, LayoutCard, ChartCard } from '@/components/layout';
@@ -19,9 +19,11 @@ import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { convertDistanceToSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertDistanceToSI } from '@/lib/unitConversion';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
@@ -49,6 +51,7 @@ export default function MileageBudgetPage() {
 
   const { formatDistance, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { fmtNumber } = useNumberFormatting();
   const { config, update } = useMileageBudget();
   const nowMs = Date.now();
   const [allowanceDraft, setAllowanceDraft] = useState<NumericDraft | null>(null);
@@ -95,14 +98,19 @@ export default function MileageBudgetPage() {
   }
 
   // Chart series in the user's display unit.
+  const distanceUnit = unitPrefs.distance;
   const chartData = useMemo(
     () =>
       budget.monthly.map((m) => ({
         month: m.month,
-        used: Math.round(perMile ? m.usedKm / KM_PER_MILE : m.usedKm),
-        allowed: Math.round(perMile ? m.allowedKm / KM_PER_MILE : m.allowedKm),
+        used: isFiniteNumber(m.usedKm) ? convertDistanceFromSI(m.usedKm * 1000, distanceUnit) : null,
+        allowed: isFiniteNumber(m.allowedKm) ? convertDistanceFromSI(m.allowedKm * 1000, distanceUnit) : null,
       })),
-    [budget.monthly, perMile],
+    [budget.monthly, distanceUnit],
+  );
+  const formatChartDistance = useCallback(
+    (value: unknown) => isFiniteNumber(value) ? fmtNumber(value) : '—',
+    [fmtNumber],
   );
 
   const historyCapped = budget.historyCapReached;
@@ -285,6 +293,13 @@ export default function MileageBudgetPage() {
             size="standard"
             exportable
             data={chartData}
+            exportData={chartData.map(({ month, used, allowed }) => ({
+              month,
+              [`${historyCapped
+                ? t('mileageBudget.col.observedUsed', 'Observed driven')
+                : t('mileageBudget.col.used', 'Driven')} (${distUnitLabel})`]: formatChartDistance(used),
+              [`${t('mileageBudget.col.allowed', 'Allowed')} (${distUnitLabel})`]: formatChartDistance(allowed),
+            }))}
             dataColumns={[
               { key: 'month', label: t('mileageBudget.col.month', 'Month') },
               {
@@ -292,8 +307,9 @@ export default function MileageBudgetPage() {
                 label: `${historyCapped
                   ? t('mileageBudget.col.observedUsed', 'Observed driven')
                   : t('mileageBudget.col.used', 'Driven')} (${distUnitLabel})`,
+                format: formatChartDistance,
               },
-              { key: 'allowed', label: `${t('mileageBudget.col.allowed', 'Allowed')} (${distUnitLabel})` },
+              { key: 'allowed', label: `${t('mileageBudget.col.allowed', 'Allowed')} (${distUnitLabel})`, format: formatChartDistance },
             ]}
             chartKey="mileage-budget"
           >
@@ -301,8 +317,10 @@ export default function MileageBudgetPage() {
               <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="month" tick={chartTick} />
-                <YAxis tick={chartTick} unit={` ${distUnitLabel}`} />
-                <Tooltip content={<ChartTooltip />} />
+                <YAxis tick={chartTick} unit={` ${distUnitLabel}`} tickFormatter={formatChartDistance} />
+                <Tooltip content={<ChartTooltip valueFormatter={(value) =>
+                  isFiniteNumber(value) ? `${formatChartDistance(value)} ${distUnitLabel}` : '—'
+                } />} />
                 <ChartLegend state={mileageHidden} />
                 <Area
                   type="monotone"

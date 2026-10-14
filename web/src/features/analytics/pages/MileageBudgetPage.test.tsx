@@ -1,11 +1,16 @@
-import type { ReactNode } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { Children, isValidElement, type ReactNode } from 'react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataState, DataStateSource } from '@/api/dataState';
+import { deriveDataState } from '@/api/dataState';
 import type { ChartCardProps } from '@/components/layout';
+import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
 import type { Drive } from '@/types/driving';
 import type { MileageBudgetConfig, MileageBudgetResult } from '../lib/mileageBudget';
+import { computeMileageBudget } from '../lib/mileageBudget';
 import MileageBudgetPage from './MileageBudgetPage';
+import { YAxis, Tooltip, ChartTooltip } from '@/components/charts';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const mocks = vi.hoisted(() => ({
   history: vi.fn(),
@@ -17,7 +22,20 @@ const mocks = vi.hoisted(() => ({
   chart: vi.fn(),
   metric: vi.fn(),
   hidden: vi.fn(),
+  brief: vi.fn(),
+  monthly: vi.fn(),
 }));
+
+vi.mock('../lib/mileageBudget', async () => {
+  const actual = await vi.importActual<typeof import('../lib/mileageBudget')>('../lib/mileageBudget');
+  return {
+    ...actual,
+    computeMileageBudget: (...args: Parameters<typeof actual.computeMileageBudget>) => {
+      const result = actual.computeMileageBudget(...args);
+      return { ...result, monthly: mocks.monthly() ?? result.monthly };
+    },
+  };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -36,6 +54,18 @@ vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ formatCurrency: (value: number) => `$${value.toFixed(2)}` }),
 }));
 vi.mock('@/hooks/useHiddenSeries', () => ({ useHiddenSeries: mocks.hidden }));
+vi.mock('@/components/charts', () => ({
+  ChartLegend: vi.fn(() => null),
+  ChartTooltip: vi.fn(() => null),
+  ComposedChart: vi.fn(() => null),
+  Line: vi.fn(() => null),
+  Area: vi.fn(() => null),
+  XAxis: vi.fn(() => null),
+  YAxis: vi.fn(() => null),
+  CartesianGrid: vi.fn(() => null),
+  Tooltip: vi.fn(() => null),
+  ResponsiveContainer: vi.fn(() => null),
+}));
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
@@ -58,6 +88,12 @@ vi.mock('@/components/layout', () => ({
   },
 }));
 vi.mock('@/components/data-display', () => ({
+  OperationalBrief: (props: OperationalBriefProps) => {
+    mocks.brief(props);
+    return <section aria-label={props.title}>{props.metrics.map(metric =>
+      <div key={metric.key} aria-label={metric.label}>{metric.value}{metric.detail}</div>,
+    )}</section>;
+  },
   MetricBar: (props: { label: string; value: number | null; max: number; fill: string; sublabel: string }) => {
     mocks.metric(props);
     return <div aria-label={props.label}>{props.sublabel}</div>;
@@ -79,6 +115,10 @@ vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
   NoVehicleSelected: ({ pageTitle }: { pageTitle: string }) => <p>{pageTitle}: select a vehicle</p>,
 }));
 
+const { MileageBudgetBrief } = await vi.importActual<
+  typeof import('../components/operationalbrief-a-m/MileageBudgetBrief')
+>('../components/operationalbrief-a-m/MileageBudgetBrief');
+
 const drive: Drive = {
   id: 10, vehicleId: 4, startTs: '2026-02-01T12:00:00Z', endTs: '2026-02-01T13:00:00Z',
   durationS: 3600, distanceM: 1609.344, startAddress: null, endAddress: null,
@@ -96,6 +136,28 @@ const retry = vi.fn();
 function latestChart(): ChartCardProps {
   return mocks.chart.mock.calls.at(-1)![0] as ChartCardProps;
 }
+function chartFormatters() {
+  let axis: ((value: unknown) => string) | undefined;
+  let tooltip: ((value: unknown, name: string) => ReactNode) | undefined;
+  function visit(nodes: ReactNode): void {
+    Children.forEach(nodes, node => {
+      if (!isValidElement<{
+        children?: ReactNode;
+        tickFormatter?: typeof axis;
+        content?: ReactNode;
+        valueFormatter?: typeof tooltip;
+      }>(node)) return;
+      if (node.type === YAxis) axis = node.props.tickFormatter;
+      if (node.type === ChartTooltip) tooltip = node.props.valueFormatter;
+      if (node.type === Tooltip) visit(node.props.content);
+      visit(node.props.children);
+    });
+  }
+  visit(latestChart().children);
+  expect(axis).toBeTypeOf('function');
+  expect(tooltip).toBeTypeOf('function');
+  return { axis: axis!, tooltip: tooltip! };
+}
 function latestSummary(): { budget: MileageBudgetResult; source: DataState<Drive[]>; period: {
   kind: string; eventId: string; start: string; end: string; provenance: string;
 } } {
@@ -104,6 +166,9 @@ function latestSummary(): { budget: MileageBudgetResult; source: DataState<Drive
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.monthly.mockReset();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-03-01T12:00:00Z'));
   config = { annualAllowanceKm: 15000, termStartIso: '2026-01-01', termMonths: 36, overagePerKm: 0.1 };
@@ -119,7 +184,76 @@ beforeEach(() => {
   mocks.config.mockImplementation(() => ({ config, update: mocks.update }));
   mocks.hidden.mockReturnValue({ isHidden: (key: string) => key === 'allowed' });
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => {
+  vi.useRealTimers();
+  act(() => {
+    setGlobalLocale('en-US');
+    setGlobalPrecision(2);
+  });
+});
+
+describe('MileageBudgetBrief projection eligibility', () => {
+  function renderBrief(patch: Partial<MileageBudgetResult> = {}, hasData = true) {
+    const budget = { ...computeMileageBudget([drive], config, Date.now()), ...patch };
+    return render(<MileageBudgetBrief budget={budget}
+      source={deriveDataState({ ...history, data: hasData ? [drive] : undefined })}
+      period={{ kind: 'unknown', label: 'Configured term', reason: 'Configured term' }}
+      formatDistance={value => `${value} m`} formatCurrency={value => `$${value.toFixed(2)}`} />);
+  }
+
+  function overage() {
+    const props = mocks.brief.mock.calls.at(-1)![0] as OperationalBriefProps;
+    return props.metrics.find(metric => metric.key === 'budget-overage')!;
+  }
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'withholds overage and its success context for unavailable projection %s',
+    projectedTotalM => {
+      renderBrief({ projectedTotalM });
+      expect(screen.getByRole('region', { name: 'Mileage budget summary metrics' })).toBeInTheDocument();
+      expect(overage()).toMatchObject({ rawValue: null, valueState: 'missing' });
+      expect(screen.getByLabelText('Projected overage')).toHaveTextContent('No measurement supplied');
+      expect(screen.queryByText('no overage projected')).not.toBeInTheDocument();
+      expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { name: 'absent history', patch: {}, hasData: false, reason: 'No measurement supplied' },
+    { name: 'invalid terms', patch: { ok: false }, hasData: true, reason: 'No measurement supplied' },
+    { name: 'capped history', patch: { historyCapReached: true }, hasData: true,
+      reason: 'unavailable while history is capped' },
+  ])('retains a missing overage reason for $name', ({ patch, hasData, reason }) => {
+    renderBrief(patch, hasData);
+    expect(overage()).toMatchObject({ rawValue: null, valueState: 'missing' });
+    expect(screen.getByLabelText('Projected overage')).toHaveTextContent(reason);
+    expect(screen.queryByText('no overage projected')).not.toBeInTheDocument();
+  });
+
+  it.each([0, -100.25, 100.25])('accepts finite projection %s with measured zero excess', projectedTotalM => {
+    renderBrief({ projectedTotalM, projectedOverageM: 0, projectedOverageCost: 0 });
+    expect(overage()).toMatchObject({ rawValue: 0, valueState: 'value' });
+    expect(screen.getByLabelText('Projected overage')).toHaveTextContent('$0.00');
+    expect(screen.getByLabelText('Projected overage')).toHaveTextContent('no overage projected');
+  });
+
+  it.each([0, -12.345, 12.345])('preserves signed and fractional overage cost %s', projectedOverageCost => {
+    renderBrief({ projectedTotalM: 50000.125, projectedOverageM: 5000.125, projectedOverageCost });
+    expect(overage()).toMatchObject({ rawValue: projectedOverageCost, valueState: 'value' });
+    expect(screen.getByLabelText('Projected overage')).toHaveTextContent(`$${projectedOverageCost.toFixed(2)}`);
+    expect(screen.getByLabelText('Projected overage')).toHaveTextContent('5000.125 m');
+  });
+
+  it('keeps overage missing until the first week of projection signal exists', () => {
+    vi.setSystemTime(new Date('2026-01-01T12:00:00Z'));
+    const view = renderBrief();
+    expect(overage()).toMatchObject({ rawValue: null, valueState: 'missing' });
+    vi.setSystemTime(new Date('2026-03-01T12:00:00Z'));
+    view.unmount();
+    renderBrief();
+    expect(overage()).toMatchObject({ rawValue: 0, valueState: 'value' });
+  });
+});
 
 describe('MileageBudgetPage scoped modernization', () => {
   it('preserves all three sections, four terms, SI summary, business period and chart capabilities', () => {
@@ -139,7 +273,7 @@ describe('MileageBudgetPage scoped modernization', () => {
       provenance: 'Configured term; observed drive-history coverage may be incomplete.',
     });
     expect(latestChart()).toMatchObject({ chartKey: 'mileage-budget', exportable: true, height: 340, size: 'standard' });
-    expect(latestChart().data?.[1]).toMatchObject({ month: '2026-02', used: 2 });
+    expect(latestChart().data?.[1]).toMatchObject({ month: '2026-02', used: 1.6 });
   });
 
   it('synchronizes both displayed numeric terms with external storage updates and unit preference changes', () => {
@@ -208,6 +342,91 @@ describe('MileageBudgetPage scoped modernization', () => {
     expect(latestSummary().budget.usedM).toBe(1609.344);
   });
 
+  it.each(['km', 'mi'] as const)('retains fractional and signed monthly readings nondestructively in %s', unit => {
+    distance = unit;
+    const monthly = Object.freeze([
+      Object.freeze({ month: '2026-01', usedKm: 0, allowedKm: 0 }),
+      Object.freeze({ month: '2026-02', usedKm: -12.345678, allowedKm: 1234.56789 }),
+    ]);
+    mocks.monthly.mockReturnValue(monthly);
+    const view = render(<MileageBudgetPage />);
+    const divisor = unit === 'mi' ? 1.609344 : 1;
+    expect(latestChart().data).toEqual([
+      { month: '2026-01', used: 0, allowed: 0 },
+      { month: '2026-02', used: (-12.345678 * 1000) / (divisor * 1000),
+        allowed: (1234.56789 * 1000) / (divisor * 1000) },
+    ]);
+    expect(latestSummary().budget.monthly).toBe(monthly);
+    expect(mocks.update).not.toHaveBeenCalled();
+    distance = unit === 'mi' ? 'km' : 'mi';
+    view.rerender(<MileageBudgetPage />);
+    expect(latestSummary().budget.monthly).toBe(monthly);
+    expect(monthly[1]).toEqual({ month: '2026-02', usedKm: -12.345678, allowedKm: 1234.56789 });
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, '', '12.5'])(
+    'keeps unavailable monthly input %s distinct from measured zero at every display boundary',
+    value => {
+      mocks.monthly.mockReturnValue([
+        { month: '2026-01', usedKm: value, allowedKm: value },
+        { month: '2026-02', usedKm: 0, allowedKm: 0 },
+      ]);
+      render(<MileageBudgetPage />);
+      expect(latestChart().data).toEqual([
+        { month: '2026-01', used: null, allowed: null },
+        { month: '2026-02', used: 0, allowed: 0 },
+      ]);
+      expect(latestChart().exportData).toEqual([
+        { month: '2026-01', 'Driven (km)': '—', 'Allowed (km)': '—' },
+        { month: '2026-02', 'Driven (km)': '0.00', 'Allowed (km)': '0.00' },
+      ]);
+      const { axis, tooltip } = chartFormatters();
+      for (const reading of [value, null]) {
+        expect(axis(reading)).toBe('—');
+        expect(tooltip(reading, 'Driven')).toBe('—');
+        for (const column of latestChart().dataColumns!.slice(1)) {
+          expect(column.format!(reading)).toBe('—');
+        }
+      }
+      expect(axis(0)).toBe('0.00');
+      expect(tooltip(0, 'Driven')).toBe('0.00 km');
+      for (const column of latestChart().dataColumns!.slice(1)) {
+        expect(column.format!(0)).toBe('0.00');
+      }
+    },
+  );
+
+  it.each(['km', 'mi'] as const)('reacts to locale and precision without rounding chart data in %s', unit => {
+    distance = unit;
+    mocks.monthly.mockReturnValue([
+      { month: '2026-01', usedKm: 0, allowedKm: 0 },
+      { month: '2026-02', usedKm: -1234.56789, allowedKm: 1234.56789 },
+    ]);
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    const view = render(<MileageBudgetPage />);
+    const data = latestChart().data;
+    const raw = Number(data![1].used);
+    const expected = raw.toLocaleString('de-DE', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    const { axis, tooltip } = chartFormatters();
+    expect(axis(raw)).toBe(expected);
+    expect(tooltip(raw, 'Driven')).toBe(`${expected} ${unit}`);
+    for (const column of latestChart().dataColumns!.slice(1)) {
+      expect(column.format!(raw)).toBe(expected);
+    }
+    expect(latestChart().exportData![1][`Driven (${unit})`]).toBe(expected);
+    act(() => {
+      setGlobalLocale('en-US');
+      setGlobalPrecision(1);
+    });
+    view.rerender(<MileageBudgetPage />);
+    expect(latestChart().data).toBe(data);
+    expect(chartFormatters().axis(raw)).toBe(raw.toLocaleString('en-US', {
+      minimumFractionDigits: 1, maximumFractionDigits: 1,
+    }));
+    expect(mocks.update).not.toHaveBeenCalled();
+  });
+
   it('uses allocated-width thirds, reachable mobile fields and solid progress while preserving both indicators', () => {
     render(<MileageBudgetPage />);
     const terms = screen.getByRole('region', { name: 'Allowance terms' });
@@ -245,7 +464,7 @@ describe('MileageBudgetPage scoped modernization', () => {
     expect(retry).toHaveBeenCalledOnce();
     if (data) {
       expect(screen.getByText('Retained history')).toBeInTheDocument();
-      expect(latestChart().data?.[1]).toMatchObject({ used: 2 });
+      expect(latestChart().data?.[1]).toMatchObject({ used: 1.6 });
     }
   });
 
