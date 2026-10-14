@@ -99,15 +99,15 @@ const (
 	dayLogVehicleExistsSQL = `SELECT EXISTS (SELECT 1 FROM vehicles WHERE id = $1)`
 
 	// Overlap predicate: a session belongs to the day when it was open
-	// at any instant inside [start, end] — started before the day ended
+	// at any instant inside [start, end) — started before the day ended
 	// AND (still open OR ended after the day began).
 	dayLogDrivesSQL = `
 SELECT id, vehicle_id, started_at, ended_at, duration_s, distance_m,
        start_place, end_place, start_soc_pct, end_soc_pct, energy_used_wh
 FROM drives
 WHERE vehicle_id = $1
-  AND started_at <= $2
-  AND (ended_at IS NULL OR ended_at >= $3)
+  AND started_at < $2
+  AND (ended_at IS NULL OR ended_at > $3)
 ORDER BY started_at ASC, id ASC`
 
 	dayLogChargesSQL = `
@@ -115,8 +115,8 @@ SELECT id, vehicle_id, started_at, ended_at, start_place,
        start_soc_pct, end_soc_pct, total_energy_added_wh
 FROM charging_sessions
 WHERE vehicle_id = $1
-  AND started_at <= $2
-  AND (ended_at IS NULL OR ended_at >= $3)
+  AND started_at < $2
+  AND (ended_at IS NULL OR ended_at > $3)
 ORDER BY started_at ASC, id ASC`
 
 	dayLogFSMSQL = `
@@ -125,7 +125,7 @@ FROM fsm_transitions
 WHERE vehicle_id = $1
   AND fsm_name = 'vehicle'
   AND ts >= $2
-  AND ts <= $3
+  AND ts < $3
 ORDER BY ts ASC, id ASC`
 
 	// No event_type filter: every recorded security transition for
@@ -137,7 +137,7 @@ SELECT id, ts, event_type, from_state, to_state
 FROM security_events
 WHERE vehicle_id = $1
   AND ts >= $2
-  AND ts <= $3
+  AND ts < $3
 ORDER BY ts ASC, id ASC`
 
 	dayLogSignalSQL = `
@@ -146,7 +146,7 @@ FROM signal_log
 WHERE vehicle_id = $1
   AND field = ANY($2)
   AND ts >= $3
-  AND ts <= $4
+  AND ts < $4
 ORDER BY ts ASC, field ASC
 LIMIT $5`
 
@@ -155,7 +155,7 @@ SELECT ts, gear
 FROM drive_telemetry
 WHERE vehicle_id = $1
   AND ts >= $2
-  AND ts <= $3
+  AND ts < $3
   AND gear IS NOT NULL
 ORDER BY ts ASC
 LIMIT $4`
@@ -164,8 +164,8 @@ LIMIT $4`
 SELECT id, vehicle_id, version, status, scheduled_at, installed_at, created_at
 FROM software_updates
 WHERE vehicle_id = $1
-  AND (created_at BETWEEN $2 AND $3
-       OR (installed_at IS NOT NULL AND installed_at BETWEEN $2 AND $3))
+  AND ((created_at >= $2 AND created_at < $3)
+       OR (installed_at IS NOT NULL AND installed_at >= $2 AND installed_at < $3))
 ORDER BY created_at ASC, id ASC`
 
 	// Latest to_state per event type strictly before the window, so
@@ -216,7 +216,8 @@ func (r *DayLogRepo) VehicleExists(ctx context.Context, vehicleID int64) (bool, 
 }
 
 // DrivesOverlapping returns sessions open at any instant inside
-// [windowStart, windowEnd], chronological by start.
+// [windowStart, windowEnd), chronological by start. Measures remain whole-session
+// totals; overlap does not imply uniform activity or justify prorating them.
 func (r *DayLogRepo) DrivesOverlapping(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]DayDrive, error) {
 	rows, err := r.pool.Query(ctx, dayLogDrivesSQL, vehicleID, windowEnd, windowStart)
 	if err != nil {
@@ -241,7 +242,7 @@ func (r *DayLogRepo) DrivesOverlapping(ctx context.Context, vehicleID int64, win
 }
 
 // ChargesOverlapping returns charge sessions open at any instant inside
-// [windowStart, windowEnd], chronological by start.
+// [windowStart, windowEnd), chronological by start, with whole-session measures.
 func (r *DayLogRepo) ChargesOverlapping(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]DayCharge, error) {
 	rows, err := r.pool.Query(ctx, dayLogChargesSQL, vehicleID, windowEnd, windowStart)
 	if err != nil {

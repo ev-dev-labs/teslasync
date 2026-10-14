@@ -195,7 +195,9 @@ type Event struct {
 	Payload   map[string]any `json:"payload"`
 }
 
-// Summary aggregates the sessions overlapping the window. Sums skip
+// Summary aggregates whole sessions overlapping [WindowStart, WindowEnd).
+// These are not window-only totals: distance, duration and energy are not
+// prorated because session activity need not be uniform. Sums skip
 // NULL measures; a sum with zero contributors is nil (unknown), never
 // a fabricated 0. Counts are exact.
 type Summary struct {
@@ -243,7 +245,9 @@ type DayLogResponse struct {
 	Events      []Event   `json:"events"`
 }
 
-// TimelineInput is the raw per-source repo output for one day window.
+// TimelineInput is the raw per-source repo output for [WindowStart, WindowEnd).
+// Instant rows use start <= ts < end; sessions use started_at < end and
+// (ended_at IS NULL or ended_at > start). Session measures stay whole.
 type TimelineInput struct {
 	VehicleID   int64
 	WindowStart time.Time
@@ -291,7 +295,7 @@ func newEvent(vehicleID int64, id string, ts time.Time, typ, layer, source strin
 }
 
 func inWindow(ts, start, end time.Time) bool {
-	return !ts.Before(start) && !ts.After(end)
+	return !ts.Before(start) && ts.Before(end)
 }
 
 // BuildTimeline merges per-source rows into one time-ordered,
@@ -467,6 +471,16 @@ func BuildTimeline(in TimelineInput) TimelineOutput {
 			events = append(events, e)
 		}
 	}
+
+	// Enforce the instant contract for every source before counting/paging,
+	// including sources whose boundary filtering normally happens in SQL.
+	windowEvents := events[:0]
+	for _, e := range events {
+		if inWindow(e.Ts, in.WindowStart, in.WindowEnd) {
+			windowEvents = append(windowEvents, e)
+		}
+	}
+	events = windowEvents
 
 	// Stable by ts only: same-timestamp rows keep their per-source DB
 	// order (each query carries an id tiebreak), and cross-source ties
