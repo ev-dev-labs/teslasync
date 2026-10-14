@@ -3,6 +3,7 @@ import type { StatMetric } from '@/components/data-display';
 import { HelpTooltip } from '@/components/ui';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { fmtInt } from '@/lib/numberFormat';
 import type { CommandReliabilitySummary } from '../../lib/commandReliability';
 
 export interface CommandHistorySummary {
@@ -65,15 +66,17 @@ export function commandReliabilityMetrics(
 ): StatMetric[] {
   const overallLabel = t('commandReliability.overall', 'Overall success');
   const overallHelp = 'Three successes out of three is not the same evidence as ninety-seven out of a hundred, even though both read as a high percentage. The Wilson score interval accounts for how much evidence there actually is, so a command is only graded reliable once its pessimistic lower bound clears the bar — not merely its lucky average.';
+  const hasResolvedAttempts = summary?.commands.some(command => command.success + command.failure > 0);
   return [
     {
       metricId: 'percent', occurrenceId: 'overall',
       label: overallLabel,
-      rawValue: summary ? Math.round(summary.overallSuccessRate * 100) : null,
+      rawValue: summary && (summary.totalAttempts === 0 || hasResolvedAttempts)
+        ? Math.round(summary.overallSuccessRate * 100) : null,
       display: { precision: 0 },
       context: <div className="flex flex-wrap items-center gap-1">
         {t('commandReliability.attempts', '{{n}} attempts', {
-          n: summary?.totalAttempts ?? '—',
+          n: summary ? fmtInt(summary.totalAttempts) : '—',
         })}
         <HelpTooltip
           size="xs"
@@ -89,7 +92,9 @@ export function commandReliabilityMetrics(
       label: t('commandReliability.unreliable', 'Unreliable commands'),
       rawValue: summary?.unreliableCount,
       context: summary
-        ? summary.worstCommand?.label ?? t('commandReliability.allFine', 'Nothing failing')
+        ? summary.worstCommand?.label ?? (summary.totalAttempts === 0
+          ? t('commandReliability.allFine', 'Nothing failing')
+          : t('common.unknown', 'Unknown'))
         : undefined,
     },
     {
