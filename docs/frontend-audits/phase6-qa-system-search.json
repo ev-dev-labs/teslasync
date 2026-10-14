@@ -1,0 +1,2499 @@
+{
+  "item": "phase6-qa-system-search",
+  "continuationDisposition": {
+    "status": "DONE; original findings disposition only",
+    "actor": "c37024de-453f-45e8-84d2-3bce8d4d6755",
+    "attempt": "original attempt1 retained; no new audit or implementation attempt",
+    "clocks": {
+      "canonicalStartUtc": "2026-10-14T05:06:00Z",
+      "firstRecordedReadUtc": "2026-10-14T05:08:50.0305899Z",
+      "returnUtc": "2026-10-14T05:26:00Z",
+      "hardUtc": "2026-10-14T05:31:00Z",
+      "reset": false,
+      "historicalClocks": "Original 02:29/02:49/02:54 clocks and original release remain historical, unchanged; this is the separately authorized queued continuation."
+    },
+    "objectiveCheck": {
+      "originalReportAlreadyDone": true,
+      "result": "Original report existed, status DONE, released02:48:56; do not repeat its audit, scans, preservation counts or native passes. Only its twelve findings and five conditional candidates required current canonical-owner disposition.",
+      "sourceChanges": "NO CHANGE NEEDED: accepted response validator, SearchPage trust/actions and AI label implementations already own eight original findings; missing execution belongs to two existing first-proof items.",
+      "reportChange": "Additive disposition needed because original requiredNarrowOwners and all twelve original confirmedIssues describe the earlier snapshot, not current unresolved work.",
+      "historicalFields": "All original JSON fields, source citations, hashes, raw failures, counts, proposed owners and release are preserved; reconstructing those fields with original CRLF matches the exact original report hash. Prior log text was retained by the append patch, but apply_patch normalized its mixed line endings: original log byte-prefix equality failed and is explicitly not claimed. This continuationDisposition alone governs current disposition; historical confirmedIssueCount12 is not twelve remaining fixes."
+    },
+    "authority": {
+      "orchestratorLoop": "docs\\orchestrator-loop.md fully read",
+      "queue": "migration-queue.md sole owner/status/attempt authority; read only",
+      "canonicalSnapshotUtc": "2026-10-14T05:12:37.0469898Z",
+      "qaRow": {
+        "line": 349,
+        "status": "[~]",
+        "item": "phase6-qa-system-search",
+        "attempt": 1,
+        "writeAllowlist": [
+          "docs\\frontend-audits\\phase6-qa-system-search.json",
+          "web\\logs\\phase6-qa-system-search.log"
+        ]
+      },
+      "acceptedRows": [
+        {
+          "line": 234,
+          "item": "phase6-fix-search-response-boundary",
+          "status": "[x]",
+          "findings": ["SS01"],
+          "receipt": "web\\logs\\phase6-fix-search-response-boundary.log",
+          "acceptance": "Accepted original actual36 executed/pass36/fail0/skip0; retained, NOT rerun. Original ES2020 fixture .at diagnostic exit2 and concurrent readonly page/test scan drift remain recorded, not global green claims."
+        },
+        {
+          "line": 235,
+          "item": "phase6-fix-search-page-trust-actions",
+          "status": "[x]",
+          "findings": ["SS04", "SS05", "SS06", "SS07", "SS08", "SS12"],
+          "receipt": "web\\logs\\phase6-fix-search-page-trust-actions.log",
+          "acceptance": "Source-only intake. Retained29 declarations (19 old plus10 added); normal startup exit1, discovered0/executed0/passed0/failedCases0/skipped0. No runtime pass inferred."
+        },
+        {
+          "line": 2568,
+          "item": "phase6-fix-ai-search-prompt-label",
+          "status": "[x]",
+          "findings": ["SS09"],
+          "receipt": "web\\logs\\phase6-fix-ai-search-prompt-label.log",
+          "acceptance": "Source-only intake. Retained15 authored cases (12 old plus3 added), external normal catalog startup failure/discovery0/execution0; NOTRUN, no own assertion failure inferred."
+        }
+      ],
+      "existingFirstProofOwners": [
+        {
+          "line": 2590,
+          "item": "phase6-proof-search-page-trust-actions",
+          "status": "[~]",
+          "actor": "092ae0d0-d0f7-49c0-9bfa-868889640750",
+          "production": "readonly",
+          "files": ["web\\src\\features\\system\\pages\\SearchPage.test.tsx"],
+          "receipt": "web\\logs\\phase6-proof-search-page-trust-actions.log",
+          "observed": "05:09:06 receipt contains original pins and first guarded Vitest command. No terminal result inspected; outcome UNKNOWN. Canonical row records actual running owner; this worker did not poll lifecycle or execute its command.",
+          "disposition": "Already owned; no duplicate proof, new repair, unchanged passing rerun, fixture write or concurrent page rewrite."
+        },
+        {
+          "line": 2582,
+          "item": "phase6-proof-ai-search-prompt-label",
+          "status": "[~]",
+          "actor": "886c3465-44e2-4a57-b037-27790fec9e42",
+          "production": "readonly",
+          "files": ["web\\src\\components\\ai\\AINLSearch.test.tsx"],
+          "receipt": "web\\logs\\phase6-proof-ai-search-prompt-label.log",
+          "observed": "05:09:27 receipt contains original15 case pins and first guarded Vitest command. No terminal result inspected; outcome UNKNOWN. No actual AI/provider request by this worker.",
+          "disposition": "Already owned; no duplicate label implementation or proof."
+        }
+      ],
+      "acceptedCatalogLeaves": {
+        "owner": "orchestrator-only serialized canonical English integration",
+        "receipt": "Both existing first-proof logs supply parent release ae31d7a3ce with normal generator/check/strict exit0; inherited evidence only, not commands executed here.",
+        "canonicalAndExistingSplitRead": [
+          "web\\src\\i18n\\en.json",
+          "web\\src\\i18n\\en\\locale-detail-search.json"
+        ],
+        "leaves": {
+          "search.brief.resultScope": "for “{{query}}” · result types: {{types}}",
+          "search.brief.announcementScope": "search results for “{{query}}” · types: {{types}}",
+          "search.brief.requestedScope": "Requested: “{{query}}” · types: {{types}}",
+          "search.brief.responseDescription": "Result counts and category coverage for the displayed search response.",
+          "search.paused.title": "Search request paused",
+          "search.paused.message": "The search request is paused. No response has been received, so result counts are unknown. Retry when the request can resume."
+        },
+        "disposition": "All six exact existing canonical/split values read and equal; their original parent needs are already satisfied. Do not add, replace or generate them again. This is not whole-catalog, caller-runtime or native acceptance. SS10 plural/number-format needs are distinct and not satisfied by these six leaves."
+      }
+    },
+    "findingDispositions": [
+      {
+        "id": "SS01",
+        "disposition": "CLOSED accepted response-boundary implementation; no duplicate fix or test pass",
+        "owner": "phase6-fix-search-response-boundary",
+        "evidence": "Current useSearch rejects absent/null/malformed envelopes and missing/non-string query or non-array/non-null hits through queryFn error; retains successful cache. Explicit producer hits:null with valid query remains legitimate empty, not absent-envelope coercion.",
+        "citations": [
+          {"file": "web/src/api/hooks/useSearch.ts", "line": 49, "endLine": 62},
+          {"file": "internal/api/search/handler.go", "line": 143, "endLine": 154},
+          {"file": "web/logs/phase6-fix-search-response-boundary.log", "line": 526}
+        ]
+      },
+      {
+        "id": "SS02",
+        "disposition": "OPEN original confirmed source mechanism; no matching canonical implementation owner found",
+        "owner": "search-completeness-integration",
+        "need": "Existing backend search producer must distinguish requested source successes/failures, including row/scan failures, without erasing successful hits/ranking/caps. Define outcomes before extending shared SearchResponse/hook and page/palette trust consumers. Frontend validator alone cannot infer complete coverage from HTTP200.",
+        "citations": [
+          {"file": "internal/api/search/handler.go", "line": 149, "endLine": 175},
+          {"file": "web/src/api/types.ts", "line": 2949, "endLine": 2952}
+        ],
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SS03",
+        "disposition": "OPEN original confirmed source mechanism; accepted validator intentionally preserves existing enablement",
+        "owner": "search-unicode-enablement",
+        "need": "Align trimmed query floor with backend Unicode rune/code-point counting at existing hook, page too-short guidance and palette remote-state gate. Preserve trim/key/AbortSignal/disabled/retention and palette200ms debounce; do not replace accepted palette trust.",
+        "citations": [
+          {"file": "web/src/api/hooks/useSearch.ts", "line": 38},
+          {"file": "web/src/features/system/pages/SearchPage.tsx", "line": 81},
+          {"file": "web/src/components/ui/CommandPalette.tsx", "line": 878},
+          {"file": "internal/api/search/handler.go", "line": 125}
+        ],
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SS04",
+        "disposition": "CLOSED source-only accepted deduplicated facets/effective count; first execution already owned",
+        "owner": "phase6-fix-search-page-trust-actions",
+        "proofOwner": "phase6-proof-search-page-trust-actions"
+      },
+      {
+        "id": "SS05",
+        "disposition": "CLOSED source-only accepted retained query/facet attribution and separate requested scope; six catalog needs already satisfied",
+        "owner": "phase6-fix-search-page-trust-actions",
+        "proofOwner": "phase6-proof-search-page-trust-actions"
+      },
+      {
+        "id": "SS06",
+        "disposition": "CLOSED source-only accepted router Link/shared button chrome; native navigation remains NOTRUN",
+        "owner": "phase6-fix-search-page-trust-actions",
+        "proofOwner": "phase6-proof-search-page-trust-actions"
+      },
+      {
+        "id": "SS07",
+        "disposition": "CLOSED source-only accepted governed settled-count announcements and generic announcement suppression; screen-reader acceptance NOTRUN",
+        "owner": "phase6-fix-search-page-trust-actions",
+        "proofOwner": "phase6-proof-search-page-trust-actions"
+      },
+      {
+        "id": "SS08",
+        "disposition": "CLOSED source-only accepted visible associated search-query label; first execution already owned",
+        "owner": "phase6-fix-search-page-trust-actions",
+        "proofOwner": "phase6-proof-search-page-trust-actions"
+      },
+      {
+        "id": "SS09",
+        "disposition": "CLOSED source-only accepted existing Textarea.label; first15-case execution already owned",
+        "owner": "phase6-fix-ai-search-prompt-label",
+        "proofOwner": "phase6-proof-ai-search-prompt-label"
+      },
+      {
+        "id": "SS10",
+        "disposition": "OPEN original confirmed source mechanism; six accepted trust/paused leaves are not plural repair",
+        "owner": "search-count-copy-catalog",
+        "need": "Use numeric plural count plus separate locale-formatted interpolation through existing number-format owner; format group badge/local count interpolations without altering raw source counts. Parent-only serialized add-only search.kpi.topCount_one/topCount_other and normal exact projections; preserve old topCount and all unrelated/accepted leaves.",
+        "citations": [
+          {"file": "web/src/features/system/pages/SearchPage.tsx", "line": 294},
+          {"file": "web/src/features/system/pages/SearchPage.tsx", "line": 381},
+          {"file": "web/src/i18n/en/locale-detail-search.json", "line": 333}
+        ],
+        "currentCatalog": "topCount={{n}} results; exact topCount_one/topCount_other absent in canonical English read05:11:55",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SS11",
+        "disposition": "OPEN original confirmed maintainability debt, lower priority; no remigration/decomposition authorization",
+        "owner": "search-page-decomposition",
+        "need": "Page remains over300-line orchestration limit: current physical469 lines versus original411. Only separately authorized local section/helper decomposition with page-plus-extracted parity and original sections/actions/test intent; no automatic rewrite or line deletion. Serialize after first-proof lease and any page fixes.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SS12",
+        "disposition": "CLOSED source-only accepted cause-neutral cold-paused/unknown-count explanation and retry; first execution already owned",
+        "owner": "phase6-fix-search-page-trust-actions",
+        "proofOwner": "phase6-proof-search-page-trust-actions"
+      }
+    ],
+    "currentRequiredNarrowOwners": [
+      {
+        "owner": "search-completeness-integration",
+        "findings": ["SS02"],
+        "queueDisposition": "Unqueued reported need, not a new claim or dispatch",
+        "existingOwnerFiles": [
+          "internal\\api\\search\\handler.go",
+          "web\\src\\api\\types.ts",
+          "web\\src\\api\\hooks\\useSearch.ts",
+          "web\\src\\features\\system\\pages\\SearchPage.tsx",
+          "web\\src\\components\\ui\\CommandPalette.tsx"
+        ],
+        "coordination": "Parent must authorize exact backend producer/covering-test and shared-types integration after outcome contract; preserve accepted envelope validator and successful results. Do not infer partial status client-side or duplicate SS01."
+      },
+      {
+        "owner": "search-unicode-enablement",
+        "findings": ["SS03"],
+        "queueDisposition": "Unqueued reported need, not a new claim or dispatch",
+        "existingOwnerFiles": [
+          "web\\src\\api\\hooks\\useSearch.ts",
+          "web\\src\\api\\hooks\\useSearch.test.tsx",
+          "web\\src\\features\\system\\pages\\SearchPage.tsx",
+          "web\\src\\features\\system\\pages\\SearchPage.test.tsx",
+          "web\\src\\components\\ui\\CommandPalette.tsx",
+          "web\\src\\components\\ui\\__tests__\\CommandPalette.test.tsx"
+        ],
+        "coordination": "Coupled floor/guidance/state gates only; serialize SearchPage/test after existing first proof, and shared palette scope requires explicit parent claim. Accepted36 hook passes stay historical; no unchanged rerun."
+      },
+      {
+        "owner": "search-count-copy-catalog",
+        "findings": ["SS10"],
+        "queueDisposition": "Unqueued reported need, not a new claim or dispatch",
+        "existingOwnerFiles": [
+          "web\\src\\features\\system\\pages\\SearchPage.tsx",
+          "web\\src\\features\\system\\pages\\SearchPage.test.tsx",
+          "web\\src\\i18n\\en.json",
+          "web\\src\\i18n\\en\\locale-detail-search.json",
+          "web\\src\\i18n\\en\\usage-manifest.json"
+        ],
+        "coordination": "Page writer and orchestrator-only canonical/projection writer must be separately authorized/serialized; normal generation determines exact changed projections before writes. No catalog write here and no duplication of six accepted leaves."
+      },
+      {
+        "owner": "search-page-decomposition",
+        "findings": ["SS11"],
+        "queueDisposition": "Unqueued lower-priority reported debt; not a new claim or automatic campaign",
+        "existingOwnerFiles": [
+          "web\\src\\features\\system\\pages\\SearchPage.tsx",
+          "web\\src\\features\\system\\pages\\SearchPage.test.tsx"
+        ],
+        "coordination": "Parent registers exact local extracted paths only if authorizing this original debt. No competing component system, remigration or overlap with active first proof."
+      }
+    ],
+    "conditionalDispositions": [
+      {
+        "id": "SC01",
+        "disposition": "CONDITIONAL request-budget/performance; no measured arrivals/429s or agreed budget. Page immediate-query behavior is not enough to demand debounce. Palette existing200ms debounce remains accepted.",
+        "need": "Only separately authorized synthetic arrival/cache/cancellation instrumentation could justify change.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SC02",
+        "disposition": "CONDITIONAL native mobile/container/RTL/zoom geometry; no measured clipping or hidden action. Preserve all original widths/extreme-label conditions, no new source fix inferred.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SC03",
+        "disposition": "CONDITIONAL native focus/motion/contrast; accepted source label/link/announcement changes are not keyboard, screen-reader, reduced-motion or contrast passes.",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SC04",
+        "disposition": "PARTLY SUPERSEDED by accepted SS01 validator: hits:{} and missing/malformed envelopes reject, so no duplicate malformed-envelope repair. Unknown/future entity members versus grouping/total remain conditional; producer currently advertises the same nine types. No production crash or broad item-schema validation campaign inferred.",
+        "ownerForCoveredBranch": "phase6-fix-search-response-boundary",
+        "runtime": "NOTRUN"
+      },
+      {
+        "id": "SC05",
+        "disposition": "CONDITIONAL privacy/timezone/locale preference reactivity; no actual identity/location read, query or timestamp acceptance. Intentional URL-backed fleet search is not itself a confirmed privacy defect.",
+        "runtime": "NOTRUN"
+      }
+    ],
+    "counts": {
+      "originalConfirmed": 12,
+      "closedAcceptedImplementation": 8,
+      "closedWithRetainedActualHookProof": 1,
+      "closedSourceOnlyWithExistingFirstProofOwner": 7,
+      "remainingConfirmed": 4,
+      "remainingConfirmedIds": ["SS02", "SS03", "SS10", "SS11"],
+      "conditionalRecordsPreserved": 5,
+      "conditionalOnlyIds": ["SC01", "SC02", "SC03", "SC05"],
+      "partlySupersededConditionalId": "SC04",
+      "newFindings": 0,
+      "newQueueItems": 0,
+      "commandsExecutingTestsHere": 0
+    },
+    "readonlyPins": {
+      "web\\src\\features\\system\\pages\\SearchPage.tsx": "10448E952F9F442FC99B339D09698114E63EF12768CC6BD941809D7F4EBAC846",
+      "web\\src\\api\\hooks\\useSearch.ts": "C8F16E7E54D3658175086362AD2086A6C5D073D9895673042033A87476C7D69F",
+      "web\\src\\api\\hooks\\useSearch.test.tsx": "65108937A8C5E8163C38A36BD6A8A83E55A13A495C1C3C726CC2EABF1F841450",
+      "web\\src\\components\\ai\\AINLSearch.tsx": "61D076255D0F7D3B8EFFD720E8CE8509B6E203D0EEBD975E7864BB3CE455EB51",
+      "internal\\api\\search\\handler.go": "B703A6EF3033D65964CAF46E50DEFEDBFACEA61C9A39B558331D831A46B311AC",
+      "web\\src\\api\\types.ts": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "web\\src\\components\\ui\\CommandPalette.tsx": "62821E61BE0A22B7B416B93F9C437C4C28A4B8E9339274333D3C71CE690E8456",
+      "web\\src\\i18n\\en.json": "DF6829C0588AA9C6EA9605FD2A6DB9F208DFB6C6E8D76BCA11B18F89D345EBA8",
+      "web\\src\\i18n\\en\\locale-detail-search.json": "6C1DF230EE81B8A369FE50C7580619CD5D91F879FB852D50827A7F9D14C8AD94"
+    },
+    "evidenceLimits": [
+      "Disposition of original findings only, not repeat audit, scan, gate or acceptance pass.",
+      "Runtime/native/browser/network/API/search/identity/location/AI/business actions/tests/lint/compiler/build/server/install/Docker/Git/helper/nested agents NOTRUN here.",
+      "Accepted source-only items are not accepted behavioral/native/full-page results; active first-proof outcomes remain UNKNOWN until their actual terminal intake.",
+      "No source/catalog/queue changes or claimed authority over another writer. Concurrent queue/first-proof logs are time-stamped reads, not immutable inputs or lifecycle polling.",
+      "Original historical citations/pins/counters describe original snapshot. Only bounded original-mechanism/current-owner reads made; no whole-page recertification.",
+      "PowerShell case-insensitive ConvertFrom-Json failed on subFSMs/subFsms, exit1; corrected case-preserving -AsHashtable read exited0. Failed/oversized read output is not validation success; no generated temporary tool-output file was opened.",
+      "Final original-log raw byte-prefix check failed after apply_patch normalized mixed CRLF/LF to LF. Original report JSON values are exact; original log content remains before additive continuation, but original log byte identity is NOT verified and no exact-prefix pass is claimed. No Git/helper/backup reconstruction attempted."
+    ],
+    "artifactValidation": {
+      "receiptUtc": "2026-10-14T05:15:31.162931+00:00",
+      "command": "Inline Python stdin: JSON parse, original-field CRLF reconstruction, twelve/five original-ID partition, bounded citation path/range reads and nine recorded-input hash comparisons only; not tests or repeat audit.",
+      "exit": 0,
+      "originalReportReconstructedSha256": "2c3764d20fdf68faadf1567a3053402d1cb115b51c0f7124a663a95e3c2b1346",
+      "originalLogBytes": 503801,
+      "originalLogSha256": "9d9bd2c74b2e5379194f4d26a22b19d4b6bb56afbf10d916904f9ef4924f67c6",
+      "readonlyPins": "9/9 unchanged; active first-proof fixtures excluded from claims",
+      "firstValidationExit": 1,
+      "firstValidationFailure": "LF-only original reconstruction hash df72d6f111085c83f7151b23f1c7b54f51d1f67276aafdddb28b3fd8804099ff did not match original CRLF byte hash; no historical field change. Case-preserving JSON reconstruction with original CRLF matches exact pre-edit original report hash.",
+      "followup": "Two citation line offsets corrected from displayed evidence: palette remoteEnabled878; raw group badge381. Final artifact-only check and actual release time recorded in owned ignored log.",
+      "originalLogPrefixCheck": {
+        "exit": 1,
+        "expectedOriginalPrefixSha256": "9d9bd2c74b2e5379194f4d26a22b19d4b6bb56afbf10d916904f9ef4924f67c6",
+        "actualFirst503801BytesSha256AfterAppend": "62bd261d3af14048b8640211abb87406206f2332a7683857a215b43aa004eee0",
+        "cause": "apply_patch normalized prior mixed line endings to LF while appending continuation. Original text retained, original raw byte-prefix equality NOTPASS.",
+        "diagnostic": "Read-only newline diagnosis exit0: current log CRLF0/LF6251; normalized historical prefix excluding additive separator497948 bytes SHA256 ea3a09c0c8d5d8b67de6c3a448c9464fbadc45474c11d550dc5be209011a0c62. No pre-edit normalized-text pin existed; do not fabricate independent text-hash equality.",
+        "disposition": "Preserve current historical text and both pre/post hashes with explicit line-ending limitation; no prohibited Git/helper/source recovery or original evidence deletion."
+      }
+    },
+    "release": {
+      "status": "RELEASED on completion of final bounded report/log artifact check",
+      "artifacts": [
+        "docs\\frontend-audits\\phase6-qa-system-search.json",
+        "web\\logs\\phase6-qa-system-search.log"
+      ],
+      "sourceWriteClaims": "none; all source/test/catalog/queue readonly",
+      "commandClaims": "none retained; no worker/service/helper/browser/test command launched",
+      "needs": "Parent disposition/authorization only for SS02 completeness, SS03 Unicode gates, SS10 plural/formatted counts, SS11 lower-priority decomposition debt. Existing page and AI first-proof owners must finish without duplication; all native/conditional acceptance remains NOTRUN."
+    }
+  },
+  "attempt": 1,
+  "status": "DONE",
+  "scopeStatus": "SOURCE QA REPORT ONLY; implementation/full page acceptance OPEN",
+  "createdAtUtc": "2026-10-14T02:48:12.484374+00:00",
+  "clocks": {
+    "reservation": "2026-10-14T02:29:12.925Z",
+    "return": "2026-10-14T02:49:12.925Z",
+    "hard": "2026-10-14T02:54:12.925Z",
+    "earlierActualCreationWins": true,
+    "reset": false,
+    "firstObservedUtc": "2026-10-14T02:35:24.6259528Z"
+  },
+  "page": "web/src/features/system/pages/SearchPage.tsx",
+  "routes": [
+    "/search"
+  ],
+  "writeAllowlist": [
+    "docs/frontend-audits/phase6-qa-system-search.json",
+    "web/logs/phase6-qa-system-search.log"
+  ],
+  "objectiveCheck": {
+    "artifactAbsentAtStart": true,
+    "result": "Existing attempt1 exact Phase6 report objective not completed or duplicate. Phase5 page and Phase0 audit are done; no remigration. Shared palette trust is not whole Search page QA.",
+    "initialQueueLine": 193,
+    "queueSnapshots": [
+      {
+        "line": 264,
+        "item": "phase6-qa-system-search",
+        "status": "[~]",
+        "files": "docs\\frontend-audits\\phase6-qa-system-search.json; web\\logs\\phase6-qa-system-search.log",
+        "attempt": "1",
+        "start": "reserved02:29:12.925Z; actor pending",
+        "note": "SearchPage; no real search/identity/location/provider/network queries."
+      },
+      {
+        "line": 653,
+        "item": "phase6-fix-gdpr-status-catalog",
+        "status": "[-]",
+        "files": "web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\usage-manifest.json; web\\src\\i18n\\gdprStatusCatalog.test.ts",
+        "attempt": "0",
+        "start": "no dispatch/no attempt",
+        "note": "Original a413bf2f6 conditional objective obsolete after accepted canonical manifest producer: no artifact.status/job lifecycle field; current page derives availability, lifecycle/constants describe created/downloaded/expires/expired only. Five phantom dynamic job-status keys are not used by shipping callers; do not add unused keys or create obsolete gdprStatusCatalog fixture. Existing unused English leaves preserved. Real caller copy needs are separately exact-parent-owned phase6-fix-admin-manifest-dlq-caller-catalog; exclusions do not waive caller tests/native acceptance."
+      },
+      {
+        "line": 666,
+        "item": "phase6-fix-disk-forecast-contracts",
+        "status": "[ ]",
+        "files": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx; web\\src\\features\\admin\\pages\\DiskForecastPage.test.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\usage-manifest.json",
+        "attempt": "0",
+        "start": "-",
+        "note": "Reporta7de026a6 gives5 tightlycoupled samepage defects: unknownestimate falselyNoquota, unsupportedHYPERTABLE_QUOTA_BYTES advice, coldpaused falseempty, before/afterbytes wronglystacked/currentpercentages, CSSvartoken MetricBargradient appends99. Existingrawbackend/wire unchanged: truthfully labelbefore/aftercomparison withoutadditivestack/share or fabricatedcapacity, keepunknown/zero distinct, source-state no-payload branches, MetricBar supportedfill=solid. Preserve6metrics/5cards/2charts/6columns/allactions/cases; truthful existingcanonicalcopy/normalprojections/pins. Broadtestengineer boundedinline/nonstageablematrix, no subagents/backend/config/env/Docker/helpers or guessedSI; serializedEnglishclaim cannot overlapproviderplural."
+      },
+      {
+        "line": 749,
+        "item": "phase6-fix-evidence-sample-count-plurals",
+        "status": "[ ]",
+        "files": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.sampleCounts.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\usage-manifest.json",
+        "attempt": "0",
+        "start": "-",
+        "note": "BS004 exactrawcount template/no_one_other produces1samples and bypassesfmtInt. Preserve numericpluralcount/rawwire; existinguseNumberFormatting supplies separatelyformattedinterpolation, add-onlycanonical singular/other leaves/normalgeneration/preservation. Actualcomponent and soleEnglishwriteclaims serialized afterexistingroots, no competingformatter/globali18n config/otherlocale changes. Null count/date-only/sourceidentity/zero/grouping/nonEnglishreactivity remain distinct tests; no silentguardbypass/currentCatalogpass assumed."
+      },
+      {
+        "line": 1021,
+        "item": "audit-page-194",
+        "status": "[x]",
+        "files": "web\\src\\features\\system\\pages\\SearchPage.tsx; docs\\frontend-audits\\audit-page-194.json",
+        "attempt": "1",
+        "start": "2026-10-07T11:59:45.928Z",
+        "note": "- / 1 / 2026-10-07T11:59:45.928Z / web\\src\\features\\system\\pages\\SearchPage.tsx; routes=/search; read-only audit; report docs\\frontend-audits\\audit-page-194.json; actor=d44e17b5-c291-4849-9f0d-dd94a2a9ef95; verified source audit; commit=54ae6e2d4d; runtime unverified"
+      },
+      {
+        "line": 1149,
+        "item": "repair-search-unused-icon",
+        "status": "[x]",
+        "files": "web\\src\\features\\system\\pages\\SearchPage.tsx",
+        "attempt": "1",
+        "start": "2026-10-08T00:09:59.172Z",
+        "note": "catalog-generated-freshness,supported-node-runtime / 1 / 2026-10-08T00:09:59.172Z / web\\src\\features\\system\\pages\\SearchPage.tsx; unused import only; triage assignment; actor=0f3da686-f549-46f1-b94d-d16c41a1f901; Delivered DONE exact scope/hash/diff verified; independent cohort20 ESLint exit0; commit=0e4fb074c5; compiler cadence270 exit0; normal regressions/catalog integration pending, browser unverified"
+      },
+      {
+        "line": 1346,
+        "item": "phase3-command-palette-search-trust",
+        "status": "[x]",
+        "files": "web\\src\\components\\ui\\CommandPalette.tsx; web\\src\\components\\ui\\__tests__\\CommandPalette.test.tsx",
+        "attempt": "2",
+        "start": "2026-10-09T03:53:53.489Z",
+        "note": "phase3-command-palette-footer-hints,phase3-retained-query-copy-and-source-catalog,phase3-post-focus-source-catalog-closure,phase3-command-palette-search-error-request-oracle / 2 / 2026-10-09T03:53:53.489Z / Accepted bounded region profile=frontend-phase3-command-palette-scoping.json; exact spec=phase3-command-palette-search-trust; sources=web\\src\\components\\ui\\CommandPalette.tsx; tests=web\\src\\components\\ui\\__tests__\\CommandPalette.test.tsx; dispatch plan=frontend-phase3-complex-owner-plan.json; fresh dispatch baseline required after predecessor commit/context release; same-file serial regions only; preserve every section/API/behavior and full original scoping evidence; unresolved catalog/hook/privacy needs remain explicit, never fake data or local engines; actor=25bdd230-617c-4625-a3c2-0588f2daa827; actor context idle verified 2026-10-09T00:46:52.313Z: Actual idle FAILED read; pair unchanged, exact1 canonical retained-query label missing and actual startup no-tests, not stuck; failure=First attempt unchanged: exactcanonical search.palette.retainedQuery copy needed, plus ordinary current shell/usage source-catalog closure; no tests executed, lint0 ALL3485/0. No broader engine or fake states; Explicit phase pause for repeated actual9 Date-oracle and3 local-provider failures; keep unrelated source frozen until two fixture roots accepted and production focus gap repaired. No attempts consumed by this hold.; Final2 resumed after accepted shared roots; distinct attempt2 heartbeat/receipt required. Prior actors retired by runtime, fresh replacement contexts preserve final2/original provenance. Fresh post-focus committed snapshots captured, no original baseline overwrite. Old attempt1 heartbeats/history cannot imply current attempt stuck.; actor context idle verified 2026-10-09T03:00:36.141Z: Actual idle FAILED read; normal startup metadata/no-tests, retained scoped source/test proof. No source writer remains on this pair; separate generator root and same-final2 readonly runtime acceptance required.; failure=Final2 implementation retained; actual normal startup shared source-catalog mismatch/no tests, not runtime success. Separate generator root then same-final2 read-only runtime/provenance acceptance; no generic implementation3 or source revert.; Read-only post-root review of preserved delivery; no source writes or implementation attempt increment; current frozen scope and original dispatch provenance required; heartbeat .agent-status\\phase3-command-palette-search-trust-attempt-2.txt; actor context idle verified 2026-10-09T03:23:05.464Z: Actual read_agent idle FAILED readonly normal100=99PASS1new initial-error retry oracle failure; frozen source/test/catalog/history unchanged. Scoped request-consumer fixture diagnosis preserved, no source writes.; failure=Same-final2 readonly runtime actual100=99PASS1FAIL new initial-error/retry test. One-shot unscoped fetch rejection likely consumed by auth-mode startup request, distinct oracle diagnosis retained; do not source-rewrite or generic3. Separate narrow authorized fixture root after proof.; Read-only post-root review of preserved delivery; no source writes or implementation attempt increment; current frozen scope and original dispatch provenance required; actor missing verified 2026-10-09T04:15:46.800Z: Actual read_agent after crash: No agent found. Partial FAILED report has empty errors/no terminal release; preserve all artifacts. Same attempt2 read-only evidence completion required, no implementation3.; Crash2114 actual missing actor replaced by bounded read-only terminal evidence completion; retain implementation2, preserve prior nonterminal FAILED empty-errors report and all raw evidence, distinct crash2114 report. No shipping writes.; actor context idle verified 2026-10-09T04:21:31.881Z: Actual completion notification and read_agent idle DONE same-attempt2 read-only crash closure delivered; independent intake pending.; Same retained attempt2 consumer accepted f496f001286f12bfb234d0c0f9de79a4af15374e; independent parent6363 protected/history hashes,77 preserved crash artifacts,4 whole byte inverses and installed TS original83/prior92/current96 AST declarations/assertions exact with sole approved height rename. Actual100/100 exact raw provenance, strictlint/types/scans0. Source-only commit; fixture already accepted oracle35cb59b530. Inherited motion/scan reviews retained; no browser/fullphase acceptance."
+      },
+      {
+        "line": 1588,
+        "item": "phase3-full-test-system-loading-fixtures",
+        "status": "[x]",
+        "files": "-",
+        "attempt": "1",
+        "start": "2026-10-09T10:39:45.496Z",
+        "note": "phase3-full-test-system-query-trust-fixtures / 1 / 2026-10-09T10:39:45.496Z / Actual immutable fullgate obsolete animate-pulse failures in system/pages/DataRepairPage.test.tsx,MyActivityPage.test.tsx,SearchPage.test.tsx and system/components/my-activity/ActivityBreakdownPanel.test.tsx. Own ONLY these four tests; preserve real source-local loading/no-ready-values/all sections, Search original at-least4 threshold and Activity exact5 lines plus geometry/aria. No source/mock/config/catalog/guard edits, count reduction or pulse restoration. Explicit four changed files forks/max2 plus owned lint; exact byte inverses/AST original cases/raw spans/protected/frozen full gate evidence. Any newly exposed failure needs ONE separate queued prerequisite.; actor context idle verified 2026-10-09T10:51:27.069Z: Known completion and read Turn0 actual idle FAILED43PASS4FAIL47 ownedlint0; scopeReleased true; all three writers now idle, intake freeze before630.; failure=Actual43PASS4FAIL47 loading4PASS lint0; ONE precise query-trust prerequisite queued; immutable original FAILED preserved, not accepted.; Acceptedac72c7f9d3actual633 fourretainedloadingtests/all75changedlines and47originalcases;query-trustprerequisiteclosed fresh23+frozen24=47PASS,strictlint0;originalFAILED43PASS4FAIL47 preserved. OriginalSearch>=4pluscompletegeometry/Activityexact5/allsource-localpendingsections preserved."
+      },
+      {
+        "line": 2275,
+        "item": "phase5-page-system-search",
+        "status": "[x]",
+        "files": "web\\src\\features\\system\\pages\\SearchPage.tsx; web\\src\\features\\system\\pages\\SearchPage.test.tsx",
+        "attempt": "2",
+        "start": "actualterminal1/release/individualreceipt",
+        "note": "Original Phase5 one-page adoption from accepted237-module inventory; aliases=/search; audit=docs\\frontend-audits\\audit-page-194.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Ready exact original scope reserved after actual old32terminal receipts, individually collected; no overlapping files/completed objective. Target32 from measured2running+30freshstarts; reservations NOT counted. Prior sourceattempt/history preserved, external0turnfailures uncharged. Only namedpage/test;20minbox/25mincap;480s scoped startup allowance/guardsON. Actualactor metadata follows. Actual fresh builtin actor=cc0249b8-8013-48fb-bb46-5185b1132786; launch returnedsuccessfully, NOT reservation projection. Exact20minbox/25mincap byrealelapsed, LastConsumed=-1; no custom cancellation/tooling workaround. Currentactualindividualintake: Actual guardedVitest1/378.163s external5artifactguard/ZEROalltests, final corrections UNEXECUTED; lint/types NOTRUN. Scans0/page411vs417/test529vs435/original13cases61assertions exactprefix,6added. Existingsearch.noResults.message matchescanonical/no newkeys. Finalunknown/provenance/native-link/shared/backend gaps unowned. Explicitrelease/no commands.  Status=[ ]/attempt1 retained. Originalfirstwork incomplete/malformed/unexecuted; current1 remainseligible next2 afteractualcatalog root, externalcatalogerror doesnotitself addfailurebudget. Actualindividualsourcecommit=f77a956725b783475a0f621de526770a1189ff9f pushed=true. AfterROOT91650fc9d actualgen/check/strict0/79keys baselineunchanged/allcontributorspushed, continue exactretainedfirstwork asbudgetedattempt2. NOremodernization/[x]dispatch/failed2reuse. Ownboundedcoveringproof andsurgicalcorrectiononly; missingbeforelogmustnowexist. ActualfreshID/start follows;20minbox/25mincap, guardsON/480scommands/no customtools. All32claims pairwiseexclusive.  Parentactualnative/log/exactownscope verified: ActualVitest0/native19allpass459.192s/lint0/scans0/finalreceipt0; encodingwrapper1 AFTERsavedproof distinct. Sourceunchanged/no keys; real20m43returnoverrun noted/no clockreset/nativeunclaimed. Bothleasesreleased/no commands/LastConsumed=1; originalattempt2preserved.  Actualindividualreceiptcommit=f70ae187b9bb2dbca6af8aa078896ac04880655e."
+      }
+    ],
+    "queueDrift": "Claim later line239 due concurrent parent insertions; queue never edited."
+  },
+  "governingReads": {
+    "orchestratorLoop": "fully read296lines",
+    "designContract": "read1-2539 with follow-up gap reads",
+    "mission": "relevant preservation/design/state/mobile/a11y/i18n/architecture/performance and43-45 definitions of done",
+    "inventory": "authority/preservation and exact SearchPage row/audit-page-194, not all237pages re-audited",
+    "handoff": "current new-machine recovery, conventions/evidence limits and historical Search references",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      ".github/instructions/go-backend.instructions.md",
+      "docs/frontend-worker-conventions.md",
+      "docs/CONTRIBUTING.md",
+      "docs/I18N_GUIDELINES.md",
+      "docs/URL_STATE_GUIDELINES.md"
+    ],
+    "precedence": "Current contract overrides obsolete neon/legacy-unit examples. User prohibitions override routine compiler/gates/status paths. No backend/source modified."
+  },
+  "dataSources": [
+    {
+      "hook": "web/src/api/hooks/useSearch.ts",
+      "endpoint": "GET /api/v1/search?q=...&types=...&limit=25",
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useSearch.ts",
+          "line": 38,
+          "endLine": 63
+        },
+        {
+          "file": "internal/api/router.go",
+          "line": 4066
+        }
+      ],
+      "behavior": "trim/2-floor/key/signal/FAST stale/previous valid response retention; per-type25, server225cap and3s context timeout; no unbounded total",
+      "execution": "NOTRUN"
+    },
+    {
+      "owner": "web/src/components/ai/AINLSearch.tsx",
+      "hook": "web/src/hooks/useAiStream.ts",
+      "endpoint": "POST /api/v1/ai/search/query",
+      "behavior": "independent opt-in nl-search; prompt-only4096max, whitespace-disabled, explicit start; shared abort generation/unmount guard, prose/activity/usage/error/empty output preserved",
+      "execution": "NOTRUN"
+    }
+  ],
+  "preservation": {
+    "pageSha256": "590de2e71c1be5ad33e8d4faa280bc063e196467e2fbe7444fee179d677fe0dc",
+    "pageLines": 411,
+    "GlassPanelOpeningSites": 7,
+    "ChartContainerOpeningSites": 0,
+    "majorSectionCount": 5,
+    "majorSections": [
+      "page header/refresh/freshness",
+      "optional independent AINLSearch",
+      "query and9facet toolbar",
+      "SystemSummaryBrief3count metrics plus top match",
+      "state/result region with9possible entity panels"
+    ],
+    "entityOrder": [
+      "vehicle",
+      "drive",
+      "charging",
+      "alert",
+      "notification",
+      "geofence",
+      "automation",
+      "location",
+      "trip"
+    ],
+    "resultFields": [
+      "type",
+      "id(key)",
+      "title",
+      "optional subtitle",
+      "url",
+      "optional when",
+      "score retained in payload, not rendered"
+    ],
+    "actions": [
+      "query edit/URL replacement",
+      "each9facet toggle",
+      "clear facets",
+      "header refresh",
+      "initial-error retry",
+      "retained-source retry",
+      "open each destination",
+      "AI prompt edit and explicit Ask Helix"
+    ],
+    "originalBaseline": "Current source+existing report/inventory only; no Git/original snapshot or70% original preservation claim. No source changed.",
+    "workspace": {
+      "range": false,
+      "vehicle": false,
+      "citation": {
+        "file": "web/src/lib/workspaceScope.ts",
+        "line": 117,
+        "endLine": 168
+      },
+      "assessment": "Intentional global fleet search; no duplicate picker or invented vehicle/date bound."
+    },
+    "SI": "No structured physical readings in SearchResponse, only text/entity metadata/count; no conversion/cache rewrite. Opaque backend subtitle/AI prose units are not frontend verified SI/preference readings.",
+    "preferences": "Shared theme/typography/motion; TimeStamp saved relative/absolute, locale and timezone hooks; no resets/writes. Local count/plural defect SS10."
+  },
+  "coverage": [
+    {
+      "area": "query/URL/debounce",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 73,
+          "endLine": 92
+        },
+        {
+          "file": "web/src/hooks/useUrlState.ts",
+          "line": 102,
+          "endLine": 131
+        }
+      ],
+      "assessment": "Ordered known facets, trim/key/disabled/signal; replace preserves unrelated params; duplicate SS04; no debounce source (SC01), server cadence NOTRUN."
+    },
+    {
+      "area": "navigation/count/grouping",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 99,
+          "endLine": 118
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 234,
+          "endLine": 245
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 328,
+          "endLine": 358
+        }
+      ],
+      "assessment": "9type order, within-group server order, largest-group/first tie retained; bounded hits count context correct; SS04/05/06/10."
+    },
+    {
+      "area": "trust/null/loading/error/empty/paused/retained",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 94,
+          "endLine": 126
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 170
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 251,
+          "endLine": 301
+        }
+      ],
+      "assessment": "Fatal only replaces typed result body; toolbar/AI survive; pending skeleton unknown values; actual empty zero survives same-key refresh; retained stale/paused warning/retry; below-floor clears results. SS01/02/05/12 remain."
+    },
+    {
+      "area": "SI/preferences/workspace",
+      "citations": [
+        {
+          "file": "web/src/components/data-display/TimeStamp.tsx",
+          "line": 44,
+          "endLine": 64
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 73,
+          "endLine": 91
+        },
+        {
+          "file": "web/src/hooks/useTimeFormatPreference.ts",
+          "line": 22,
+          "endLine": 26
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 117,
+          "endLine": 168
+        }
+      ],
+      "assessment": "Intentional global scope, shared formatting, no structured physical conversion; preference reactivity/timezone interpretation NOTRUN."
+    },
+    {
+      "area": "mobile/a11y/i18n",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 190,
+          "endLine": 218
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 302,
+          "endLine": 360
+        },
+        {
+          "file": "web/src/components/ai/AIFeatureCard.tsx",
+          "line": 280,
+          "endLine": 351
+        },
+        {
+          "file": "web/src/components/motion/FadeIn.tsx",
+          "line": 23,
+          "endLine": 36
+        }
+      ],
+      "assessment": "Facet wrap/44minimum, refresh44minimum, complete titles/subtitles/timestamp stacking, named regions/pressed chips/decorative icons, shared reduced motion; SS07/08/09/10 and SC02/03. No native geometry/contrast pass."
+    }
+  ],
+  "confirmedIssueCount": 12,
+  "confirmedIssues": [
+    {
+      "id": "SS01",
+      "rule": "unknown-as-zero",
+      "file": "web/src/api/hooks/useSearch.ts",
+      "line": 54,
+      "title": "Absent payload is converted to authoritative empty",
+      "mechanism": "Null/undefined/missing hits becomes [] in a successful response. The page treats hasData as available, emits zero counts and No results. Client204 returns undefined. Existing tests assert this coercion, not the stronger unknown-versus-zero contract.",
+      "fix": "Distinguish absent/malformed response from authoritative hits:[] while preserving safe iteration and existing source trust.",
+      "repairOwner": "search-response-boundary",
+      "priority": "P1",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 232,
+          "endLine": 245
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 288,
+          "endLine": 297
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 259,
+          "endLine": 260
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.test.tsx",
+          "line": 507,
+          "endLine": 515
+        },
+        {
+          "file": "web/src/api/hooks/useSearch.test.tsx",
+          "line": 237,
+          "endLine": 247
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Intercept request in a future fixture: null, undefined/204 and {} separately.",
+          "Current source predicts Source available, Total results0 and No results.",
+          "Require unknown/unavailable payload while actual hits:[] stays measured zero."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS02",
+      "rule": "source-completeness",
+      "file": "internal/api/search/handler.go",
+      "line": 175,
+      "title": "Sub-search failures are omitted without source outcomes",
+      "mechanism": "Query errors are logged/skipped; row scan errors are also skipped. Search still returns200 with hits/query only. SearchResponse has no source outcomes; request success cannot establish complete coverage.",
+      "fix": "Separately design backward-safe completeness metadata at existing handler/types/hook owners. Preserve successful hits/ranking/caps; frontend must not fabricate partial status.",
+      "repairOwner": "search-completeness-integration",
+      "priority": "P1",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "internal/api/search/handler.go",
+          "line": 150,
+          "endLine": 196
+        },
+        {
+          "file": "internal/api/search/handler.go",
+          "line": 320,
+          "endLine": 338
+        },
+        {
+          "file": "web/src/api/types.ts",
+          "line": 2949,
+          "endLine": 2952
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 230,
+          "endLine": 236
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future handler fixture: one entity fails and another returns a synthetic hit, then all requested entity sources fail.",
+          "Current response lacks failed-source identities and can still be200.",
+          "Require incomplete/unavailable classification without erasing successes."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS03",
+      "rule": "unicode-query-floor",
+      "file": "web/src/api/hooks/useSearch.ts",
+      "line": 38,
+      "title": "Client UTF-16 floor differs from backend Unicode runes",
+      "mechanism": "Page/hook use string.length; backend uses utf8.RuneCountInString<2. One astral character has two client code units but only one server rune, so it is submitted as valid and receives no-match instead of minimum guidance.",
+      "fix": "Share Unicode-aligned enablement at existing search boundary/page/palette; keep trim/key/signal/disabled policies.",
+      "repairOwner": "search-unicode-enablement",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 78,
+          "endLine": 91
+        },
+        {
+          "file": "internal/api/search/handler.go",
+          "line": 120,
+          "endLine": 128
+        },
+        {
+          "file": "web/src/api/hooks/useSearch.test.tsx",
+          "line": 84,
+          "endLine": 88
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future synthetic input: one U+1F680 character, then two code points.",
+          "Require no request and guidance for one code point; preserve two-code-point/ASCII behavior."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS04",
+      "rule": "filter-count-truth",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 83,
+      "title": "Duplicate URL facets inflate effective filter count",
+      "mechanism": "useUrlArray splits without deduplication; page filters only invalid types. types=drive,drive sends duplicate types and counts2 while one chip is selected. Backend parses a set.",
+      "fix": "Deduplicate known types preserving first-occurrence order, unrelated URL params and toggle/clear behavior.",
+      "repairOwner": "search-page-followups",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/hooks/useUrlState.ts",
+          "line": 214,
+          "endLine": 230
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 128,
+          "endLine": 137
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 238,
+          "endLine": 239
+        },
+        {
+          "file": "internal/api/search/handler.go",
+          "line": 230,
+          "endLine": 252
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future mount /search?q=synthetic&types=drive,drive.",
+          "Current source predicts two filter entries but one pressed facet.",
+          "Require one effective filter and stable order."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS05",
+      "rule": "retained-filter-scope",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 230,
+      "title": "Retained query label does not identify retained facets",
+      "mechanism": "Old query is correctly taken from data.query and Retained source is shown. However placeholder response has no types metadata while description says current query/selected filters and Active filters immediately reflects new facets. Old drive rows/counts can remain under a Vehicles filter. This is narrower than the previously fixed query-attribution issue.",
+      "fix": "Expose requested versus retained facet scope through existing page/query boundary without discarding placeholder hits.",
+      "repairOwner": "search-page-followups",
+      "priority": "P1",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useSearch.ts",
+          "line": 40,
+          "endLine": 63
+        },
+        {
+          "file": "web/src/api/types.ts",
+          "line": 2949,
+          "endLine": 2952
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 231,
+          "endLine": 239
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.test.tsx",
+          "line": 492,
+          "endLine": 505
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future intercepted fixture resolves drive-only hits; leave next vehicle-filter request pending.",
+          "Switch Drives to Vehicles and inspect chips/counts/retained rows.",
+          "Require retained facet identity as well as original query and retained status."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS06",
+      "rule": "native-navigation",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 331,
+      "title": "Result destinations are buttons, not links",
+      "mechanism": "Shared Button calls navigate(hit.url) with no href/to anchor. Destination rows lack native link semantics/copy/open-in-new-tab affordances; single-click routing is merely declared by a test.",
+      "fix": "Use existing router Link and BUTTON_BASE/shared navigation chrome, preserving URL/name/metadata/wrapping/ordinary navigation.",
+      "repairOwner": "search-page-followups",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 328,
+          "endLine": 358
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 21,
+          "endLine": 31
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.test.tsx",
+          "line": 327,
+          "endLine": 338
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future synthetic /drives/42 row: inspect link role/href, modifier and middle-click, copy-link context menu.",
+          "Require native destination behavior and unchanged ordinary routing."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS07",
+      "rule": "load-announcement-wiring",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 148,
+      "title": "Busy prop does not drive loaded/count announcement",
+      "mechanism": "Page supplies busy, not loading/error/empty or its own result announcer. PageContainer passes Boolean(loading) to useLoadAnnouncement; it emits only on that falling edge. aria-busy alone does not wire a loaded/no-match/count outcome. Regions and accessible names still exist.",
+      "fix": "Use existing governed announcer for settled search outcomes, suppress duplicate generic announcements, do not blank page children with global loading.",
+      "repairOwner": "search-page-followups",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/components/layout/PageContainer.tsx",
+          "line": 136,
+          "endLine": 142
+        },
+        {
+          "file": "web/src/hooks/useStatusAnnouncer.ts",
+          "line": 289,
+          "endLine": 307
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 300,
+          "endLine": 301
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future pending fixture resolves2 hits and another valid query resolves0.",
+          "Spy on existing announcer/live region; require one meaningful settled outcome, not keystroke chatter."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS08",
+      "rule": "visible-field-label",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 176,
+      "title": "Typed input lacks visible associated label",
+      "mechanism": "Only placeholder and aria-label are supplied. Input renders visible Label only when label is supplied. This is a visible-label contract gap, not a missing accessible name.",
+      "fix": "Pass existing translated Search query through Input.label, retaining ID/name/size/autofocus/URL value.",
+      "repairOwner": "search-page-followups",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 176,
+          "endLine": 185
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 64,
+          "endLine": 75
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future fixture fills input so placeholder disappears.",
+          "Require persistent visible associated label with same accessible name."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS09",
+      "rule": "visible-field-label",
+      "file": "web/src/components/ai/AINLSearch.tsx",
+      "line": 54,
+      "title": "AI prompt lacks visible associated label",
+      "mechanism": "Textarea receives aria-label/placeholder but no label; its shared visible Label is conditional on label. Card title/description is not field association.",
+      "fix": "Use existing Textarea.label and translated prompt label; preserve4096 cap, feature gate and prompt-only body.",
+      "repairOwner": "search-ai-prompt-label",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/components/ai/AINLSearch.tsx",
+          "line": 54,
+          "endLine": 64
+        },
+        {
+          "file": "web/src/components/ui/Textarea.tsx",
+          "line": 55,
+          "endLine": 65
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future synthetic enabled component fixture fills textarea.",
+          "Require visible associated label without issuing a stream/provider request."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS10",
+      "rule": "count-i18n-preferences",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 245,
+      "title": "Top match always plural; local counts bypass display formatter",
+      "mechanism": "Canonical/generated topCount is {{n}} results with no _one/_other; caller passes n rather than numeric count. One hit produces1 results. Group badge displays raw group.hits.length and interpolations bypass shared locale-number formatting.",
+      "fix": "Use numeric plural count and separately formatted interpolation through existing number-format hook; serialized add-only canonical singular/other leaves, raw counts unchanged.",
+      "repairOwner": "search-count-copy-catalog",
+      "priority": "P2",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 321,
+          "endLine": 323
+        },
+        {
+          "file": "web/src/i18n/en/locale-detail-search.json",
+          "line": 327,
+          "endLine": 333
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future fixture1 hit then multiple hits with a non-Latin-digit locale preference.",
+          "Require singular/plural and formatted badge count without modifying raw source values."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS11",
+      "rule": "page-size",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 411,
+      "title": "Current page exceeds300-line orchestration limit",
+      "mechanism": "Pinned page is411 lines with toolbar/summary/results/helpers. Applicable React instructions prohibit pages over300. This is maintainability debt, not permission to repeat completed migration.",
+      "fix": "Only separately queued decomposition may extract local sections/helpers with complete section/action/test parity; no deletion or competing component system.",
+      "repairOwner": "search-page-decomposition",
+      "priority": "P3",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 173,
+          "endLine": 247
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 251,
+          "endLine": 373
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Source count411 is recorded by command08.",
+          "Future authorized decomposition must preserve all sections/actions/original test intent, not just reduce lines."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    },
+    {
+      "id": "SS12",
+      "rule": "initial-paused-state",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 125,
+      "title": "Cold paused request has no distinct source-local explanation",
+      "mechanism": "Pending/no-data correctly prevents false no-results. Fetching and paused cold requests nevertheless share skeleton/Loading source; busy becomes false when paused, warning returns null without data, DataFreshnessAuto lacks fetchStatus, page never consumes isRefreshBlocked for cold branch.",
+      "fix": "Use existing deferred/paused source notice and retry without asserting an unverified offline cause or fake error/zero; preserve query controls.",
+      "repairOwner": "search-page-followups",
+      "priority": "P1",
+      "confidence": "high for source mechanism only",
+      "evidenceClass": "source-confirmed",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 148
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 170
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 232
+        },
+        {
+          "file": "web/src/features/system/pages/SearchPage.tsx",
+          "line": 279,
+          "endLine": 286
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59,
+          "endLine": 61
+        },
+        {
+          "file": "web/src/components/data-display/DataFreshness.tsx",
+          "line": 282,
+          "endLine": 285
+        }
+      ],
+      "reproduction": {
+        "status": "UNEXECUTED",
+        "steps": [
+          "Future pause valid cold query without cache.",
+          "Require distinct deferred-refresh explanation/recovery while skeleton/unknown counts remain; no offline assertion."
+        ],
+        "scope": "future safe synthetic fixture; no real API/identity/location/provider query"
+      },
+      "runtime": "NOTRUN"
+    }
+  ],
+  "candidateCount": 5,
+  "conditionalNativeCandidates": [
+    {
+      "id": "SC01",
+      "classification": "conditional request-budget/performance",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 180,
+      "mechanism": "Immediate URL edit/new query key; no debounce; backend30 requests/minute. AbortSignal preserved, actual server arrivals not measured.",
+      "citations": [
+        {
+          "file": "web/src/api/hooks/useSearch.ts",
+          "line": 38,
+          "endLine": 49
+        },
+        {
+          "file": "internal/api/router.go",
+          "line": 4066
+        }
+      ],
+      "unexecutedRepro": "Authorized synthetic instrumentation: >30 distinct enabled queries/minute, count server arrivals/429s/cache/cancellation and agree budget before change.",
+      "runtime": "NOTRUN",
+      "reproStatus": "UNEXECUTED"
+    },
+    {
+      "id": "SC02",
+      "classification": "native mobile/container",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 302,
+      "mechanism": "Viewport grid versus PageLayout container; current facets/title/subtitle/timestamp wrapping preserved. No measured clipping.",
+      "unexecutedRepro": "320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers, long synthetic labels, RTL/200% text, last action above chrome and focus overflow.",
+      "runtime": "NOTRUN",
+      "reproStatus": "UNEXECUTED"
+    },
+    {
+      "id": "SC03",
+      "classification": "native focus/motion/contrast",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 184,
+      "mechanism": "Input autofocus versus route heading focus; shared motion preference source-present; neutral tokens are not contrast proof.",
+      "unexecutedRepro": "Keyboard route/back, screen reader, actual targets, dark/light/custom/forced-colors, reduced motion/low-bandwidth.",
+      "runtime": "NOTRUN",
+      "reproStatus": "UNEXECUTED"
+    },
+    {
+      "id": "SC04",
+      "classification": "conditional malformed/future payload",
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "line": 103,
+      "mechanism": "Unknown types skipped from groups while raw total includes all; non-array hits not runtime-validated. Current typed handler uses same9types.",
+      "unexecutedRepro": "Future synthetic hits:{} and new type fixtures; decide partial/error policy before alleging production crash.",
+      "runtime": "NOTRUN",
+      "reproStatus": "UNEXECUTED"
+    },
+    {
+      "id": "SC05",
+      "classification": "conditional privacy/timezone preference",
+      "file": "web/src/components/data-display/TimeStamp.tsx",
+      "line": 44,
+      "mechanism": "Fleet hits lack timezone metadata; TimeStamp uses saved default zone mode; query intentionally URL-backed. No actual identity/location read or queried.",
+      "unexecutedRepro": "Synthetic mixed-fleet timestamp/relative/absolute/locale reactivity and URL/history/share privacy review; no real VIN/location evidence.",
+      "runtime": "NOTRUN",
+      "reproStatus": "UNEXECUTED"
+    }
+  ],
+  "requiredNarrowOwners": [
+    {
+      "owner": "search-response-boundary",
+      "findings": [
+        "SS01"
+      ],
+      "proposedExclusiveFiles": [
+        "web/src/api/hooks/useSearch.ts",
+        "web/src/api/hooks/useSearch.test.tsx"
+      ],
+      "existingQueueFileOverlaps": [],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    },
+    {
+      "owner": "search-completeness-integration",
+      "findings": [
+        "SS02"
+      ],
+      "proposedExclusiveFiles": [
+        "internal/api/search/handler.go",
+        "web/src/api/types.ts",
+        "web/src/api/hooks/useSearch.ts"
+      ],
+      "existingQueueFileOverlaps": [],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    },
+    {
+      "owner": "search-unicode-enablement",
+      "findings": [
+        "SS03"
+      ],
+      "proposedExclusiveFiles": [
+        "web/src/api/hooks/useSearch.ts",
+        "web/src/api/hooks/useSearch.test.tsx",
+        "web/src/features/system/pages/SearchPage.tsx",
+        "web/src/features/system/pages/SearchPage.test.tsx"
+      ],
+      "existingQueueFileOverlaps": [],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    },
+    {
+      "owner": "search-page-followups",
+      "findings": [
+        "SS04",
+        "SS05",
+        "SS06",
+        "SS07",
+        "SS08",
+        "SS12"
+      ],
+      "proposedExclusiveFiles": [
+        "web/src/features/system/pages/SearchPage.tsx",
+        "web/src/features/system/pages/SearchPage.test.tsx"
+      ],
+      "existingQueueFileOverlaps": [],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    },
+    {
+      "owner": "search-ai-prompt-label",
+      "findings": [
+        "SS09"
+      ],
+      "proposedExclusiveFiles": [
+        "web/src/components/ai/AINLSearch.tsx",
+        "web/src/components/ai/AINLSearch.test.tsx"
+      ],
+      "existingQueueFileOverlaps": [],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    },
+    {
+      "owner": "search-count-copy-catalog",
+      "findings": [
+        "SS10"
+      ],
+      "proposedExclusiveFiles": [
+        "web/src/features/system/pages/SearchPage.tsx",
+        "web/src/features/system/pages/SearchPage.test.tsx",
+        "web/src/i18n/en.json",
+        "web/src/i18n/en/locale-detail-search.json"
+      ],
+      "existingQueueFileOverlaps": [
+        {
+          "line": 184,
+          "item": "phase6-fix-admin-manifest-dlq-caller-catalog",
+          "status": "[~]"
+        },
+        {
+          "line": 339,
+          "item": "phase6-fix-charger-milestone-canonical-leaves",
+          "status": "[x]"
+        },
+        {
+          "line": 639,
+          "item": "phase6-fix-dlq-toast-catalog",
+          "status": "[x]"
+        },
+        {
+          "line": 653,
+          "item": "phase6-fix-gdpr-status-catalog",
+          "status": "[-]"
+        },
+        {
+          "line": 662,
+          "item": "phase6-fix-action-center-provider-plural",
+          "status": "[x]"
+        },
+        {
+          "line": 666,
+          "item": "phase6-fix-disk-forecast-contracts",
+          "status": "[ ]"
+        },
+        {
+          "line": 692,
+          "item": "phase6-fix-causal-journey-hint-catalog",
+          "status": "[x]"
+        },
+        {
+          "line": 749,
+          "item": "phase6-fix-evidence-sample-count-plurals",
+          "status": "[ ]"
+        },
+        {
+          "line": 785,
+          "item": "phase6-native-drives-count-catalog-integration",
+          "status": "[x]"
+        },
+        {
+          "line": 2088,
+          "item": "phase6-driving-efficiency-excluded-plural",
+          "status": "[x]"
+        }
+      ],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    },
+    {
+      "owner": "search-page-decomposition",
+      "findings": [
+        "SS11"
+      ],
+      "proposedExclusiveFiles": [
+        "web/src/features/system/pages/SearchPage.tsx",
+        "web/src/features/system/pages/SearchPage.test.tsx"
+      ],
+      "existingQueueFileOverlaps": [],
+      "disposition": "REPORT ONLY; parent must queue exact new objectives and serialize all page/hook/canonical-catalog overlaps. Existing catalog objectives are not Search plural repair; completed Phase5/old palette objectives not redispatched."
+    }
+  ],
+  "summary": {
+    "totalConfirmedIssues": 12,
+    "byRule": {
+      "unknown-as-zero": 1,
+      "source-completeness": 1,
+      "unicode-query-floor": 1,
+      "filter-count-truth": 1,
+      "retained-filter-scope": 1,
+      "native-navigation": 1,
+      "load-announcement-wiring": 1,
+      "visible-field-label": 2,
+      "count-i18n-preferences": 1,
+      "page-size": 1,
+      "initial-paused-state": 1
+    },
+    "filesWithMostIssues": {
+      "web/src/api/hooks/useSearch.ts": 2,
+      "internal/api/search/handler.go": 1,
+      "web/src/features/system/pages/SearchPage.tsx": 8,
+      "web/src/components/ai/AINLSearch.tsx": 1
+    },
+    "priority": [
+      "unknown/completeness SS01/02",
+      "retained facet/cold-paused SS05/12",
+      "Unicode/filter counts SS03/04",
+      "native navigation/announcement/visible labels/plurals SS06-10",
+      "decomposition SS11 lower priority, never remigration"
+    ]
+  },
+  "checks": {
+    "boundedGrep": {
+      "scope": "page,useSearch,SystemSummaryBrief,AINLSearch; backend handler only",
+      "rawOutput": "COMMAND08/09/10 in owned log",
+      "staticInlineStyle": 0,
+      "rawHtml": 0,
+      "directLibraryImport": 0,
+      "oldApiImport": 0,
+      "doublePrefixRaw": 1,
+      "doublePrefixClassification": "comment only AINLSearch:2; real path /ai/search/query",
+      "camelcaseRaw": 60,
+      "camelcaseClassification": "JSX prop false positives; refined URL grep0 and actual params q/types/limit",
+      "hiddenDataGate": 0,
+      "literalJsxEnglishCandidates": 0,
+      "pageWrapper": 1,
+      "wrapperClassification": "PageLayout:141 -> PageContainer at PageLayout:11",
+      "fetchUseEffectCandidates": 0,
+      "backendInterpolation": 0,
+      "backendPrintln": 0,
+      "backendPanic": 0,
+      "backendContextRaw": 4,
+      "contextClassification": "3URL.Query reads; 1Pool.Query(ctx,sql,args...)",
+      "exceptions": "UI raw controls/shared FadeIn vendor import are building blocks; explicit shared AI streaming fetch is not page useEffect data loading; AI feature gate and idle/error/empty branch panels are intentional.",
+      "limit": "Zero candidate matches is not a whole-repository zero-violation claim; no lint/compiler/security execution."
+    },
+    "catalog": {
+      "literalSites": 53,
+      "uniqueKeys": 52,
+      "missingCanonicalKeys": 0,
+      "searchSplitSitesMatched": 47,
+      "systemBriefSplitParity": true,
+      "topCountPluralLeaves": "_one/_other absent (raw None/None)",
+      "generator": "NOTRUN"
+    },
+    "tests": {
+      "files": [
+        {
+          "file": "web/src/features/system/pages/SearchPage.test.tsx",
+          "literalDeclarations": 19,
+          "staticallyExpandedDeclaredCases": 19,
+          "sites": [
+            {
+              "line": 188,
+              "declaration": "it('renders the idle empty state and makes NO request with an empty query', () => {"
+            },
+            {
+              "line": 204,
+              "declaration": "it('shows the too-short guidance and still makes no request for a 1-char query', () => {"
+            },
+            {
+              "line": 214,
+              "declaration": "it('renders KPI + results skeletons while the search is pending', () => {"
+            },
+            {
+              "line": 246,
+              "declaration": "it('groups hits into ALL_TYPES order and derives the KPI band from the hit set', async () => {"
+            },
+            {
+              "line": 277,
+              "declaration": "it('surfaces the LARGEST group (not the first) as the Top Match KPI', async () => {"
+            },
+            {
+              "line": 298,
+              "declaration": "it('renders the No-results state and a zeroed KPI band on an empty hit set', async () => {"
+            },
+            {
+              "line": 311,
+              "declaration": "it('shows the QueryError banner on a failed fetch and re-issues on Retry', async () => {"
+            },
+            {
+              "line": 327,
+              "declaration": "it('navigates to a hit url when its result row is activated', async () => {"
+            },
+            {
+              "line": 340,
+              "declaration": "it('toggles a facet chip: aria-pressed, Clear button, KPI, and types= param', async () => {"
+            },
+            {
+              "line": 371,
+              "declaration": "it('restores an active type filter from the URL on first mount', async () => {"
+            },
+            {
+              "line": 386,
+              "declaration": "it('drives the search from the controlled input and fires a request on type', async () => {"
+            },
+            {
+              "line": 405,
+              "declaration": "it('exposes accessible names for the labelled regions and icon-only controls', async () => {"
+            },
+            {
+              "line": 421,
+              "declaration": "it('re-issues the request when the header Refresh control is activated', async () => {"
+            },
+            {
+              "line": 439,
+              "declaration": "it('keeps all nine facets, neutral result icons, complete labels, and ordered API filters', async () => {"
+            },
+            {
+              "line": 460,
+              "declaration": "it('keeps resolved empty results and measured zeroes during a pending refresh', async () => {"
+            },
+            {
+              "line": 475,
+              "declaration": "it('retains rows, summary, warning, and retry after a background refresh failure', async () => {"
+            },
+            {
+              "line": 492,
+              "declaration": "it('labels placeholder results with their original query while the next query loads', async () => {"
+            },
+            {
+              "line": 507,
+              "declaration": "it('handles a null response without crashing or dropping the query and AI controls', async () => {"
+            },
+            {
+              "line": 517,
+              "declaration": "it('clears retained rows and the summary when the query falls below the minimum', async () => {"
+            }
+          ],
+          "execution": "NOTRUN"
+        },
+        {
+          "file": "web/src/api/hooks/useSearch.test.tsx",
+          "literalDeclarations": 17,
+          "staticallyExpandedDeclaredCases": 17,
+          "sites": [
+            {
+              "line": 84,
+              "declaration": "it('is the backend-mirrored floor of 2 runes', () => {"
+            },
+            {
+              "line": 96,
+              "declaration": "it('namespaces the key and normalises absent types/limit to stable slots', () => {"
+            },
+            {
+              "line": 106,
+              "declaration": "it('joins the requested types and threads the limit', () => {"
+            },
+            {
+              "line": 116,
+              "declaration": "it('collapses an empty types array to the same key as undefined (cache-stability)', () => {"
+            },
+            {
+              "line": 124,
+              "declaration": "it('produces distinct keys for distinct limits', () => {"
+            },
+            {
+              "line": 136,
+              "declaration": "it('does not fire a request for a query shorter than the minimum', async () => {"
+            },
+            {
+              "line": 147,
+              "declaration": "it('trims whitespace before applying the length gate (a padded single char stays disabled)', () => {"
+            },
+            {
+              "line": 155,
+              "declaration": "it('GETs /search with a trimmed q and threads the abort signal', async () => {"
+            },
+            {
+              "line": 170,
+              "declaration": "it('appends the joined types param only when a non-empty list is provided', async () => {"
+            },
+            {
+              "line": 180,
+              "declaration": "it('omits the types param for an empty types array', async () => {"
+            },
+            {
+              "line": 190,
+              "declaration": "it('appends the limit param when positive and omits it when zero', async () => {"
+            },
+            {
+              "line": 205,
+              "declaration": "it('honours the disabled override even for a long-enough query', () => {"
+            },
+            {
+              "line": 215,
+              "declaration": "it('reports a loading state before the first response arrives', () => {"
+            },
+            {
+              "line": 227,
+              "declaration": "it('surfaces request failures as isError', async () => {"
+            },
+            {
+              "line": 237,
+              "declaration": "it('coerces a null response body into a well-formed empty result (null-safety)', async () => {"
+            },
+            {
+              "line": 250,
+              "declaration": "it('keeps the previous hits visible while a new valid query is in flight (no flicker)', async () => {"
+            },
+            {
+              "line": 272,
+              "declaration": "it('drops stale hits the instant the query falls below the minimum', async () => {"
+            }
+          ],
+          "execution": "NOTRUN"
+        },
+        {
+          "file": "web/src/components/ai/AINLSearch.test.tsx",
+          "literalDeclarations": 12,
+          "staticallyExpandedDeclaredCases": 12,
+          "sites": [
+            {
+              "line": 169,
+              "declaration": "it('renders nothing when ai_mode=off even with the feature toggle on', () => {"
+            },
+            {
+              "line": 182,
+              "declaration": "it('renders nothing when the per-feature toggle is false even with mode=cloud', () => {"
+            },
+            {
+              "line": 193,
+              "declaration": "it('renders nothing when ai_features is undefined (settings not yet resolved)', () => {"
+            },
+            {
+              "line": 202,
+              "declaration": "it('renders the gated section with the registered marker + copy when fully enabled (positive control)', () => {"
+            },
+            {
+              "line": 220,
+              "declaration": "it('disables the Search button and shows the empty hint when the prompt is empty', () => {"
+            },
+            {
+              "line": 237,
+              "declaration": "it('disables the Search button when the prompt is only whitespace (trim branch)', () => {"
+            },
+            {
+              "line": 247,
+              "declaration": "it('enables the Search button and hides the empty hint once a prompt is present', () => {"
+            },
+            {
+              "line": 263,
+              "declaration": "it('exposes an accessible name, placeholder, and the backend prompt cap on the textarea', () => {"
+            },
+            {
+              "line": 279,
+              "declaration": "it('reflects typed text as a controlled input', () => {"
+            },
+            {
+              "line": 291,
+              "declaration": "it('POSTs once to the search route with ONLY a prompt (no vehicle_id) and renders the delta', async () => {"
+            },
+            {
+              "line": 331,
+              "declaration": "it('ignores a second click while streaming (double-submit guard)', async () => {"
+            },
+            {
+              "line": 363,
+              "declaration": "it('surfaces a non-2xx response as an inline Helix error', async () => {"
+            }
+          ],
+          "execution": "NOTRUN"
+        },
+        {
+          "file": "web/src/components/ai/AIFeatureCard.test.tsx",
+          "literalDeclarations": 29,
+          "staticallyExpandedDeclaredCases": 34,
+          "sites": [
+            {
+              "line": 64,
+              "declaration": "it('renders the default Helix label with the brand tooltip, accessible name, and a decorative icon', () => {"
+            },
+            {
+              "line": 81,
+              "declaration": "it('honours a custom label override while keeping the Helix accessible name', () => {"
+            },
+            {
+              "line": 93,
+              "declaration": "it('renders the title as a level-3 heading, the description, and the Helix badge', () => {"
+            },
+            {
+              "line": 113,
+              "declaration": "it('applies a custom badge label inside the card header', () => {"
+            },
+            {
+              "line": 130,
+              "declaration": "it('passes shared stream activity into the Helix evidence trail', () => {"
+            },
+            {
+              "line": 158,
+              "declaration": "it('shows the empty hint when canStart is false and a hint is supplied', () => {"
+            },
+            {
+              "line": 173,
+              "declaration": "it('hides the empty hint once canStart flips to true', () => {"
+            },
+            {
+              "line": 192,
+              "declaration": "it('renders the universal Ask Helix CTA with a per-feature accessible name and tooltip', () => {"
+            },
+            {
+              "line": 219,
+              "declaration": "it('lets buttonTitle override the tooltip while keeping the aria-label verb', () => {"
+            },
+            {
+              "line": 236,
+              "declaration": "it('exposes the action button through buttonTestId when supplied', () => {"
+            },
+            {
+              "line": 253,
+              "declaration": "it('disables the button and mirrors aria-disabled when canStart is false', () => {"
+            },
+            {
+              "line": 270,
+              "declaration": "it('shows the thinking label, disables, and announces aria-busy while streaming', () => {"
+            },
+            {
+              "line": 292,
+              "declaration": "it('calls stream.start() on click when no onAction override is supplied', () => {"
+            },
+            {
+              "line": 308,
+              "declaration": "it('calls onAction instead of stream.start() when an override is supplied', () => {"
+            },
+            {
+              "line": 327,
+              "declaration": "it('swallows the click while disabled (canStart false) so no stream fires', () => {"
+            },
+            {
+              "line": 343,
+              "declaration": "it('swallows the click while streaming (double-submit guard via disabled)', () => {"
+            },
+            {
+              "line": 361,
+              "declaration": "it.each(["
+            },
+            {
+              "line": 400,
+              "declaration": "it('retains the action override and blocks unavailable and streaming repeats inside a form', async () => {"
+            },
+            {
+              "line": 447,
+              "declaration": "it('allows the existing inline action and title to wrap without hiding card content', () => {"
+            },
+            {
+              "line": 466,
+              "declaration": "it('retains streaming state and accessible action identity with an adaptive label', () => {"
+            },
+            {
+              "line": 486,
+              "declaration": "it('coerces the button below and after the inputSlot even when placement is inline', () => {"
+            },
+            {
+              "line": 506,
+              "declaration": "it('renders children between the action button and the output panel', () => {"
+            },
+            {
+              "line": 527,
+              "declaration": "it('nests the button in the header row when placement is inline (default)', () => {"
+            },
+            {
+              "line": 545,
+              "declaration": "it('lifts the button into its own row when placement is below', () => {"
+            },
+            {
+              "line": 566,
+              "declaration": "it('keeps the header, input and domain content through paused, failed and done-empty streams', () => {"
+            },
+            {
+              "line": 620,
+              "declaration": "it('renders no output panel while idle with no accumulated text', () => {"
+            },
+            {
+              "line": 634,
+              "declaration": "it('renders the accumulated stream text in the output panel when done', () => {"
+            },
+            {
+              "line": 649,
+              "declaration": "it('surfaces a stream error inside the output panel', () => {"
+            },
+            {
+              "line": 665,
+              "declaration": "it('shows the thinking indicator while streaming before any text arrives', () => {"
+            }
+          ],
+          "execution": "NOTRUN"
+        },
+        {
+          "file": "web/src/components/ai/withAiFeature.test.tsx",
+          "literalDeclarations": 5,
+          "staticallyExpandedDeclaredCases": 5,
+          "sites": [
+            {
+              "line": 64,
+              "declaration": "it('renders null when settings have ai_mode=off', () => {"
+            },
+            {
+              "line": 74,
+              "declaration": "it('renders null when the per-feature flag is false even with mode=cloud', () => {"
+            },
+            {
+              "line": 83,
+              "declaration": "it('renders the inner component inside the marker wrapper when fully enabled', () => {"
+            },
+            {
+              "line": 96,
+              "declaration": "it('throws when wrapping an unknown feature ID at construction time', () => {"
+            },
+            {
+              "line": 103,
+              "declaration": "it('exposes a useful displayName for React DevTools', () => {"
+            }
+          ],
+          "execution": "NOTRUN"
+        },
+        {
+          "file": "web/src/features/system/__tests__/TestNLSearchAIOffFallsBackToTypedFilters.test.tsx",
+          "literalDeclarations": 3,
+          "staticallyExpandedDeclaredCases": 3,
+          "sites": [
+            {
+              "line": 56,
+              "declaration": "it('TestNLSearchAIOffFallsBackToTypedFilters: renders nothing when ai_mode=off even with the nl-search toggle on', () => {"
+            },
+            {
+              "line": 74,
+              "declaration": "it('TestNLSearchAIOffFallsBackToTypedFilters: renders nothing when ai_mode is non-off but the nl-search toggle is false', () => {"
+            },
+            {
+              "line": 89,
+              "declaration": "it('TestNLSearchAIOffFallsBackToTypedFilters: renders the section when ai_mode=cloud AND nl-search toggle is on (positive control)', () => {"
+            }
+          ],
+          "execution": "NOTRUN"
+        }
+      ],
+      "literalDeclarationTotal": 85,
+      "staticallyExpandedDeclaredTotal": 90,
+      "parameterization": "AIFeatureCard one it.each table6explicit rows361-368 replaces1declaration; counts are static only",
+      "runtimeDiscovery": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "meaning": "Counters describe this attempt only; tests not passing/failing/skipped by a runner. English stub/mock declarations are not real catalog/native proof."
+    },
+    "runtime": "NOTRUN",
+    "native": "NOTRUN",
+    "typescript": "NOTRUN; npx tsc --noEmit prohibited",
+    "testsLintBuildCompilerServerBrowserNetworkApiSearchIdentityLocationProvider": "NOTRUN; prohibited",
+    "finalArtifactValidation": {
+      "json": "parsed before and after final write",
+      "citationReferencesChecked": 78,
+      "citationPathsAndRanges": "PASS",
+      "findingCandidateRuleAndTestCounts": "PASS",
+      "inputPinResult": {
+        "total": 58,
+        "matched": 57,
+        "driftFiles": [
+          "web/src/i18n/en.json"
+        ]
+      },
+      "catalogScopedValues": "52 unchanged; scoped split parity true; generator NOTRUN",
+      "command": "13 inline Python stdin source/artifact validation only",
+      "exit": 0
+    }
+  },
+  "commandEvidence": {
+    "log": "web\\logs\\phase6-qa-system-search.log",
+    "receipts": [
+      {
+        "shell": "2673",
+        "exit": 0,
+        "limit": "Two Get-Item absent-artifact errors; nonterminating errors not a QA pass."
+      },
+      {
+        "shell": "2699",
+        "exit": 0,
+        "limit": "Mixed table suppressed useful queue/file columns; replaced by explicit numbered reads."
+      },
+      {
+        "shell": "2729",
+        "exit": 1,
+        "rawOutput": "empty; nested here-string failed."
+      },
+      {
+        "shell": "2748",
+        "command": "01",
+        "exit": 1,
+        "failure": "UnicodeEncodeError cp1252 cannot encode U+2192; partial stdout retained, no full scan."
+      },
+      {
+        "command": "02",
+        "exit": 0
+      },
+      {
+        "command": "03",
+        "exit": 0
+      },
+      {
+        "command": "04",
+        "exit": 0
+      },
+      {
+        "command": "05",
+        "exit": 0
+      },
+      {
+        "command": "06",
+        "exit": 0
+      },
+      {
+        "command": "07",
+        "exit": 0
+      },
+      {
+        "command": "08",
+        "exit": 0
+      },
+      {
+        "command": "09",
+        "exit": 0
+      },
+      {
+        "command": "10",
+        "exit": 0
+      },
+      {
+        "shell": "3133",
+        "command": "11 report write attempt",
+        "exit": 1,
+        "rawOutput": "<error: The filename or extension is too long. (os error 206)>",
+        "limit": "Host refused oversized command before execution; no successful report write inferred."
+      },
+      {
+        "command": "12",
+        "shell": "3201",
+        "exit": 0,
+        "result": "Report created;58pins57match1externalcanonicaldrift"
+      },
+      {
+        "command": "13",
+        "exit": 0,
+        "result": "final JSON/citation/count/pin/scoped-catalog validation; native/runtime NOTRUN"
+      }
+    ],
+    "currentCommand": "13 final validation/release",
+    "logMethod": "AppendAllText to allowed log; Path.write_text to allowed report. No redirection/helper files.",
+    "readFailures": [
+      "Wrong guessed __tests__/useSearch.test.ts path absent; actual colocated useSearch.test.tsx inspected.",
+      "Large view outputs truncated; contract followed with bounded ranges/gap reads."
+    ]
+  },
+  "inputPins": [
+    {
+      "file": "web/src/features/system/pages/SearchPage.tsx",
+      "beforeSha256": "590de2e71c1be5ad33e8d4faa280bc063e196467e2fbe7444fee179d677fe0dc",
+      "beforeLineCount": 411,
+      "afterSha256": "590de2e71c1be5ad33e8d4faa280bc063e196467e2fbe7444fee179d677fe0dc",
+      "afterLineCount": 411,
+      "matches": true
+    },
+    {
+      "file": "web/src/api/hooks/useSearch.ts",
+      "beforeSha256": "ff122bd572e03e6113b097e1192c592f408fcbff1c5f0d3629bfd2a20436c7cc",
+      "beforeLineCount": 65,
+      "afterSha256": "ff122bd572e03e6113b097e1192c592f408fcbff1c5f0d3629bfd2a20436c7cc",
+      "afterLineCount": 65,
+      "matches": true
+    },
+    {
+      "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+      "beforeSha256": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+      "beforeLineCount": 63,
+      "afterSha256": "161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891",
+      "afterLineCount": 63,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "beforeLineCount": 65,
+      "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "afterLineCount": 65,
+      "matches": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "beforeLineCount": 434,
+      "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "afterLineCount": 434,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useUrlState.ts",
+      "beforeSha256": "1b8fd7f191489f94e58bfc7960115e8bd56bb2721ad04b7b28f6ee159a46aa53",
+      "beforeLineCount": 291,
+      "afterSha256": "1b8fd7f191489f94e58bfc7960115e8bd56bb2721ad04b7b28f6ee159a46aa53",
+      "afterLineCount": 291,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/AINLSearch.tsx",
+      "beforeSha256": "364dca048b9f92794c5ff31bc4dbde5cca1b5a6236fd8d7974cc6c08f5214029",
+      "beforeLineCount": 72,
+      "afterSha256": "364dca048b9f92794c5ff31bc4dbde5cca1b5a6236fd8d7974cc6c08f5214029",
+      "afterLineCount": 72,
+      "matches": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "beforeLineCount": 168,
+      "afterSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "afterLineCount": 168,
+      "matches": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "beforeSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "beforeLineCount": 919,
+      "afterSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "afterLineCount": 919,
+      "matches": true
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "beforeSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "beforeLineCount": 458,
+      "afterSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "afterLineCount": 458,
+      "matches": true
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "beforeSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "beforeLineCount": 4194,
+      "afterSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "afterLineCount": 4194,
+      "matches": true
+    },
+    {
+      "file": "web/src/features/system/pages/SearchPage.test.tsx",
+      "beforeSha256": "610e0b308d68228fbcd6234cfbca95a5870db3ccfd0574d55aa18ceb0c3450a3",
+      "beforeLineCount": 529,
+      "afterSha256": "610e0b308d68228fbcd6234cfbca95a5870db3ccfd0574d55aa18ceb0c3450a3",
+      "afterLineCount": 529,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.tsx",
+      "beforeSha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "beforeLineCount": 352,
+      "afterSha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "afterLineCount": 352,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.tsx",
+      "beforeSha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "beforeLineCount": 60,
+      "afterSha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "afterLineCount": 60,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useAiStream.ts",
+      "beforeSha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "beforeLineCount": 617,
+      "afterSha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "afterLineCount": 617,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "beforeLineCount": 17,
+      "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "afterLineCount": 17,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "beforeLineCount": 115,
+      "afterSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "afterLineCount": 115,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/data-display/TimeStamp.tsx",
+      "beforeSha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "beforeLineCount": 64,
+      "afterSha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "afterLineCount": 64,
+      "matches": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "beforeLineCount": 39002,
+      "afterSha256": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+      "afterLineCount": 39035,
+      "matches": false
+    },
+    {
+      "file": "web/src/i18n/en/locale-detail-search.json",
+      "beforeSha256": "ef37d48162c2837a09071077ee1914355160c00388e1f3559885a4efa8be34a2",
+      "beforeLineCount": 351,
+      "afterSha256": "ef37d48162c2837a09071077ee1914355160c00388e1f3559885a4efa8be34a2",
+      "afterLineCount": 351,
+      "matches": true
+    },
+    {
+      "file": "web/src/i18n/en/locale-system.json",
+      "beforeSha256": "aeecb425f606a0d3cc9569a3296de5d39d0a3d19a45ee76907989625484f3f8f",
+      "beforeLineCount": 4493,
+      "afterSha256": "aeecb425f606a0d3cc9569a3296de5d39d0a3d19a45ee76907989625484f3f8f",
+      "afterLineCount": 4493,
+      "matches": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "beforeSha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "beforeLineCount": 289,
+      "afterSha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "afterLineCount": 289,
+      "matches": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "beforeLineCount": 462,
+      "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "afterLineCount": 462,
+      "matches": true
+    },
+    {
+      "file": "web/src/api/hooks/useSearch.test.tsx",
+      "beforeSha256": "de316dd88af19eff0f426dfd00d82ea9d38aeb612632e1aaa5150703456cdef1",
+      "beforeLineCount": 294,
+      "afterSha256": "de316dd88af19eff0f426dfd00d82ea9d38aeb612632e1aaa5150703456cdef1",
+      "afterLineCount": 294,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/AINLSearch.test.tsx",
+      "beforeSha256": "ec996bc99b0ffee1c1a808d305e20ea294504e4349f45015e7cdbb4ab70f8907",
+      "beforeLineCount": 381,
+      "afterSha256": "ec996bc99b0ffee1c1a808d305e20ea294504e4349f45015e7cdbb4ab70f8907",
+      "afterLineCount": 381,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/AIFeatureCard.test.tsx",
+      "beforeSha256": "f8a8e8d368d09f034a4bef5315ff881927a201f8c5ab45c702af512de48a5e43",
+      "beforeLineCount": 678,
+      "afterSha256": "f8a8e8d368d09f034a4bef5315ff881927a201f8c5ab45c702af512de48a5e43",
+      "afterLineCount": 678,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/withAiFeature.test.tsx",
+      "beforeSha256": "653c81d8e483623d2edcccd61732961f762fd61cd387fded95166cdfe770082e",
+      "beforeLineCount": 107,
+      "afterSha256": "653c81d8e483623d2edcccd61732961f762fd61cd387fded95166cdfe770082e",
+      "afterLineCount": 107,
+      "matches": true
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestNLSearchAIOffFallsBackToTypedFilters.test.tsx",
+      "beforeSha256": "feddfb1c7dcfa079a53b812d01d67ab621f345ca1ba3ceacd16c5f8e17c9c48d",
+      "beforeLineCount": 105,
+      "afterSha256": "feddfb1c7dcfa079a53b812d01d67ab621f345ca1ba3ceacd16c5f8e17c9c48d",
+      "afterLineCount": 105,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "beforeLineCount": 259,
+      "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "afterLineCount": 259,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ai/AiOutputPanel.tsx",
+      "beforeSha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "beforeLineCount": 120,
+      "afterSha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "afterLineCount": 120,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useAiEnabled.ts",
+      "beforeSha256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+      "beforeLineCount": 39,
+      "afterSha256": "afb5dddd9edc3f024249d1ba97f04a8c9c9a5d5b9bc09be672113fe155069250",
+      "afterLineCount": 39,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "beforeLineCount": 148,
+      "afterSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "afterLineCount": 148,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useTimeFormatPreference.ts",
+      "beforeSha256": "720db3c19e020a343f8c3df9a28d869d3a6c119ae5ddc7345dc86f7e4a5c1132",
+      "beforeLineCount": 26,
+      "afterSha256": "720db3c19e020a343f8c3df9a28d869d3a6c119ae5ddc7345dc86f7e4a5c1132",
+      "afterLineCount": 26,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "beforeSha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "beforeLineCount": 116,
+      "afterSha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "afterLineCount": 116,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ui/Textarea.tsx",
+      "beforeSha256": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+      "beforeLineCount": 115,
+      "afterSha256": "6de5efa5b3f0077c97712be4fc7c3b436df47a4c803012cae8cb0756bad2db75",
+      "afterLineCount": 115,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "beforeLineCount": 93,
+      "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "afterLineCount": 93,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "beforeSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "beforeLineCount": 39,
+      "afterSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "afterLineCount": 39,
+      "matches": true
+    },
+    {
+      "file": "internal/api/search/handler.go",
+      "beforeSha256": "b703a6ef3033d65964caf46e50defedbfacea61c9a39b558331d831a46b311ac",
+      "beforeLineCount": 776,
+      "afterSha256": "b703a6ef3033d65964caf46e50defedbfacea61c9a39b558331d831a46b311ac",
+      "afterLineCount": 776,
+      "matches": true
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "beforeSha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "beforeLineCount": 342,
+      "afterSha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "afterLineCount": 342,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useStatusAnnouncer.ts",
+      "beforeSha256": "378541442b5b9cbd5534efa3df15152e0207fa330d9a5473ce7419937b009508",
+      "beforeLineCount": 330,
+      "afterSha256": "378541442b5b9cbd5534efa3df15152e0207fa330d9a5473ce7419937b009508",
+      "afterLineCount": 330,
+      "matches": true
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "beforeSha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "beforeLineCount": 707,
+      "afterSha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "afterLineCount": 707,
+      "matches": true
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "beforeSha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "beforeLineCount": 296,
+      "afterSha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "afterLineCount": 296,
+      "matches": true
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "beforeSha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "beforeLineCount": 2539,
+      "afterSha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "afterLineCount": 2539,
+      "matches": true
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "beforeSha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "beforeLineCount": 1593,
+      "afterSha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "afterLineCount": 1593,
+      "matches": true
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "beforeSha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "beforeLineCount": 1460,
+      "afterSha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "afterLineCount": 1460,
+      "matches": true
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "beforeSha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "beforeLineCount": 2460,
+      "afterSha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "afterLineCount": 2460,
+      "matches": true
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "beforeSha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "beforeLineCount": 152,
+      "afterSha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "afterLineCount": 152,
+      "matches": true
+    },
+    {
+      "file": "docs/CONTRIBUTING.md",
+      "beforeSha256": "6ac302d828f961845a40205abcf4b162e62c90228136345043e7faf8e86f3a8c",
+      "beforeLineCount": 286,
+      "afterSha256": "6ac302d828f961845a40205abcf4b162e62c90228136345043e7faf8e86f3a8c",
+      "afterLineCount": 286,
+      "matches": true
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "beforeSha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "beforeLineCount": 216,
+      "afterSha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "afterLineCount": 216,
+      "matches": true
+    },
+    {
+      "file": "docs/URL_STATE_GUIDELINES.md",
+      "beforeSha256": "f7631225366c70127132a3c18520d7afe055782be48baf17336869c47b05b908",
+      "beforeLineCount": 170,
+      "afterSha256": "f7631225366c70127132a3c18520d7afe055782be48baf17336869c47b05b908",
+      "afterLineCount": 170,
+      "matches": true
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-194.json",
+      "beforeSha256": "30debc1a6de239a11c1c46a363c1a056af9a4d2e4dc74a890ac2a09773d44f1c",
+      "beforeLineCount": 259,
+      "afterSha256": "30debc1a6de239a11c1c46a363c1a056af9a4d2e4dc74a890ac2a09773d44f1c",
+      "afterLineCount": 259,
+      "matches": true
+    },
+    {
+      "file": "internal/api/router.go",
+      "beforeSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "beforeLineCount": 5363,
+      "afterSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "afterLineCount": 5363,
+      "matches": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "beforeLineCount": 24,
+      "afterSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "afterLineCount": 24,
+      "matches": true
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "beforeSha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "beforeLineCount": 629,
+      "afterSha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "afterLineCount": 629,
+      "matches": true
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "beforeSha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "beforeLineCount": 94,
+      "afterSha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "afterLineCount": 94,
+      "matches": true
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "beforeSha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "beforeLineCount": 221,
+      "afterSha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "afterLineCount": 221,
+      "matches": true
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "beforeSha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "beforeLineCount": 45,
+      "afterSha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "afterLineCount": 45,
+      "matches": true
+    },
+    {
+      "file": ".github/instructions/go-backend.instructions.md",
+      "beforeSha256": "fdbb699709e5843e88c57d9cbba924718f1b72780a7f1c4e5d31d5c50922b69f",
+      "beforeLineCount": 684,
+      "afterSha256": "fdbb699709e5843e88c57d9cbba924718f1b72780a7f1c4e5d31d5c50922b69f",
+      "afterLineCount": 684,
+      "matches": true
+    }
+  ],
+  "pinCounts": {
+    "total": 58,
+    "matched": 57,
+    "drift": 1,
+    "orderingLimit": "Some exploratory first reads predated first captured pin; rereads and final hash comparison establish captured-input stability, not an original immutable baseline.",
+    "queue": "exact row snapshots only; concurrently moving queue not treated immutable",
+    "driftFiles": [
+      "web/src/i18n/en.json"
+    ]
+  },
+  "filesRead": [
+    "web/src/features/system/pages/SearchPage.tsx",
+    "web/src/api/hooks/useSearch.ts",
+    "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useUrlState.ts",
+    "web/src/components/ai/AINLSearch.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/App.tsx",
+    "web/src/api/client.ts",
+    "web/src/api/types.ts",
+    "web/src/features/system/pages/SearchPage.test.tsx",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/data-display/TimeStamp.tsx",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-detail-search.json",
+    "web/src/i18n/en/locale-system.json",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/api/hooks/useSearch.test.tsx",
+    "web/src/components/ai/AINLSearch.test.tsx",
+    "web/src/components/ai/AIFeatureCard.test.tsx",
+    "web/src/components/ai/withAiFeature.test.tsx",
+    "web/src/features/system/__tests__/TestNLSearchAIOffFallsBackToTypedFilters.test.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/ai/AiOutputPanel.tsx",
+    "web/src/hooks/useAiEnabled.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useTimeFormatPreference.ts",
+    "web/src/components/ui/Input.tsx",
+    "web/src/components/ui/Textarea.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "internal/api/search/handler.go",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/hooks/useStatusAnnouncer.ts",
+    ".github/copilot-instructions.md",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/URL_STATE_GUIDELINES.md",
+    "docs/frontend-audits/audit-page-194.json",
+    "internal/api/router.go",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/go-backend.instructions.md"
+  ],
+  "evidenceLimits": [
+    "All defect reproductions UNEXECUTED. Source-confirmed means visible mechanism, not observed runtime defect.",
+    "Runtime/native/browser/device/keyboard/contrast/auth/server/API/provider/search/identity/location queries NOTRUN.",
+    "No agents/installs/helpers/tests/lint/build/compiler/server/network or Git commands. Source/test/catalog/route/queue/Git untouched.",
+    "No original snapshot comparison, deployment or whole-application acceptance.",
+    "Canonical en.json changed externally during review; all52 inspected key values remained unchanged at final check; no global catalog stability or generator pass claimed."
+  ],
+  "release": {
+    "status": "RELEASED",
+    "atUtc": "2026-10-14T02:48:56.340121+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-system-search.json",
+      "web/logs/phase6-qa-system-search.log"
+    ],
+    "sourceWriteClaims": "none; all source/test/hook/route/catalog/queue read-only",
+    "commandClaims": "RELEASE on this bounded command completion; no agent/service/browser/provider/network command retained"
+  }
+}
