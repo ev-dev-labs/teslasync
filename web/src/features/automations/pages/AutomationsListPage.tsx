@@ -117,10 +117,11 @@ export default function AutomationsListPage() {
   const automationsQuery = useAutomations();
   const {
     data: automations,
-    refetch,
   } = automationsQuery;
   const automationsState = useDataState(automationsQuery);
-  const isLoading = !automationsState.hasData && automationsQuery.isLoading;
+  const isLoading = !automationsState.hasData
+    && !automationsState.isRefreshBlocked
+    && (automationsQuery.isLoading || automationsQuery.isFetching || automationsQuery.fetchStatus === 'fetching');
   const error = automationsState.fatalError;
   const isError = error != null;
   const vehiclesQuery = useVehicles();
@@ -396,7 +397,7 @@ export default function AutomationsListPage() {
                 aria-label={t('automations.search', 'Search automations...')}
               />
             </div>
-            {hasActiveFilter && (
+            {hasActiveFilter && automationsState.hasData && (
               <Badge variant="neutral" className="self-start sm:self-auto">
                 {t('automations.filterCount', '{{shown}} / {{total}}', {
                   shown: filteredItems.length,
@@ -455,9 +456,11 @@ export default function AutomationsListPage() {
           <div className="min-w-0 space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <SectionTitle>{t('automations.yourAutomations', 'Your automations')}</SectionTitle>
-              <Caption>
-                {t('automations.showingCount', 'Showing {{count}}', { count: sortedItems.length })}
-              </Caption>
+              {automationsState.hasData && (
+                <Caption>
+                  {t('automations.showingCount', 'Showing {{count}}', { count: sortedItems.length })}
+                </Caption>
+              )}
               {connectionState === 'reconnecting' && (
                 <Badge variant="info">
                   {t('live.reconnecting', 'Reconnecting…')}
@@ -467,7 +470,7 @@ export default function AutomationsListPage() {
 
             {isError ? (
               <GlassPanel className="p-6">
-                <QueryError error={error} onRetry={() => refetch()} />
+                <QueryError error={error} onRetry={automationsState.retry ?? undefined} />
               </GlassPanel>
             ) : isLoading ? (
               <div className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
@@ -475,6 +478,22 @@ export default function AutomationsListPage() {
                   <Skeleton key={`auto-skel-${i}`} className="h-40 w-full rounded-xl" />
                 ))}
               </div>
+            ) : !automationsState.hasData ? (
+              <GlassPanel className="space-y-3 p-6" role="status">
+                <Text variant="bodySm">
+                  {automationsState.isRefreshBlocked
+                    ? t('dataSources.status.paused', 'Refresh paused')
+                    : t('dataSources.status.pending', 'Pending')}
+                </Text>
+                <Text variant="bodySm" color="secondary">
+                  {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+                </Text>
+                {automationsState.retry && (
+                  <Button type="button" variant="secondary" size="sm" onClick={automationsState.retry}>
+                    {t('common.refresh', 'Refresh')}
+                  </Button>
+                )}
+              </GlassPanel>
             ) : sortedItems.length > 0 ? (
               <StaggerContainer className="grid grid-cols-1 gap-3 2xl:grid-cols-2">
                 {sortedItems.map((a) => (

@@ -205,7 +205,15 @@ let alertMock: ReturnType<typeof vi.fn>;
 
 function setAutomations(
   data: Automation[] | undefined,
-  extra: Partial<{ isLoading: boolean; isError: boolean; error: unknown; refetch: () => void }> = {},
+  extra: Partial<{
+    isLoading: boolean;
+    isError: boolean;
+    isPending: boolean;
+    isFetching: boolean;
+    fetchStatus: 'fetching' | 'paused' | 'idle';
+    error: unknown;
+    refetch: () => void;
+  }> = {},
 ) {
   m.useAutomations.mockReturnValue({
     data,
@@ -213,6 +221,9 @@ function setAutomations(
     isError: extra.isError ?? false,
     error: extra.error ?? null,
     refetch: extra.refetch ?? vi.fn(),
+    isPending: extra.isPending,
+    isFetching: extra.isFetching,
+    fetchStatus: extra.fetchStatus,
   });
 }
 
@@ -232,13 +243,15 @@ beforeEach(() => {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter>
         <AutomationsListPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(page());
+  return { ...result, rerenderPage: () => result.rerender(page()) };
 }
 
 function kpiRegion(): HTMLElement {
@@ -461,6 +474,86 @@ describe('AutomationsListPage — filter toolbar', () => {
 // ═══ Workspace loading / error / empty ═══════════════════════════════════════
 
 describe('AutomationsListPage — workspace states', () => {
+  function expectUnresolvedInventory() {
+    expect(screen.queryByText(/No automations yet/)).not.toBeInTheDocument();
+    expect(screen.queryByText('No automations match your filters')).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Showing \d+$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\d+ \/ \d+$/)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('automation-card')).not.toBeInTheDocument();
+    expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+    expect(screen.getByText('Cabin comfort Autopilot')).toBeInTheDocument();
+  }
+
+  it.each([
+    { isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching' as const },
+    { isLoading: false, isPending: true, isFetching: true, fetchStatus: 'fetching' as const },
+  ])('does not infer empty counts during active initial loading: %j', (state) => {
+    setAutomations(undefined, state);
+    const { container } = renderPage();
+    fireEvent.change(screen.getByLabelText('Search automations...'), { target: { value: 'cabin' } });
+    expectUnresolvedInventory();
+    expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each(['paused', 'idle'] as const)('keeps %s without data distinct from successful empty and recovers', (fetchStatus) => {
+    const refetch = vi.fn();
+    setAutomations(undefined, { isPending: true, fetchStatus, refetch });
+    const { rerenderPage } = renderPage();
+    fireEvent.change(screen.getByLabelText('Search automations...'), { target: { value: 'Active' } });
+    expectUnresolvedInventory();
+    const notice = screen.getByText('No requested source has returned usable data yet.').closest('[role="status"]');
+    if (!(notice instanceof HTMLElement)) throw new Error('Missing unresolved inventory notice');
+    expect(within(notice).getByText(fetchStatus === 'paused' ? 'Refresh paused' : 'Pending')).toBeInTheDocument();
+    expect(notice?.textContent).not.toMatch(/offline|failed|previously loaded/i);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    setAutomations([active]);
+    rerenderPage();
+    expect(screen.queryByText('No requested source has returned usable data yet.')).not.toBeInTheDocument();
+    expect(screen.getByText('Active One')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1')).toBeInTheDocument();
+    expect(screen.getByText('1 / 1')).toBeInTheDocument();
+  });
+
+  it('shows genuine empty and zero counts only after a successful response', () => {
+    setAutomations([]);
+    renderPage();
+    fireEvent.change(screen.getByLabelText('Search automations...'), { target: { value: 'cabin' } });
+    expect(screen.getByText(/No automations yet/)).toBeInTheDocument();
+    expect(screen.getByText('Showing 0')).toBeInTheDocument();
+    expect(screen.getByText('0 / 0')).toBeInTheDocument();
+    for (const label of ['Total', 'Active', 'Disabled', 'Auto-disabled']) {
+      expect(metricValue(label)).toBe('0');
+    }
+  });
+
+  it('retains filtered rules during refresh failure and updates only after recovery', () => {
+    const refetch = vi.fn();
+    setAutomations([active, disabled], { isError: true, error: new ApiError('refresh failed', 500), refetch });
+    const { rerenderPage } = renderPage();
+    fireEvent.change(screen.getByLabelText('Search automations...'), { target: { value: 'Active' } });
+    expect(screen.getByText('Active One')).toBeInTheDocument();
+    expect(screen.getByText('1 / 2')).toBeInTheDocument();
+    expect(screen.getByText('Showing 1')).toBeInTheDocument();
+    expect(screen.getByTestId('preset-gallery')).toBeInTheDocument();
+    expect(screen.getByText('Cabin comfort Autopilot')).toBeInTheDocument();
+    const warning = screen.getByTestId('stale-refresh-warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    setAutomations([active, disabled], { isFetching: true, fetchStatus: 'fetching', error: new ApiError('refresh failed', 500), refetch });
+    rerenderPage();
+    expect(screen.getByText('Active One')).toBeInTheDocument();
+    expect(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Updating…' })).toBeDisabled();
+
+    setAutomations([]);
+    rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText(/No automations yet/)).toBeInTheDocument();
+    expect(screen.getByText('0 / 0')).toBeInTheDocument();
+    expect(screen.getByLabelText('Search automations...')).toHaveValue('Active');
+  });
+
   it('renders skeleton placeholders while loading and no cards', () => {
     setAutomations(undefined, { isLoading: true });
     const { container } = renderPage();
