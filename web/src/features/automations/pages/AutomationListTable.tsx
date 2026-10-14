@@ -125,7 +125,7 @@ export function AutomationListTable({
         sortable: true,
         render: (a) => (
           <Link
-            to={`/automations/${a.id}`}
+            to={`/automations/${a.id}/edit`}
             className="font-medium text-[var(--text-primary)] underline-offset-2 hover:underline"
           >
             {a.name ?? t('automationList.unnamed', 'Untitled automation')}

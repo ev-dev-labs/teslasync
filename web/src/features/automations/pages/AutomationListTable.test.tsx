@@ -206,12 +206,12 @@ describe('AutomationListTable — shared loaded-value filters', () => {
 
 // ── Data rendering ──────────────────────────────────────────────────────────
 describe('AutomationListTable — data rendering', () => {
-  it('renders a name link per row pointing at the automation detail route', () => {
+  it('renders a name link per row pointing at the existing automation edit route', () => {
     renderTable();
     const alphaLink = screen.getByRole('link', { name: 'Alpha' });
-    expect(alphaLink).toHaveAttribute('href', '/automations/1');
-    expect(screen.getByRole('link', { name: 'bravo' })).toHaveAttribute('href', '/automations/2');
-    expect(screen.getByRole('link', { name: 'Charlie' })).toHaveAttribute('href', '/automations/3');
+    expect(alphaLink).toHaveAttribute('href', '/automations/1/edit');
+    expect(screen.getByRole('link', { name: 'bravo' })).toHaveAttribute('href', '/automations/2/edit');
+    expect(screen.getByRole('link', { name: 'Charlie' })).toHaveAttribute('href', '/automations/3/edit');
   });
 
   it('resolves the Vehicle column with lookup hit, all-vehicles, and unknown fallback', () => {
