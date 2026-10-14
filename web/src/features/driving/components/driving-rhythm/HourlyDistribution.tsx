@@ -35,15 +35,12 @@ export function HourlyDistribution({
         hour: `${String(hour.hour).padStart(2, '0')}:00`,
         drives: hour.drives,
         distance:
-          hour.measuredDistanceDrives > 0
-            ? Math.round(
-                convertDistanceFromSI(
-                  hour.distanceM,
-                  unitPrefs.distance,
-                ) * 10,
-              ) / 10
+          hour.measuredDistanceDrives > 0 &&
+          typeof hour.distanceM === 'number' &&
+          Number.isFinite(hour.distanceM)
+            ? convertDistanceFromSI(hour.distanceM, unitPrefs.distance)
             : null,
-        share: Math.round(hour.share * 1_000) / 10,
+        share: hour.share * 100,
       })),
     [summary.hourly, unitPrefs.distance],
   );
