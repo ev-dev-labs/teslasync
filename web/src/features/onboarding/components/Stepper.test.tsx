@@ -2,15 +2,17 @@
  * Stepper contract.
  *
  * Stepper renders the onboarding checklist as an accessible ordered list.
- * It derives each row's state purely from the `done` flags:
+ * It derives completion and action ordering from the `done` flags:
  *
- *   - every `done` row is "done" (green check, SR "Completed");
- *   - the FIRST not-done row is "current" (spinner, aria-current="step",
+ *   - every `done` row is "done" (semantic success check, SR "Completed");
+ *   - the FIRST not-done row is "current" (static arrow, aria-current="step",
  *     SR "In progress") and is the ONLY row that renders a CTA;
  *   - every later not-done row is "pending" (1-based index, SR "Not started").
+ *   - null completion stays "Unknown", retaining the first unconfirmed CTA.
+ * Busy feedback requires explicit work and respects both motion preferences.
  *
  * These tests exercise the public surface — the `Stepper` component plus the
- * `OnboardingStep` / `StepperProps` types — across all three states, both CTA
+ * `OnboardingStep` / `StepperProps` types — across known/unknown states, both CTA
  * render paths (default <Button> and the `renderCta` render-prop), the
  * all-done and empty branches, and the null-safety guard.
  *
@@ -20,11 +22,21 @@
  * (the repo does not depend on @testing-library/user-event).
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { Link, MemoryRouter } from 'react-router-dom';
 import { Button } from '@/components/ui';
+import { severityTokens } from '@/lib/tokens';
+
+const motion = vi.hoisted(() => ({ osReduce: false, lowBandwidth: false }));
+vi.mock('framer-motion', async (importOriginal) => ({
+  ...await importOriginal<typeof import('framer-motion')>(),
+  useReducedMotion: () => motion.osReduce,
+}));
+vi.mock('@/hooks/useLowBandwidthMode', () => ({
+  useLowBandwidthMode: () => ({ enabled: motion.lowBandwidth }),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -70,6 +82,11 @@ function renderStepper(props: StepperProps) {
 }
 
 describe('Stepper', () => {
+  beforeEach(() => {
+    motion.osReduce = false;
+    motion.lowBandwidth = false;
+  });
+
   it('renders an accessible ordered list with every step title and description', () => {
     renderStepper({ steps: threeSteps() });
 
@@ -169,7 +186,7 @@ describe('Stepper', () => {
   it('numbers only the pending rows and gives every row a stable id', () => {
     const { container } = renderStepper({ steps: threeSteps() });
 
-    // done -> check glyph, current -> spinner, pending (3rd) -> its 1-based index.
+    // done -> check glyph, current -> arrow, pending (3rd) -> its 1-based index.
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.queryByText('1')).toBeNull();
     expect(screen.queryByText('2')).toBeNull();
@@ -196,7 +213,7 @@ describe('Stepper', () => {
     expect(screen.getByRole('button', { name: 'Second action' })).toBeInTheDocument();
   });
 
-  it('keeps LI ids and distinct check, spinner and pending markers in a contained layout', () => {
+  it('keeps LI ids and distinct check, idle current and pending markers in a contained layout', () => {
     const { container } = renderStepper({ steps: threeSteps() });
     const list = screen.getByRole('list', { name: 'Onboarding steps' });
     expect(list).toHaveClass('min-w-0', 'max-w-full');
@@ -209,7 +226,8 @@ describe('Stepper', () => {
     }
     expect(done?.querySelector('.lucide-check')).not.toBeNull();
     expect(done?.querySelector('.animate-spin')).toBeNull();
-    expect(current?.querySelector('.animate-spin')).toHaveClass('motion-reduce:animate-none');
+    expect(current?.querySelector('.lucide-arrow-right')).not.toBeNull();
+    expect(current?.querySelector('.animate-spin')).toBeNull();
     expect(pending).toHaveTextContent('3');
     expect(pending?.querySelector('.animate-spin')).toBeNull();
     expect(pending?.querySelector('.lucide-check')).toBeNull();
@@ -270,5 +288,97 @@ describe('Stepper', () => {
     });
     expect(renderCta).not.toHaveBeenCalled();
     expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('distinguishes unknown evidence without hiding rows or changing the first available CTA', () => {
+    const steps = [
+      mkStep({ key: 'unknown', title: 'Unknown anchor', done: null, cta: { label: 'Explore' } }),
+      mkStep({ key: 'done', title: 'Confirmed anchor', done: true }),
+      mkStep({ key: 'unknown-later', title: 'Unknown later anchor', done: null, cta: { label: 'Later' } }),
+      mkStep({ key: 'pending', title: 'Known incomplete anchor' }),
+    ];
+    const { container, rerender } = renderStepper({ steps });
+    expect(screen.getAllByRole('listitem')).toHaveLength(4);
+    expect(screen.getAllByText('Unknown')).toHaveLength(2);
+    expect(screen.getByText('Completed')).toBeInTheDocument();
+    expect(screen.getByText('Not started')).toBeInTheDocument();
+    expect(screen.queryByText('In progress')).toBeNull();
+    expect(container.querySelectorAll('[aria-current="step"]')).toHaveLength(1);
+    expect(container.querySelector('[aria-current="step"]')).toHaveAttribute('id', 'onboarding-step-unknown');
+    expect(container.querySelector('#onboarding-step-unknown .lucide-circle-help')).not.toBeNull();
+    expect(container.querySelector('.animate-spin')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Explore' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Later' })).toBeNull();
+
+    rerender(<Stepper steps={steps.map(step => ({ ...step, done: true }))} />);
+    expect(screen.queryByText('Unknown')).toBeNull();
+    expect(screen.getAllByText('Completed')).toHaveLength(4);
+    expect(container.querySelector('[aria-current="step"]')).toBeNull();
+  });
+
+  it('preserves the custom CTA renderer and step identity with unknown completion', () => {
+    const step = mkStep({ key: 'explore', title: 'Explore setup', done: null, cta: { label: 'Read guide' } });
+    const renderCta = vi.fn(() => <a href="/docs/fleet-telemetry-setup">Read guide</a>);
+    renderStepper({ steps: [step], renderCta });
+    expect(renderCta).toHaveBeenCalledExactlyOnceWith(step);
+    expect(screen.getByRole('link', { name: 'Read guide' })).toHaveAttribute('href', '/docs/fleet-telemetry-setup');
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
+
+  it('does not infer busy work from a disabled manual action', () => {
+    const { container } = renderStepper({ steps: threeSteps({ disabled: true }) });
+    expect(container.querySelector('.animate-spin')).toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+  });
+
+  it.each([
+    [false, false, true],
+    [true, false, false],
+    [false, true, false],
+    [true, true, false],
+  ])('honors OS reduction=%s and low bandwidth=%s during explicit busy work', (osReduce, lowBandwidth, spins) => {
+    motion.osReduce = osReduce;
+    motion.lowBandwidth = lowBandwidth;
+    const steps = threeSteps();
+    steps[1].busy = true;
+    const { container, rerender } = renderStepper({ steps });
+    const row = container.querySelector('#onboarding-step-vehicle');
+    const loader = row?.querySelector('.lucide-loader-circle');
+    expect(loader).toHaveClass('motion-reduce:animate-none');
+    expect(loader?.classList.contains('animate-spin')).toBe(spins);
+    expect(row).toHaveAttribute('aria-busy', 'true');
+    expect(row).toHaveAttribute('aria-current', 'step');
+    expect(screen.getByText('In progress')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+
+    rerender(<Stepper steps={steps.map(step => ({ ...step, busy: false }))} />);
+    expect(container.querySelector('.lucide-loader-circle')).toBeNull();
+    expect(row).not.toHaveAttribute('aria-busy');
+    expect(row?.querySelector('.lucide-arrow-right')).not.toBeNull();
+  });
+
+  it('never presents completed, unknown or later pending evidence as busy', () => {
+    const { container } = renderStepper({ steps: [
+      mkStep({ key: 'done', title: 'Done', done: true, busy: true }),
+      mkStep({ key: 'unknown', title: 'Unknown evidence', done: null, busy: true }),
+      mkStep({ key: 'pending', title: 'Pending', busy: true }),
+    ] });
+    expect(container.querySelector('.lucide-loader-circle')).toBeNull();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
+
+  it('uses existing semantic success/info and neutral roles with forced-color safety', () => {
+    const steps = [...threeSteps(), mkStep({ key: 'unknown', title: 'Unknown evidence', done: null })];
+    const { container } = renderStepper({ steps });
+    for (const [key, tokens] of [['tesla', severityTokens.success], ['vehicle', severityTokens.info]] as const) {
+      const indicator = container.querySelector(`#onboarding-step-${key} > div:first-child > span:first-child`);
+      expect(indicator).toHaveClass(tokens.bg, tokens.border, tokens.fg);
+      expect(indicator).toHaveClass('forced-colors:border-[CanvasText]', 'forced-colors:bg-[Canvas]', 'forced-colors:text-[CanvasText]');
+    }
+    const unknown = container.querySelector('#onboarding-step-unknown > div:first-child > span:first-child');
+    expect(unknown).toHaveClass('text-[var(--text-secondary)]', 'bg-[var(--surface-2)]');
+    expect(container.querySelector('#onboarding-step-tesla .bg-\\[var\\(--semantic-success\\)\\]')).not.toBeNull();
   });
 });

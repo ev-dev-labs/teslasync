@@ -1,20 +1,23 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Loader2, ArrowRight, ListChecks } from 'lucide-react';
+import { Check, Loader2, ArrowRight, ListChecks, CircleHelp } from 'lucide-react';
 import { cn } from '@/lib/cn';
+import { severityTokens } from '@/lib/tokens';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { Button, Heading, Text } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
 
 /**
  * Compact vertical step list used by the onboarding page. Each step
- * is in one of three states:
+ * keeps completion evidence separate from action readiness:
  *
- *   - done        ✓ green check
- *   - in-progress spinner (current actionable step)
+ *   - done        confirmed completion check
+ *   - current     static arrow, or spinner only during explicit work
  *   - pending     muted index circle
+ *   - unknown     neutral question mark, never inferred incompletion
  *
- * Steps render their CTA only while in-progress so completed rows
+ * Only the first unconfirmed step renders its CTA so completed rows
  * stay visually quiet, and pending rows below don't tempt the user
  * into clicking ahead.
  */
@@ -26,9 +29,11 @@ export interface OnboardingStep {
   title: string;
   /** Localized supporting copy explaining the step. */
   description: string;
-  /** True once the underlying anchor is satisfied. */
-  done: boolean;
-  /** Optional CTA rendered while the step is in-progress. */
+  /** True once the anchor is satisfied; null means completion is unknown. */
+  done: boolean | null;
+  /** Explicit work in flight, not an idle CTA or a disabled action. */
+  busy?: boolean;
+  /** Optional CTA rendered when this is the first unconfirmed step. */
   cta?: {
     label: string;
     onClick?: () => void;
@@ -47,55 +52,53 @@ export interface StepperProps {
   renderCta?: (step: OnboardingStep) => ReactNode;
 }
 
-type StepState = 'done' | 'current' | 'pending';
+type StepState = 'done' | 'current' | 'pending' | 'unknown';
 
 /**
- * Resolve a row's visual state from its own `done` flag and the index of
- * the first not-done step (`currentIndex`, computed once by the caller so
- * the whole list isn't re-scanned per row). Done rows are always `done`;
- * the single first-pending row is `current`; every later not-done row
- * stays `pending` so the user follows the flow top-to-bottom.
+ * Unknown completion stays unknown even when that row owns the next action.
+ * Known unfinished rows follow the original current/pending ordering.
  */
-function stepStateFor(done: boolean, index: number, currentIndex: number): StepState {
+function stepStateFor(done: OnboardingStep['done'], index: number, currentIndex: number): StepState {
+  if (done == null) return 'unknown';
   if (done) return 'done';
   return index === currentIndex ? 'current' : 'pending';
 }
 
 const indicatorClasses = {
-  done: 'bg-emerald-500/20 border-emerald-400/50 text-emerald-300',
-  current: 'bg-cyan-500/20 border-cyan-400/50 text-cyan-300',
+  done: cn(severityTokens.success.bg, severityTokens.success.border, severityTokens.success.fg),
+  current: cn(severityTokens.info.bg, severityTokens.info.border, severityTokens.info.fg),
   pending: 'bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-muted)]',
+  unknown: 'bg-[var(--surface-2)] border-[var(--border-subtle)] text-[var(--text-secondary)]',
 } as const;
 
 const titleClasses = {
   done: 'text-[var(--text-primary)]',
   current: 'text-[var(--text-primary)]',
   pending: 'text-[var(--text-secondary)]',
+  unknown: 'text-[var(--text-secondary)]',
 } as const;
 
 const descriptionClasses = {
   done: 'text-[var(--text-secondary)]',
   current: 'text-[var(--text-secondary)]',
   pending: 'text-[var(--text-muted)]',
+  unknown: 'text-[var(--text-secondary)]',
 } as const;
 
 export function Stepper({ steps, renderCta }: StepperProps) {
   const { t } = useTranslation();
+  const { reduce } = useMotionPreference();
   // Null-safe: callers may hand us `data?.steps` before the query resolves.
   const items = steps ?? [];
 
-  // The "current" step is the first not-done step. Compute it once here
-  // instead of re-scanning the whole list inside every row (previously an
-  // O(n²) pass). `-1` means every step is done — no current, no CTA.
-  const currentIndex = useMemo(() => items.findIndex((s) => !s.done), [items]);
+  // Unknown evidence must not prevent the original first available action.
+  const currentIndex = useMemo(() => items.findIndex((s) => s.done !== true), [items]);
 
-  // Screen-reader-only status announced before each row's title, since the
-  // done/current/pending state is otherwise conveyed with colour + an
-  // aria-hidden indicator glyph only.
   const statusLabel: Record<StepState, string> = {
     done: t('onboarding.stepper.status.done', 'Completed'),
     current: t('onboarding.stepper.status.current', 'In progress'),
     pending: t('onboarding.stepper.status.pending', 'Not started'),
+    unknown: t('common.unknown', 'Unknown'),
   };
 
   if (items.length === 0) {
@@ -111,27 +114,36 @@ export function Stepper({ steps, renderCta }: StepperProps) {
     <ol className="flex min-w-0 max-w-full flex-col gap-5 sm:gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
       {items.map((step, idx) => {
         const state = stepStateFor(step.done, idx, currentIndex);
-        const showCta = state === 'current' && step.cta;
+        const isCurrent = idx === currentIndex;
+        const isBusy = state === 'current' && step.busy === true;
+        const showCta = isCurrent && step.cta;
         const isLast = idx === items.length - 1;
         return (
           <li
             key={step.key}
             id={`onboarding-step-${step.key}`}
             className="flex min-w-0 max-w-full gap-3 sm:gap-4"
-            aria-current={state === 'current' ? 'step' : undefined}
+            aria-current={isCurrent ? 'step' : undefined}
+            aria-busy={isBusy || undefined}
           >
             <div className="relative flex shrink-0 flex-col items-center">
               <span
                 aria-hidden="true"
                 className={cn(
-                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-colors forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full border forced-colors:border-[CanvasText] forced-colors:bg-[Canvas] forced-colors:text-[CanvasText]',
                   indicatorClasses[state],
                 )}
               >
                 {state === 'done' ? (
                   <Check className="h-4 w-4" />
+                ) : state === 'unknown' ? (
+                  <CircleHelp className="h-4 w-4" />
                 ) : state === 'current' ? (
-                  <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                  isBusy ? (
+                    <Loader2 className={cn('h-4 w-4 motion-reduce:animate-none', !reduce && 'animate-spin')} />
+                  ) : (
+                    <ArrowRight className="h-4 w-4" />
+                  )
                 ) : (
                   <Text as="span" size="sm" weight="semibold">{idx + 1}</Text>
                 )}
@@ -141,7 +153,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
                   aria-hidden="true"
                   className={cn(
                     'mt-1 w-px flex-1 min-h-[28px]',
-                    state === 'done' ? 'bg-emerald-400/40' : 'bg-[var(--surface-2)]',
+                    state === 'done' ? severityTokens.success.dot : 'bg-[var(--surface-2)]',
                   )}
                 />
               )}
