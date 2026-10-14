@@ -1,0 +1,2096 @@
+{
+  "item": "phase6-qa-notifications-notification-health",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "startedUtc": "2026-10-14T02:00:03.0342662Z",
+  "returnDeadlineUtc": "2026-10-14T02:17:57.687Z",
+  "hardDeadlineUtc": "2026-10-14T02:22:57.687Z",
+  "pinsBefore": [
+    {
+      "path": "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+      "sha256": "1375328c12227bfb3ff8a5cd8dbe7bfa67e8b5eda692f69adfd915ccf26140e0",
+      "bytes": 4060
+    },
+    {
+      "path": "web/src/features/notifications/pages/NotificationHealthPage.test.tsx",
+      "sha256": "93591d94a018b99b593f41e59146adb2241e48d30ce249459afaa9ad70e188bc",
+      "bytes": 10054
+    },
+    {
+      "path": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "sha256": "5dce71a522b592f02be467548528b478735f46186684f4b4b0bbde78cbae76b1",
+      "bytes": 17912
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "sha256": "3be3ed008453a03345d3879368f4fcaebc97ff4747a02fb3f2719a131240e78e",
+      "bytes": 13150
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "sha256": "baa7d78c8a17c97d432a927f2b79b0e85c6e2ef4868571e3205362fbb47f4177",
+      "bytes": 14662
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationHealthPanels.continuation.test.tsx",
+      "sha256": "ffe812f5c561b69c1e31d74c1ed1ff72fdbc573aa495060ce1770091ba75dd42",
+      "bytes": 17298
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationLatencyPanel.test.tsx",
+      "sha256": "a8534b11213e4de458da17ddeb9a02105e7548d970eb1e56c1e915d5c111730b",
+      "bytes": 5482
+    },
+    {
+      "path": "web/src/features/notifications/lib/alertFatigue.ts",
+      "sha256": "e67638ff579ddea9624a7718c568e852c3557c4d928f0fea8e8a1e4478f63b2f",
+      "bytes": 10809
+    },
+    {
+      "path": "web/src/features/notifications/lib/alertFatigue.test.ts",
+      "sha256": "262153ce8b4a191b2d80945275b5647d9765084982c878294fc0f3d088ce7e3f",
+      "bytes": 8734
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationBurnRate.ts",
+      "sha256": "62cb045da10a5f7af5f014e73675c0b26717bf7bc01943eec2278a11949782f4",
+      "bytes": 7230
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationBurnRate.test.ts",
+      "sha256": "14a693ffea0a576198731bcc2733f6084c10daebfe669d7d111c24a55c3d3857",
+      "bytes": 5647
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationLatency.ts",
+      "sha256": "322cecd7f29ceb9438d032b5cbdeb9c5de45b30288cc58e177ebc14e1113d9d6",
+      "bytes": 6901
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationLatency.test.ts",
+      "sha256": "337e691344d619a60800e3e33f2e7d6bf670095dce7a4fe4aa9f0ae9dfb5fbda",
+      "bytes": 6297
+    },
+    {
+      "path": "web/src/api/hooks/useNotifications.ts",
+      "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "bytes": 51833
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes": 2035
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "bytes": 18863
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes": 1161
+    },
+    {
+      "path": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "sha256": "804547bcb6e9be1d6210dc459efee9ed7a8cb76999322f98c5cf7d80ea242057",
+      "bytes": 3987
+    },
+    {
+      "path": "web/src/api/hooks/useNotificationDeliveryLogs.test.tsx",
+      "sha256": "9f515a25fc6a22ec601bdf682c8a8865e05e3519723408c04d195dbb5cfdd348",
+      "bytes": 3328
+    },
+    {
+      "path": "web/src/api/hooks/__tests__/useNotifications.test.tsx",
+      "sha256": "03273d0d1aa44bc44dd342eff2b6bb1b6b16a7489010d83f7f3ea3ddd2a1a2c9",
+      "bytes": 8749
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes": 4093
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "bytes": 11591
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "bytes": 41517
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes": 5253
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "bytes": 120243
+    },
+    {
+      "path": "web/src/hooks/useChartPalette.ts",
+      "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "bytes": 2108
+    },
+    {
+      "path": "web/src/components/ui/Table.tsx",
+      "sha256": "b61e99f1aedd878bc422456906b3c04071c3416c53e2b9a517d67a0204310026",
+      "bytes": 1388
+    },
+    {
+      "path": "web/src/components/ui/HelpTooltip.tsx",
+      "sha256": "fb8d5d08643e810939608e5255f5f967084ec7c7af3c49eb130e38a682a27c86",
+      "bytes": 4388
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "bytes": 77157
+    },
+    {
+      "path": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "bytes": 20093
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "bytes": 1843667
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes": 1493
+    },
+    {
+      "path": "web/src/hooks/usePageTitle.ts",
+      "sha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "bytes": 1280
+    },
+    {
+      "path": "web/src/lib/cn.ts",
+      "sha256": "acde17243c0a88a7d5ad0183353c32e7e332d883ee36363b7f86bcfd85447d7b",
+      "bytes": 4204
+    },
+    {
+      "path": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "bytes": 2801
+    }
+  ],
+  "page": "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+  "routes": [
+    "/notifications/health"
+  ],
+  "purpose": "Source QA every current section/action; no application behavior executed.",
+  "scope": {
+    "mode": "READONLY attempt1",
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-notifications-notification-health.json",
+      "web/logs/phase6-qa-notifications-notification-health.log"
+    ],
+    "sourceWrites": false,
+    "testWrites": false,
+    "catalogWrites": false,
+    "gitWrites": false,
+    "subagents": false,
+    "queueInitialLine": 71,
+    "queueLaterLine": 92,
+    "queueItem": "phase6-qa-notifications-notification-health",
+    "reservation": "2026-10-14T01:57:57.687Z",
+    "priorSourceAcceptance": "Phase5 page pair a84019834d9e6d5ee0b7889a24a6748baeb2568a; historical9/9/lint0; privacy-blocked capture2; not current proof. Unowned paused/null panel needs were already acknowledged."
+  },
+  "governingReads": {
+    "fullyRead": [
+      "docs/orchestrator-loop.md:1-296",
+      "docs/frontend-design-contract.md:1-2539",
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "relevantRead": [
+      "mission sections0-3,14-17,21-28,30-37,43-45",
+      "handoff1-47,2148-2270 and NotificationHealth matches",
+      "inventory201",
+      "exact queue initial71/later92/Phase5 completion2049",
+      "I18N_GUIDELINES28-140",
+      "A11Y_GUIDELINES1-128",
+      "MOBILE_GUIDELINES1-162",
+      "frontend-si-cutover instructions",
+      "unit-conversion instructions1-120: legacy examples superseded by current SI contract"
+    ],
+    "localInstructions": "No additional AGENTS.md found in bounded web/docs search. No competing playbook used."
+  },
+  "findingsConfirmed": [
+    {
+      "id": "NH-01",
+      "rule": "initial-paused-conflation",
+      "priority": "P1",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 81,
+      "mechanism": "All three panels equate no retained data/no fatal error with active loading. deriveDataState preserves isRefreshBlocked for paused initial queries, but StaleRefreshWarning hides without data; latency Loading label wins before paused.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Set both source fixtures to data=undefined,error=null,fetchStatus=paused.",
+          "Skeletons/busy brief remain; no initial-paused explanation/local recovery. Paused does not prove device offline."
+        ]
+      },
+      "fix": "Use existing source feedback to distinguish initial blocked versus actively loading; preserve all sections/independent retry.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+          "line": 56
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+          "line": 84
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 199
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 61
+        }
+      ]
+    },
+    {
+      "id": "NH-02",
+      "rule": "unknown-as-outcome",
+      "priority": "P1",
+      "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "line": 233,
+      "mechanism": "Null severity burnRate is coerced to zero for success Badge tone despite eligible=0; text is a dash.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Use recent deferred_dnd/pending-only severity.",
+          "Reducer rates are null; Badge variant selects success."
+        ]
+      },
+      "fix": "Neutral for null before unchanged measured thresholds; preserve real zero/outcome counts.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/notificationBurnRate.ts",
+          "line": 111
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+          "line": 237
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationHealthPanels.continuation.test.tsx",
+          "line": 249
+        }
+      ]
+    },
+    {
+      "id": "NH-03",
+      "rule": "unknown-as-outcome",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "line": 110,
+      "mechanism": "Null Apdex becomes zero for warning tone. Real OperationalBrief applies caller tone even to missing value text and in drawer.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Use successful empty/no-usable-latency history.",
+          "Apdex null receives warning, not neutral."
+        ]
+      },
+      "fix": "Neutral for null, existing0.85 threshold for known values.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/notificationLatency.ts",
+          "line": 204
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 195
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 276
+        },
+        {
+          "file": "web/src/lib/operationalMetrics.tsx",
+          "line": 43
+        }
+      ]
+    },
+    {
+      "id": "NH-04",
+      "rule": "rolling-window-clock",
+      "priority": "P1",
+      "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "line": 38,
+      "mechanism": "Summary depends only on cached array identity while reducer uses Date.now. Time/identical structurally shared refresh cannot age outcomes out; no dedicated hook polling/clock or analysis-as-of instant.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Mount one failed outcome59minutes old.",
+          "Two minutes later with same array: short burn stays100x although event is outside1h."
+        ]
+      },
+      "fix": "Use existing explicit clock/snapshot policy and disclose as-of; preserve windows/keys/SLO. No unsolicited requests.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/notificationBurnRate.ts",
+          "line": 159
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 894
+        }
+      ]
+    },
+    {
+      "id": "NH-05",
+      "rule": "rounded-rate-denominator",
+      "priority": "P2",
+      "file": "web/src/features/notifications/lib/alertFatigue.ts",
+      "line": 307,
+      "mechanism": "Global rate uses integer-rounded observed days; individual rule rate uses actual fractional span. Caption claims recorded firing span.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Three valid firings in one rule spanning1.49days.",
+          "Rule rate3/1.49~=2.01/day; overall rate3/round(1.49)=3/day. Manual arithmetic only."
+        ]
+      },
+      "fix": "Use actual clamped span as denominator and round display only, or explicitly approve/disclose estimator. Preserve inputs/one-day clamp.",
+      "owner": "O2",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 224
+        },
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 245
+        },
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 317
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 148
+        }
+      ]
+    },
+    {
+      "id": "NH-06",
+      "rule": "empty-rate-as-zero",
+      "priority": "P2",
+      "file": "web/src/features/notifications/lib/alertFatigue.ts",
+      "line": 317,
+      "mechanism": "Empty history has analyzedDays=0 but per-day and burst rates0. Undefined denominator differs from true zero rule counts.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Successfully loaded analysis[].",
+          "Brief shows0/day across0days and0%bursts without observed span/eligible adjacency."
+        ]
+      },
+      "fix": "Keep zero counts; missing/unavailable for ratios without denominators; preserve measured zero.",
+      "owner": "O2",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 307
+        },
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 319
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 98
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 111
+        }
+      ]
+    },
+    {
+      "id": "NH-07",
+      "rule": "inaccurate-grouping-explanation",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 297,
+      "mechanism": "Help claims vehicle names/timestamps stripped. normalizeTitle replaces numeric substrings/percentages and whitespace only; key also includes alert_id/event_type.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Same source identity: Battery low for Alpha versus Beta.",
+          "Alphabetic names remain distinct, contrary to tooltip promise."
+        ]
+      },
+      "fix": "Correct existing help/canonical copy to actual composite grouping; never change grouping to fit wrong prose.",
+      "owner": "O1",
+      "secondaryOwners": [
+        "O3"
+      ],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 110
+        },
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 179
+        },
+        {
+          "file": "web/src/components/ui/HelpTooltip.tsx",
+          "line": 60
+        }
+      ]
+    },
+    {
+      "id": "NH-08",
+      "rule": "missing-canonical-i18n-key",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 296,
+      "mechanism": "help.alertFatigue.detail absent from current canonical English catalog. C19 checked flat/nested lookup:128 unique literal keys; exactly1 absent. English fallback is not canonical integration.",
+      "repro": {
+        "executed": false,
+        "kind": "synthetic specification/source tracing only",
+        "steps": [
+          "Resolve this exact key in en.json.",
+          "No leaf; HelpTooltip uses fallback when contextual help enabled. No validator/runtime run."
+        ]
+      },
+      "fix": "Serialized catalog owner adds corrected explanation and normal generated outputs under separate lease.",
+      "owner": "O3",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/components/ui/HelpTooltip.tsx",
+          "line": 60
+        }
+      ]
+    },
+    {
+      "id": "NH-09",
+      "rule": "unstable-chart-identity",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 223,
+      "mechanism": "Cell key is truncated title; chart mapping drops stable g.key. Different rule identities/same title or same15-character prefix collide.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "Two alert_id values with title Charge complete produce distinct groups but identical Cell keys."
+        ]
+      },
+      "fix": "Carry g.key into chartData/Cell; preserve visible truncation/full-title alternatives.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 52
+        },
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 179
+        }
+      ]
+    },
+    {
+      "id": "NH-10",
+      "rule": "latency-sample-provenance-label",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "line": 95,
+      "mechanism": "summary.count is labeled measured deliveries but counts derived and measured usable attempts, including failed/deferred attempts with latency.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "One legacy sent row with created_at and later sent_at, no latency_ms: count1/measuredShare0, caption1 measured deliveries."
+        ]
+      },
+      "fix": "Accurate usable-sample caption or existing measuredShare breakdown; no provider receipt claim.",
+      "owner": "O1",
+      "secondaryOwners": [
+        "O3"
+      ],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/lib/notificationLatency.ts",
+          "line": 87
+        },
+        {
+          "file": "web/src/features/notifications/lib/notificationLatency.ts",
+          "line": 151
+        },
+        {
+          "file": "web/src/features/notifications/lib/notificationLatency.ts",
+          "line": 207
+        }
+      ]
+    },
+    {
+      "id": "NH-11",
+      "rule": "number-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 336,
+      "mechanism": "Rule details interpolate raw JS numbers/fixed one-decimal and whole-percent rounding; never-read concatenates raw percentage. Locale/precision bridge is bypassed.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "Saved decimal-comma locale/nondefault precision with perDay1.25: detail stays dot/fixed rounding. No actual settings action."
+        ]
+      },
+      "fix": "Existing reactive numeric formatters at display boundary; keep raw validated measurements.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 346
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 357
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 98
+        }
+      ]
+    },
+    {
+      "id": "NH-12",
+      "rule": "date-time-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "line": 44,
+      "mechanism": "Burn formatTime and latency formatDateTime omit locale/timezone; fatigue bins browser-local getHours/getDay with bare00-23/no timezone; shared freshness title uses browser toLocaleString.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "Saved timezone/locale differ from browser at near-midnight instant. Bin/labels/date/title follow browser; timeline memo lacks formatting dependency."
+        ]
+      },
+      "fix": "Reuse current preference-aware formatting; preserve grouping unless separately approved and disclose actual zone. Shared badge fix at its owner. 12/24h acceptance remains NOTRUN.",
+      "owner": "O1",
+      "secondaryOwners": [
+        "O4"
+      ],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+          "line": 46
+        },
+        {
+          "file": "web/src/features/notifications/lib/alertFatigue.ts",
+          "line": 267
+        },
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 36
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 43
+        },
+        {
+          "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+          "line": 117
+        }
+      ]
+    },
+    {
+      "id": "NH-13",
+      "rule": "history-provenance-default",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 43,
+      "mechanism": "Three panels omit provenance option for declared recorded-history hooks. Healthy useDataState defaults cached; badge says loaded earlier/not confirmed since, rather than known stored-history origin. Fetch time is not event observation.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "Successful historical payload plus dataUpdatedAt still yields cached badge."
+        ]
+      },
+      "fix": "Pass existing appropriate historical provenance at callers; keep derived/measured explanations and fetch/event times separate; do not change HTTP default globally.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+          "line": 37
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+          "line": 28
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 189
+        },
+        {
+          "file": "web/src/api/hooks/useNotifications.ts",
+          "line": 893
+        }
+      ]
+    },
+    {
+      "id": "NH-14",
+      "rule": "fixed-decorative-accent",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 292,
+      "mechanism": "Four decorative breakdown heading icons retain text-cyan-300 rather than restrained theme roles. Overview already corrected; not re-reported.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "Inspect utilities across saved themes: fixedcyan remains. No rendered saturation/contrast defect claimed."
+        ]
+      },
+      "fix": "Existing neutral secondary/muted icon roles; preserve glyphs/text/outcome colors.",
+      "owner": "O1",
+      "secondaryOwners": [],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+          "line": 206
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+          "line": 199
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+          "line": 261
+        }
+      ]
+    },
+    {
+      "id": "NH-15",
+      "rule": "missing-pluralization",
+      "priority": "P2",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 90,
+      "mechanism": "Captions use invariant plurals/n not count: of1rules/across1days. Latency sample key also has invariant catalog string. Existing declarations pin grammar defects.",
+      "repro": {
+        "executed": false,
+        "kind": "source-derived synthetic specification only",
+        "steps": [
+          "One rule/day/sample resolves these plural captions; unexecuted."
+        ]
+      },
+      "fix": "Serialized canonical _one/_other forms with count; accurate latency denominator copy.",
+      "owner": "O3",
+      "secondaryOwners": [
+        "O1"
+      ],
+      "confidence": "source-confirmed",
+      "relatedEvidence": [
+        {
+          "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+          "line": 101
+        },
+        {
+          "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+          "line": 95
+        }
+      ]
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C-01",
+      "file": "web/src/features/notifications/lib/alertFatigue.ts",
+      "line": 254,
+      "mechanism": "Below3 firings score0/verdict healthy despite comment/test title saying withheld; intentionally pinned behavior. Product must decide insufficient evidence versus low score before changes.",
+      "owner": "O2"
+    },
+    {
+      "id": "C-02",
+      "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "line": 155,
+      "mechanism": "pending-only history counts as nonempty but no pending Bar; fallback/severity retain pending. Clarify intentional outcome-only plot, not confirmed data loss.",
+      "owner": "O1"
+    },
+    {
+      "id": "C-03",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 52,
+      "mechanism": "Top12 chart/fallback and top10 slowest table/export are subsets; all rule details retained. Disclosure need conditional; not1000-row API cap or full-result export.",
+      "owner": "O1"
+    },
+    {
+      "id": "C-04",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 226,
+      "mechanism": "Four charts explicitly use fixed chartTokens.series, no useChartPalette. Shared owner resolves intentional semantic versus saved palette-governed series. No new page palette.",
+      "owner": "O5"
+    },
+    {
+      "id": "C-05",
+      "file": "web/src/features/notifications/lib/alertFatigue.ts",
+      "line": 319,
+      "mechanism": "Overall burst denominator N-1 differs from sum of per-group eligible transitions. Two groups of2close firings: each100%, overall2/3. Clarify intended denominator/caption before altering pinned calculation.",
+      "owner": "O2"
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N-01",
+      "file": "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+      "line": 20,
+      "mechanism": "Hash scroll to nonfocusable sections; native keyboard/history/screen-reader focus unverified.",
+      "owner": "O6"
+    },
+    {
+      "id": "N-02",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 212,
+      "mechanism": "110px axis/10px ticks/truncation may constrain narrow plot; no measured clipping.",
+      "owner": "O6"
+    },
+    {
+      "id": "N-03",
+      "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "line": 274,
+      "mechanism": "Full-field shared table scroll/controls, help/drawers/exports/legend, forced-colors/contrast/44px targets require composed proof, not class assertions.",
+      "owner": "O6"
+    }
+  ],
+  "owners": [
+    {
+      "id": "O1",
+      "role": "deduplicated notification-health panel caller owner",
+      "definiteNeeds": true,
+      "files": [
+        "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+        "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+        "web/src/features/notifications/components/NotificationLatencyPanel.tsx"
+      ],
+      "needs": "Atomic released source/test pairs; original continuation/latency tests retained; serialize overlap. Trust/tones/clock/identity/formatting/style/caption/provenance fixes. Catalog-dependent changes follow O3."
+    },
+    {
+      "id": "O2",
+      "role": "fatigue domain calculation owner",
+      "definiteNeeds": true,
+      "files": [
+        "web/src/features/notifications/lib/alertFatigue.ts",
+        "web/src/features/notifications/lib/alertFatigue.test.ts"
+      ],
+      "needs": "Exact reducer/test lease for span and empty ratio semantics; conditional minimum/burst decisions do not reset thresholds."
+    },
+    {
+      "id": "O3",
+      "role": "serialized canonical English integrator",
+      "definiteNeeds": true,
+      "files": [
+        "web/src/i18n/en.json"
+      ],
+      "needs": "Correct/add help.alertFatigue.detail; accurate notificationLatency.kpis.samples; plural forms alertFatigue.ofTotal/overDays/sample. Parent determines normal generated outputs, no writes here."
+    },
+    {
+      "id": "O4",
+      "role": "existing shared freshness formatting owner",
+      "definiteNeeds": true,
+      "files": [
+        "web/src/components/data-display/DataProvenanceBadge.tsx"
+      ],
+      "needs": "Locale/timezone-aware title at shared owner, no global formatter default rewrite."
+    },
+    {
+      "id": "O5",
+      "role": "existing palette/token decision owner",
+      "definiteNeeds": false,
+      "needs": "Conditional saved-palette/semantic disposition; no competing palette/remigration."
+    },
+    {
+      "id": "O6",
+      "role": "separately authorized native evidence owner",
+      "definiteNeeds": false,
+      "needs": "All10mission widths/narrow containers/200%text/RTL/themes/forced-colors/reduced motion/keyboard/touch. Existing privacy/synthetic/locks/budgets; no browser grant here."
+    },
+    {
+      "id": "O7",
+      "role": "existing notification API/provider contract evidence owner",
+      "definiteNeeds": false,
+      "files": [
+        "web/src/api/hooks/useNotifications.ts"
+      ],
+      "needs": "Separate authorization for server cursor/order/retention/auth/provider receipt and latency semantics. Backend owner path UNKNOWN, not guessed."
+    }
+  ],
+  "sections": [
+    {
+      "name": "Delivery intelligence overview",
+      "file": "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+      "line": 54,
+      "subviews": [
+        "three numbered native anchors/explanation"
+      ],
+      "states": "Always mounted; PageLayout delegates PageContainer."
+    },
+    {
+      "name": "Alert fatigue",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 119,
+      "subviews": [
+        "4metrics",
+        "top12 score chart",
+        "24hour arrival chart",
+        "all-rule detail"
+      ],
+      "fields": [
+        "count/total/help",
+        "perDay/span",
+        "ignored/read eligibility",
+        "bursts/max",
+        "title/severity/verdict",
+        "firings/sent/failed"
+      ],
+      "states": "Fatal-only errors/retry;4x96px initial skeletons; explicit empty; retained warning/retry; paused/empty-rate defects recorded."
+    },
+    {
+      "name": "Burn rate",
+      "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "line": 93,
+      "subviews": [
+        "4metrics",
+        "hourly outcomes",
+        "severity detail"
+      ],
+      "fields": [
+        "99%objective",
+        "1h/24h factors/denominators",
+        "budget",
+        "sent/failed/deferred/pending",
+        "fallback deliveryRate/burnRate"
+      ],
+      "states": "Fatal-only errors; retained shared delivery source; initial/empty; null-tone/clock defects."
+    },
+    {
+      "name": "Latency",
+      "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "line": 115,
+      "subviews": [
+        "4metrics",
+        "histogram",
+        "severity/status cohorts",
+        "slowest table"
+      ],
+      "fields": [
+        "p50/p95/p99",
+        "trimmed mean/count/tail",
+        "Apdex1s/4s",
+        "bins/count/share",
+        "cohort count/tail/p95",
+        "record ID/title/severity/status/date/measured-derived/ms"
+      ],
+      "states": "Null metrics/loading/fatal/retained/empty; channels link; tone/caption/paused defects."
+    }
+  ],
+  "actions": [
+    {
+      "action": "3hash links/scroll/aria-current",
+      "file": "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+      "line": 67,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "11fatal retry callbacks/3retained warnings, independent analysis/shared deliveries",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 135,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "3Review details drawers/close/loading suppression",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 163,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "2fatigue help controls/contextualHelp preference",
+      "file": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "line": 92,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "4ready chart PNG/SVG/copy menus; no exportData therefore no chartCSV; no fullscreen/annotations prop",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 477,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "sent/failed/deferred legend persisted chartKey notification-burn-rate-outcomes",
+      "file": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "line": 152,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Manage delivery channels href only, not send permission",
+      "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "line": 213,
+      "execution": "NOTRUN"
+    },
+    {
+      "action": "Stable notifications:slow-deliveries table ID; column/density/loaded-row CSV/JSON for top10 only; no inferred full-result export",
+      "file": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "line": 274,
+      "execution": "NOTRUN"
+    }
+  ],
+  "dataSources": [
+    {
+      "hook": "useNotificationAnalysisLogs",
+      "file": "web/src/api/hooks/useNotifications.ts",
+      "line": 903,
+      "key": [
+        "notification-logs",
+        "analysis-history"
+      ],
+      "path": "/notifications/logs?view=inbox&archived=all&limit=1000",
+      "consumers": [
+        "fatigue"
+      ]
+    },
+    {
+      "hook": "useNotificationDeliveryLogs",
+      "file": "web/src/api/hooks/useNotifications.ts",
+      "line": 894,
+      "key": [
+        "notification-logs",
+        "delivery-history"
+      ],
+      "path": "/notifications/logs?view=deliveries&archived=all&limit=1000",
+      "consumers": [
+        "burn",
+        "latency"
+      ]
+    }
+  ],
+  "coverage": {
+    "pagination": "H:869-890 cursor-paged until page<1000, before_created_at/before_id, signal each request; rejects nonarray/invalid/immediate nonadvancing cursor. Publishes after completion; retains old cache on error. 1000 page size NOT cap.",
+    "workspace": "workspaceScope.ts:23 list omits health; :104 notifications disables vehicle. range=false/vehicle=false; no ignored header bounds/duplicate picker. Fixed burn windows/all-history other panels declared.",
+    "serverProviderUnknown": "Stable ordering/cursor precision/concurrent snapshot/retention/auth/complete real provider coverage UNKNOWN. No backend/network actions. sent is recorded attempt status, not verified recipient receipt; no provider breakdown metadata.",
+    "fatigue": "Composite alert/event/title;30minute adjacency,min3,25/45/70 thresholds. sent/triggered eligible read tracking; absent read_at untracked versus explicit null unread. Recorded span not requested observation coverage.",
+    "burn": "sent+failed denominator;99%objective,1%budget; defer/pending excluded/retained counts;1h/24h buckets;warning6/3,critical14.4/6;invalid/future excluded.",
+    "latency": "Finite nonnegative backend ms or nonnegative created-to-sent derived sample; status cohorts include failed/deferred. count versus measuredShare separate; top10 table only. Raw ms retained; metric bridge seconds conversion display only.",
+    "freshness": "updatedAt last successful fetch, never event/provider observation. Retained errors/paused keep payload/time; no new offline cause invented."
+  },
+  "preferences": {
+    "preservedDeclarations": [
+      "reactive numeric bridge burn/latency",
+      "stable table/legend IDs/persistence",
+      "contextual help optout",
+      "no settings/reset writes",
+      "FadeIn:24 motion preference, initial=false reduced"
+    ],
+    "defects": [
+      "NH-11",
+      "NH-12",
+      "NH-15"
+    ],
+    "conditional": [
+      "C-04"
+    ],
+    "unverified": [
+      "12/24h",
+      "RTL",
+      "saved custom themes",
+      "actual persistence",
+      "OS motion/low bandwidth"
+    ]
+  },
+  "accessibility": {
+    "status": "SOURCE DECLARATIONS ONLY",
+    "declarations": [
+      "named native nav/sections/shared headings/focus rings",
+      "row th scope=row",
+      "chart dataColumns SR/forced-colors fallback",
+      "polite retained warning/fatal retry",
+      "existing Drawer/Tooltip/table owners"
+    ],
+    "limits": "No native focus/44px/contrast/overflow/viewport/screenreader measurement; class-only tests do not establish responsive acceptance."
+  },
+  "testDeclarations": {
+    "files": [
+      {
+        "file": "web/src/features/notifications/pages/NotificationHealthPage.test.tsx",
+        "registrations": [
+          {
+            "line": 31,
+            "declaration": "it('keeps all three analyses and their empty states on one route', () => {"
+          },
+          {
+            "line": 48,
+            "declaration": "it('offers a responsive, keyboard-accessible overview without collapsing any analysis', () => {"
+          },
+          {
+            "line": 63,
+            "declaration": "it('keeps each metrics band readable at phone, tablet, and desktop widths', () => {"
+          },
+          {
+            "line": 75,
+            "declaration": "it('leaves reliability and latency visible if fatigue history fails', () => {"
+          },
+          {
+            "line": 85,
+            "declaration": "it('leaves fatigue visible when the shared delivery-history query fails', () => {"
+          },
+          {
+            "line": 99,
+            "declaration": "it('retains successfully loaded empty histories after a delivery refresh fails', () => {"
+          },
+          {
+            "line": 114,
+            "declaration": "it('retains populated rule breakdowns, SLO outcomes, and measured latency records', () => {"
+          },
+          {
+            "line": 135,
+            "declaration": "it('wraps long rule and delivery names instead of clipping details on narrow screens', () => {"
+          },
+          {
+            "line": 151,
+            "declaration": "it('uses restrained overview roles while preserving selected native navigation and focus', () => {"
+          }
+        ],
+        "count": 9,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationHealthPanels.continuation.test.tsx",
+        "registrations": [
+          {
+            "line": 86,
+            "declaration": "it('retains all populated sections after refresh failures and retries only the requested source', () => {"
+          },
+          {
+            "line": 119,
+            "declaration": "it('keeps successful delivery panels when analysis fails initially', () => {"
+          },
+          {
+            "line": 130,
+            "declaration": "it('does not present empty-history metrics while the source is unknown', () => {"
+          },
+          {
+            "line": 158,
+            "declaration": "it('retains source data during paused refreshes and labels it as offline', () => {"
+          },
+          {
+            "line": 181,
+            "declaration": "it('mounts real fatigue metrics with complete captions, read eligibility, and burst denominators', () => {"
+          },
+          {
+            "line": 208,
+            "declaration": "it('keeps absent read tracking unknown rather than inventing a never-read zero', () => {"
+          },
+          {
+            "line": 219,
+            "declaration": "it('keeps the screenshot short-window unknown and long-window 100 times burn distinct', () => {"
+          },
+          {
+            "line": 249,
+            "declaration": "it('distinguishes measured zero burn from deferred-only histories with no eligible outcomes', () => {"
+          },
+          {
+            "line": 271,
+            "declaration": "it('reviews full fatigue and mixed-window SLO evidence without removing the latency analysis', () => {"
+          }
+        ],
+        "count": 9,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/notifications/components/NotificationLatencyPanel.test.tsx",
+        "registrations": [
+          {
+            "line": 36,
+            "declaration": "it('preserves notification text, provenance, status and latency without subset checklists', () => {"
+          },
+          {
+            "line": 51,
+            "declaration": "it('reviews measured percentiles, trimmed mean, sample denominator, tail share, and Apdex thresholds', () => {"
+          },
+          {
+            "line": 75,
+            "declaration": "it('keeps the real latency brief busy without invented measurements on first load', () => {"
+          },
+          {
+            "line": 86,
+            "declaration": "it('retains cached latency values and slowest records after a failed refresh', () => {"
+          }
+        ],
+        "count": 4,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/notifications/lib/alertFatigue.test.ts",
+        "registrations": [
+          {
+            "line": 51,
+            "declaration": "it('collapses embedded percentages and numbers', () => {"
+          },
+          {
+            "line": 57,
+            "declaration": "it('is case- and whitespace-insensitive', () => {"
+          },
+          {
+            "line": 61,
+            "declaration": "it('keeps genuinely different rules apart', () => {"
+          },
+          {
+            "line": 67,
+            "declaration": "it('grows with volume', () => {"
+          },
+          {
+            "line": 72,
+            "declaration": "it('grows with burstiness at equal volume', () => {"
+          },
+          {
+            "line": 76,
+            "declaration": "it('grows when notifications go unread', () => {"
+          },
+          {
+            "line": 80,
+            "declaration": "it('stays bounded to 0–100 under extreme input', () => {"
+          },
+          {
+            "line": 85,
+            "declaration": "it('redistributes weight when read tracking is absent', () => {"
+          },
+          {
+            "line": 93,
+            "declaration": "it('is empty and safe with no data', () => {"
+          },
+          {
+            "line": 101,
+            "declaration": "it('groups firings that differ only by an embedded value', () => {"
+          },
+          {
+            "line": 112,
+            "declaration": "it('counts canonical inbox events and their read state without requiring a delivery channel', () => {"
+          },
+          {
+            "line": 123,
+            "declaration": "it('does not combine a system event and an automation with the same title', () => {"
+          },
+          {
+            "line": 133,
+            "declaration": "it('flags a high-volume, ignored, bursty rule as fatiguing', () => {"
+          },
+          {
+            "line": 142,
+            "declaration": "it('leaves a rare, promptly-read rule healthy', () => {"
+          },
+          {
+            "line": 150,
+            "declaration": "it('detects bursts and reports the largest run', () => {"
+          },
+          {
+            "line": 162,
+            "declaration": "it('does not count evenly-spaced firings as bursts', () => {"
+          },
+          {
+            "line": 168,
+            "declaration": "it('reports null ignored rate when the backend never tracked reads', () => {"
+          },
+          {
+            "line": 177,
+            "declaration": "it('excludes failed deliveries from the read denominator', () => {"
+          },
+          {
+            "line": 191,
+            "declaration": "it('withholds a verdict below the minimum firing count', () => {"
+          },
+          {
+            "line": 199,
+            "declaration": "it('ranks the noisiest rule first', () => {"
+          },
+          {
+            "line": 210,
+            "declaration": "it('builds weekday and hour histograms that account for every firing', () => {"
+          },
+          {
+            "line": 219,
+            "declaration": "it('ignores entries with unusable timestamps or empty titles', () => {"
+          },
+          {
+            "line": 231,
+            "declaration": "it('computes a fleet-wide ignored rate across rules', () => {"
+          }
+        ],
+        "count": 23,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/notifications/lib/notificationBurnRate.test.ts",
+        "registrations": [
+          {
+            "line": 32,
+            "declaration": "it('reports no data when neither window has outcomes', () => {"
+          },
+          {
+            "line": 36,
+            "declaration": "it('requires sustained dual-window burn for critical', () => {"
+          },
+          {
+            "line": 41,
+            "declaration": "it('keeps in-budget windows healthy', () => {"
+          },
+          {
+            "line": 47,
+            "declaration": "it('returns safe empty windows', () => {"
+          },
+          {
+            "line": 55,
+            "declaration": "it('computes a 99% SLO burn rate from sent and failed outcomes', () => {"
+          },
+          {
+            "line": 66,
+            "declaration": "it('excludes deferred DND and pending rows from the SLO denominator', () => {"
+          },
+          {
+            "line": 79,
+            "declaration": "it('separates the one-hour and 24-hour windows', () => {"
+          },
+          {
+            "line": 90,
+            "declaration": "it('ignores future, invalid, and out-of-window rows', () => {"
+          },
+          {
+            "line": 102,
+            "declaration": "it('builds severity cohorts with independent burn rates', () => {"
+          },
+          {
+            "line": 112,
+            "declaration": "it('normalizes blank severity into an explicit unknown cohort', () => {"
+          },
+          {
+            "line": 117,
+            "declaration": "it('accounts for every 24-hour event in timeline buckets', () => {"
+          },
+          {
+            "line": 132,
+            "declaration": "it('honors custom window and bucket sizes', () => {"
+          },
+          {
+            "line": 143,
+            "declaration": "it('flags sustained severe budget consumption', () => {"
+          },
+          {
+            "line": 156,
+            "declaration": "it('falls back to the documented objective for an invalid objective', () => {"
+          }
+        ],
+        "count": 14,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/notifications/lib/notificationLatency.test.ts",
+        "registrations": [
+          {
+            "line": 43,
+            "declaration": "it('prefers measured latency over the timestamp fallback', () => {"
+          },
+          {
+            "line": 50,
+            "declaration": "it('derives latency from created to sent for legacy rows', () => {"
+          },
+          {
+            "line": 57,
+            "declaration": "it('rejects negative or invalid elapsed time', () => {"
+          },
+          {
+            "line": 65,
+            "declaration": "it('falls back to timestamps when measured latency is invalid', () => {"
+          },
+          {
+            "line": 72,
+            "declaration": "it('computes interpolated percentiles', () => {"
+          },
+          {
+            "line": 78,
+            "declaration": "it('trims symmetric tails before taking a mean', () => {"
+          },
+          {
+            "line": 86,
+            "declaration": "it('returns explicit no-data metrics and stable empty histogram bins', () => {"
+          },
+          {
+            "line": 95,
+            "declaration": "it('computes p50, p95, p99 and a trimmed mean', () => {"
+          },
+          {
+            "line": 105,
+            "declaration": "it('implements Apdex with T and four-times-T bands', () => {"
+          },
+          {
+            "line": 120,
+            "declaration": "it('builds severity cohorts ranked by tail latency', () => {"
+          },
+          {
+            "line": 133,
+            "declaration": "it('builds separate status cohorts when attempts carry latency', () => {"
+          },
+          {
+            "line": 146,
+            "declaration": "it('accounts for every record exactly once in histogram bins', () => {"
+          },
+          {
+            "line": 154,
+            "declaration": "it('ranks and limits the slowest delivery records', () => {"
+          },
+          {
+            "line": 163,
+            "declaration": "it('reports how much data came from backend measurements', () => {"
+          },
+          {
+            "line": 172,
+            "declaration": "it('normalizes blank severities and ignores rows with no latency', () => {"
+          },
+          {
+            "line": 181,
+            "declaration": "it('uses the documented threshold when an invalid threshold is supplied', () => {"
+          }
+        ],
+        "count": 16,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/api/hooks/useNotificationDeliveryLogs.test.tsx",
+        "registrations": [
+          {
+            "line": 14,
+            "declaration": "it('fetches channel attempts rather than canonical inbox trigger rows', async () => {"
+          },
+          {
+            "line": 41,
+            "declaration": "it('reads every page using the last row cursor instead of silently dropping older events', async () => {"
+          },
+          {
+            "line": 63,
+            "declaration": "it('surfaces a malformed history response rather than reporting no activity', async () => {"
+          }
+        ],
+        "count": 3,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/api/hooks/__tests__/useNotifications.test.tsx",
+        "registrations": [
+          {
+            "line": 38,
+            "declaration": "it('returns an empty string for no filters', () => {"
+          },
+          {
+            "line": 42,
+            "declaration": "it('joins multi-value filters with commas (snake_case keys)', () => {"
+          },
+          {
+            "line": 54,
+            "declaration": "it('emits the boolean read filter for true and false but omits undefined', () => {"
+          },
+          {
+            "line": 60,
+            "declaration": "it('forwards date range, search text, and pagination', () => {"
+          },
+          {
+            "line": 77,
+            "declaration": "it('omits empty arrays and empty search', () => {"
+          },
+          {
+            "line": 88,
+            "declaration": "it('calls /notifications/logs with serialized filters', async () => {"
+          },
+          {
+            "line": 103,
+            "declaration": "it('omits the query string when filters are empty', async () => {"
+          },
+          {
+            "line": 116,
+            "declaration": "it('loads the stable component-health event catalog', async () => {"
+          },
+          {
+            "line": 138,
+            "declaration": "it('loads the selected channel preferences through the versioned client path', async () => {"
+          },
+          {
+            "line": 154,
+            "declaration": "it('does not request preferences until a channel is selected', () => {"
+          },
+          {
+            "line": 162,
+            "declaration": "it('updates one event preference with a snake_case request body', async () => {"
+          },
+          {
+            "line": 192,
+            "declaration": "it('selects the count out of the response payload', async () => {"
+          },
+          {
+            "line": 202,
+            "declaration": "it('falls back to 0 when count is missing', async () => {"
+          },
+          {
+            "line": 215,
+            "declaration": "it.each(["
+          },
+          {
+            "line": 231,
+            "declaration": "it('useDeleteNotifications hits DELETE /notifications/logs with ids body', async () => {"
+          }
+        ],
+        "count": 15,
+        "status": "NOTRUN"
+      }
+    ],
+    "registrationCount": 93,
+    "healthSpecific": 78,
+    "broaderHook": 15,
+    "potentialExpandedCases": 96,
+    "meaning": "93 source registrations:92 ordinary+1 it.each of4rows;96 potential expanded cases, NOT discovered/executed/passed",
+    "discovered": null,
+    "executed": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "gaps": [
+      "initial paused without data",
+      "null tone",
+      "clock-only aging",
+      "fractional/empty denominator",
+      "duplicate key",
+      "derived-only caption",
+      "real preferences/mobile/focus/provider/server proof"
+    ]
+  },
+  "frontendRuleChecks": {
+    "static-inline-style": 0,
+    "raw-html": 0,
+    "direct-library-import": 0,
+    "old-api-import": 0,
+    "double-prefix": 0,
+    "camelcase-param": 0,
+    "hidden-section": 0,
+    "hardcoded-string": 0,
+    "missing-page-container": 0,
+    "fetch-useeffect": 0
+  },
+  "acceptableExceptions": [
+    "C13 coarse case-insensitive raw scan matched2<Table>; corrected C15=0 native feature controls.",
+    "C13 fetch matched refetch; corrected C15 only1 hash-scroll effect, not data loading.",
+    "PageLayout:11 delegates PageContainer.",
+    "Recharts API tick/fill props/dynamic array colors exempt.",
+    "t fallbacks/user titles/database enum status/severity identifiers/unit IDs not raw English JSX. Missing key/format/plural separately counted.",
+    "Shared component internals/direct vendors expected; feature barrels proper."
+  ],
+  "preservation": {
+    "pagePlusPanelsLines": 1027,
+    "lines": {
+      "web/src/features/notifications/pages/NotificationHealthPage.tsx": 94,
+      "web/src/features/notifications/components/AlertFatiguePanel.tsx": 383,
+      "web/src/features/notifications/components/NotificationBurnRatePanel.tsx": 263,
+      "web/src/features/notifications/components/NotificationLatencyPanel.tsx": 287
+    },
+    "topLevelSections": 4,
+    "analyticalSubviews": 11,
+    "metrics": 12,
+    "jsxOccurrences": {
+      "GlassPanel": 11,
+      "ChartContainer": 4,
+      "OperationalBrief": 3,
+      "section": 6,
+      "DataTable": 1
+    },
+    "meaning": "Static branch occurrences, not simultaneous runtime. All source/tests/catalogs untouched."
+  },
+  "summary": {
+    "confirmed": 15,
+    "conditional": 5,
+    "native": 3,
+    "definiteRepairOwners": 4,
+    "conditionalEvidenceOwners": 3,
+    "byRule": {
+      "initial-paused-conflation": 1,
+      "unknown-as-outcome": 2,
+      "rolling-window-clock": 1,
+      "rounded-rate-denominator": 1,
+      "empty-rate-as-zero": 1,
+      "inaccurate-grouping-explanation": 1,
+      "missing-canonical-i18n-key": 1,
+      "unstable-chart-identity": 1,
+      "latency-sample-provenance-label": 1,
+      "number-preference-bypass": 1,
+      "date-time-preference-bypass": 1,
+      "history-provenance-default": 1,
+      "fixed-decorative-accent": 1,
+      "missing-pluralization": 1
+    },
+    "byPrimaryFile": {
+      "web/src/features/notifications/components/AlertFatiguePanel.tsx": 8,
+      "web/src/features/notifications/components/NotificationBurnRatePanel.tsx": 3,
+      "web/src/features/notifications/components/NotificationLatencyPanel.tsx": 2,
+      "web/src/features/notifications/lib/alertFatigue.ts": 2
+    },
+    "byPriority": {
+      "P1": 3,
+      "P2": 12
+    },
+    "cyanSites": 4,
+    "pausedPanelSites": 3,
+    "priority": "Paused/unknown tone/clock then ratio semantics, identity, provenance/formatter/copy. Source QA complete, application RELEASE acceptance NOT granted."
+  },
+  "notRun": [
+    "All fresh tests/Vitest/Playwright/browser/actions/screenshots",
+    "Lint/build/global npx tsc --noEmit",
+    "QA/preservation/i18n/a11y helpers/guards",
+    "All network/API/refetch/delivery/provider/test notifications",
+    "Installs/servers/subagents/Git/source/test/catalog writes"
+  ],
+  "failures": [
+    {
+      "command": "C02 rg --files",
+      "exit": 1,
+      "raw": "rg is not recognized",
+      "recovery": "Native Select-String, no grep result inferred"
+    },
+    {
+      "command": "C22 Get-Content operationalMetrics.ts",
+      "hostExit": 0,
+      "semanticStatus": "FAILED",
+      "raw": "Cannot find path because it does not exist.",
+      "recovery": "C23 actual .tsx read; not passing C22"
+    },
+    {
+      "command": "C24 large JSON-author command",
+      "exit": 1,
+      "raw": "The filename or extension is too long. (os error 206)",
+      "recovery": "Tool failed before execution; bounded C25/C26 only artifact writes"
+    },
+    {
+      "command": "C08 baseline probes",
+      "hostExit": 0,
+      "raw": "MISSING assumed useNotifications.test.ts and components/layout/PageLayout.tsx",
+      "recovery": "Actual paths resolved/pinned C11/C12"
+    },
+    {
+      "command": "C27 final JSON/pin check",
+      "exit": 1,
+      "raw": "UnicodeDecodeError UTF8 invalid byte0x96",
+      "recovery": "C28 authorized artifact encoding repair; no application rerun"
+    }
+  ],
+  "commands": [
+    {
+      "id": "C01",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C02",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C03",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C04",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C05",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C06",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C07",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C08",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C09",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C10",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C11",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C12",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C13",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C14",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C15",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C16",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C17",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C18",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C19",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C20",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C21",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C22",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C23",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C24",
+      "rawOutput": "assigned log and conversation tool output; commands executed before transcript activation remain in tool history",
+      "hostExit": "consult original raw output, not inferred from numbering"
+    },
+    {
+      "id": "C25",
+      "hostExit": 0,
+      "rawOutput": "assigned log/tool transcript",
+      "semanticStatus": "completed"
+    },
+    {
+      "id": "C26",
+      "hostExit": 0,
+      "rawOutput": "assigned log/tool transcript",
+      "semanticStatus": "completed"
+    },
+    {
+      "id": "C27",
+      "hostExit": 1,
+      "semanticStatus": "FAILED UTF8 parse; pins not reached"
+    },
+    {
+      "id": "C28",
+      "hostExit": 0,
+      "rawOutput": "assigned log/tool transcript",
+      "check": "UTF8 repair, parse/39SHA256/counts/identity/citation line bounds"
+    },
+    {
+      "id": "C29",
+      "check": "Authorized report-only integrity correction and UTF8 JSON reparse",
+      "hostExit": 0,
+      "rawOutput": "assigned log/tool transcript",
+      "sourcePinRecheck": "NOTRERUN; completed C28 unchanged pins retained"
+    }
+  ],
+  "evidenceLimits": {
+    "mode": "Source tracing/grep/read only; all repros unexecuted. No test/type/lint/build/native pass claimed.",
+    "historical": "Old audit read for context, overview fixed/paused wording independently rechecked; historical9/9 not fresh.",
+    "raw": "Raw executed check output was pasted via tool results/transcript log. Early untranscribed probes remain in tool history, not automatically captured. Command indices alone do not prove success; pre-C25 exits must be read from raw evidence. C02/C22/C24/C27 failures explicitly retained.",
+    "scope": "Direct feature graph/support excerpts/tests, not repository-wide absence claim; no backend inspected.",
+    "deadline": "Reservation deadlines unchanged."
+  },
+  "filesRead": [
+    "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+    "web/src/features/notifications/pages/NotificationHealthPage.test.tsx",
+    "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+    "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+    "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+    "web/src/features/notifications/components/NotificationHealthPanels.continuation.test.tsx",
+    "web/src/features/notifications/components/NotificationLatencyPanel.test.tsx",
+    "web/src/features/notifications/lib/alertFatigue.ts",
+    "web/src/features/notifications/lib/alertFatigue.test.ts",
+    "web/src/features/notifications/lib/notificationBurnRate.ts",
+    "web/src/features/notifications/lib/notificationBurnRate.test.ts",
+    "web/src/features/notifications/lib/notificationLatency.ts",
+    "web/src/features/notifications/lib/notificationLatency.test.ts",
+    "web/src/api/hooks/useNotifications.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/components/data-display/DataProvenanceBadge.tsx",
+    "web/src/api/hooks/useNotificationDeliveryLogs.test.tsx",
+    "web/src/api/hooks/__tests__/useNotifications.test.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/hooks/useSettings.ts",
+    "web/src/api/types.ts",
+    "web/src/hooks/useChartPalette.ts",
+    "web/src/components/ui/Table.tsx",
+    "web/src/components/ui/HelpTooltip.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/lib/tokens.ts",
+    "web/src/i18n/en.json",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/hooks/usePageTitle.ts",
+    "web/src/lib/cn.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/A11Y_GUIDELINES.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-150-attempt-2.json"
+  ],
+  "finalChecks": {
+    "jsonParse": "PASS after UTF8 repair",
+    "identityAttemptWritablePaths": "PASS",
+    "countsOwners": "PASS",
+    "citationLineBounds": "PASS",
+    "citationErrors": [],
+    "sha256Pins": "PASS",
+    "utc": "2026-10-14T02:19:12.344020+00:00",
+    "withinReservationSoftDeadline": false,
+    "withinReservationHardDeadline": true,
+    "applicationChecks": "NOTRUN"
+  },
+  "release": {
+    "state": "RELEASE",
+    "sourceClaimsHeld": false,
+    "sourceWrites": false,
+    "writableClaimsOnly": [
+      "docs/frontend-audits/phase6-qa-notifications-notification-health.json",
+      "web/logs/phase6-qa-notifications-notification-health.log"
+    ],
+    "completedUtc": "2026-10-14T02:19:12.344020+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-notifications-notification-health.json",
+      "web/logs/phase6-qa-notifications-notification-health.log"
+    ],
+    "acceptance": "Source QA report only, no application/native acceptance",
+    "pinStatus": "PASS"
+  },
+  "pinsAfter": [
+    {
+      "path": "web/src/features/notifications/pages/NotificationHealthPage.tsx",
+      "sha256": "1375328c12227bfb3ff8a5cd8dbe7bfa67e8b5eda692f69adfd915ccf26140e0",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/pages/NotificationHealthPage.test.tsx",
+      "sha256": "93591d94a018b99b593f41e59146adb2241e48d30ce249459afaa9ad70e188bc",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/components/AlertFatiguePanel.tsx",
+      "sha256": "5dce71a522b592f02be467548528b478735f46186684f4b4b0bbde78cbae76b1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationBurnRatePanel.tsx",
+      "sha256": "3be3ed008453a03345d3879368f4fcaebc97ff4747a02fb3f2719a131240e78e",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationLatencyPanel.tsx",
+      "sha256": "baa7d78c8a17c97d432a927f2b79b0e85c6e2ef4868571e3205362fbb47f4177",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationHealthPanels.continuation.test.tsx",
+      "sha256": "ffe812f5c561b69c1e31d74c1ed1ff72fdbc573aa495060ce1770091ba75dd42",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/components/NotificationLatencyPanel.test.tsx",
+      "sha256": "a8534b11213e4de458da17ddeb9a02105e7548d970eb1e56c1e915d5c111730b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/lib/alertFatigue.ts",
+      "sha256": "e67638ff579ddea9624a7718c568e852c3557c4d928f0fea8e8a1e4478f63b2f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/lib/alertFatigue.test.ts",
+      "sha256": "262153ce8b4a191b2d80945275b5647d9765084982c878294fc0f3d088ce7e3f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationBurnRate.ts",
+      "sha256": "62cb045da10a5f7af5f014e73675c0b26717bf7bc01943eec2278a11949782f4",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationBurnRate.test.ts",
+      "sha256": "14a693ffea0a576198731bcc2733f6084c10daebfe669d7d111c24a55c3d3857",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationLatency.ts",
+      "sha256": "322cecd7f29ceb9438d032b5cbdeb9c5de45b30288cc58e177ebc14e1113d9d6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/notifications/lib/notificationLatency.test.ts",
+      "sha256": "337e691344d619a60800e3e33f2e7d6bf670095dce7a4fe4aa9f0ae9dfb5fbda",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useNotifications.ts",
+      "sha256": "d782e449f6e641b214a9e4fb5e3f91031aefccbf78abf92242191722aa50833f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "sha256": "804547bcb6e9be1d6210dc459efee9ed7a8cb76999322f98c5cf7d80ea242057",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useNotificationDeliveryLogs.test.tsx",
+      "sha256": "9f515a25fc6a22ec601bdf682c8a8865e05e3519723408c04d195dbb5cfdd348",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/__tests__/useNotifications.test.tsx",
+      "sha256": "03273d0d1aa44bc44dd342eff2b6bb1b6b16a7489010d83f7f3ea3ddd2a1a2c9",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useChartPalette.ts",
+      "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Table.tsx",
+      "sha256": "b61e99f1aedd878bc422456906b3c04071c3416c53e2b9a517d67a0204310026",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/HelpTooltip.tsx",
+      "sha256": "fb8d5d08643e810939608e5255f5f967084ec7c7af3c49eb130e38a682a27c86",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/usePageTitle.ts",
+      "sha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/cn.ts",
+      "sha256": "acde17243c0a88a7d5ad0183353c32e7e332d883ee36363b7f86bcfd85447d7b",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "unchanged": true
+    }
+  ],
+  "pinComparison": {
+    "count": 39,
+    "unchanged": 39,
+    "drift": [],
+    "matched": true
+  }
+}
