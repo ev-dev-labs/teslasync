@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import { EmptyState } from '@/components/feedback';
 import { GlassPanel, HelpTooltip, PanelTitle, Text } from '@/components/ui';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { cn } from '@/lib/cn';
+import { typography } from '@/lib/tokens';
 
 import type { DrivingRhythm } from '../../lib/drivingRhythm';
 import { DrivingRhythmSectionBody } from './DrivingRhythmSectionBody';
@@ -12,21 +14,15 @@ import type { DrivingRhythmSectionState } from './types';
 import { useRhythmDayLabel } from './useRhythmDayLabel';
 
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0] as const;
-const CELL_LEVEL_CLASSES = [
-  'bg-cyan-300/15',
-  'bg-cyan-300/30',
-  'bg-cyan-300/45',
-  'bg-cyan-300/65',
-  'bg-cyan-300/85',
-] as const;
+const CELL_LEVEL_PERCENTAGES = [15, 30, 45, 65, 85] as const;
 
-function cellClass(count: number, maximum: number): string {
-  if (count <= 0 || maximum <= 0) return 'bg-[var(--surface-2)]';
+function cellColor(count: number, maximum: number, color: string): string | undefined {
+  if (count <= 0 || maximum <= 0) return undefined;
   const index = Math.min(
-    CELL_LEVEL_CLASSES.length - 1,
-    Math.ceil((count / maximum) * CELL_LEVEL_CLASSES.length) - 1,
+    CELL_LEVEL_PERCENTAGES.length - 1,
+    Math.ceil((count / maximum) * CELL_LEVEL_PERCENTAGES.length) - 1,
   );
-  return CELL_LEVEL_CLASSES[index]!;
+  return `color-mix(in srgb, ${color} ${CELL_LEVEL_PERCENTAGES[index]}%, var(--surface-2))`;
 }
 
 interface WeeklyPunchcardProps {
@@ -39,6 +35,7 @@ export function WeeklyPunchcard({
   state,
 }: WeeklyPunchcardProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const dayLabel = useRhythmDayLabel();
   const favoriteLabel = summary.favorite
     ? `${dayLabel(summary.favorite.day)} ${String(
@@ -55,7 +52,7 @@ export function WeeklyPunchcard({
     >
       <PanelTitle className="flex items-center gap-2">
         <CalendarClock
-          className="h-4 w-4 text-cyan-300"
+          className={cn('h-4 w-4', typography.color.secondary)}
           aria-hidden="true"
         />
         {t('rhythm.punchcard', 'Weekly Punchcard')}
@@ -128,10 +125,10 @@ export function WeeklyPunchcard({
                             count,
                           },
                         )}
-                        className={cn(
-                          'aspect-square rounded-sm border border-[var(--border-subtle)]',
-                          cellClass(count, summary.maxCount),
-                        )}
+                        className="aspect-square rounded-sm border border-[var(--border-subtle)] bg-[var(--surface-2)]"
+                        style={{
+                          backgroundColor: cellColor(count, summary.maxCount, palette[0]!),
+                        }}
                       />
                     );
                   })}
