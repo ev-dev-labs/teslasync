@@ -33,13 +33,36 @@ export function shortFingerprint(value: string, max = 28): string {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
 }
 
-/** Shared-buffer cache hit ratio (0–100) or null when no blocks were touched. */
+function cacheCounters(row: SlowQueryRow): [number, number] | null {
+  const hit = row.shared_blks_hit;
+  const read = row.shared_blks_read;
+  if (hit == null || read == null || !Number.isFinite(hit) || !Number.isFinite(read)
+    || hit < 0 || read < 0) return null;
+  return [hit, read];
+}
+
+/** Unknown or untouched shared buffers have no measured cache hit ratio. */
 export function cacheHitRatioValue(row: SlowQueryRow): number | null {
-  const hit = row.shared_blks_hit ?? 0;
-  const read = row.shared_blks_read ?? 0;
+  const counters = cacheCounters(row);
+  if (counters === null) return null;
+  const [hit, read] = counters;
   const total = hit + read;
-  if (total <= 0) return null;
+  if (total <= 0 || !Number.isFinite(total)) return null;
   return (hit / total) * 100;
+}
+
+/** Across-shown-queries evidence must be complete, not a partial-row estimate. */
+export function cacheHitRatioTotalValue(rows: readonly SlowQueryRow[]): number | null {
+  let hit = 0;
+  let read = 0;
+  for (const row of rows) {
+    const counters = cacheCounters(row);
+    if (counters === null) return null;
+    hit += counters[0];
+    read += counters[1];
+  }
+  const total = hit + read;
+  return total > 0 && Number.isFinite(total) ? (hit / total) * 100 : null;
 }
 
 /** Table-cell label form of the cache hit ratio. */
