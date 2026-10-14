@@ -1,0 +1,1728 @@
+{
+  "item": "phase6-qa-ownership-subscription-roi",
+  "attempt": 1,
+  "mode": "READONLY_SOURCE_ONLY",
+  "status": "SOURCE_QA_COMPLETE_WITH_FINDINGS_NOT_APPLICATION_ACCEPTANCE",
+  "started_at_utc": "2026-10-14T02:12:46.9933523Z",
+  "return_deadline_utc": "2026-10-14T02:30:36.129Z",
+  "hard_deadline_utc": "2026-10-14T02:35:36.129Z",
+  "writable_files": [
+    "docs/frontend-audits/phase6-qa-ownership-subscription-roi.json",
+    "web/logs/phase6-qa-ownership-subscription-roi.log"
+  ],
+  "scope": {
+    "page": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+    "route": "/ownership/subscription-roi",
+    "direct_supports": "Pinned direct modules/test declarations and relevant dependency excerpts. Unrelated feature/backend/provider source not audited. Initial ownership filename/hash discovery included extra files but did not audit their contents.",
+    "actions_performed": "NONE: no actual subscriptions/billing/identity/financial/provider/browser/API/network/request/render/mutation/export/clipboard/preference save. Source-only repro inputs are hypothetical.",
+    "source_tests_catalog_git_writes": false
+  },
+  "queue_authority": {
+    "file": "migration-queue.md",
+    "line": 111,
+    "status_at_read": "[~]",
+    "attempt": 1,
+    "dependency": "phase5-page-ownership-subscription-roi",
+    "dependency_line": 2118,
+    "dependency_status": "[x]",
+    "phase5_receipt": "1c20d9823fb7d8579a755924667c3501ecdabe3b; source only; historical zero-test catalog startup failure, not a fresh pass",
+    "queue_modified": false
+  },
+  "governing_reads": [
+    {
+      "path": "docs/orchestrator-loop.md",
+      "range": [
+        1,
+        296
+      ],
+      "full": true
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "ranges": [
+        [
+          1,
+          654
+        ],
+        [
+          1254,
+          1341
+        ]
+      ],
+      "note": "Complete base contract and relevant ownership addendum; unrelated later addenda heading-located only."
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "range": [
+        1,
+        1593
+      ],
+      "full": true
+    },
+    {
+      "path": "docs/frontend-inventory.md",
+      "ranges": [
+        [
+          211,
+          211
+        ],
+        [
+          504,
+          504
+        ],
+        [
+          507,
+          507
+        ],
+        [
+          1313,
+          1314
+        ]
+      ]
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "ranges": [
+        [
+          1,
+          190
+        ],
+        [
+          1245,
+          1385
+        ],
+        [
+          2350,
+          2460
+        ]
+      ]
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "ranges": [
+        [
+          1,
+          180
+        ],
+        [
+          218,
+          455
+        ]
+      ]
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "range": [
+        1,
+        629
+      ],
+      "full": true
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "full": true
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "full": true,
+      "note": "Legacy examples do not supersede SI cutover/unknown-zero contract."
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-160.json",
+      "range": [
+        1,
+        220
+      ],
+      "note": "Historical obligations, not current runtime proof."
+    }
+  ],
+  "confirmed_findings": [
+    {
+      "id": "ROI-01",
+      "classification": "confirmed-source",
+      "priority": "P1",
+      "rule": "draft-scope-lifecycle",
+      "title": "Draft vehicle binding never retires, including after successful save",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 112,
+          "end_line": 123
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 188,
+          "end_line": 194
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 604,
+          "end_line": 609,
+          "exact_source": "if (draftVehicleId == null) setDraftVehicleId(vehicleId);"
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 740,
+          "end_line": 743
+        }
+      ],
+      "mechanism": "The only setter after initialization runs when the bound vehicle is null. Cancel only toggles visibility; success only closes the form. No reset/new-draft action clears the binding. The guard correctly prevents wrong-vehicle writes but strands later creation on another selected vehicle while this page remains mounted.",
+      "source_only_repro": "Hypothetical selected 7: open editor to bind 7; Cancel or settle a mocked create onSuccess. Change selection to 8 without unmount and reopen Add. Binding is still 7, Vehicle 7 is shown, Save is disabled and submit returns. Preserve the original retained cross-selection draft when fixing lifetime.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source state/event sequence only. No render, API or mutation invoked.",
+      "needs": [
+        "N01"
+      ]
+    },
+    {
+      "id": "ROI-02",
+      "classification": "confirmed-source",
+      "priority": "P1",
+      "rule": "unknown-zero",
+      "title": "Clearing a required price synthesizes a known zero",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 666,
+          "end_line": 672,
+          "exact_source": "price_minor: value ?? 0"
+        },
+        {
+          "file": "web/src/features/ownership/components/MoneyInput.tsx",
+          "line": 38,
+          "end_line": 48
+        }
+      ],
+      "mechanism": "MoneyInput emits null for blank/invalid numeric input. Page substitutes 0 and feeds it back into the required controlled field, so a blank required fact becomes a priced zero. Deliberately entering zero is a different case.",
+      "source_only_repro": "Trace event.target.value=\"\": MoneyInput next=null, page callback sets price_minor=0, next render/hint shows zero. A hypothetical later draft payload contains 0 rather than requiring an explicit price. No submit performed.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source state/event sequence only. No render, API or mutation invoked.",
+      "needs": [
+        "N01"
+      ]
+    },
+    {
+      "id": "ROI-03",
+      "classification": "confirmed-source",
+      "priority": "P1",
+      "rule": "rate-precision",
+      "title": "Fractional-minor benchmark rates are displayed as zero currency",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 160,
+          "end_line": 164,
+          "exact_source": "Math.round(row.benchmark_minor_per_unit * 100) / 100,"
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 381,
+          "end_line": 389
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 698,
+          "end_line": 713
+        },
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 20,
+          "end_line": 30
+        }
+      ],
+      "mechanism": "A per-unit rate accepts step=\"any\" but display first rounds to two fractional minor digits, then the amount formatter limits currency fraction digits to its exponent. Valid nonzero fractional rates can display as zero. Filter key remains raw, so distinct rates share zero display labels.",
+      "source_only_repro": "Hypothetical USD 0.1 minor/unit -> major 0.001 -> two currency digits $0.00. A 0.001 minor/unit rate becomes 0 already in the page pre-rounding. Source algebra only, not an executed financial calculation.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source state/event sequence only. No render, API or mutation invoked.",
+      "needs": [
+        "N01"
+      ]
+    },
+    {
+      "id": "ROI-04",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "unit-disclosure",
+      "title": "Benchmark denominator and metric-specific input unit are undisclosed",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 385,
+          "end_line": 389
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 698,
+          "end_line": 707
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 153,
+          "end_line": 158
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 1025,
+          "end_line": 1031
+        }
+      ],
+      "mechanism": "Register benchmark shows only currency. Editor says minor / unit with generic help; changing usage_metric never identifies metres, Wh, seconds or count, nor a source/display unit cue. Physical usage and break-even do convert with preferences elsewhere. Backend metric-to-unit mapping is not inferred.",
+      "source_only_repro": "Inspect driving_distance versus supercharging_energy versus connectivity_time: identical benchmark label/help; register has no /unit suffix. Establish authoritative basis before preference-aware rate input; do not guess SI mappings.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source state/event sequence only. No render, API or mutation invoked.",
+      "needs": [
+        "N01",
+        "N06"
+      ]
+    },
+    {
+      "id": "ROI-05",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "display-precision",
+      "title": "Chart and accessible table pre-round ROI to one decimal regardless of preferences",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 176,
+          "end_line": 184,
+          "exact_source": "roi: Number((item.roi_pct ?? 0).toFixed(1)),"
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 522,
+          "end_line": 528
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 300,
+          "end_line": 300
+        }
+      ],
+      "mechanism": "Numeric chart data loses precision before the shared formatter. Its fallback table uses the same reduced number; verdict and summary retain original signed ROI. Preferences cannot recover discarded digits although raw payload stays unchanged.",
+      "source_only_repro": "Hypothetical ROI 12.34 at precision2 produces chart12.3 but verdict12.34; ROI0.04 produces chart0 while positive source ROI remains in the verdict. No render/preference save.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source state/event sequence only. No render, API or mutation invoked.",
+      "needs": [
+        "N01"
+      ]
+    },
+    {
+      "id": "ROI-06",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "title": "Known metric labels and chart verdict values bypass i18n",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 372
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 376
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 689
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 529
+        }
+      ],
+      "mechanism": "Three metric option/filter/cell sites replace underscores on known English wire enums rather than t(). Chart fallback Verdict has no value formatter and consumes raw keep/review/cancel/too_early/unknown; existing verdictLabel/Badge already localize known verdicts. User names/server prose are not counted.",
+      "source_only_repro": "Hypothetical non-English context still reads connectivity time/driving distance; chart table too_early stays raw.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N01"
+      ]
+    },
+    {
+      "id": "ROI-07",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "hardcoded-string",
+      "title": "Quality badge emits known English status token",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 69,
+          "end_line": 73
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 12
+        }
+      ],
+      "mechanism": "Badge renders quality.status raw; sufficient/limited/insufficient are a closed known enum with existing localized ownership verdict keys. One shared EvidencePanel root, not one defect per consumer.",
+      "source_only_repro": "Hypothetical non-English context plus quality.status=limited still displays limited. Metadata-unavailable fallback is correctly localized.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N04"
+      ]
+    },
+    {
+      "id": "ROI-08",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "date-preferences",
+      "title": "Register, brief and evidence dates bypass effective locale/timezone",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 36
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 397,
+          "end_line": 400
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 758,
+          "end_line": 760
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 60,
+          "end_line": 72
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 98,
+          "end_line": 100
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 139,
+          "end_line": 145
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 38,
+          "end_line": 61
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 73,
+          "end_line": 93
+        }
+      ],
+      "mechanism": "All three callers use pure formatDateTime without opts, so browser defaults apply instead of effective settings. Existing useDateFormat resolves locale and user/vehicle/UTC preferences. This is caller adoption, not a broad dateFormat engine defect.",
+      "source_only_repro": "Hypothetical browser en-US/Los_Angeles versus saved de-DE/UTC: dates/bounds/client-loaded/evidence time still use browser choices. No settings were changed.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N01",
+        "N03",
+        "N04"
+      ]
+    },
+    {
+      "id": "ROI-09",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "business-date-boundary",
+      "title": "Business date inputs silently mean UTC midnight",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 715,
+          "end_line": 737
+        },
+        {
+          "file": "web/src/features/ownership/formatters.ts",
+          "line": 136,
+          "end_line": 147
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 397,
+          "end_line": 400
+        }
+      ],
+      "mechanism": "toDateInput slices UTC ISO day; fromDateInput serializes UTC midnight. Started/Ended labels do not disclose this basis, while register renders local instants. These are independent business dates, not workspace ranges.",
+      "source_only_repro": "Hypothetical selected 2026-01-01 becomes 2026-01-01T00:00Z, which falls on Dec31 16:00 in Los_Angeles. Establish intended day basis or explicitly label preserved UTC semantics; do not silently rewrite dates.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N01",
+        "N06"
+      ]
+    },
+    {
+      "id": "ROI-10",
+      "classification": "confirmed-source",
+      "priority": "P1",
+      "rule": "source-trust-editor",
+      "title": "Editor masks unresolved/paused/fatal register feedback",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line": 41,
+          "end_line": 57
+        },
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line": 64,
+          "end_line": 77
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 149
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 590,
+          "end_line": 593
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 750,
+          "end_line": 772
+        },
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+          "line": 165,
+          "end_line": 175
+        }
+      ],
+      "mechanism": "editing with no data forces ready before fatal/paused/loading decisions and disables errorRecovery. Children include DataTable with [] and no-records wording despite no authoritative empty result. Retaining editor is correct; masking independent register trust/retry is not. Existing test explicitly expects no Retry, not fresh passing evidence.",
+      "source_only_repro": "Hypothetical subs data undefined plus paused or fatal: opening Add makes independentEditor true, source notice/retry disappears and empty register table renders. Preserve editor beside source feedback.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N02"
+      ]
+    },
+    {
+      "id": "ROI-11",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "initial-paused",
+      "title": "Brief describes initial pause as active loading",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 36,
+          "end_line": 48
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 75
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 190,
+          "end_line": 215
+        }
+      ],
+      "mechanism": "deriveDataState exposes isRefreshBlocked but Brief ignores it. For no data + isPending + fetchStatus paused, label is Loading source and loading=true. Parent OwnershipPanel correctly shows initial-paused notice; this is a contradictory inner declaration, not absent page offline handling.",
+      "source_only_repro": "Trace synthetic {isPending:true,isLoading:false,fetchStatus:\"paused\",data:undefined}: parent says initial query paused, inner Brief remains busy/loading.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N03"
+      ]
+    },
+    {
+      "id": "ROI-12",
+      "classification": "confirmed-source",
+      "priority": "P2",
+      "rule": "row-evidence-coverage",
+      "title": "Per-subscription quality/population/bounds have no presentation path",
+      "locations": [
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 1075,
+          "end_line": 1091
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 197,
+          "end_line": 337
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 568,
+          "end_line": 583
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 778,
+          "end_line": 782
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 147,
+          "end_line": 159
+        }
+      ],
+      "mechanism": "ROI row includes quality samples/coverage/window/reasons, but page never reads row.quality and trailer receives aggregate report quality only. Quick view preserves all existing columns but none represents these qualifiers. Confidence/narrative do not substitute for row population/observation coverage.",
+      "source_only_repro": "Hypothetical aggregate sufficient100% and one item limited20%/2samples with own bounds/reasons: trace columns/quick-view/trailer; item qualifiers have no path. Frequency of actual partial coverage is unknown.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N01"
+      ]
+    },
+    {
+      "id": "ROI-13",
+      "classification": "confirmed-source",
+      "priority": "P1",
+      "rule": "live-write-guard",
+      "title": "Subscription mutations omit available live-mode write guard",
+      "locations": [
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 766,
+          "end_line": 781
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 784,
+          "end_line": 800
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 348,
+          "end_line": 358
+        },
+        {
+          "file": "web/src/lib/operationalMode.ts",
+          "line": 66,
+          "end_line": 75
+        },
+        {
+          "file": "web/src/api/queryClient.ts",
+          "line": 67,
+          "end_line": 74
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 133,
+          "end_line": 145
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 188,
+          "end_line": 194
+        }
+      ],
+      "mechanism": "POST/DELETE omit requiresLiveMode. Client defaults false; operational guard returns before inspecting read-only historical/offline mode. Page Save checks draft vehicle, Remove checks named confirmation only. Global retry0/networkModealways correctly prevents replay, but is not a live-mode guard. This concerns local register writes, not provider cancellation.",
+      "source_only_repro": "Hypothetical as_of context: trace handlers/request options to requiresLiveMode=false and guard early return. Network/backend acceptance unknown; no handler/request/mutation was invoked.",
+      "repro_execution": "NOTRUN; hypothetical synthetic source trace only. No render, request or mutation invoked.",
+      "needs": [
+        "N05"
+      ]
+    }
+  ],
+  "conditional_native_candidates": [
+    {
+      "id": "ROI-C01",
+      "classification": "conditional-contract",
+      "title": "Mixed currency report versus nested subscription denomination",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 150,
+          "end_line": 152
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 229,
+          "end_line": 230
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 272,
+          "end_line": 285
+        }
+      ],
+      "mechanism": "ROI item money uses report.currency; register uses each subscription currency.",
+      "condition_to_confirm": "Establish whether backend rejects mixed ISO codes or normalizes all item amounts. Otherwise USD/JPY/KWD can be mislabeled/scaled. No backend/population conversion contract or actual money inspected.",
+      "repro_execution": "NOTRUN"
+    },
+    {
+      "id": "ROI-C02",
+      "classification": "conditional-contract",
+      "title": "List total versus loaded population",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 149
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 765,
+          "end_line": 767
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 43,
+          "end_line": 47
+        }
+      ],
+      "mechanism": "OwnershipList.total is not used; shared table only knows loaded rows.",
+      "condition_to_confirm": "Confirm returned total greater than items.length/incomplete list before asserting omission. Unpaginated list contract is not proof of complete observation coverage; never invent denominator.",
+      "repro_execution": "NOTRUN"
+    },
+    {
+      "id": "ROI-C03",
+      "classification": "conditional-product-intent",
+      "title": "Sortable metadata not wired to ordering",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 224,
+          "end_line": 231
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 288,
+          "end_line": 305
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 367
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 568,
+          "end_line": 583
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 750,
+          "end_line": 772
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1571,
+          "end_line": 1598
+        }
+      ],
+      "mechanism": "Five columns declare sortable, but tables provide no onSort/sortKey/sortDir. Shared table deliberately shows static headers without handler.",
+      "condition_to_confirm": "Confirm sorting is intended rather than dead inherited metadata before adding an action. No visible broken sort control/native click observed.",
+      "repro_execution": "NOTRUN"
+    },
+    {
+      "id": "ROI-C04",
+      "classification": "conditional-export",
+      "title": "Canonical/composite export semantics",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 197,
+          "end_line": 420
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 890,
+          "end_line": 925
+        }
+      ],
+      "mechanism": "Default local CSV/JSON actions exist; no explicit exportValue/exportRow; fallback uses matching raw keys or readable rendered text.",
+      "condition_to_confirm": "Future synthetic native exports must establish minor-unit/rate precision, source ISO/confidence/nested values and persisted hidden-column behavior. No export/download/clipboard occurred; do not claim full-result export or an observed lost file.",
+      "repro_execution": "NOTRUN"
+    },
+    {
+      "id": "ROI-C05",
+      "classification": "native-mobile-a11y",
+      "title": "Measured geometry/targets/overflow",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 531,
+          "end_line": 543
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 621
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 740,
+          "end_line": 742
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 29,
+          "end_line": 34
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 85
+        }
+      ],
+      "mechanism": "Buttons/Select/mobile adapter declare44px; Input default min-h-10, 280px chart and long names need measurement.",
+      "condition_to_confirm": "Review all mission widths/narrow allocations, 200% text, long labels/large rows/RTL/density/themes. CSS minimum is not actual hit area or clipping proof; mocked geometry is not device acceptance.",
+      "repro_execution": "NOTRUN"
+    },
+    {
+      "id": "ROI-C06",
+      "classification": "native-keyboard-a11y",
+      "title": "Nested details/confirmation focus, tooltip and alternatives",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 604,
+          "end_line": 622
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 795
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 144,
+          "end_line": 162
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 517,
+          "end_line": 539
+        }
+      ],
+      "mechanism": "Disclosure/form names/chart alternative/shared overlays exist. Tooltip has no explicit localized Bar name or percent unit.",
+      "condition_to_confirm": "Check actual Tab/ShiftTab/Escape/nested modal isolation/focus return/screen readers, tooltip units, composed contrast/forced-colors, reduced-motion/low-bandwidth/native select/date popups. No browser/OS interaction observed.",
+      "repro_execution": "NOTRUN"
+    },
+    {
+      "id": "ROI-C07",
+      "classification": "conditional-identity-settlement",
+      "title": "Async confirmation/create scope races",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 133,
+          "end_line": 145
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 188,
+          "end_line": 194
+        },
+        {
+          "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+          "line": 604,
+          "end_line": 609
+        }
+      ],
+      "mechanism": "Remove captures concrete named row id through async confirm; create success closes editor while fields/toggle can change pending.",
+      "condition_to_confirm": "Establish external selection changes during confirm and edits during earlier mocked create settlement. Normal modal isolates header actions. No wrong identity, cross-vehicle write or lost draft observed.",
+      "repro_execution": "NOTRUN"
+    }
+  ],
+  "needs": [
+    {
+      "id": "N01",
+      "owner": "Existing page owner, one exclusive writer",
+      "files": [
+        "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+        "web/src/features/ownership/pages/SubscriptionROIPage.test.tsx"
+      ],
+      "findings": [
+        "ROI-01",
+        "ROI-02",
+        "ROI-03",
+        "ROI-04",
+        "ROI-05",
+        "ROI-06",
+        "ROI-08",
+        "ROI-09",
+        "ROI-12"
+      ],
+      "action": "Narrow serialized page corrections preserving retained draft, every section/action/raw value/ID and source semantics. Reuse existing units/rate/date/i18n owners; no whole-page remigration. Exact missing copy goes to one serialized canonical English owner; catalog needs not established by a fresh guard."
+    },
+    {
+      "id": "N02",
+      "owner": "Shared OwnershipPanel root",
+      "files": [
+        "web/src/features/ownership/components/OwnershipPanel.tsx",
+        "web/src/features/ownership/components/OwnershipPanel.test.tsx"
+      ],
+      "findings": [
+        "ROI-10"
+      ],
+      "action": "Keep independent editor plus separate initial/paused/fatal register notice/retry. One root for all consumers, not page retries."
+    },
+    {
+      "id": "N03",
+      "owner": "Shared OwnershipBrief root",
+      "files": [
+        "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx"
+      ],
+      "findings": [
+        "ROI-08",
+        "ROI-11"
+      ],
+      "action": "Effective date preferences and honest initial-paused declaration. Serialize overlapping same-file changes; preserve numeric/drawer trust."
+    },
+    {
+      "id": "N04",
+      "owner": "Shared ownership EvidencePanel root",
+      "files": [
+        "web/src/features/ownership/components/EvidencePanel.tsx"
+      ],
+      "findings": [
+        "ROI-07",
+        "ROI-08"
+      ],
+      "action": "Known quality localization and effective dates; retain all evidence/reasons/limits. New test needs explicit claim. Not the completed advanced-intelligence EvidencePanel file/root."
+    },
+    {
+      "id": "N05",
+      "owner": "Existing useOwnership hook shared-file owner",
+      "files": [
+        "web/src/api/hooks/useOwnership.ts"
+      ],
+      "findings": [
+        "ROI-13"
+      ],
+      "action": "Resolve live-only options for exactly create/delete subscription; preserve wire IDs/body/confirmation/invalidation/toasts/no-replay defaults. New mocked test requires explicit claim; no real API/billing."
+    },
+    {
+      "id": "N06",
+      "owner": "Carried G152/P291 ownership range/bounds and source-unit contract integration",
+      "files": [
+        "web/src/lib/workspaceScope.ts",
+        "web/src/api/hooks/useOwnership.ts"
+      ],
+      "findings": [
+        "ROI-04",
+        "ROI-09"
+      ],
+      "carried_gap": true,
+      "action": "Current route range=false; hook accepts vehicle_id/window_days only. Preserve30/90/180/365 until typed complete-server bounds/timezone and metric basis established. Backend owner is original integration contract, not audited here; no guessed custom-bound support or loaded-row filtering."
+    }
+  ],
+  "source_test_hashes": [
+    {
+      "path": "web/src/api/client.ts",
+      "sha256_before": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "sha256_after": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "unchanged": true,
+      "lines_after": 458
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "sha256_after": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "lines_after": 434
+    },
+    {
+      "path": "web/src/api/hooks/useOwnership.ts",
+      "sha256_before": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "sha256_after": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "unchanged": true,
+      "lines_after": 801
+    },
+    {
+      "path": "web/src/api/offlineCache.ts",
+      "sha256_before": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "sha256_after": "ede8370b47bc67befd688a6434d6696c1efdae22e77bfdcc56c2d11d2857e6ce",
+      "unchanged": true,
+      "lines_after": 185
+    },
+    {
+      "path": "web/src/api/queryClient.ts",
+      "sha256_before": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "sha256_after": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "unchanged": true,
+      "lines_after": 86
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "sha256_before": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "sha256_after": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "unchanged": true,
+      "lines_after": 294
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256_before": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "sha256_after": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "unchanged": true,
+      "lines_after": 1006
+    },
+    {
+      "path": "web/src/components/charts/ChartTooltip.tsx",
+      "sha256_before": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "sha256_after": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "unchanged": true,
+      "lines_after": 179
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256_before": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "sha256_after": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "unchanged": true,
+      "lines_after": 321
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "sha256_after": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "lines_after": 259
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.production.test.tsx",
+      "sha256_before": "5449f48a7b74528ab61adbf320e9488a5d0dca17924905d5e4a9c2617b58a5f0",
+      "sha256_after": "5449f48a7b74528ab61adbf320e9488a5d0dca17924905d5e4a9c2617b58a5f0",
+      "unchanged": true,
+      "lines_after": 166
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.test.tsx",
+      "sha256_before": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+      "sha256_after": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+      "unchanged": true,
+      "lines_after": 81
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "sha256_after": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "lines_after": 17
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.production.test.tsx",
+      "sha256_before": "954f27c6c86e314b7fc4e8b5f396f135bd7586eb92b69230611736585d6be934",
+      "sha256_after": "954f27c6c86e314b7fc4e8b5f396f135bd7586eb92b69230611736585d6be934",
+      "unchanged": true,
+      "lines_after": 584
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256_before": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "sha256_after": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "unchanged": true,
+      "lines_after": 74
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256_before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "sha256_after": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true,
+      "lines_after": 39
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256_before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "sha256_after": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true,
+      "lines_after": 93
+    },
+    {
+      "path": "web/src/components/ui/DataTable.test.tsx",
+      "sha256_before": "080c61119d9bc8dbaf4864e772ee4d378c9db9a8119bff12e6c7b6c0b24f1161",
+      "sha256_after": "080c61119d9bc8dbaf4864e772ee4d378c9db9a8119bff12e6c7b6c0b24f1161",
+      "unchanged": true,
+      "lines_after": 1145
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "sha256_after": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true,
+      "lines_after": 1707
+    },
+    {
+      "path": "web/src/components/ui/Input.tsx",
+      "sha256_before": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "sha256_after": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "unchanged": true,
+      "lines_after": 116
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256_before": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "sha256_after": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "unchanged": true,
+      "lines_after": 165
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "sha256_before": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "sha256_after": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "unchanged": true,
+      "lines_after": 30
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256_before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "sha256_after": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "unchanged": true,
+      "lines_after": 119
+    },
+    {
+      "path": "web/src/components/ui/tableValueFilters.ts",
+      "sha256_before": "86f2e409fc1d93af04b6ed6c0823481eef1943592871cb0cb096ebaa0e2d2462",
+      "sha256_after": "86f2e409fc1d93af04b6ed6c0823481eef1943592871cb0cb096ebaa0e2d2462",
+      "unchanged": true,
+      "lines_after": 96
+    },
+    {
+      "path": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "sha256_before": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "sha256_after": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "unchanged": true,
+      "lines_after": 194
+    },
+    {
+      "path": "web/src/features/ownership/components/MoneyInput.tsx",
+      "sha256_before": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "sha256_after": "27f10245ddf17543712e0e97ab980e8ec66dc9c677165ca4ee3132c4003d5202",
+      "unchanged": true,
+      "lines_after": 52
+    },
+    {
+      "path": "web/src/features/ownership/components/MutationError.tsx",
+      "sha256_before": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "sha256_after": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "unchanged": true,
+      "lines_after": 22
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "sha256_before": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "sha256_after": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "unchanged": true,
+      "lines_after": 193
+    },
+    {
+      "path": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "sha256_before": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "sha256_after": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "unchanged": true,
+      "lines_after": 88
+    },
+    {
+      "path": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "sha256_before": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "sha256_after": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "unchanged": true,
+      "lines_after": 141
+    },
+    {
+      "path": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "sha256_before": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "sha256_after": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "unchanged": true,
+      "lines_after": 130
+    },
+    {
+      "path": "web/src/features/ownership/components/index.ts",
+      "sha256_before": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "sha256_after": "f0aa0993238bf0f41b96fd17c2a4e18cb4fa65a147f58aefd191f91f0800f67b",
+      "unchanged": true,
+      "lines_after": 8
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "sha256_before": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "sha256_after": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "unchanged": true,
+      "lines_after": 112
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "sha256_before": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "sha256_after": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "unchanged": true,
+      "lines_after": 81
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "sha256_before": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "sha256_after": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "unchanged": true,
+      "lines_after": 9
+    },
+    {
+      "path": "web/src/features/ownership/components/operationalbrief-all/testAssertions.ts",
+      "sha256_before": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "sha256_after": "0c2975fb42671eb884309a1c7811e7b3754d6b1f0a355151465790a92869000e",
+      "unchanged": true,
+      "lines_after": 16
+    },
+    {
+      "path": "web/src/features/ownership/formatters.ts",
+      "sha256_before": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "sha256_after": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "unchanged": true,
+      "lines_after": 148
+    },
+    {
+      "path": "web/src/features/ownership/pages/SubscriptionROIPage.test.tsx",
+      "sha256_before": "e4bf204952c9e8f3d21a2de6bba175297b7a1d06b6b094c1e08b2a9913ee5192",
+      "sha256_after": "e4bf204952c9e8f3d21a2de6bba175297b7a1d06b6b094c1e08b2a9913ee5192",
+      "unchanged": true,
+      "lines_after": 491
+    },
+    {
+      "path": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+      "sha256_before": "b334fc5a8e986203ccfb3f029a74dcf55cd3cbc1902504fd44859989e300f259",
+      "sha256_after": "b334fc5a8e986203ccfb3f029a74dcf55cd3cbc1902504fd44859989e300f259",
+      "unchanged": true,
+      "lines_after": 798
+    },
+    {
+      "path": "web/src/hooks/useConfirm.ts",
+      "sha256_before": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "sha256_after": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "unchanged": true,
+      "lines_after": 118
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256_before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "sha256_after": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true,
+      "lines_after": 65
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256_before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "sha256_after": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "unchanged": true,
+      "lines_after": 148
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "sha256_after": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true,
+      "lines_after": 47
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256_before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "sha256_after": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true,
+      "lines_after": 24
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256_before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "sha256_after": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "unchanged": true,
+      "lines_after": 174
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "sha256_before": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "sha256_after": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "unchanged": true,
+      "lines_after": 146
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256_before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "sha256_after": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true,
+      "lines_after": 194
+    },
+    {
+      "path": "web/src/lib/__tests__/dateFormat.duration.test.ts",
+      "sha256_before": "f2084fb07f448b2ebc97717ec4d50592e038a7655d88a18787c1a9f0f4f251ef",
+      "sha256_after": "f2084fb07f448b2ebc97717ec4d50592e038a7655d88a18787c1a9f0f4f251ef",
+      "unchanged": true,
+      "lines_after": 173
+    },
+    {
+      "path": "web/src/lib/__tests__/dateFormat.test.ts",
+      "sha256_before": "fe43bf19f715422da82acd9dcaad795b03bc5e1c697b239f1905c169ba79f487",
+      "sha256_after": "fe43bf19f715422da82acd9dcaad795b03bc5e1c697b239f1905c169ba79f487",
+      "unchanged": true,
+      "lines_after": 286
+    },
+    {
+      "path": "web/src/lib/currencyFormat.test.ts",
+      "sha256_before": "bf778927b137f53504700b0c8ed177a698fc39d032f1058e3bcc0015b78e1c57",
+      "sha256_after": "bf778927b137f53504700b0c8ed177a698fc39d032f1058e3bcc0015b78e1c57",
+      "unchanged": true,
+      "lines_after": 265
+    },
+    {
+      "path": "web/src/lib/currencyFormat.ts",
+      "sha256_before": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "sha256_after": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "unchanged": true,
+      "lines_after": 271
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "sha256_after": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true,
+      "lines_after": 462
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256_before": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "sha256_after": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "unchanged": true,
+      "lines_after": 137
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256_before": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "sha256_after": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "unchanged": true,
+      "lines_after": 172
+    },
+    {
+      "path": "web/src/lib/operationalMode.ts",
+      "sha256_before": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "sha256_after": "ee455c50bef62d5751b3cd9c7bf92f342071e740b76b3fd6f8fde8b4773c455d",
+      "unchanged": true,
+      "lines_after": 89
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256_before": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "sha256_after": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "unchanged": true,
+      "lines_after": 500
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "sha256_after": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true,
+      "lines_after": 168
+    },
+    {
+      "path": "web/src/types/ownership.ts",
+      "sha256_before": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "sha256_after": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "unchanged": true,
+      "lines_after": 1106
+    }
+  ],
+  "absent_probes": [
+    {
+      "path": "web/src/api/hooks/useOwnership.test.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/components/feedback/SourceContent.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/components/layout/PageLayout.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.test.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/components/ui/__tests__/MobileDataTableAdapter.test.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/components/ui/data-table/MobileTableCards.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/hooks/__tests__/useUnits.test.ts",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/hooks/useUnits.test.tsx",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    },
+    {
+      "path": "web/src/lib/dateFormat.test.ts",
+      "before": "ABSENT",
+      "after": "ABSENT"
+    }
+  ],
+  "command_failures": [
+    {
+      "id": "C02",
+      "exit": 1,
+      "failure": "rg executable unavailable; FileNotFoundError [WinError2]; no scan occurred."
+    },
+    {
+      "id": "C05",
+      "exit": 1,
+      "failure": "UnicodeEncodeError cp1252 U+2192 printing locator. Changed stdout to UTF-8; C06 performed narrowed read."
+    },
+    {
+      "id": "C17",
+      "exit": 1,
+      "failure": "Tool failed to start oversized artifact command: filename or extension too long (os error206). No command ran and no JSON was written by C17. Split standard-library serialization into bounded commands."
+    },
+    {
+      "id": "view-C11-701-860",
+      "exit": null,
+      "failure": "View start701 beyond EOF653; no process exit exposed. Relevant content read through valid ranges."
+    }
+  ],
+  "final_verification": {
+    "status": "PASS_DOCUMENT_AND_SOURCE_PINS_ONLY",
+    "command": "C20 independent JSON parse, exact source line/anchor checks, unique IDs/count/rules/path validation, 58 current source/test SHA256 checks",
+    "source_pin_count": 58,
+    "source_pin_mismatches": 0,
+    "absent_probe_count": 9,
+    "absent_probe_changes": 0,
+    "application_pass_claim": false,
+    "completed_at_utc": "2026-10-14T02:32:40.209483+00:00"
+  },
+  "acceptance_limits": "Source audit only, not native/application/page/Phase7 acceptance. No TypeScript/test/lint/build/runtime pass or financial result claimed.",
+  "section_action_preservation": [
+    {
+      "section": "Page/header/notice",
+      "lines": [
+        423,
+        452
+      ],
+      "declarations": "PageLayout -> PageContainer, translated title/page title; independent query array for freshness; four-day-window Select updates ROI key, no second vehicle picker. Notice defines realised value as measured usage times benchmark, too-early rule; savings are modeled commitment, not observed provider refund."
+    },
+    {
+      "section": "Portfolio economics",
+      "lines": [
+        455,
+        500
+      ],
+      "declarations": "Five raw metrics: monthly/spend/value/signed ROI/cancel-candidate saving with per-month if-all-cancelled basis; recorded bounds and source/client freshness; Review details drawer/Close; unknown stays dash, not zero."
+    },
+    {
+      "section": "Return chart",
+      "lines": [
+        503,
+        551
+      ],
+      "declarations": "Only non-null ROI subset, zero included; themed semantic verdict fill/category imports/axes/grid; descriptive ariaLabel and3-column accessible alternative; canonical image/SVG/clipboard export declaration, no CSV/fullscreen/annotation requested; all NOTRUN."
+    },
+    {
+      "section": "Per-subscription verdict",
+      "lines": [
+        553,
+        585
+      ],
+      "declarations": "All10 columns: name/kind/billing, verdict/confidence, monthly cost, spend/active days, measured usage/month, modeled value, signed net/ROI, break-even/utilisation, narrative. Low-confidence cancel means inspect, not act. Stable subscription.id/tableId; mobile quick view renders every column. Shared loaded-row search/clear/density/columns/reorder/resize/local CSV/JSON declarations, NOTRUN."
+    },
+    {
+      "section": "Register/editor",
+      "lines": [
+        587,
+        775
+      ],
+      "declarations": "Independent source; all6 columns incl confirmed Remove. Name/kind/valid billing pair/integer-minor price/ISO code/metric/fractional benchmark/start/end fields; required/length/min/step constraints, stacked then md2/xl3. Add/Cancel useId/expanded/controls; scoped Save pending/failure/success-only close; named danger confirm Delete/Cancel, matching pending row disabled. Value filters and mobile full-detail Remove reachable in source; NOTRUN."
+    },
+    {
+      "section": "Evidence/limitations",
+      "lines": [
+        777,
+        795
+      ],
+      "declarations": "Fifth persistent source panel with3 regions: aggregate quality/sample/coverage/bounds/reasons, every evidence identity/summary/count/time, limits and unsupported provider cancellation/intangible value. Null metadata/empty evidence explicit. Independent report retry; conditional ConfirmDialog is an action, not a hidden data section."
+    }
+  ],
+  "source_state_matrix": {
+    "no_vehicle": "Queries disabled until positive selected ID; Selection required/unknown summary; Save disabled. No real vehicle identity read.",
+    "initial": "Contextual per-source loading; summary raw metrics suppressed/retained skeleton. Independent report/list failures do not gate entire page.",
+    "initial_paused": "Panel explicitly says initial query paused/no empty inferred and exposes retry; Brief contradicts with loading (ROI-11), editing masks trust (ROI-10).",
+    "fatal": "Source-specific fatal body/retry only; unknown summary preserved; other query remains visible. Editing register exception ROI-10.",
+    "authoritative_empty": "Distinct chart/verdict/register wording; quality unavailable/empty evidence; retained-empty explanation preserved. Backend full population unknown.",
+    "retained_refresh_error_paused": "DataState keeps raw payload, warning and individual retry; Brief retained state. Existing tests declare this but were not executed.",
+    "unknown_zero_signed_si": "Null/nonfinite amounts/percentages/usage dash; observed zero remains0, signed net/ROI preserved and zero neutral. m/Wh/s convert display only; counts reactive. Blank-price/rate/chart exceptions ROI-02/03/05.",
+    "mutation": "Draft vehicle guard/named danger confirmation/pending/MutationError/toasts/invalidation/success-only close declared. Global mutation retry0/networkModealways prevents reconnect replay; live guard omission ROI-13. No real action."
+  },
+  "modeled_value_observation_contract": {
+    "observations": "Only source DTO declarations, not actual observations/populations/provider/identity data. report/items/evidence quality may differ; no complete source cohort/coverage/authorization verified.",
+    "model": "Realised value, net/ROI, break-even/utilisation and cancel saving are benchmark/commitment outputs, not causal observed benefit/billing/refund. Notice and limitations state this.",
+    "bounds": "Returned report from/to/days and quality observation bounds are separate; rolling day count is not coverage. Route range disabled, typed hook lacks explicit bounds. Business dates independent, UTC assumption findings.",
+    "identity": "Vehicle/window query keys, subscription.id table keys and original draft vehicle guard retained. report.vehicle_id not revalidated but no wrong-scope payload observed; no previous-data override declared.",
+    "money_preferences": "Source ISO/minor amount exponent preserved; no guessed symbol-to-ISO replacement. Mixed denomination conditional. SI/signs converted render-only, raw state/cache unchanged. Number/unit preferences use existing bridges; date preferences bypassed.",
+    "catalog_prose": "Known code labels findings; user names/evidence identities/opaque server narrative/reasons are not asserted hardcoded English UI violations."
+  },
+  "test_declarations": {
+    "page": {
+      "file": "web/src/features/ownership/pages/SubscriptionROIPage.test.tsx",
+      "lines": 491,
+      "simple_it": 14,
+      "it_each_literal_entries": 3,
+      "authored_cases": 17,
+      "coverage": "Minor/source currency/signed ROI/SI, unknown vs zero, independent fatal/retained, editor retention/draft vehicle/ARIA, confirm/cancel/pending, mobile full details/Remove; i18n and geometry mocked.",
+      "status": "NOTRUN"
+    },
+    "supports": [
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+        "authored_simple_cases": 18,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+        "authored_simple_cases": 5,
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+        "status": "NOTRUN; data-driven executable count not claimed"
+      }
+    ],
+    "execution_counts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    }
+  },
+  "engineering_rule_checks": {
+    "commands": [
+      "C13",
+      "C14",
+      "C16"
+    ],
+    "page_actual_pattern_matches": {
+      "static_style": 0,
+      "raw_html": 0,
+      "direct_vendor": 0,
+      "old_api": 0,
+      "double_prefix": 0,
+      "camelcase_url_candidate": 0,
+      "data_hidden_panel_candidate": 0,
+      "fetch_useeffect": 0,
+      "PageLayout": 1
+    },
+    "exceptions": "Shared UI native controls/motion direct vendor/computed inline geometry and tooltip colors accepted. Conditional ConfirmDialog is intentional. PageLayout wraps PageContainer. Shared observer/persistence/selection/Query settings coordination effects not ad-hoc page fetch. Initial Select-String case-insensitive Button false-positive corrected; generic TS matches not JSX strings.",
+    "limits": "Bounded grep/source review, not AST/lint or zero-repository-violations claim. Backend SQL/log/panic/context checks NOTAPPLICABLE/NOTRUN. Page798 vs inventory740 retains original sections/actions;300-line legacy guideline still unmet, no whole-page extraction authorized."
+  },
+  "owner_deduplication": {
+    "commands": [
+      "C08",
+      "C11",
+      "C12"
+    ],
+    "result": "No exact active Phase6 repair claim found for inspected ownership page/Panel/Brief/Evidence/two-hook mechanisms; historical phase3 exclusions not new leases. G152/P291 carried, not recreated. Sibling Insurance/ChargingReconciliation artifacts at read were in-progress pins without findings. Parent must deduplicate newer results before dispatch and serialize overlapping file owners; no runtime actor census inferred."
+  },
+  "notrun": [
+    "Fresh tests/Vitest/lint/build/preservation helpers/global npx tsc --noEmit",
+    "Browser/native/Playwright/screenshots/OS/keyboard/screen reader/contrast/forced-colors/mobile/RTL/200%/motion acceptance",
+    "Actual subscriptions/billing/financial/identities/provider/API/network/request/mutation/export/clipboard/preference action",
+    "Backend audit/auth/population/currency/metric-basis validation",
+    "Catalog guard/generator/catalog edits; no tests/passing reruns/startup retry",
+    "Git commands/writes, source/tests/catalog writes, subagents/installs/servers/helpers"
+  ],
+  "commands": [
+    {
+      "id": "C01",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C02",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 1,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C03",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C04",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C05",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 1,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C06",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C07",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C08",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C09",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C10",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C11",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C12",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C13",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C14",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C15",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C16",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C17",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 1,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C18",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C19",
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log",
+      "exit": 0,
+      "scope": "Read-only source/docs checks except permitted artifact writes",
+      "raw_output": "Logged audit stdout; initial discovery/failure traceback also returned in tool transcript."
+    },
+    {
+      "id": "C20",
+      "actual_command_family": "Python standard-library independent parse/line-anchor/count/path and current SHA256 verification; final permitted artifact metadata serialization and reparse",
+      "exit": 0,
+      "receipt": "web/logs/phase6-qa-ownership-subscription-roi.log"
+    }
+  ],
+  "summary": {
+    "confirmed_findings": 13,
+    "conditional_native_candidates": 7,
+    "deduplicated_owner_needs": 6,
+    "confirmed_by_rule": {
+      "draft-scope-lifecycle": 1,
+      "unknown-zero": 1,
+      "rate-precision": 1,
+      "unit-disclosure": 1,
+      "display-precision": 1,
+      "hardcoded-string": 2,
+      "date-preferences": 1,
+      "business-date-boundary": 1,
+      "source-trust-editor": 1,
+      "initial-paused": 1,
+      "row-evidence-coverage": 1,
+      "live-write-guard": 1
+    },
+    "severity_counts": {
+      "P1": 5,
+      "P2": 8
+    },
+    "hardcoded_string_occurrences": 5,
+    "hardcoded_string_root_findings": 2,
+    "source_pin_count": 58,
+    "tests_authored": 17,
+    "tests_executed": 0,
+    "command_failures": 3,
+    "view_failures": 1,
+    "priority_fixes": [
+      "live-mode guard",
+      "blank price versus zero",
+      "fractional-rate honesty",
+      "draft lifetime",
+      "independent editor/source trust"
+    ],
+    "files_with_most_finding_citations": [
+      {
+        "file": "web/src/features/ownership/pages/SubscriptionROIPage.tsx",
+        "distinct_findings": 11
+      },
+      {
+        "file": "web/src/types/ownership.ts",
+        "distinct_findings": 3
+      },
+      {
+        "file": "web/src/features/ownership/formatters.ts",
+        "distinct_findings": 2
+      },
+      {
+        "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+        "distinct_findings": 2
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+        "distinct_findings": 2
+      }
+    ]
+  },
+  "artifact_completed_at_utc": "2026-10-14T02:31:54.505506+00:00",
+  "deadline_compliance": {
+    "requested_soft_release_met": false,
+    "soft_release_late_seconds": 124.080483,
+    "hard_deadline_met": true,
+    "elapsed_seconds_from_first_actual_command": 1193.216131,
+    "actual_plus20_minutes_met": true,
+    "reason_for_soft_late": "Oversized C17 artifact command failed to launch (Win32 os error206); bounded serialization and final checks continued. Soft deadline missed, not hidden or renewed."
+  },
+  "released_at_utc": "2026-10-14T02:32:40.209483+00:00"
+}
