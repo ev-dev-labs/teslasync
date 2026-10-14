@@ -1,5 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
+import { Text } from '@/components/ui';
 import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import { summarizeItems, type MaintenanceItem } from './maintenanceModel';
 
@@ -21,10 +22,12 @@ export function MaintenanceSummary({
     { key: 'soon', label: t('maintenance.kpi.soon', 'Due soon'), value: summary?.soon ?? null },
     { key: 'healthy', label: t('maintenance.kpi.healthy', 'Healthy'), value: summary?.good ?? null },
     { key: 'completed', label: t('maintenance.kpi.completed', 'Completed'), value: summary?.completed ?? null },
+    { key: 'unavailable', label: t('common.unavailable', 'Unavailable'), value: summary?.unavailable ?? null },
     { key: 'categories', label: t('maintenance.kpi.categories', 'Categories'), value: categories },
   ];
   return (
     <div className="w-full min-w-0">
+        <Text variant="caption">{t('maintenance.itemProgress', '{{name}} service progress', { name: t('maintenance.title', 'Maintenance') })}</Text>
         <VehicleOperationalBrief
           id="maintenance-summary"
           title={t('maintenance.kpis', 'Maintenance summary')}

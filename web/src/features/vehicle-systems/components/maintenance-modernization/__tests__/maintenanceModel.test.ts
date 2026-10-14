@@ -5,7 +5,7 @@ import {
 } from '../maintenanceModel';
 import { item, record } from './fixtures';
 
-describe('maintenance source calculations (unchanged specialist contracts)', () => {
+describe('maintenance calculations and source-status separation', () => {
   it('preserves mileage precedence over configured months and due odometer', () => {
     const source = item({
       current_mileage: 39000, last_service_mileage: 20000,
@@ -25,14 +25,72 @@ describe('maintenance source calculations (unchanged specialist contracts)', () 
     }), start + 6 * monthMs)).toBeCloseTo(50, 12);
   });
 
-  it('retains the established invalid-service-date zero, without NaN geometry', () => {
-    expect(computeProgress(item({ interval_months: 12, last_service_date: 'invalid' }))).toBe(0);
+  it('represents invalid service dates as unavailable, not measured zero', () => {
+    expect(computeProgress(item({ interval_months: 12, last_service_date: 'invalid' }))).toBeNull();
   });
 
   it('falls back to current/due odometer only after interval paths', () => {
     expect(computeProgress(item({ current_mileage: 30000, due_mileage: 40000 }))).toBe(75);
-    expect(computeProgress(item())).toBe(0);
-    expect(computeProgress(item({ due_mileage: 0, current_mileage: 100 }))).toBe(0);
+    expect(computeProgress(item())).toBeNull();
+    expect(computeProgress(item({ due_mileage: 0, current_mileage: 100 }))).toBeNull();
+  });
+
+  it.each([
+    { interval_miles: 100 },
+    { interval_miles: 0, last_service_mileage: 0 },
+    { interval_miles: -100, last_service_mileage: 0 },
+    { interval_miles: NaN, last_service_mileage: 0 },
+    { interval_miles: Infinity, last_service_mileage: 0 },
+    { interval_miles: 100, last_service_mileage: NaN },
+    { interval_miles: 100, last_service_mileage: Infinity },
+    { interval_miles: 100, last_service_mileage: 0, current_mileage: NaN },
+    { interval_miles: 100, last_service_mileage: 0, current_mileage: Infinity },
+    { interval_months: 12 },
+    { interval_months: 0, last_service_date: '2024-01-01' },
+    { interval_months: -1, last_service_date: '2024-01-01' },
+    { interval_months: Infinity, last_service_date: '2024-01-01' },
+    { interval_months: NaN, last_service_date: '2024-01-01' },
+    { due_mileage: -100 },
+    { due_mileage: Infinity },
+    { due_mileage: NaN },
+    { due_mileage: 100, current_mileage: undefined },
+  ])('does not turn invalid or missing basis into Good: %j', overrides => {
+    const pct = computeProgress(item(overrides));
+    expect(pct).toBeNull();
+    expect(statusFromPct(pct)).toBeNull();
+  });
+
+  it('does not mask an invalid configured basis with a lower-precedence estimate', () => {
+    expect(computeProgress(item({
+      interval_miles: -1, last_service_mileage: 0,
+      interval_months: 12, last_service_date: '2024-01-01', due_mileage: 100,
+    }))).toBeNull();
+    expect(computeProgress(item({
+      interval_months: 12, last_service_date: 'invalid', due_mileage: 100,
+    }))).toBeNull();
+  });
+
+  it('preserves measured zero, signed numerators and fractional values', () => {
+    expect(computeProgress(item({ due_mileage: 100, current_mileage: 0 }))).toBe(0);
+    expect(computeProgress(item({
+      interval_miles: 100, last_service_mileage: 20, current_mileage: 20,
+    }))).toBe(0);
+    expect(computeProgress(item({
+      interval_miles: 100, last_service_mileage: 20, current_mileage: 10,
+    }))).toBe(0);
+    expect(computeProgress(item({
+      interval_miles: 0.5, last_service_mileage: -0.5, current_mileage: -0.25,
+    }))).toBe(50);
+    expect(computeProgress(item({ due_mileage: 100, current_mileage: 50.125 }))).toBe(50.125);
+    const start = Date.parse('2024-01-01T00:00:00Z');
+    const source = item({ interval_months: 0.5, last_service_date: '2024-01-01T00:00:00Z' });
+    expect(computeProgress(source, start)).toBe(0);
+    expect(computeProgress(source, start - 1000)).toBe(0);
+    expect(computeProgress(source, start + 0.25 * 30.44 * 86400000)).toBeCloseTo(50, 12);
+    expect(computeProgress(source, NaN)).toBeNull();
+    expect(computeProgress(item({
+      interval_miles: Number.MIN_VALUE, last_service_mileage: 0, current_mileage: 1,
+    }))).toBeNull();
   });
 
   it.each([
@@ -49,15 +107,47 @@ describe('maintenance source calculations (unchanged specialist contracts)', () 
     expect(statusFromPct(pct)).toBe(expected);
   });
 
-  it('keeps six KPI facts based on wire status, not derived progress or filtering', () => {
+  it.each([null, NaN, Infinity, -Infinity])('does not derive Good from %s', pct => {
+    expect(statusFromPct(pct)).toBeNull();
+  });
+
+  it('counts calculated progress separately from raw source status', () => {
     const rows = [
       item({ status: 'good', current_mileage: 99999, due_mileage: 1 }),
-      item({ id: 2, status: 'soon' }),
+      item({ id: 2, status: 'soon', current_mileage: 0, due_mileage: 100 }),
       item({ id: 3, status: 'overdue' }),
       item({ id: 4, status: 'completed' }),
+      item({ id: 5, status: 'good', current_mileage: 70, due_mileage: 100 }),
     ];
-    expect(summarizeItems(rows)).toEqual({ total: 4, good: 1, soon: 1, overdue: 1, completed: 1 });
-    expect(summarizeItems([])).toEqual({ total: 0, good: 0, soon: 0, overdue: 0, completed: 0 });
+    expect(summarizeItems(rows)).toEqual({ total: 5, good: 1, soon: 1, overdue: 1, completed: 1, unavailable: 1 });
+    expect(summarizeItems([])).toEqual({ total: 0, good: 0, soon: 0, overdue: 0, completed: 0, unavailable: 0 });
+    expect(rows.map(row => row.status)).toEqual(['good', 'soon', 'overdue', 'completed', 'good']);
+  });
+
+  it('sorts calculated urgency ahead of completion and unavailable basis, not source status', () => {
+    const rows = Object.freeze([
+      Object.freeze(item({ id: 1, status: 'overdue' })),
+      Object.freeze(item({ id: 2, status: 'overdue', due_mileage: 100, current_mileage: 0 })),
+      Object.freeze(item({ id: 3, status: 'good', due_mileage: 100, current_mileage: 90 })),
+      Object.freeze(item({ id: 4, status: 'completed', due_mileage: 100, current_mileage: 100 })),
+      Object.freeze(item({ id: 5, status: 'good', due_mileage: 100, current_mileage: 70 })),
+    ]);
+    expect(sortItems(rows, 'status').map(row => row.id)).toEqual([3, 5, 2, 4, 1]);
+    expect(rows.map(row => row.id)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it('uses one calculation clock for month-based sorting and summaries', () => {
+    const start = Date.parse('2024-01-01T00:00:00Z');
+    const now = start + 0.75 * 30.44 * 86400000;
+    const rows = [
+      item({ id: 1, interval_months: 1, last_service_date: '2024-01-01T00:00:00Z' }),
+      item({ id: 2, due_mileage: 100, current_mileage: 95 }),
+      item({ id: 3, interval_months: 1, last_service_date: 'invalid' }),
+    ];
+    expect(sortItems(rows, 'status', now).map(row => row.id)).toEqual([2, 1, 3]);
+    expect(summarizeItems(rows, now)).toEqual({
+      total: 3, good: 0, soon: 1, overdue: 1, completed: 0, unavailable: 1,
+    });
   });
 
   it('sorts by status, name, category and due date without mutating rows', () => {
@@ -66,7 +156,7 @@ describe('maintenance source calculations (unchanged specialist contracts)', () 
       Object.freeze(item({ id: 2, name: 'Alpha', category: 'brakes', due_date: 'invalid' })),
       Object.freeze(item({ id: 3, name: 'Mid', category: 'general', due_date: '2024-06-01', status: 'overdue' })),
     ]);
-    expect(sortItems(rows, 'status').map(row => row.id)).toEqual([3, 1, 2]);
+    expect(sortItems(rows, 'status').map(row => row.id)).toEqual([1, 2, 3]);
     expect(sortItems(rows, 'name').map(row => row.id)).toEqual([2, 3, 1]);
     expect(sortItems(rows, 'category').map(row => row.id)).toEqual([2, 3, 1]);
     expect(sortItems(rows, 'due_date').map(row => row.id)).toEqual([3, 2, 1]);

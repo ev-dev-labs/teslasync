@@ -16,6 +16,7 @@ export interface MaintenanceSummary {
   soon: number;
   overdue: number;
   completed: number;
+  unavailable: number;
 }
 
 export interface CostStatistics {
@@ -46,8 +47,7 @@ const STATUS_ORDER: Record<MaintenanceStatus, number> = {
   completed: 3,
 };
 
-/** Preserve the established numerical clamp, including invalid-date fallback.
- * This is not evidence that a missing service basis is a measured zero. */
+/** Clamp measured percentages only; missing/invalid service basis is null. */
 export function clampPct(value: number): number {
   if (!Number.isFinite(value)) return 0;
   return Math.min(100, Math.max(0, value));
@@ -55,42 +55,58 @@ export function clampPct(value: number): number {
 
 /** Preserve precedence and the specialist 30.44-day month denominator.
  * `now` only makes the existing Date.now calculation reproducible in tests. */
-export function computeProgress(item: MaintenanceItem, now = Date.now()): number {
-  if (item.interval_miles && item.last_service_mileage != null) {
-    return clampPct(
-      ((item.current_mileage - item.last_service_mileage) / item.interval_miles) * 100,
-    );
-  }
-  if (item.interval_months && item.last_service_date) {
+export function computeProgress(item: MaintenanceItem, now = Date.now()): number | null {
+  let pct: number;
+  if (item.interval_miles != null) {
+    if (!Number.isFinite(item.interval_miles) || item.interval_miles <= 0
+      || !Number.isFinite(item.current_mileage)
+      || item.last_service_mileage == null || !Number.isFinite(item.last_service_mileage)) return null;
+    pct = ((item.current_mileage - item.last_service_mileage) / item.interval_miles) * 100;
+  } else if (item.interval_months != null) {
+    if (!Number.isFinite(item.interval_months) || item.interval_months <= 0
+      || !item.last_service_date || !Number.isFinite(now)) return null;
     const lastDate = new Date(item.last_service_date).getTime();
-    if (!Number.isFinite(lastDate)) return 0;
+    if (!Number.isFinite(lastDate)) return null;
     const intervalMs = item.interval_months * 30.44 * 24 * 60 * 60 * 1000;
-    return clampPct(((now - lastDate) / intervalMs) * 100);
+    if (!Number.isFinite(intervalMs) || intervalMs <= 0) return null;
+    pct = ((now - lastDate) / intervalMs) * 100;
+  } else if (item.due_mileage != null) {
+    if (!Number.isFinite(item.due_mileage) || item.due_mileage <= 0
+      || !Number.isFinite(item.current_mileage)) return null;
+    pct = (item.current_mileage / item.due_mileage) * 100;
+  } else {
+    return null;
   }
-  if (item.due_mileage) {
-    return clampPct((item.current_mileage / item.due_mileage) * 100);
-  }
-  return 0;
+  return Number.isFinite(pct) ? clampPct(pct) : null;
 }
 
-export function statusFromPct(pct: number): MaintenanceStatus {
+export function statusFromPct(pct: number | null): MaintenanceStatus | null {
+  if (pct == null || !Number.isFinite(pct)) return null;
   if (pct >= 90) return 'overdue';
   if (pct >= 70) return 'soon';
   return 'good';
 }
 
 export function progressFillClass(pct: number): string {
-  if (pct >= 90) return 'bg-rose-500';
-  if (pct >= 70) return 'bg-amber-500';
-  return 'bg-emerald-500';
+  if (pct >= 90) return 'bg-[var(--semantic-danger)]';
+  if (pct >= 70) return 'bg-[var(--semantic-warning)]';
+  return 'bg-[var(--semantic-success)]';
+}
+
+function calculatedStatus(item: MaintenanceItem, now: number): MaintenanceStatus | null {
+  return item.status === 'completed' ? 'completed' : statusFromPct(computeProgress(item, now));
 }
 
 /** Sorting never changes cache ordering or the caller's array. */
-export function sortItems(items: readonly MaintenanceItem[], sortBy: string): MaintenanceItem[] {
+export function sortItems(items: readonly MaintenanceItem[], sortBy: string, now = Date.now()): MaintenanceItem[] {
   return [...items].sort((a, b) => {
     switch (sortBy) {
-      case 'status':
-        return STATUS_ORDER[a.status] - STATUS_ORDER[b.status];
+      case 'status': {
+        const statusA = calculatedStatus(a, now);
+        const statusB = calculatedStatus(b, now);
+        return (statusA == null ? 4 : STATUS_ORDER[statusA])
+          - (statusB == null ? 4 : STATUS_ORDER[statusB]);
+      }
       case 'name':
         return a.name.localeCompare(b.name);
       case 'category':
@@ -108,16 +124,18 @@ export function sortItems(items: readonly MaintenanceItem[], sortBy: string): Ma
   });
 }
 
-/** All returned items, not the filtered cards or the projection subset. */
-export function summarizeItems(items: readonly MaintenanceItem[]): MaintenanceSummary {
+/** Calculated classifications for all returned items; source completion wins. */
+export function summarizeItems(items: readonly MaintenanceItem[], now = Date.now()): MaintenanceSummary {
   return items.reduce<MaintenanceSummary>((summary, item) => {
     summary.total += 1;
-    if (item.status === 'soon') summary.soon += 1;
-    else if (item.status === 'overdue') summary.overdue += 1;
-    else if (item.status === 'completed') summary.completed += 1;
+    const status = calculatedStatus(item, now);
+    if (status == null) summary.unavailable += 1;
+    else if (status === 'soon') summary.soon += 1;
+    else if (status === 'overdue') summary.overdue += 1;
+    else if (status === 'completed') summary.completed += 1;
     else summary.good += 1;
     return summary;
-  }, { total: 0, good: 0, soon: 0, overdue: 0, completed: 0 });
+  }, { total: 0, good: 0, soon: 0, overdue: 0, completed: 0, unavailable: 0 });
 }
 
 /** Keep the original all-record denominator and minimum 0.1-year span.

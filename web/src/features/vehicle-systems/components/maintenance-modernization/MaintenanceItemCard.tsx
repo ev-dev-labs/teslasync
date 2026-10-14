@@ -5,7 +5,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
 import { cn } from '@/lib/cn';
 import {
-  clampPct, computeProgress, progressFillClass, statusFromPct,
+  computeProgress, progressFillClass, statusFromPct,
   type DistanceFormatter, type MaintenanceItem,
 } from './maintenanceModel';
 import { MaintenanceStatusBadge } from './MaintenanceStatusBadge';
@@ -22,7 +22,7 @@ export function MaintenanceItemCard({
 }) {
   const { t } = useTranslation();
   const { fmtNumber, fmtInt } = useNumberFormatting();
-  const pct = clampPct(computeProgress(item));
+  const pct = computeProgress(item);
   const status = item.status === 'completed' ? 'completed' : statusFromPct(pct);
   const sourceStatus = STATUS_BADGES[item.status];
   const fields = [
@@ -82,15 +82,20 @@ export function MaintenanceItemCard({
           <Tag className="mr-1 h-3 w-3" aria-hidden="true" />
           {item.category}
         </Badge>
-        <MaintenanceStatusBadge status={status} />
+        <Text variant="caption">{t('maintenance.details.sourceStatus', 'Source status')}</Text>
+        <MaintenanceStatusBadge status={item.status} />
       </div>
       <Subhead className="break-words text-[var(--text-primary)]">{item.name}</Subhead>
       <Text as="p" variant="caption" className="break-words">{item.description}</Text>
 
       {status !== 'completed' && (
         <div className="space-y-1">
+          <Text variant="caption">{t('maintenance.itemProgress', '{{name}} service progress', { name: item.name })}</Text>
+          {status != null ? <MaintenanceStatusBadge status={status} /> : (
+            <Badge variant="neutral" size="sm">{t('common.unavailable', 'Unavailable')}</Badge>
+          )}
           <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-[var(--text-muted)]">
-            <span className="tabular-nums">{fmtNumber(pct)}%</span>
+            <span className="tabular-nums">{pct != null ? `${fmtNumber(pct)}%` : t('common.unavailable', 'Unavailable')}</span>
             <span>
               {item.due_date
                 ? `${t('maintenance.due', 'Due')}: ${formatDate(item.due_date)}`
@@ -99,7 +104,7 @@ export function MaintenanceItemCard({
                   : null}
             </span>
           </div>
-          <div
+          {pct != null && <div
             role="progressbar"
             aria-valuenow={Math.round(pct)}
             aria-valuemin={0}
@@ -111,7 +116,7 @@ export function MaintenanceItemCard({
               className={cn('h-full rounded-full motion-safe:transition-all motion-safe:duration-slow', progressFillClass(pct))}
               style={{ width: `${pct}%` }}
             />
-          </div>
+          </div>}
         </div>
       )}
 
