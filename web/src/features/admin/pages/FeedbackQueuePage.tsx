@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Archive, Bug, CheckCircle, ExternalLink, PieChart, RefreshCw, RotateCcw, Workflow } from 'lucide-react'
 
@@ -15,7 +15,7 @@ import {
   type Column,
 } from '@/components/ui'
 import { PageLayout } from '@/components/layout'
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
+import { DataStateNotice, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { UserCell, type StatMetric } from '@/components/data-display'
 import { AdminSummary } from '../components/operationalbrief-a-g/AdminSummary'
@@ -154,6 +154,12 @@ export default function FeedbackQueuePage() {
   const bridgeEnabled = Boolean(data?.github_bridge_enabled)
   const bridgeRepo = data?.github_repo ?? ''
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+
+  useEffect(() => {
+    if (isLoading || isFetching || isPlaceholderData || listQuery.isError ||
+      !isFiniteNumber(data?.total) || data.total < 0) return
+    setPage((current) => Math.min(current, Math.max(0, Math.ceil(data.total / PAGE_SIZE) - 1)))
+  }, [data?.total, isLoading, isFetching, isPlaceholderData, listQuery.isError])
 
   const statTiles = useMemo<StatMetric[]>(
     () => [
@@ -423,10 +429,22 @@ export default function FeedbackQueuePage() {
 
           <StaleRefreshWarning state={listState} label={t('feedback.queue.tableTitle', 'Queue')} hideRetry />
           {isPlaceholderData && <Text as="p" variant="helper" role="status">{t('common.loading', 'Loading...')}</Text>}
-          {isLoading && !listState.hasData ? (
-            <Skeleton height={44} lines={6} />
-          ) : listState.fatalError ? (
+          {listState.fatalError ? (
             <QueryError error={listState.fatalError} onRetry={() => refetch()} />
+          ) : listState.status === 'initial' ? (
+            listState.isRefreshBlocked || !isFetching ? (
+              <DataStateNotice
+                state="partial"
+                role="status"
+                title={listState.isRefreshBlocked
+                  ? t('dataSources.status.paused', 'Refresh paused')
+                  : t('common.unknown', 'Unknown')}
+              >
+                {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              </DataStateNotice>
+            ) : (
+              <Skeleton height={44} lines={6} />
+            )
           ) : items.length === 0 ? (
             // no-action: feedback arrives by user submission, no admin CTA possible
             <EmptyState
@@ -481,6 +499,9 @@ export default function FeedbackQueuePage() {
                 )}
                 compact
               />
+            </>
+          )}
+          {(items.length > 0 || page > 0) && (
               <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <Caption>
                   {t('feedback.queue.pageOf', 'Page {{page}} of {{total}} ({{count}} entries)', {
@@ -508,7 +529,6 @@ export default function FeedbackQueuePage() {
                   </Button>
                 </div>
               </div>
-            </>
           )}
         </GlassPanel>
       </FadeIn>

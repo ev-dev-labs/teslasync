@@ -228,6 +228,8 @@ function mainResult() {
     isError: Boolean(m.isError),
     error: m.error ?? null,
     isFetching: Boolean(m.isFetching),
+    isPending: Boolean(m.isPending),
+    fetchStatus: m.fetchStatus,
     isPlaceholderData: Boolean(m.isPlaceholderData),
     refetch: refetches.main,
   }
@@ -273,13 +275,15 @@ beforeEach(() => {
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } })
-  return render(
+  const tree = () => (
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/admin/feedback']}>
         <FeedbackQueuePage />
       </MemoryRouter>
     </QueryClientProvider>,
   )
+  const result = render(tree())
+  return { ...result, rerenderPage: () => result.rerender(tree()) }
 }
 
 function rowTr(title: string): HTMLElement {
@@ -397,7 +401,7 @@ describe('FeedbackQueuePage', () => {
 
   it('shows the loading skeleton (and no rows or empty state) while the table query is loading', () => {
     configure({
-      main: { isLoading: true, data: undefined },
+      main: { isLoading: true, isFetching: true, data: undefined },
       counts: Object.fromEntries(
         FACET_KEYS.map((k) => [k, { total: undefined, isLoading: true }]),
       ) as Partial<Record<FacetKey, Record<string, unknown>>>,
@@ -423,6 +427,65 @@ describe('FeedbackQueuePage', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }))
     expect(refetches.main).toHaveBeenCalledTimes(1)
+  })
+
+  it.each(['paused', 'idle'] as const)(
+    'does not infer an empty queue from an unresolved %s request and preserves neighboring sections',
+    (fetchStatus) => {
+      configure({
+        main: { data: undefined, isPending: true, isLoading: false, fetchStatus },
+      })
+      const { container, rerenderPage } = renderPage()
+
+      const unresolvedNotice = screen.getByText('No requested source has returned usable data yet.').closest('[role="status"]')
+      expect(unresolvedNotice).toHaveTextContent(
+        fetchStatus === 'paused' ? 'Refresh paused' : 'Unknown',
+      )
+      expect(unresolvedNotice).toHaveTextContent('No requested source has returned usable data yet.')
+      expect(screen.queryByText('No feedback yet')).toBeNull()
+      expect(screen.queryByText("Can't reach server")).toBeNull()
+      expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).toBeNull()
+      expect(screen.getByTestId('feedback-queue-summary')).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: 'Status distribution: 5 new, 3 triaged, 2 closed' })).toBeInTheDocument()
+      expect(screen.getByRole('heading', { name: 'Category mix' })).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: 'Status' })).toBeEnabled()
+      expect(screen.getByRole('combobox', { name: 'Category' })).toBeEnabled()
+      fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+      expect(refetches.main).toHaveBeenCalledTimes(1)
+
+      configure({
+        main: { data: { items: [], total: 0, limit: 25, offset: 0 } },
+      })
+      rerenderPage()
+      expect(screen.getByText('No feedback yet')).toBeInTheDocument()
+      expect(screen.queryByText('No requested source has returned usable data yet.')).toBeNull()
+    },
+  )
+
+  it('uses the unresolved DataState for active fetching even when isLoading is false', () => {
+    configure({
+      main: { data: undefined, isLoading: false, isPending: true, isFetching: true, fetchStatus: 'fetching' },
+    })
+    const { container } = renderPage()
+    expect(container.querySelector('[class~="bg-[var(--skeleton-bg)]"]')).not.toBeNull()
+    expect(screen.queryByText('No feedback yet')).toBeNull()
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('feedback-queue-summary')).toBeInTheDocument()
+  })
+
+  it('retains populated rows, expansion and selection when refreshing is paused', () => {
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    expandRow('Timeline cuts off early')
+    configure({ main: { fetchStatus: 'paused' } })
+    rerenderPage()
+
+    expect(screen.getByText('Timeline cuts off early')).toBeInTheDocument()
+    expect(drawerFor('Timeline cuts off early')).toHaveTextContent('Body A')
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(screen.queryByText('No feedback yet')).toBeNull()
+    expect(screen.queryByText("Can't reach server")).toBeNull()
   })
 
   it('shows empty states for the table, triage progress, and category mix when the whole queue is empty', () => {
@@ -493,6 +556,91 @@ describe('FeedbackQueuePage', () => {
     fireEvent.click(screen.getByRole('button', { name: /^Next$/i }))
     expect(screen.getByText('Page 3 of 3 (60 entries)')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^Next$/i })).toBeDisabled()
+  })
+
+  it('clamps to the last remaining page after a settled shrink without clearing filters, selection or expansion', () => {
+    configure({
+      main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } },
+    })
+    const { rerenderPage } = renderPage()
+    fireEvent.change(screen.getByRole('combobox', { name: 'Status' }), { target: { value: 'new' } })
+    fireEvent.change(screen.getByRole('combobox', { name: 'Category' }), { target: { value: 'bug' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
+    expandRow('Timeline cuts off early')
+
+    configure({ main: { data: { items: [], total: 26, limit: 25, offset: 50 } } })
+    rerenderPage()
+
+    expect(mockUseFeedbackList).toHaveBeenCalledWith({
+      status: 'new', category: 'bug', limit: 25, offset: 25,
+    })
+    expect(screen.getByText('Page 2 of 2 (26 entries)')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    expect(screen.getByRole('combobox', { name: 'Status' })).toHaveValue('new')
+    expect(screen.getByRole('combobox', { name: 'Category' })).toHaveValue('bug')
+
+    configure({ main: { data: { items: [rowA()], total: 26, limit: 25, offset: 25 } } })
+    rerenderPage()
+    expect(screen.getAllByRole('checkbox', { name: /^Deselect (?!all)/ })[0]).toBeChecked()
+    expect(drawerFor('Timeline cuts off early')).toHaveTextContent('Body A')
+  })
+
+  it.each([25, 0])('clamps an empty later page to offset zero when the settled total becomes %i', (total) => {
+    configure({ main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } } })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    mockUseFeedbackList.mockClear()
+
+    configure({ main: { data: { items: [], total, limit: 25, offset: 50 } } })
+    rerenderPage()
+
+    expect(mockUseFeedbackList).toHaveBeenLastCalledWith({ category: 'other', limit: 1 })
+    expect(mockUseFeedbackList).toHaveBeenCalledWith({
+      status: undefined, category: undefined, limit: 25, offset: 0,
+    })
+    expect(screen.getByText('No feedback yet')).toBeInTheDocument()
+  })
+
+  it.each([
+    { isFetching: true },
+    { isPlaceholderData: true },
+    { isLoading: true },
+    { isError: true, error: new Error('refresh failed') },
+  ])('does not clamp from an unsettled or failed total: %j', (queryState) => {
+    configure({ main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } } })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    mockUseFeedbackList.mockClear()
+
+    configure({
+      main: { ...queryState, data: { items: [], total: 0, limit: 25, offset: 50 } },
+    })
+    rerenderPage()
+    expect(mockUseFeedbackList).not.toHaveBeenCalledWith(expect.objectContaining({ limit: 25, offset: 0 }))
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeInTheDocument()
+
+    configure({ main: { data: { items: [], total: 0, limit: 25, offset: 50 } } })
+    rerenderPage()
+    expect(mockUseFeedbackList).toHaveBeenCalledWith(expect.objectContaining({ limit: 25, offset: 0 }))
+  })
+
+  it('keeps Previous usable when a settled empty page still has a valid offset', () => {
+    configure({ main: { data: { items: [rowA()], total: 60, limit: 25, offset: 0 } } })
+    const { rerenderPage } = renderPage()
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
+    configure({ main: { data: { items: [], total: 60, limit: 25, offset: 25 } } })
+    rerenderPage()
+    expect(screen.getByText('No feedback yet')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled()
+    mockUseFeedbackList.mockClear()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
+    expect(mockUseFeedbackList).toHaveBeenCalledWith(expect.objectContaining({ limit: 25, offset: 0 }))
   })
 
   it('refresh refetches the table AND all six count queries so KPIs stay consistent', () => {
