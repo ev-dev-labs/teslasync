@@ -131,9 +131,14 @@ export function getChannelMeta(kind: string): ChannelTypeMeta {
   return CHANNEL_TYPES.find((c) => c.value === kind) ?? FALLBACK_META;
 }
 
-/** Fields whose values must never be shown in plaintext previews. */
+const CREDENTIAL_FIELDS = new Set([
+  'webhook_url', 'url', 'bot_token', 'app_token', 'user_key',
+  'smtp_password', 'bearer_token', 'password',
+]);
+
+/** Credential-bearing URLs are secret too; input type is not a preview policy. */
 export function isSecretField(key: string): boolean {
-  return key.includes('token') || key.includes('key') || key.includes('password');
+  return CREDENTIAL_FIELDS.has(key);
 }
 
 /** Flatten a stored channel into the flat `Record<string,string>` the form edits. */

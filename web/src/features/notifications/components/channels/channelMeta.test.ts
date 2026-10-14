@@ -142,19 +142,21 @@ describe('getChannelMeta', () => {
 });
 
 describe('isSecretField', () => {
-  it('classifies token/key/password fields as secret', () => {
-    expect(isSecretField('bot_token')).toBe(true);
-    expect(isSecretField('app_token')).toBe(true);
-    expect(isSecretField('user_key')).toBe(true);
-    expect(isSecretField('smtp_password')).toBe(true);
+  it.each([
+    'webhook_url', 'url', 'bot_token', 'app_token', 'user_key',
+    'smtp_password', 'bearer_token', 'password',
+  ])('explicitly classifies %s as a credential', (key) => {
+    expect(isSecretField(key)).toBe(true);
   });
 
   it('treats non-credential fields (and empty input) as plaintext', () => {
-    expect(isSecretField('webhook_url')).toBe(false);
+    expect(isSecretField('server_url')).toBe(false);
     expect(isSecretField('chat_id')).toBe(false);
     expect(isSecretField('topic')).toBe(false);
     expect(isSecretField('smtp_host')).toBe(false);
     expect(isSecretField('')).toBe(false);
+    expect(isSecretField('keyboard_layout')).toBe(false);
+    expect(isSecretField('token_count')).toBe(false);
   });
 
   it('marks every password-typed catalog field as secret (UI masking invariant)', () => {

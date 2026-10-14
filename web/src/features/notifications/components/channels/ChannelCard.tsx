@@ -116,7 +116,7 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
           previewEntries.map(([k, v]) => (
             <Text key={k} as="p" variant="caption" className="block truncate">
               <Text as="span" size="xs" weight="medium" color="secondary">{k}:</Text>{' '}
-              {isSecretField(k) ? '••••••••' : (v || '—')}
+              {v ? (isSecretField(k) ? '••••••••' : v) : '—'}
             </Text>
           ))
         )}

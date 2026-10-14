@@ -9,7 +9,7 @@
  *
  *   1. Rendering — name, kind, Active/Disabled badge, provider controls, and
  *      the dimmed styling applied to a disabled channel.
- *   2. Credential preview — secrets (token/key/password) are masked, non-secret
+ *   2. Credential preview — explicit credentials including URLs are masked, non-secret
  *      values render verbatim, empty values collapse to an em-dash, a channel
  *      with no exposable config shows a single placeholder, and the preview is
  *      capped at the first three fields.
@@ -220,6 +220,46 @@ describe('ChannelCard — rendering', () => {
 
 // ── 2. Credential preview ─────────────────────────────────────────────────────
 describe('ChannelCard — credential preview', () => {
+  it.each<NotificationChannel>([
+    DISCORD,
+    {
+      ...DISCORD, kind: 'slack', name: 'Team Slack',
+      webhook_url: 'https://hooks.slack.com/services/SECRET', channel: null,
+    },
+    {
+      id: 6, name: 'Private webhook', kind: 'webhook', enabled: true,
+      created_at: 'c', updated_at: 'u',
+      url: 'https://receiver.test/SECRET?token=private', method: 'PUT',
+      headers: {}, body_template: '',
+    },
+  ])('masks $kind URLs without changing the channel passed to Edit', (channel) => {
+    const { container, onEdit } = renderCard(channel);
+    const url = channel.kind === 'webhook' ? channel.url
+      : channel.kind === 'discord' || channel.kind === 'slack' ? channel.webhook_url : '';
+
+    expect(screen.getByText('••••••••')).toBeInTheDocument();
+    expect(container.innerHTML).not.toContain(url);
+    if (channel.kind === 'webhook') {
+      expect(screen.getByText('PUT')).toBeInTheDocument();
+      expect(screen.getByText('—')).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
+    expect(onEdit).toHaveBeenCalledWith(channel);
+    expect(onEdit.mock.calls[0][0]).toBe(channel);
+  });
+
+  it('keeps the ntfy server URL and topic visible', () => {
+    renderCard({
+      id: 7, name: 'Public ntfy', kind: 'ntfy', enabled: true,
+      created_at: 'c', updated_at: 'u',
+      server_url: 'https://ntfy.sh', topic: 'teslasync', priority: 3,
+      username: null, password: null,
+    });
+
+    expect(screen.getByText('https://ntfy.sh')).toBeInTheDocument();
+    expect(screen.getByText('teslasync')).toBeInTheDocument();
+  });
+
   it('masks secret fields while showing non-secret values verbatim', () => {
     renderCard(TELEGRAM);
 
@@ -238,6 +278,7 @@ describe('ChannelCard — credential preview', () => {
     expect(screen.getByText('webhook_url:')).toBeInTheDocument();
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('https://discord.com/api/webhooks/abc')).toBeNull();
+    expect(screen.queryByText('••••••••')).toBeNull();
   });
 
   it('shows a single placeholder when a channel exposes no config', () => {
