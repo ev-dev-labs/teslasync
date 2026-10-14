@@ -39,6 +39,60 @@ function metric(container: HTMLElement, id: string) {
 afterEach(cleanup);
 
 describe('SleepEvidenceOverview source trust through the existing evidence adapter', () => {
+  it.each([
+    ['absent', undefined],
+    ['null', null],
+    ['invalid collection', {}],
+    ['invalid count', [{ state: 'asleep', count: NaN, total_minutes: 0 }]],
+    ['infinite count', [{ state: 'asleep', count: Infinity, total_minutes: 0 }]],
+    ['null count', [{ state: 'asleep', count: null, total_minutes: 0 }]],
+    ['string count', [{ state: 'asleep', count: '0', total_minutes: 0 }]],
+    ['negative count', [{ state: 'asleep', count: -1, total_minutes: 0 }]],
+    ['fractional count', [{ state: 'asleep', count: 0.5, total_minutes: 0 }]],
+    ['missing state', [{ state: '', count: 0, total_minutes: 0 }]],
+  ])('withholds transition counts for %s inputs rather than inventing zero', (_label, rows) => {
+    const data = Object.assign(sleepEfficiencyFixture(), { state_distribution: rows });
+    const view = render(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />, { wrapper: Provider });
+    expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric(view.container, 'sleep-asleep-count-share')).toHaveAttribute('data-value-state', 'missing');
+  });
+
+  it('preserves supplied zero counts even when other rows are invalid', () => {
+    const data = {
+      ...sleepEfficiencyFixture(),
+      state_distribution: [
+        { state: 'asleep', count: 0, total_minutes: 0 },
+        { state: 'online', count: -1, total_minutes: 0 },
+      ],
+    };
+    const view = render(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />, { wrapper: Provider });
+    expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'value');
+    expect(metric(view.container, 'sleep-destinations').querySelector('[data-operational-value]')).toHaveTextContent('0');
+    expect(metric(view.container, 'sleep-asleep-count-share')).toHaveAttribute('data-value-state', 'missing');
+  });
+
+  it('preserves fractional duration evidence and signed source values without changing count validation', () => {
+    const data = {
+      ...sleepEfficiencyFixture(),
+      state_distribution: [
+        { state: 'asleep', count: 1, total_minutes: 0.5 },
+        { state: 'online', count: 1, total_minutes: 1.5 },
+      ],
+      time_to_sleep_avg_min: 0.25,
+      sentry_comparison: [
+        { sentry_mode: true, count: 1, avg_drain_rate: 0.25, avg_duration_hours: 0.5, avg_battery_lost: 0.125, avg_temp: -2.5 },
+        { sentry_mode: false, count: 1, avg_drain_rate: 0.5, avg_duration_hours: 0.5, avg_battery_lost: 0.25, avg_temp: -1.5 },
+      ],
+    };
+    const input = props({ data, isSuccess: true });
+    const view = render(<SleepEvidenceOverview {...input} />, { wrapper: Provider });
+    expect(metric(view.container, 'sleep-duration-efficiency').querySelector('[data-operational-value]')).toHaveTextContent('25');
+    expect(metric(view.container, 'sleep-average-time-to-sleep').querySelector('[data-operational-value]')).toHaveTextContent('0.25');
+    expect(input.analysis.sentry.drainRateDifference).toBe(-0.25);
+    expect(input.analysis.sentry.on.avgTempC).toBe(-2.5);
+    expect(metric(view.container, 'sleep-sentry-comparison')).toHaveAttribute('data-value-state', 'value');
+  });
+
   it('distinguishes active loading from paused without data and preserves all metric shells', () => {
     const view = render(<SleepEvidenceOverview {...props({ isLoading: true, isFetching: true, fetchStatus: 'fetching' })} />,
       { wrapper: Provider });
@@ -63,6 +117,8 @@ describe('SleepEvidenceOverview source trust through the existing evidence adapt
       sentry_comparison: [],
       recent_events: [],
       total_events: 0,
+      battery_capacity_wh: NaN,
+      base_cost_per_kwh: NaN,
     };
     const view = render(<SleepEvidenceOverview {...props({ data, isSuccess: true })} />, { wrapper: Provider });
     expect(metric(view.container, 'sleep-destinations')).toHaveAttribute('data-value-state', 'value');
