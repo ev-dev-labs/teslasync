@@ -1,17 +1,36 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { AuditLogRow } from '@/types/admin-operator-confidence';
 import { ApiError } from '@/lib/resilience';
+import { SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
+import { toDateTimeInput, toIsoOrUndefined } from '../components/structural-closure/audit-log/helpers';
 
-const { mockedRequest } = vi.hoisted(() => ({
+const { mockedRequest, preferences } = vi.hoisted(() => ({
   mockedRequest: vi.fn<(path: string, init?: RequestInit) => Promise<unknown>>(),
+  preferences: { timezone: '', headerRange: false },
 }));
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: mockedRequest };
+});
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return { ...actual, useSettings: () => {
+    const current = actual.useSettings();
+    return { ...current, settings: { ...current.settings, timezone_user: preferences.timezone, tz_display_default: 'user' } };
+  } };
+});
+
+vi.mock('@/lib/workspaceScope', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/workspaceScope')>('@/lib/workspaceScope');
+  return { ...actual, getWorkspaceRouteScope: (path: string) => ({
+    ...actual.getWorkspaceRouteScope(path),
+    ...(path === '/admin/audit-log' && preferences.headerRange ? { range: true } : {}),
+  }) };
 });
 
 describe('AuditLogPage deployment capability evidence', () => {
@@ -107,14 +126,22 @@ function install({ failLog = false, failVerify = false } = {}) {
   });
 }
 
-function renderPage() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
-  const rendered = render(<QueryClientProvider client={client}><MemoryRouter><AuditLogPage /></MemoryRouter></QueryClientProvider>);
+function renderPage(initialEntries = ['/'], client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } })) {
+  const rendered = render(<QueryClientProvider client={client}><MemoryRouter initialEntries={initialEntries}><AuditLogPage /></MemoryRouter></QueryClientProvider>);
   return { ...rendered, client };
 }
 
 beforeEach(() => {
   mockedRequest.mockReset();
+  preferences.timezone = '';
+  preferences.headerRange = false;
+  localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
+});
+
+afterEach(() => {
+  cleanup();
+  onlineManager.setOnline(true);
+  localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
 });
 
 describe('AuditLogPage presentation preservation', () => {
@@ -132,6 +159,141 @@ describe('AuditLogPage presentation preservation', () => {
     expect(within(details).getByText('Categories')).toBeInTheDocument();
     expect(details).toHaveTextContent('Current filtered page only; not the full ledger');
     expect(details).toHaveTextContent('Queried category catalog; not limited to this page');
+  });
+
+  describe('AuditLogPage bounded verification and unresolved sources', () => {
+    function receipt(data: { intact: boolean; rows_checked: number; first_bad_id: number }, updatedAt = Date.now() - 60_000) {
+      install();
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false, retryDelay: 0 } } });
+      client.setQueryData(['admin', 'audit-log', 'verify', null, 1000],
+        { ...data, since: '2026-09-01T12:34:00Z', limit: 1000 }, { updatedAt });
+      return renderPage(['/admin/audit-log'], client);
+    }
+
+    it.each([0, -1])('never calls an intact result with %s checked rows verification evidence', async (rows_checked) => {
+      receipt({ intact: true, rows_checked, first_bad_id: 0 });
+      await screen.findByText(ROW.actor);
+      expect(screen.getByText('No verification evidence')).toBeInTheDocument();
+      expect(screen.queryByText('Chain intact')).not.toBeInTheDocument();
+      expect(screen.getByText(/Bounded row-hash proof only/)).toHaveTextContent('not adjacency proof');
+      expect(mockedRequest.mock.calls.some(([path]) => path.startsWith('/admin/audit-log/verify'))).toBe(false);
+    });
+
+    it('retains the bounded receipt lower bound, cap, age and exact broken-row evidence', async () => {
+      receipt({ intact: false, rows_checked: 10, first_bad_id: 17 });
+      await screen.findByText(ROW.actor);
+      expect(screen.getByText('Chain broken')).toBeInTheDocument();
+      expect(screen.getByText('First bad row: #17')).toBeInTheDocument();
+      expect(screen.getByText('10 rows checked')).toBeInTheDocument();
+      expect(screen.getByText('Receipt since: 2026-09-01T12:34:00Z')).toBeInTheDocument();
+      expect(screen.getByText('Receipt limit: 1000')).toBeInTheDocument();
+      expect(screen.getByText(/Receipt: .*seconds old/)).toBeInTheDocument();
+    });
+
+    it('keeps an initial paused list unknown and records explicit paused verification rather than idle', async () => {
+      install();
+      onlineManager.setOnline(false);
+      renderPage();
+      expect(screen.queryByText('No audit entries')).not.toBeInTheDocument();
+      expect(screen.getByText('Entries have not been received; no empty ledger has been established.')).toBeInTheDocument();
+      expect(screen.getByText(/Read-only GET re-derives at most/)).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Verify chain' }));
+      expect(await screen.findByText('Verification was requested but is paused. No verification receipt has been received.')).toBeInTheDocument();
+      expect(screen.queryByText(/Read-only GET re-derives at most/)).not.toBeInTheDocument();
+      expect(mockedRequest).not.toHaveBeenCalled();
+      expect(screen.getByRole('textbox', { name: 'Actor' })).toBeInTheDocument();
+    });
+
+    it('shows a real empty list only after a successful response', async () => {
+      install();
+      const success = mockedRequest.getMockImplementation()!;
+      mockedRequest.mockImplementation(async (path, init) => path.startsWith('/admin/audit-log?')
+        ? { rows: [], limit: 100 } : success(path, init));
+      renderPage();
+      expect(await screen.findByText('No audit entries')).toBeInTheDocument();
+      expect(screen.queryByText('Entries have not been received; no empty ledger has been established.')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('AuditLogPage shared and minute-level range consumers', () => {
+    it('keeps fresh ledger access unbounded without manufacturing a seven-day default', async () => {
+      install();
+      renderPage(['/admin/audit-log']);
+      await screen.findByText(ROW.actor);
+      const listCalls = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/admin/audit-log?'));
+      expect(listCalls).not.toHaveLength(0);
+      expect(listCalls.every(([path]) => !new URLSearchParams(path.split('?')[1]).has('since')
+        && !new URLSearchParams(path.split('?')[1]).has('until'))).toBe(true);
+    });
+
+    it('consumes custom workspace URL dates in the saved zone with both full server bounds and no duplicate controls', async () => {
+      install();
+      preferences.timezone = 'America/Los_Angeles';
+      preferences.headerRange = true;
+      renderPage(['/admin/audit-log?from=2026-03-08&to=2026-03-08']);
+      await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => {
+        const params = new URLSearchParams(path.split('?')[1]);
+        return path.startsWith('/admin/audit-log?') && params.get('since') === '2026-03-08T08:00:00.000Z'
+          && params.get('until') === '2026-03-09T07:00:00.000Z';
+      })).toBe(true));
+      expect(screen.queryByLabelText('Since')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Until')).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+      expect(screen.getByText('Filter timezone: America/Los_Angeles')).toBeInTheDocument();
+    });
+
+    it('restores the existing saved shared range instead of inventing another preference', async () => {
+      install();
+      preferences.timezone = 'UTC';
+      localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify({
+        version: 2, start: '2026-10-01', end: '2026-10-02',
+      }));
+      renderPage(['/admin/audit-log']);
+      await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => {
+        const params = new URLSearchParams(path.split('?')[1]);
+        return params.get('since') === '2026-10-01T00:00:00.000Z' && params.get('until') === '2026-10-03T00:00:00.000Z';
+      })).toBe(true));
+      expect(JSON.parse(localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? 'null')).toEqual({
+        version: 2, start: '2026-10-01', end: '2026-10-02',
+      });
+    });
+
+    it('restores exact minute-level URL instants and retains the selected row limit on reset', async () => {
+      install();
+      preferences.timezone = 'America/Los_Angeles';
+      renderPage(['/admin/audit-log?since=2026-10-04T15%3A30%3A00Z&until=2026-10-05T15%3A45%3A00Z']);
+      await screen.findByText(ROW.actor);
+      expect(screen.getByLabelText('Since')).toHaveValue('2026-10-04T08:30');
+      expect(screen.getByLabelText('Until')).toHaveValue('2026-10-05T08:45');
+      fireEvent.change(screen.getByRole('combobox', { name: 'Rows per page' }), { target: { value: '250' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Reset' }));
+      expect(screen.getByRole('combobox', { name: 'Rows per page' })).toHaveValue('250');
+      expect(screen.getByLabelText('Since')).toHaveValue('');
+      expect(screen.getByLabelText('Until')).toHaveValue('');
+    });
+
+    it('keeps minute-level editing available until the actual header capability exists', async () => {
+      install();
+      preferences.timezone = 'UTC';
+      renderPage(['/admin/audit-log?from=2026-10-01&to=2026-10-02']);
+      await screen.findByText(ROW.actor);
+      expect(screen.getByLabelText('Since')).toHaveValue('2026-10-01T00:00');
+      fireEvent.change(screen.getByLabelText('Since'), { target: { value: '2026-10-01T08:30' } });
+      await waitFor(() => expect(mockedRequest.mock.calls.some(([path]) => {
+        const params = new URLSearchParams(path.split('?')[1]);
+        return params.get('since') === '2026-10-01T08:30:00.000Z'
+          && params.get('until') === '2026-10-03T00:00:00.000Z';
+      })).toBe(true));
+    });
+
+    it('interprets civil minutes in the supplied zone, including DST gaps and repeated minutes', () => {
+      expect(toIsoOrUndefined('2026-10-04T08:30', 'America/Los_Angeles')).toBe('2026-10-04T15:30:00.000Z');
+      expect(toIsoOrUndefined('2026-03-08T02:30', 'America/Los_Angeles')).toBeUndefined();
+      expect(toIsoOrUndefined('2026-11-01T01:30', 'America/Los_Angeles')).toBe('2026-11-01T08:30:00.000Z');
+      expect(toIsoOrUndefined('bad', 'UTC')).toBeUndefined();
+      expect(toDateTimeInput('2026-10-04T15:30:00Z', 'America/Los_Angeles')).toBe('2026-10-04T08:30');
+    });
   });
 
   it('uses the canonical six-metric strip with honest page and independent catalog scope', async () => {

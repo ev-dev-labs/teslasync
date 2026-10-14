@@ -1,18 +1,22 @@
 import { Search, X as XIcon } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
-import { Button, Input, Select } from '@/components/ui';
+import { Button, Caption, Input, Select } from '@/components/ui';
 import type { useAuditLogPage } from '../../../hooks/useAuditLogPage';
 import { LIMIT_OPTIONS } from './helpers';
 
 type Props = { controller: ReturnType<typeof useAuditLogPage> };
 
 export function AuditLogFilters({ controller }: Props) {
-  const { t, since, setSince, until, setUntil, category, setCategory, action, setAction, actor, setActor, entityType, setEntityType, limit, setLimit, setOffset, logQuery, categoryOptions, actionOptions, handleReset } = controller;
+  const { t, since, setSince, until, setUntil, category, setCategory, action, setAction, actor, setActor, entityType, setEntityType, limit, setLimit, setOffset, logQuery, categoryOptions, actionOptions, handleReset, workspaceRangeAvailable, timezone } = controller;
 
   return (
 <div className="min-w-0 xl:col-span-2">
           <LayoutCard title={t('admin.auditLog.filtersTitle', 'Filters')}>
+            <Caption className="mb-3 block">
+              {t('admin.auditLog.rangeZone', 'Filter timezone: {{timezone}}', { timezone })}
+            </Caption>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 3xl:grid-cols-3">
+              {!workspaceRangeAvailable && <>
               <Input
                 type="datetime-local"
                 label={t('admin.auditLog.sinceLabel', 'Since')}
@@ -31,6 +35,7 @@ export function AuditLogFilters({ controller }: Props) {
                   setOffset(0);
                 }}
               />
+              </>}
               <Select
                 label={t('admin.auditLog.categoryLabel', 'Category')}
                 options={categoryOptions}

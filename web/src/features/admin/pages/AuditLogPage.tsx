@@ -4,13 +4,14 @@
  * Full-width modern-ui cockpit: a derived KPI band, a controls bento
  * (filters + hash-chain integrity), and a full-bleed entries table with
  * expandable rows and CSV export. Page-controller filters scope the server
- * request; they are not persisted in the browser URL.
+ * request. Time bounds consume shared workspace/URL state; minute-level
+ * bounds remain URL-backed until the route's shared capability is available.
  *
  * Backed by:
  *   GET /admin/audit-log            (filtered list)
  *   GET /admin/audit-log/categories (filter dropdown)
  *   GET /admin/audit-log/actions    (filter dropdown)
- *   GET /admin/audit-log/verify     (chain re-derivation)
+ *   GET /admin/audit-log/verify     (bounded row-hash re-derivation)
  *
  * The shared request() client prepends /api/v1, so the hook URLs above
  * carry no prefix. See internal/handler/v1/admin_audit_handler.go and
@@ -36,7 +37,13 @@ export default function AuditLogPage() {
     subsystemMissing,
     tableError: subsystemMissing ? null : fatalError,
   };
-  const { t, logQuery, categoriesQuery, actionsQuery, verifyQuery, verifyState } = controller;
+  const { t, logQuery, logState, categoriesQuery, actionsQuery, verifyQuery, verifyState, verificationRequested } = controller;
+  // The existing entries seam uses isLoading to guard an unresolved body.
+  // Keep actual transport state intact for PageLayout and source notices.
+  const entriesController = {
+    ...controller,
+    logQuery: { ...logQuery, isLoading: logQuery.isLoading || (!logState.hasData && !logState.fatalError) },
+  };
   return (
     <PageLayout
       title={t('admin.auditLog.pageTitle', 'Audit log')}
@@ -49,7 +56,7 @@ export default function AuditLogPage() {
         { id: 'audit-entries', label: t('admin.auditLog.tableTitle', 'Entries'), query: logQuery },
         { id: 'audit-categories', label: t('admin.auditLog.kpiCategories', 'Categories'), query: categoriesQuery },
         { id: 'audit-actions', label: t('admin.auditLog.kpiActions', 'Action types'), query: actionsQuery },
-        { id: 'audit-integrity', label: t('admin.auditLog.integrityTitle', 'Hash chain integrity'), query: verifyQuery, enabled: verifyQuery.isFetching || verifyState.hasData || Boolean(verifyState.fatalError) },
+        { id: 'audit-integrity', label: t('admin.auditLog.integrityTitle', 'Hash chain integrity'), query: verifyQuery, enabled: verificationRequested || verifyQuery.isFetching || verifyState.hasData || Boolean(verifyState.fatalError) },
       ]}
     >
       {subsystemMissing && (
@@ -72,7 +79,14 @@ export default function AuditLogPage() {
           <AuditLogIntegrity controller={controller} />
         </section>
       </FadeIn>
-      <AuditLogEntries controller={controller} />
+      {!logState.hasData && !logState.fatalError && !logQuery.isFetching && (
+        <DataStateNotice state="partial" title={logState.isRefreshBlocked
+          ? t('fleetOps.brief.refreshBlocked', 'Refresh paused')
+          : t('common.unknown', 'Unknown')}>
+          {t('admin.auditLog.entriesUnresolved', 'Entries have not been received; no empty ledger has been established.')}
+        </DataStateNotice>
+      )}
+      <AuditLogEntries controller={entriesController} />
     </PageLayout>
   );
 }

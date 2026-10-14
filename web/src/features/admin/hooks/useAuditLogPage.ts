@@ -1,42 +1,101 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSettings } from '@/hooks/useSettings';
+import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '@/hooks/useRangeState';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
+import { getDatePreset } from '@/lib/datePresets';
+import { formatDateTime as formatTimestamp } from '@/lib/dateFormat';
+import { resolveTimezone } from '@/lib/timezone';
 import { useAuditLog, useAuditCategories, useAuditActions, useAuditChainVerify } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
 import { deriveDataState } from '@/api/dataState';
 import type { AuditLogQueryParams } from '@/types/admin-operator-confidence';
-import { toIsoOrUndefined } from '../components/structural-closure/audit-log/helpers';
+import { toDateTimeInput, toIsoOrUndefined } from '../components/structural-closure/audit-log/helpers';
 
 export function useAuditLogPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.auditLog.pageTitle', 'Audit log'));
 
-  // Filter state — string fields are empty=unset, never undefined,
-  // so the controlled inputs stay controlled.
-  const [since, setSince] = useState('');
-  const [until, setUntil] = useState('');
+  const { pathname } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { settings, locale } = useSettings();
+  const tz = resolveTimezone(settings.tz_display_default === 'utc' ? 'utc' : 'user', null, settings.timezone_user);
+  const formatDateTime = (value: string | Date) => formatTimestamp(value, { locale, tz });
+  const range = useRangeState({ timezone: tz });
+  const workspaceRangeAvailable = getWorkspaceRouteScope(pathname).range;
+  // No implicit seven-day restriction on a previously unbounded ledger.
+  // The shared owner must adjudicate its default before enabling this route.
+  let hasSavedRange = false;
+  try {
+    const saved: unknown = JSON.parse(localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? 'null');
+    if (saved && typeof saved === 'object' && 'version' in saved && saved.version === 2
+      && 'start' in saved && 'end' in saved && typeof saved.start === 'string' && typeof saved.end === 'string') {
+      hasSavedRange = /^\d{4}-\d{2}-\d{2}$/.test(saved.start) && /^\d{4}-\d{2}-\d{2}$/.test(saved.end)
+        && saved.start <= saved.end && Number.isFinite(Date.parse(saved.start)) && Number.isFinite(Date.parse(saved.end));
+    }
+  } catch {
+    // A denied or invalid preference cannot silently narrow the ledger.
+  }
+  const from = searchParams.get('from') ?? '';
+  const to = searchParams.get('to') ?? '';
+  const scope = searchParams.get('time_scope');
+  const calendarRange = /^\d{4}-\d{2}-\d{2}$/.test(from) && /^\d{4}-\d{2}-\d{2}$/.test(to)
+    && from <= to && Number.isFinite(Date.parse(from)) && Number.isFinite(Date.parse(to));
+  const sharedRangeActive = !searchParams.has('since') && !searchParams.has('until')
+    && Boolean(calendarRange || (scope && getDatePreset(scope)) || hasSavedRange);
+  const since = toDateTimeInput(sharedRangeActive ? range.startInstant : searchParams.get('since') ?? '', tz);
+  const until = toDateTimeInput(sharedRangeActive ? range.endInstantExclusive : searchParams.get('until') ?? '', tz);
+  const setBound = (key: 'since' | 'until', value: string) => {
+    const iso = toIsoOrUndefined(value, tz);
+    setSearchParams((previous) => {
+      const next = new URLSearchParams(previous);
+      if (sharedRangeActive && !workspaceRangeAvailable) {
+        next.set('since', range.startInstant);
+        next.set('until', range.endInstantExclusive);
+        next.delete('from');
+        next.delete('to');
+        next.delete('time_scope');
+      }
+      if (iso) next.set(key, iso);
+      else next.delete(key);
+      return next;
+    }, { replace: true });
+    setOffset(0);
+  };
+  const setSince = (value: string) => setBound('since', value);
+  const setUntil = (value: string) => setBound('until', value);
   const [category, setCategory] = useState('');
   const [action, setAction] = useState('');
   const [actor, setActor] = useState('');
   const [entityType, setEntityType] = useState('');
   const [limit, setLimit] = useState('100');
-  const [offset, setOffset] = useState(0);
+  const rangeKey = sharedRangeActive
+    ? `${range.startInstant}|${range.endInstantExclusive}`
+    : `${searchParams.get('since') ?? ''}|${searchParams.get('until') ?? ''}`;
+  const [page, setPage] = useState({ rangeKey, offset: 0 });
+  const offset = page.rangeKey === rangeKey ? page.offset : 0;
+  const setOffset = (next: number) => setPage({ rangeKey, offset: next });
   const [expanded, setExpanded] = useState<(string | number)[]>([]);
+  const [verificationRequested, setVerificationRequested] = useState(false);
 
   const queryParams = useMemo<AuditLogQueryParams>(() => {
     const p: AuditLogQueryParams = { limit: Number(limit), offset };
-    const sinceIso = toIsoOrUndefined(since);
-    const untilIso = toIsoOrUndefined(until);
-    if (sinceIso) p.since = sinceIso;
-    if (untilIso) p.until = untilIso;
+    const sinceIso = sharedRangeActive ? range.startInstant : searchParams.get('since');
+    const untilIso = sharedRangeActive ? range.endInstantExclusive : searchParams.get('until');
+    if (sinceIso && Number.isFinite(Date.parse(sinceIso))) p.since = sinceIso;
+    if (untilIso && Number.isFinite(Date.parse(untilIso))) p.until = untilIso;
     if (category) p.categories = [category];
     if (action) p.actions = [action];
     if (actor) p.actors = [actor];
     if (entityType) p.entity_type = entityType;
     return p;
-  }, [since, until, category, action, actor, entityType, limit, offset]);
+  }, [sharedRangeActive, range.startInstant, range.endInstantExclusive, searchParams,
+    category, action, actor, entityType, limit, offset]);
 
-  const logQuery = useAuditLog(queryParams);
+  const logSource = useAuditLog(queryParams);
+  const logQuery = { ...logSource, isLoading: Boolean(logSource.isLoading) };
   const categoriesQuery = useAuditCategories();
   const actionsQuery = useAuditActions();
   const verifyQuery = useAuditChainVerify(null, 1000, false);
@@ -45,7 +104,8 @@ export function useAuditLogPage() {
   const actionsState = deriveDataState(actionsQuery);
   const verifyState = deriveDataState(verifyQuery);
 
-  const subsystemMissing = isApiError(logState.fatalError) && logState.fatalError.status === 503;
+  const subsystemMissing = isApiError(logState.fatalError) && logState.fatalError.status === 503
+    && logState.fatalError.code === 'SUBSYSTEM_NOT_CONFIGURED';
   const tableError = subsystemMissing ? null : logState.fatalError;
 
   const rows = logQuery.data?.rows ?? [];
@@ -83,8 +143,14 @@ export function useAuditLogPage() {
   }, [actionsQuery.data, t]);
 
   const handleReset = () => {
-    setSince('');
-    setUntil('');
+    if (!workspaceRangeAvailable && !sharedRangeActive) {
+      setSearchParams((previous) => {
+        const next = new URLSearchParams(previous);
+        next.delete('since');
+        next.delete('until');
+        return next;
+      }, { replace: true });
+    }
     setCategory('');
     setAction('');
     setActor('');
@@ -98,8 +164,13 @@ export function useAuditLogPage() {
     );
   };
 
+  const handleVerify = () => {
+    setVerificationRequested(true);
+    void verifyQuery.refetch();
+  };
 
   return {
-    t, since, setSince, until, setUntil, category, setCategory, action, setAction, actor, setActor, entityType, setEntityType, limit, setLimit, offset, setOffset, expanded, setExpanded, logQuery, categoriesQuery, actionsQuery, verifyQuery, logState, categoriesState, actionsState, verifyState, subsystemMissing, tableError, rows, verifyData, failedCount, okCount, distinctActors, categoriesCount, actionsCount, countsReady, categoriesReady, actionsReady, categoryOptions, actionOptions, handleReset, toggleExpanded
+    t, since, setSince, until, setUntil, category, setCategory, action, setAction, actor, setActor, entityType, setEntityType, limit, setLimit, offset, setOffset, expanded, setExpanded, logQuery, categoriesQuery, actionsQuery, verifyQuery, logState, categoriesState, actionsState, verifyState, subsystemMissing, tableError, rows, verifyData, failedCount, okCount, distinctActors, categoriesCount, actionsCount, countsReady, categoriesReady, actionsReady, categoryOptions, actionOptions, handleReset, toggleExpanded,
+    workspaceRangeAvailable, sharedRangeActive, range, timezone: tz, formatDateTime, verificationRequested, handleVerify,
   };
 }
