@@ -429,6 +429,26 @@ describe('PresetGallery — trigger labels', () => {
 
 // ── Interaction + a11y ───────────────────────────────────────────────────────
 describe('PresetGallery — install interaction & a11y', () => {
+  it('uses nonshrinking details and wrapping install targets in a narrow populated card', () => {
+    const name = 'A long preset name preserving the full scheduled departure policy';
+    mockUsePresets.mockReturnValue(hookResult({
+      data: { categories: [], presets: [makePreset({ name })] },
+    }));
+    renderGallery();
+    const details = screen.getByRole('button', { name: `Details for ${name}` });
+    const install = screen.getByRole('button', { name: `Install ${name}` });
+    expect(details).toHaveClass('h-11', 'w-11', 'min-h-11', 'min-w-11', 'shrink-0');
+    expect(install).toHaveClass('min-h-11', 'w-full', 'whitespace-normal');
+    const card = install.closest('[data-print-card]');
+    expect(card).toHaveClass('min-w-0', 'p-4', 'gap-3');
+    expect(card?.parentElement).toHaveClass('min-w-0');
+    expect(card).not.toHaveClass('hover:border-[var(--semantic-info-border)]');
+    details.focus();
+    expect(screen.getByRole('tooltip')).toHaveTextContent(name);
+    fireEvent.click(install);
+    expect(navigateMock).toHaveBeenCalledWith('/automations/new?preset=preset-1');
+  });
+
   it('navigates to the builder with the preset id when Install is clicked', () => {
     mockUsePresets.mockReturnValue(
       hookResult({

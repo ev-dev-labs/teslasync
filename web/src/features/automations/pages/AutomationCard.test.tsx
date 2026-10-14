@@ -146,6 +146,23 @@ beforeEach(() => {
 // ── Status badge + toggle state ───────────────────────────────────────────────
 
 describe('AutomationCard — status', () => {
+  it('keeps distinct reachable header targets and wraps populated narrow cards', () => {
+    const name = 'A long automation name with all departure conditions preserved';
+    const { container } = renderCard(makeAutomation({
+      name,
+      description: 'Precondition the cabin and notify before the scheduled departure.',
+      execution_count: 42,
+    }));
+    const pin = screen.getByTestId('pin-button');
+    expect(pin).toHaveClass('min-h-11', 'min-w-11');
+    const toggle = screen.getByRole('switch', { name: 'Toggle automation' });
+    expect(toggle).toHaveClass('h-11', 'min-w-11', 'shrink-0');
+    expect(screen.getByRole('button', { name: 'Actions menu' })).toHaveClass('min-h-11', 'min-w-11');
+    expect(toggle.parentElement?.parentElement).toHaveClass('flex-wrap', 'gap-2', 'max-w-full');
+    expect(screen.getByRole('heading', { name })).toHaveClass('min-w-0', 'break-words');
+    expect(container.textContent).toContain('Runs: 42');
+  });
+
   it('renders the automation name and an Active badge with the switch on when enabled', () => {
     renderCard(makeAutomation({ name: 'Morning warmup', enabled: true }));
     expect(screen.getByRole('heading', { name: 'Morning warmup' })).toBeInTheDocument();

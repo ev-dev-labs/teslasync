@@ -76,7 +76,7 @@ export function AutomationCard({
         className={cn(
           'min-w-0 p-4 transition-all duration-normal motion-reduce:transition-none',
           isFiring && 'ring-2 ring-[var(--theme-primary)]',
-          uiStatus === 'auto-disabled' && 'border-red-500/30',
+          uiStatus === 'auto-disabled' && 'border-[var(--semantic-danger)]',
         )}
       >
         <div className="flex min-w-0 flex-wrap items-start justify-between gap-3">
@@ -96,7 +96,7 @@ export function AutomationCard({
             )}
           </div>
           <div className="flex max-w-full flex-wrap items-center gap-2">
-            <PinButton itemType="automation" itemId={a.id} size="sm" />
+            <PinButton itemType="automation" itemId={a.id} size="sm" minTargetSize={44} />
             <Toggle
               checked={a.auto_disabled ? false : a.enabled}
               onChange={handleToggle}

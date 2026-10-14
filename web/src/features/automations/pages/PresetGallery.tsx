@@ -77,10 +77,10 @@ function PresetCard({
   };
 
   return (
-    <GlassPanel hover glow="cyan" className="flex h-full flex-col gap-3 p-5">
+    <GlassPanel className="flex h-full min-w-0 flex-col gap-3 p-4">
       <div className="flex min-h-24 items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-          <Icon className="h-5 w-5 text-cyan-400" aria-hidden="true" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)]">
+          <Icon className="h-5 w-5 text-[var(--text-secondary)]" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <Text as="h3" variant="bodySm" weight="semibold" color="primary" className="break-words">
@@ -106,7 +106,7 @@ function PresetCard({
             variant="ghost"
             size="sm"
             aria-label={t('automations.presets.details', 'Details for {{name}}', { name: preset.name })}
-            className="h-8 w-8 shrink-0 p-0"
+            className="h-11 w-11 min-h-11 min-w-11 shrink-0 p-0"
           >
             <Icons.info className="h-4 w-4" aria-hidden="true" />
           </UiButton>
@@ -127,7 +127,7 @@ function PresetCard({
         aria-label={t('automations.presets.installNamed', 'Install {{name}}', {
           name: preset.name,
         })}
-        className="mt-auto w-full"
+        className="mt-auto min-h-11 w-full"
       >
         <Icons.add className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
         {t('automations.presets.install', 'Install')}
@@ -138,7 +138,7 @@ function PresetCard({
 
 function PresetCardSkeleton() {
   return (
-    <GlassPanel className="flex h-full flex-col gap-3 p-5">
+    <GlassPanel className="flex h-full min-w-0 flex-col gap-3 p-4">
       <div className="flex items-start gap-3">
         <Skeleton className="w-10 h-10 rounded-lg" />
         <div className="flex-1">
@@ -147,7 +147,7 @@ function PresetCardSkeleton() {
         </div>
       </div>
       <Skeleton className="h-8 w-full" />
-      <Skeleton className="h-7 w-full mt-auto" />
+      <Skeleton className="h-11 w-full mt-auto" />
     </GlassPanel>
   );
 }
@@ -265,7 +265,7 @@ export function PresetGallery({
         <FadeIn>
           <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredPresets.map((preset) => (
-              <StaggerItem key={preset.id} className="h-full">
+              <StaggerItem key={preset.id} className="h-full min-w-0">
                 <PresetCard
                   preset={preset}
                   actionsDisabled={actionsDisabled}
