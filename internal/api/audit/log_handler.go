@@ -1,6 +1,7 @@
 package audit
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -8,18 +9,31 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
+	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
+
+type activityQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+}
 
 // AuditHandler handles audit log endpoints.
 type AuditHandler struct {
 	db                *database.DB
+	activityPool      activityQuerier
 	forwardAuthHeader string
 }
 
 // NewAuditHandler creates an AuditHandler. Without a ForwardAuth header,
 // per-user activity returns 503 because rows cannot be scoped safely.
 func NewAuditHandler(db *database.DB, forwardAuthHeader string) *AuditHandler {
-	return &AuditHandler{db: db, forwardAuthHeader: forwardAuthHeader}
+	h := &AuditHandler{db: db, forwardAuthHeader: forwardAuthHeader}
+	if db != nil && db.Pool != nil {
+		h.activityPool = db.Pool
+	}
+	return h
 }
 
 // List returns recent audit log entries.
@@ -67,13 +81,17 @@ type userActivityEntry struct {
 //
 // Identity is resolved from the configured ForwardAuth header. When the
 // install is not running behind a reverse-proxy auth provider (header name
-// unset OR header value empty for the request), the endpoint returns 503
+// unset), the endpoint returns 503; a missing request identity returns 401
 // rather than collapsing every "anonymous" caller into a single shared feed.
+// Database and row-decoding failures return 500, never an empty or partial feed.
 //
 // Query params:
 //   - start, end (YYYY-MM-DD, optional): defaults to last 30 days
 //   - limit (1..200, default 50), offset (>=0, default 0)
 func (h *AuditHandler) UserActivity(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "audit.UserActivity")
+	defer span.End()
+
 	if h.forwardAuthHeader == "" {
 		httpx.WriteError(w, http.StatusServiceUnavailable, "per-user activity requires a ForwardAuth identity provider; set FORWARD_AUTH_HEADER to enable")
 		return
@@ -101,7 +119,12 @@ func (h *AuditHandler) UserActivity(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := h.db.Pool.Query(r.Context(),
+	if h.activityPool == nil {
+		httpx.WriteError(w, http.StatusServiceUnavailable, "activity storage unavailable")
+		return
+	}
+
+	rows, err := h.activityPool.Query(ctx,
 		`SELECT id, ts, action, entity_type, entity_id, detail
 		   FROM audit_logs
 		  WHERE actor = $1 AND ts BETWEEN $2 AND $3
@@ -109,8 +132,7 @@ func (h *AuditHandler) UserActivity(w http.ResponseWriter, r *http.Request) {
 		  LIMIT $4 OFFSET $5`,
 		actor, start, end, limit, offset)
 	if err != nil {
-		// Early installs may not have audit_logs yet; keep the dashboard degraded, not broken.
-		httpx.WriteJSON(w, http.StatusOK, []userActivityEntry{})
+		writeActivityError(w, span, err)
 		return
 	}
 	defer rows.Close()
@@ -119,9 +141,20 @@ func (h *AuditHandler) UserActivity(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var e userActivityEntry
 		if err := rows.Scan(&e.ID, &e.Ts, &e.Action, &e.EntityType, &e.EntityID, &e.Detail); err != nil {
-			continue
+			writeActivityError(w, span, err)
+			return
 		}
 		entries = append(entries, e)
 	}
+	if err := rows.Err(); err != nil {
+		writeActivityError(w, span, err)
+		return
+	}
 	httpx.WriteJSON(w, http.StatusOK, entries)
+}
+
+func writeActivityError(w http.ResponseWriter, span trace.Span, err error) {
+	span.RecordError(err)
+	log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).Msg("failed to load user activity")
+	httpx.WriteError(w, http.StatusInternalServerError, "failed to load user activity")
 }
