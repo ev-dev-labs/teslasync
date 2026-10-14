@@ -9,6 +9,9 @@ import type { ConnectionPool, DBStats, MigrationStatus } from '@/types/admin';
 import { formatDateTime } from '@/lib/dateFormat';
 import { DBHealthSummary } from './DBHealthSummary';
 
+vi.unmock('@/hooks/useSettings');
+vi.unmock('@/lib/timezone');
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string, vars?: Record<string, unknown>) =>
@@ -125,6 +128,8 @@ describe('DB health canonical summary preservation', () => {
     await act(async () => {
       client.setQueryData<AppSettings>(['settings'], { ...settings, locale, timezone_user: tz });
     });
+    expect(client.getQueryData<AppSettings>(['settings'])).toMatchObject({ locale, timezone_user: tz });
+    expect(client.getQueryCache().find({ queryKey: ['settings'] })?.getObserversCount()).toBeGreaterThan(0);
     await waitFor(() => {
       timestamps.forEach((timestamp, index) => {
         const brief = screen.getByTestId(`db-health-summary-${index}`);
