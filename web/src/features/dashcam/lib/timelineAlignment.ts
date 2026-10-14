@@ -88,7 +88,7 @@ export function toReconstructionMarkers(result: ReconstructionResult): Reconstru
  * is null or unparseable — callers must treat that as "cannot align".
  */
 export function resolveClipEpochMs(capturedAtRaw: string | null, offsetMinutes: number): number | null {
-  if (!capturedAtRaw) return null;
+  if (!capturedAtRaw || !Number.isFinite(offsetMinutes)) return null;
   const naiveUtcMs = Date.parse(`${capturedAtRaw}Z`);
   if (!Number.isFinite(naiveUtcMs)) return null;
   return naiveUtcMs - offsetMinutes * 60_000;
@@ -149,22 +149,33 @@ export function alignSignalHistoryToClip(params: {
       if (!Number.isFinite(epochMs)) continue;
       const atSeconds = (epochMs - clipStartEpochMs) / 1000;
       if (atSeconds < windowStart || atSeconds > windowEnd) continue;
-      const value = p.valueNum ?? p.valueStr ?? (p.valueBool != null ? p.valueBool : null);
+      const value = p.valueNum != null
+        ? (Number.isFinite(p.valueNum) ? p.valueNum : null)
+        : p.valueStr ?? p.valueBool ?? null;
       points.push({ atSeconds, timestamp: p.timestamp, value });
     }
     points.sort((a, b) => a.atSeconds - b.atSeconds);
 
-    let largestGap = 0;
+    const measuredPoints = points.filter((p) => p.value !== null);
+    // Boundary spans are uncovered too; samples do not imply continuity to the requested bounds.
+    let largestGap = measuredPoints.length > 0
+      ? Math.max(
+        measuredPoints[0].atSeconds - windowStart,
+        windowEnd - measuredPoints[measuredPoints.length - 1].atSeconds,
+      )
+      : windowSeconds;
     const gapNotes: string[] = [];
-    for (let i = 1; i < points.length; i++) {
-      const gap = points[i].atSeconds - points[i - 1].atSeconds;
+    for (let i = 1; i < measuredPoints.length; i++) {
+      const gap = measuredPoints[i].atSeconds - measuredPoints[i - 1].atSeconds;
       if (gap > largestGap) largestGap = gap;
     }
-    const coverage = classifyCoverage(points.length, largestGap, windowSeconds);
+    const coverage = classifyCoverage(measuredPoints.length, largestGap, windowSeconds);
     if (coverage === 'none') {
-      gapNotes.push(`No telemetry samples found for "${input.signal}" in the reconstruction window.`);
+      gapNotes.push(points.length > 0
+        ? `No usable telemetry values found for "${input.signal}" in the reconstruction window.`
+        : `No telemetry samples found for "${input.signal}" in the reconstruction window.`);
     } else if (coverage === 'sparse') {
-      gapNotes.push(`Only ${points.length} sample(s) for "${input.signal}" — too few to plot a reliable trend.`);
+      gapNotes.push(`Only ${measuredPoints.length} sample(s) for "${input.signal}" — too few to plot a reliable trend.`);
     } else if (coverage === 'partial') {
       gapNotes.push(
         `Largest data gap for "${input.signal}" is ${largestGap.toFixed(1)}s (${Math.round((largestGap / windowSeconds) * 100)}% of the window).`,
