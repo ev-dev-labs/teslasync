@@ -57,6 +57,7 @@ export default function FederatedLearningStudioPage() {
   const mutationError = mutation.variables?.vehicle_id === vehicleId ? mutation.error : null;
   const roundResult = mutation.data?.model_card.vehicle_id === vehicleId ? mutation.data : undefined;
   const cards = query.data?.items ?? [];
+  const evidenceSource = roundResult ? { data: roundResult } : query;
   const summaryMetrics: readonly StatMetric[] = [
     { occurrenceId: 'epsilon-budget', metricId: 'ratio', rawValue: query.data?.total_epsilon_budget,
       label: t('advancedIntelligence.federated.budget.total', 'Total epsilon budget'),
@@ -266,9 +267,10 @@ export default function FederatedLearningStudioPage() {
 
       <FadeIn delay={0.15}>
         <EvidencePanel
-          quality={roundResult?.data_quality ?? query.data?.data_quality}
-          evidence={roundResult?.evidence ?? query.data?.evidence}
-          limitations={cards.flatMap((card) => card.limitations ?? [])}
+          query={evidenceSource}
+          quality={evidenceSource.data?.data_quality}
+          evidence={evidenceSource.data?.evidence}
+          limitations={roundResult ? roundResult.model_card.limitations : cards.flatMap((card) => card.limitations ?? [])}
           unsupported={[
             t('advancedIntelligence.federated.unsupported.upload', 'Raw-data or gradient upload'),
             t('advancedIntelligence.federated.unsupported.global', 'A centralized fleet model or cross-subject access'),

@@ -64,6 +64,27 @@ function populate(items = [card], total = items.length) {
   };
 }
 
+function completedRound(vehicleId = 7): FederatedRoundResult {
+  return {
+    model_card: { ...card, vehicle_id: vehicleId, limitations: ['Round-local limitation.'] },
+    round: {
+      id: 9, model_card_id: card.id, round_number: 5, requested_epsilon: 0.1,
+      epsilon_spent: 0.1, sample_count: 5, local_metric_wh_per_m: 0.25,
+      clipped_update_pct: null, status: 'completed',
+      started_at: '2026-08-04T00:00:00Z', completed_at: '2026-08-04T00:01:00Z',
+    },
+    data_quality: {
+      status: 'sufficient', sample_count: 5, coverage_pct: 80,
+      window_start: null, window_end: null, reasons: ['Round-local coverage.'],
+    },
+    evidence: [{ source: 'local-round', observed_at: null, sample_count: 5, summary: 'Round-local evidence.' }],
+  };
+}
+
+function evidenceContainer() {
+  return screen.getByRole('region', { name: 'Evidence sources' }).parentElement!;
+}
+
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   function Providers({ children }: { children: ReactNode }) {
@@ -266,6 +287,156 @@ describe('Federated learning studio scoped adoption', () => {
     expect(screen.getAllByText('Select a vehicle to load intelligence.')).toHaveLength(4);
     expect(screen.getByRole('button', { name: 'Review privacy spend' })).toBeDisabled();
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'healthy', source: {} },
+    { name: 'refresh failed', source: { error: new Error('Synthetic list refresh failure.') } },
+    { name: 'refresh paused', source: { fetchStatus: 'paused' as const } },
+  ])('pairs the winning round metadata and trust independently of a $name list', ({ source }) => {
+    populate();
+    Object.assign(state.query, source);
+    state.mutation.data = completedRound();
+    const before = structuredClone({ list: state.query.data, round: state.mutation.data });
+    renderPage();
+    const container = evidenceContainer();
+    const evidence = within(container);
+    expect(container).toHaveAttribute('data-source-status', 'ok');
+    expect(container).toHaveAttribute('data-source-provenance', 'cached');
+    expect(container).toHaveAttribute('aria-busy', 'false');
+    ['sufficient', '• Round-local coverage.', 'local-round', 'Round-local evidence.', '• Round-local limitation.']
+      .forEach(text => expect(evidence.getByText(text)).toBeInTheDocument());
+    ['limited', 'local-budget', '• Local coverage only.', '• Local aggregate only.']
+      .forEach(text => expect(evidence.queryByText(text)).not.toBeInTheDocument());
+    expect(screen.getByRole('table', { name: 'local-efficiency' })).toBeInTheDocument();
+    expect(screen.getByText('Synthetic local aggregate privacy policy.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Subject privacy budget' })).toBeInTheDocument();
+    expect(evidence.queryByRole('button', { name: /Refresh|Retry/ })).not.toBeInTheDocument();
+    expect({ list: state.query.data, round: state.mutation.data }).toEqual(before);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not borrow list evidence or limitations when the winning round returns empty metadata arrays', () => {
+    populate();
+    state.mutation.data = {
+      ...completedRound(),
+      model_card: { ...card, limitations: [] },
+      evidence: [],
+      data_quality: { ...completedRound().data_quality, sample_count: 0, coverage_pct: null, reasons: [] },
+    };
+    renderPage();
+    const evidence = within(evidenceContainer());
+    expect(evidence.getByText('sufficient')).toBeInTheDocument();
+    expect(evidence.getByText('No supporting evidence was returned.')).toBeInTheDocument();
+    expect(evidence.getByText('No additional limitations were returned.')).toBeInTheDocument();
+    expect(evidence.queryByText('local-budget')).not.toBeInTheDocument();
+    expect(evidence.queryByText('• Local aggregate only.')).not.toBeInTheDocument();
+    expect(evidence.queryByText('• Local coverage only.')).not.toBeInTheDocument();
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('switches the complete metadata and trust pair away from an old-vehicle round on scope changes', () => {
+    populate();
+    state.mutation.data = completedRound();
+    const oldRound = structuredClone(state.mutation.data);
+    const view = renderPage();
+    expect(within(evidenceContainer()).getByText('local-round')).toBeInTheDocument();
+    state.vehicleId = 8;
+    state.query = { fetchStatus: 'paused', refetch: state.retry };
+    view.update();
+    expect(state.read).toHaveBeenLastCalledWith(8, 12, 0);
+    expect(evidenceContainer()).toHaveAttribute('data-source-status', 'initial');
+    expect(evidenceContainer()).toHaveAttribute('data-source-provenance', 'unknown');
+    expect(within(evidenceContainer()).getAllByText('Unknown')).toHaveLength(3);
+    expect(within(evidenceContainer()).queryByText('local-round')).not.toBeInTheDocument();
+    expect(within(evidenceContainer()).queryByText('• Round-local limitation.')).not.toBeInTheDocument();
+    populate([{ ...card, vehicle_id: 8, limitations: ['Vehicle-eight limitation.'] }]);
+    view.update();
+    const evidence = within(evidenceContainer());
+    expect(evidenceContainer()).toHaveAttribute('data-source-status', 'stale');
+    expect(evidence.getByText('local-budget')).toBeInTheDocument();
+    expect(evidence.getByText('limited')).toBeInTheDocument();
+    expect(evidence.getByText('• Vehicle-eight limitation.')).toBeInTheDocument();
+    expect(evidence.queryByText('local-round')).not.toBeInTheDocument();
+    expect(evidence.queryByText('• Round-local coverage.')).not.toBeInTheDocument();
+    expect(evidence.queryByText('• Round-local limitation.')).not.toBeInTheDocument();
+    expect(state.mutation.data).toEqual(oldRound);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'fetching', source: { isLoading: true, fetchStatus: 'fetching' as const }, status: 'initial', busy: 'true' },
+    { name: 'paused', source: { fetchStatus: 'paused' as const }, status: 'initial', busy: 'false' },
+    { name: 'unresolved', source: { fetchStatus: 'idle' as const }, status: 'initial', busy: 'false' },
+    { name: 'fatal', source: { error: new Error('Synthetic evidence source failure.') }, status: 'initialFailure', busy: 'false' },
+  ])('keeps cold $name evidence unknown without authoritative empty claims or duplicate recovery', ({ source, status, busy }) => {
+    Object.assign(state.query, source);
+    renderPage();
+    const container = evidenceContainer();
+    const evidence = within(container);
+    expect(container).toHaveAttribute('data-source-status', status);
+    expect(container).toHaveAttribute('data-source-provenance', 'unknown');
+    expect(container).toHaveAttribute('aria-busy', busy);
+    expect(evidence.getAllByText('Unknown')).toHaveLength(3);
+    ['Quality metadata is unsupported.', 'No supporting evidence was returned.', 'No additional limitations were returned.']
+      .forEach(text => expect(evidence.queryByText(text)).not.toBeInTheDocument());
+    expect(evidence.queryByRole('button', { name: /Refresh|Retry/ })).not.toBeInTheDocument();
+    expect(evidence.getByText('• Raw-data or gradient upload')).toBeInTheDocument();
+    expect(evidence.getByText('• A centralized fleet model or cross-subject access')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Privacy-gated local training round' })).toBeInTheDocument();
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { name: 'failed refresh', source: { error: new Error('Synthetic evidence refresh failure.') }, status: 'stale', busy: 'false' },
+    { name: 'paused refresh', source: { fetchStatus: 'paused' as const }, status: 'stale', busy: 'false' },
+    { name: 'active refresh', source: { isFetching: true, fetchStatus: 'fetching' as const }, status: 'ok', busy: 'true' },
+  ])('retains the complete list metadata pair and authentic trust during $name', ({ source, status, busy }) => {
+    populate();
+    Object.assign(state.query, source);
+    const before = structuredClone(state.query.data);
+    const view = renderPage();
+    const container = evidenceContainer();
+    const evidence = within(container);
+    expect(container).toHaveAttribute('data-source-status', status);
+    expect(container).toHaveAttribute('data-source-provenance', 'cached');
+    expect(container).toHaveAttribute('aria-busy', busy);
+    ['limited', '• Local coverage only.', 'local-budget', 'Subject-local evidence.', '• Local aggregate only.']
+      .forEach(text => expect(evidence.getByText(text)).toBeInTheDocument());
+    expect(evidence.queryByRole('button', { name: /Refresh|Retry/ })).not.toBeInTheDocument();
+    if (status === 'stale') {
+      const warnings = screen.getAllByTestId('stale-refresh-warning');
+      expect(warnings).toHaveLength(1);
+      fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+      expect(state.retry).toHaveBeenCalledOnce();
+    }
+    Object.assign(state.query, { error: null, isFetching: false, isLoading: false, fetchStatus: 'idle' });
+    view.update();
+    expect(evidenceContainer()).toHaveAttribute('data-source-status', 'ok');
+    expect(within(evidenceContainer()).getByText('local-budget')).toBeInTheDocument();
+    expect(state.query.data).toEqual(before);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('only claims returned-empty evidence after a list payload resolves and retains that answer on refresh failure', () => {
+    const view = renderPage();
+    expect(within(evidenceContainer()).getAllByText('Unknown')).toHaveLength(3);
+    populate([]);
+    state.query.data!.evidence = [];
+    view.update();
+    const evidence = within(evidenceContainer());
+    expect(evidenceContainer()).toHaveAttribute('data-source-status', 'ok');
+    expect(evidence.getByText('limited')).toBeInTheDocument();
+    expect(evidence.getByText('No supporting evidence was returned.')).toBeInTheDocument();
+    expect(evidence.getByText('No additional limitations were returned.')).toBeInTheDocument();
+    expect(screen.getByText('No local model cards exist for this vehicle and subject.')).toBeInTheDocument();
+    state.query.error = new Error('Synthetic empty-list refresh failure.');
+    view.update();
+    expect(evidenceContainer()).toHaveAttribute('data-source-status', 'stale');
+    expect(within(evidenceContainer()).getByText('No supporting evidence was returned.')).toBeInTheDocument();
+    expect(within(evidenceContainer()).getByText('No additional limitations were returned.')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
     expect(state.mutation.mutate).not.toHaveBeenCalled();
   });
 });
