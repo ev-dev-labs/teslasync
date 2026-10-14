@@ -1,12 +1,13 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useDrives } from '@/api/hooks/useDriving';
+import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -46,31 +47,74 @@ export default function UtilizationPage() {
   const { costPerKwh, formatCurrency, pricingState } = useFormatting();
   // Pricing has its own source lifecycle; never borrow drive-history trust.
   const availableCostPerKwh = pricingState && !pricingState.hasData ? null : costPerKwh;
-  const [asOfMs] = useState(() => Date.now());
-  const { start, end } = useRangeState({
+  const { tz } = useDateFormat();
+  const { start, end, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'utilization.range',
     defaultPresetId: 'all',
+    timezone: tz,
   });
+  const scopeKey = JSON.stringify([vehicleId, startInstant, endInstantExclusive]);
+  const [clock, setClock] = useState(() => ({ scopeKey, asOfMs: Date.now() }));
+  // Freeze refreshes within a scope, but rebase when the header window moves.
+  if (clock.scopeKey !== scopeKey) {
+    setClock({ scopeKey, asOfMs: Date.now() });
+  }
+  const asOfMs = clock.asOfMs;
 
-  const drivesQuery = useDrives(vehicleIdStr, {
-    start,
-    end,
-    limit: UTILIZATION_DRIVE_LIMIT,
-  });
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const drives = useMemo(
     () => drivesQuery.data ?? [],
     [drivesQuery.data],
   );
-  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const drivesState = useDataState(drivesQuery, {
+    provenance: 'historical',
+    partial: drivesQuery.isFetching,
+  });
   const summary = useMemo(
-    () =>
-      summarizeUtilization(drives, availableCostPerKwh, {
-        rangeStart: start,
-        rangeEnd: end,
-        asOfMs,
-        historyLimit: UTILIZATION_DRIVE_LIMIT,
-      }),
-    [asOfMs, availableCostPerKwh, drives, end, start],
+    () => {
+      const startMs = Date.parse(startInstant);
+      const endMs = Date.parse(endInstantExclusive);
+      const rangeValid = Number.isFinite(startMs) && Number.isFinite(endMs) && startMs < endMs;
+      let beforeRangeRows = 0;
+      let afterRangeRows = 0;
+      const scopedDrives = rangeValid ? drives.filter(drive => {
+        const timestamp = drive.startTs ? Date.parse(drive.startTs) : Number.NaN;
+        // Leave invalid/future evidence to the model's existing accounting.
+        if (!Number.isFinite(timestamp) || timestamp >= asOfMs) return true;
+        if (timestamp < startMs) { beforeRangeRows += 1; return false; }
+        if (timestamp >= endMs) { afterRangeRows += 1; return false; }
+        return true;
+      }) : drives;
+      // The existing model owns UTC rollups. Use a containing UTC calendar
+      // envelope, with the exact end as its analysis clock, not local labels.
+      const result = summarizeUtilization(scopedDrives, availableCostPerKwh, {
+        rangeStart: rangeValid ? new Date(startMs).toISOString().slice(0, 10) : '',
+        rangeEnd: rangeValid ? new Date(endMs - 1).toISOString().slice(0, 10) : '',
+        asOfMs: rangeValid ? Math.min(asOfMs, endMs) : asOfMs,
+        historyLimit: Number.POSITIVE_INFINITY,
+      });
+      return {
+        ...result,
+        window: {
+          ...result.window,
+          rangeStart: start,
+          rangeEnd: end,
+          asOfMs,
+          selectedStartMs: rangeValid ? startMs : null,
+          selectedEndExclusiveMs: rangeValid ? endMs : null,
+        },
+        accounting: {
+          ...result.accounting,
+          returnedRows: drives.length,
+          excludedRows: result.accounting.excludedRows + beforeRangeRows + afterRangeRows,
+          beforeRangeRows: result.accounting.beforeRangeRows + beforeRangeRows,
+          afterRangeRows: result.accounting.afterRangeRows + afterRangeRows,
+          // The history hook publishes only after the final server page succeeds.
+          historyCapReached: false,
+        },
+      };
+    },
+    [asOfMs, availableCostPerKwh, drives, end, endInstantExclusive, start, startInstant],
   );
   // Coverage does not erase returned rows or override a retained-source warning.
   const incompleteMeasurements = summary.accounting.eligibleRows > 0 && (
@@ -173,6 +217,7 @@ export default function UtilizationPage() {
         <TimeCostOverview
           summary={summary}
           state={sectionState}
+          hasSource={drivesState.hasData}
         />
       </FadeIn>
 
