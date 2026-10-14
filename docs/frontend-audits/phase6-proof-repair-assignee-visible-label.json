@@ -1,0 +1,225 @@
+{
+  "item": "phase6-proof-repair-assignee-visible-label",
+  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+  "sourceReference": "3995c314080939dc644e10951e9fcfdc0e2498ab",
+  "sourceReferenceAuthority": "Exact root queue row; no Git command used to verify commit ancestry.",
+  "requestUtc": "2026-10-14T07:40:55.245Z",
+  "returnDeadlineUtc": "2026-10-14T08:00:55.245Z",
+  "releaseUtc": "2026-10-14T07:48:34.7076134Z",
+  "cwd": "D:\\repos\\teslasync\\web",
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-proof-repair-assignee-visible-label.json",
+    "web\\logs\\phase6-proof-repair-assignee-visible-label.log"
+  ],
+  "readOnlyFiles": [
+    "web\\src\\features\\system\\components\\RepairCaseCollaboration.tsx",
+    "web\\src\\features\\system\\components\\RepairCaseCollaboration.test.tsx"
+  ],
+  "rawEvidenceLog": "web\\logs\\phase6-proof-repair-assignee-visible-label.log",
+  "rawEvidenceLogSha256": "F06A9BDB3462072A4B18B1EA5FC29A0ECFF1E2E29D92D7FD12485DC3D4A8E812",
+  "receiptValidation": {
+    "utc": "2026-10-14T07:48:34.7053188Z",
+    "command": "PowerShell ConvertFrom-Json; exact seven-name/status comparison against unchanged fixture; SHA256 source/fixture comparison; zero-execution accounting validation",
+    "exit": 0,
+    "rawOutput": "{\"zeroExecutionNotPass\":true,\"invalidGeneratedBasenameCount\":25,\"ownedFailuresCharged\":0,\"exactCaseNamesMatch\":true,\"sourceFixtureHashesMatch\":true,\"receiptParse\":\"OK\"}"
+  },
+  "runtime": {
+    "node": "v26.8.1",
+    "vitest": "4.1.11",
+    "installedRunner": "node_modules\\vitest\\vitest.mjs",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "normalConfig": "web\\vite.config.ts",
+    "configOrGuardBypass": false,
+    "dependencyInstall": false,
+    "environmentOverrides": []
+  },
+  "run": {
+    "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseCollaboration.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=..\\docs\\frontend-audits\\phase6-proof-repair-assignee-visible-label.json",
+    "startUtc": "2026-10-14T07:42:41.8998408Z",
+    "endUtc": "2026-10-14T07:46:23.0711586Z",
+    "elapsedSeconds": 221.1713178,
+    "exit": 1,
+    "timedOut": false,
+    "normalStartupGuardCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+    "startupGuardExit": 1,
+    "rawStartupError": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+    "freshVitestJsonProduced": false,
+    "jsonProvenance": "The normal JSON reporter was requested at this exact owned path, but startup failed before discovery and produced no JSON. This file is the subsequently authored evidence receipt, NOT a Vitest success report.",
+    "reruns": 0,
+    "rerunPolicy": "No identical blocked run repeated; no catalog repair or guard bypass authorized."
+  },
+  "accounting": {
+    "staticFixtureCases": 7,
+    "intendedSelected": 7,
+    "runtimeDiscovered": 0,
+    "runtimeSelected": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedTests": 0,
+    "runtimeSkipped": 0,
+    "deliberatelyUnselected": 0,
+    "coveringCasesNotRun": 7,
+    "startupErrors": 1,
+    "ownedFailuresCharged": 0,
+    "externalCatalogFailuresUncharged": 1,
+    "meaning": "All seven covering cases remain NOTRUN. A zero-test failure is not a pass, and unexecuted cases are not presented as skipped or deliberately unselected."
+  },
+  "suite": "RepairCaseCollaboration visible assignee label",
+  "cases": [
+    {
+      "name": "keeps a canonical visible label associated with the populated assignee, not just its placeholder",
+      "line": 76,
+      "coverage": "Visible localized label, htmlFor/id association, accessible name, existing value/placeholder, both panels, full note and no unintended transport.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "localizes the visible label without changing field identity or editable drafts",
+      "line": 92,
+      "coverage": "Locale switch, stable field/id, label association and preservation of assignment/review drafts.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "gives simultaneous panels independent label bindings even for the same case",
+      "line": 108,
+      "coverage": "Same-case simultaneous instances, unique IDs and independent visible-label associations.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves both panels, full notes and drafts when editing permission changes",
+      "line": 121,
+      "coverage": "Disabled inputs/actions and reasons, no transport when blocked, both panel shells/full notes/drafts preserved, permissions restored.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves assignment payload, pending state and rejected draft through an explicit retry",
+      "line": 146,
+      "coverage": "Exact assignment endpoint/method/live-mode payload, trimming/null assignment, pending state, rejection and explicit retry.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "retains rejected review notes and clears them only after a successful retry",
+      "line": 170,
+      "coverage": "Textarea limits, exact note endpoint/method/live-mode payload, pending/rejected draft preservation and success-only clearing.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves case-change draft reset and routes subsequent assignment to the new case",
+      "line": 199,
+      "coverage": "Case identity transition, stable field association, draft reset, empty-note state, retained panels and subsequent endpoint identity.",
+      "status": "NOTRUN"
+    }
+  ],
+  "historicalEvidencePreserved": {
+    "log": "web\\logs\\phase6-fix-repair-assignee-visible-label.log",
+    "priorFinalRun": {
+      "startUtc": "2026-10-14T06:17:02.6729582Z",
+      "endUtc": "2026-10-14T06:20:36.9434727Z",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedTests": 0,
+      "exit": 1,
+      "status": "NOTRUN_CATALOG_STARTUP"
+    },
+    "earlierRed": {
+      "discovered": 7,
+      "executed": 1,
+      "passed": 0,
+      "failedTests": 1,
+      "unselected": 6,
+      "exit": 1,
+      "reason": "Earlier fixture lacked real ToastProvider. This historical failure is retained, not a causal visible-label red and not the current fixture status."
+    },
+    "historicalGenuinePassesRepeated": 0,
+    "previousSourceAndFixturePinsMatch": true,
+    "priorLintAndScopedTypecheck": "Historical evidence only; not rerun or promoted to current approval."
+  },
+  "currentness": {
+    "preRunUtc": "2026-10-14T07:42:41.6955571Z",
+    "catalogDuringRunUtc": "2026-10-14T07:45:08.7832059Z",
+    "postRunUtc": "2026-10-14T07:46:51.6671982Z",
+    "hashAlgorithm": "SHA256",
+    "sourceSha256": "D9730B4847640189AA585E43A6FD8E1E4B8C4714CD417605B01F7A09A447A34C",
+    "fixtureSha256": "499FBAC0BE8529960CA7BF6A612A5CA8FB6B06420CE799FA77203688508E6EC0",
+    "sourceAndFixtureMatchPriorReleasePins": true,
+    "recordedExistingInputCount": 20,
+    "recordedChangedInputs": 0,
+    "sourceLinesByGetContent": 112,
+    "fixtureLinesByGetContent": 218,
+    "sourceGlassPanels": 2,
+    "fixtureCasesPreserved": 7,
+    "hashManifest": "Exact paths, before/after SHA256, byte lengths, last-write UTC and per-file verification UTC are in the owned raw log.",
+    "catalogPinTimingCaveat": "Initial generated-directory probes found no files. Glob located src\\i18n\\en; locale-system.json, usage-manifest.json and known-missing-keys.json were pinned DURING the run, then unchanged at post-run. No pre-run catalog pin is fabricated.",
+    "claimScope": "Unchanged recorded inputs only, not a complete transitive dependency closure or whole-worktree claim."
+  },
+  "needs": [
+    {
+      "kind": "EXTERNAL_UNCHARGED_CATALOG_OWNER",
+      "reason": "Ordinary catalog split check rejects generated artifacts before Vitest can discover any covering test.",
+      "affectedGeneratedBasenames": [
+        "locale-detail-errorBoundary.json",
+        "locale-system.json",
+        "locale-notifications.json",
+        "locale-telemetry.json",
+        "locale-unreferenced.json",
+        "locale-battery.json",
+        "locale-driving.json",
+        "locale-analytics.json",
+        "locale-sharing.json",
+        "locale-vehicles.json",
+        "locale-automations.json",
+        "locale-charging.json",
+        "locale-dashboard.json",
+        "locale-settings.json",
+        "locale-admin.json",
+        "locale-vehicle-systems.json",
+        "locale-diagnostics.json",
+        "locale-maps.json",
+        "locale-trips.json",
+        "locale-exports.json",
+        "locale-power-user.json",
+        "locale-driving-route-efficiency.json",
+        "locale-driving-trip-planner.json",
+        "runtime-manifest.json",
+        "usage-manifest.json"
+      ],
+      "nextAction": "Existing authorized catalog/generated-output owner must restore normal startup freshness, then an authorized proof worker runs the same original seven covering cases without weakening assertions or repairing mocks.",
+      "workerPerformedCatalogRepair": false
+    }
+  ],
+  "ownedFailureRequiringCorrectionWorker": null,
+  "verificationNotRun": {
+    "globalTypeScript": "NOTRUN: proof-only scope; no application source edit.",
+    "lint": "NOTRUN: proof-only scope.",
+    "violationsAudit": "NOTRUN: proof-only scope.",
+    "build": "NOTRUN: prohibited broader acceptance work.",
+    "browserNative": "NOTRUN: prohibited.",
+    "routerRuntimeOrBackendRequests": "NOTRUN: no real network mutation permitted."
+  },
+  "approval": {
+    "coveringRuntimePass": false,
+    "sourceAcceptance": false,
+    "nativeApproval": false,
+    "pageApproval": false,
+    "globalGateApproval": false
+  },
+  "preservation": {
+    "applicationSourceEdited": false,
+    "fixtureEdited": false,
+    "mocksRepaired": false,
+    "assertionsWeakened": false,
+    "catalogConfigQueueEdited": false,
+    "gitCommandsIssued": false,
+    "nestedAgentsLaunched": false,
+    "serversBrowserDockerLaunched": false,
+    "note": "Only the exact owned receipt/log were authored. Ordinary installed Vitest handles its own standard internal config-loading cache; no worker cache/config cleanup or modification was performed."
+  },
+  "release": {
+    "sourceWriteClaim": "NEVER_ACQUIRED_READONLY",
+    "fixtureWriteClaim": "NEVER_ACQUIRED_READONLY",
+    "reportWriteClaim": "RELEASED",
+    "logWriteClaim": "RELEASED",
+    "commands": "ALL_OWNED_COMMANDS_COMPLETED; no background work remains."
+  }
+}
