@@ -11,10 +11,11 @@ export function EfficiencySpeedDistribution({ model, source, units }: DrivesPres
   const { t } = useTranslation();
   const efficiencyUnit = units.unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const { speedDist } = model;
+  const chartData = speedDist.map(({ range, avgEff, count }) => ({ range, avgEff, count }));
   return <EfficiencyChart source={source}
     title={t('efficiency.speedDist', 'Efficiency by speed range')}
     ariaLabel={t('efficiency.speedDistAria', 'Efficiency by speed-range bar chart')}
-    data={speedDist}
+    data={chartData}
     dataColumns={[
       { key: 'range', label: t('efficiency.col.range', 'Speed range') },
       { key: 'avgEff', label: t('efficiency.chartColumns.averageEfficiency', 'Average drive energy consumption ({{unit}})', { unit: efficiencyUnit }), kind: 'measurement' },
@@ -22,13 +23,13 @@ export function EfficiencySpeedDistribution({ model, source, units }: DrivesPres
     ]}
     empty={speedDist.length === 0}>
     <ResponsiveContainer width="100%" height="100%">
-      <BarChart data={speedDist}>
+      <BarChart data={chartData}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
         <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
         <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
         <Tooltip content={<ChartTooltip />} />
         <Bar dataKey="avgEff" name={`${t('efficiency.avg', 'Avg')} ${efficiencyUnit}`} radius={[4, 4, 0, 0]}>
-          {speedDist.map((entry, i) => <Cell key={i} fill={efficiencyColor(entry.avgEff)} fillOpacity={0.7} />)}
+          {speedDist.map((entry, i) => <Cell key={i} fill={efficiencyColor(entry.avgEffWhKm)} fillOpacity={0.7} />)}
         </Bar>
       </BarChart>
     </ResponsiveContainer>
