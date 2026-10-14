@@ -1,6 +1,22 @@
 {
   "admin": {
     "auditLog": {
+      "detailId": "Entry ID",
+      "detailPreviousHash": "Previous row hash",
+      "detailsHint": "Use “{{action}}” to view complete entry details.",
+      "rangeZone": "Filter timezone: {{timezone}}",
+      "boundedProof": "Bounded row-hash proof only: not adjacency proof, full-ledger verification, or the current entry filters.",
+      "retainedVerification": "Verification is running; the previous receipt remains visible.",
+      "verificationPaused": "Verification was requested but is paused. No verification receipt has been received.",
+      "verificationPending": "Verification was requested; no verification receipt has been received.",
+      "noVerificationEvidence": "No verification evidence",
+      "verificationSince": "Receipt since: {{since}}",
+      "serverSelectedSince": "Server-selected lower bound",
+      "verificationLimit": "Receipt limit: {{limit}}",
+      "verificationReceiptAge": "Receipt: {{at}} · {{seconds}} seconds old",
+      "verificationReceiptUnknown": "Receipt time unknown",
+      "boundedVerifyHint": "Read-only GET re-derives at most 1,000 non-null row hashes, oldest first, from the server-selected lower bound (default: 30 days ago). It does not verify the full ledger or row adjacency.",
+      "entriesUnresolved": "Entries have not been received; no empty ledger has been established.",
       "kpiActions": "Action types",
       "kpiActors": "Actors (in view)",
       "kpiCategories": "Categories",
@@ -411,7 +427,7 @@
     "flags": {
       "toast": {
         "deleteError": "Failed to delete flag",
-        "deleteSuccess": "Flag \"{{key}}\" deleted",
+        "deleteSuccess": "Delete request completed for flag \"{{key}}\"; the response determines whether an entry was removed. Audit persistence is reported separately.",
         "saveError": "Failed to save flag",
         "saveSuccess": "Flag \"{{key}}\" saved"
       },
@@ -427,20 +443,20 @@
         },
         "empty": {
           "title": "No flag changes yet",
-          "scopedMessage": "No audit rows for \"{{key}}\" — edit the value above to start the trail.",
-          "globalMessage": "Flag changes will appear here once an operator edits a value."
+          "scopedMessage": "No audit rows were returned for \"{{key}}\". This does not establish whether a registry change was persisted.",
+          "globalMessage": "No audit rows were returned. Registry changes and audit persistence are separate outcomes."
         },
         "loading": "Loading audit log…"
       },
       "editor": {
-        "valueEmpty": "Value is required.",
+        "valueEmpty": "This editor requires JSON input; an empty stored text value is represented by \"\".",
         "valueInvalid": "Invalid JSON: {{msg}}",
         "keyLabel": "Flag key",
         "keyPlaceholder": "feature.dlq.replay_enabled",
         "keyImmutable": "Flag keys are immutable once created. Delete + re-create to rename.",
-        "valueLabel": "Value (JSON)",
+        "valueLabel": "Stored text value (JSON input)",
         "reasonLabel": "Reason",
-        "reasonPlaceholder": "Why this change? (logged in audit)"
+        "reasonPlaceholder": "Why this change? (audit persistence is reported separately)"
       },
       "drawer": {
         "editTitle": "Edit flag \"{{key}}\"",
@@ -464,7 +480,7 @@
         "empty": "No feature flags are set on this server."
       },
       "pageTitle": "Feature flags",
-      "subtitle": "Typed feature-flag registry — all changes are sudo-gated and logged.",
+      "subtitle": "String-valued feature-flag registry — writes are sudo-gated; audit persistence is reported separately.",
       "panels": {
         "registry": "Registry",
         "changes": "Recent changes",
@@ -472,9 +488,9 @@
       },
       "delete": {
         "title": "Delete flag?",
-        "message": "Permanently remove flag \"{{key}}\". This is logged as a delete operation in the audit feed.",
+        "message": "Request removal of flag \"{{key}}\". The server reports whether an entry was removed or the operation was a no-op; audit persistence is a separate outcome.",
         "reasonLabel": "Reason",
-        "reasonPlaceholder": "Why this delete? (logged in audit)",
+        "reasonPlaceholder": "Why this delete? (audit persistence is reported separately)",
         "confirm": "Delete flag"
       },
       "stats": {
@@ -495,13 +511,13 @@
         "array": "Array",
         "null": "Null",
         "sublabel": "{{count}} · {{pct}}%",
-        "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here.",
-        "ariaLabel": "Flag value-type composition"
+        "empty": "No flags to summarize yet. Stored values are text, including valid empty text.",
+        "ariaLabel": "Returned flag value presentation; stored values are text"
       },
       "brief": {
         "eyebrow": "Feature flag operations",
         "title": "Registry and recent changes",
-        "description": "Review stored value types alongside the recent audit subset. Registry edits and deletions remain sudo-gated and audited.",
+        "description": "Registry values are stored as strings, including empty text; JSON-looking content is not typed storage. Review the registry and the independent recent audit subset. Writes are sudo-gated; a successful registry operation does not guarantee audit persistence.",
         "sourceStatus": "Registry: {{registry}} · Audit: {{audit}}",
         "freshness": "Registry: {{registry}} · Audit: {{audit}}"
       },
@@ -516,9 +532,9 @@
         },
         "registryMissing": "Registry snapshot not supplied",
         "auditContext": "Returned recent audit rows only (limit 50); not lifetime totals or a selected date range.",
-        "totalDescription": "Current registry entries, across all stored JSON value types.",
-        "booleanDescription": "Boolean-valued flags, including both true and false.",
-        "structuredDescription": "Object-valued and array-valued flags in the current registry.",
+        "totalDescription": "Current registry entries; values are stored as strings, including valid empty text.",
+        "booleanDescription": "Values classified as booleans by this presentation; storage is string-only.",
+        "structuredDescription": "Values classified as objects or arrays by this presentation; JSON-looking text does not establish typed storage.",
         "changesDescription": "Number of returned recent audit rows, including deletions.",
         "deletesDescription": "Delete operations among returned recent audit rows.",
         "actorsDescription": "Distinct non-empty trimmed actor identities in returned recent audit rows.",
@@ -700,6 +716,20 @@
         "cancelled": "Cancelled",
         "other": "Other"
       },
+      "status": {
+        "booked": "Booked",
+        "pending": "Pending",
+        "orderPlaced": "Order placed",
+        "preparing": "Preparing",
+        "inProduction": "In production",
+        "buildScheduled": "Build scheduled",
+        "readyForDelivery": "Ready for delivery",
+        "inTransit": "In transit",
+        "transportScheduled": "Transport scheduled",
+        "canceled": "Canceled",
+        "orderRejected": "Order rejected",
+        "deliveryCancelled": "Delivery cancelled"
+      },
       "panels": {
         "breakdown": "Order status",
         "outlook": "Delivery outlook",
@@ -713,6 +743,7 @@
       "outlook": {
         "nextDelivery": "Next delivery",
         "noUpcoming": "None scheduled",
+        "unknownDelivery": "Delivery date unknown",
         "upgradable": "Upgradable orders",
         "models": "Distinct models",
         "vin": "VIN assigned",
@@ -1400,6 +1431,13 @@
   },
   "devtools": {
     "utils": {
+      "cronInvalid": "Invalid cron expression",
+      "cronAtMinute": "At minute {{minute}} of every hour",
+      "cronAtTime": "At {{time}}",
+      "cronDuringHour": "Every minute of hour {{hour}}",
+      "cronOnDay": "on day {{day}}",
+      "cronInMonth": "in month {{month}}",
+      "cronOnWeekday": "on {{weekday}}",
       "base64": "Base64",
       "base64Desc": "Encode and decode Base64 text",
       "computeSha256": "Compute SHA256",
@@ -1548,6 +1586,12 @@
     "keypairIdle": "Generate or delete a keypair to see results",
     "uploadIdle": "Upload a public key to see results",
     "fleet": {
+      "confirmDeleteKey": "Delete the configured public key for this TeslaSync installation? Existing vehicle key pairing may stop working.",
+      "confirmReplaceKey": "Replace the configured public key for this TeslaSync installation? Existing vehicle key pairing may need to be repeated.",
+      "pairingHostUnknown": "Pairing link unavailable: the configured application hostname is not provided by Fleet API info.",
+      "portInvalid": "Use an integer port from 1 to 65535, or leave it blank or 0 for the server default.",
+      "serverDefaults": "A blank hostname or blank/0 port uses the server configuration; the configured hostname is not available in this view.",
+      "confirmDeleteConfig": "Delete Fleet Telemetry configuration for {{vin}}? This stops its telemetry subscription.",
       "pairingStep1": "Pairing Step1",
       "pairingStep2": "Pairing Step2",
       "pairingStep3": "Pairing Step3",
@@ -1666,6 +1710,7 @@
       "externalLinks": "external links"
     },
     "infra": {
+      "mqttPingDesc": "Run the fixed MQTT connectivity ping. The server publishes to teslasync/dev-tools/ping with a generated timestamp/source payload; topic and message inputs are ignored.",
       "mqtt": "MQTT",
       "topic": "Topic",
       "message": "Message",
@@ -1688,6 +1733,7 @@
       "utilities": "Utilities"
     },
     "errorsIdle": "Click View Errors to fetch recent Fleet Telemetry errors for this vehicle.",
+    "errorsUnknown": "Fleet Telemetry error status is unknown: the response format was not recognized.",
     "errorsEmpty": "No Fleet Telemetry errors reported for this vehicle.",
     "errorsRaw": "Show raw Tesla response",
     "vehicleDataIdle": "Choose a vehicle and an action to see results.",
@@ -1847,60 +1893,6 @@
       "scope": "Settings and polling snapshots; no shared observation time is reported."
     }
   },
-  "gas": {
-    "title": "Gas price auto-poll",
-    "subtitle": "Automatically fetch US average gas prices from EIA",
-    "autoPoll": "Auto-poll",
-    "enabled": "Auto-poll enabled",
-    "disabled": "Auto-poll disabled",
-    "running": "Running",
-    "stopped": "Stopped",
-    "pollInterval": "Poll interval",
-    "intervalUpdated": "Poll interval updated",
-    "daily": "Daily",
-    "weekly": "Weekly",
-    "biweekly": "Bi-weekly",
-    "monthly": "Monthly",
-    "currentPrice": "Current price",
-    "lastPolled": "Last polled",
-    "never": "Never",
-    "pollTriggered": "Gas price poll triggered",
-    "pollNow": "Poll now",
-    "source": "Source: U.S. Energy information administration",
-    "status": "Status",
-    "enabledShort": "Auto-poll on",
-    "disabledShort": "Auto-poll off",
-    "unitGallon": "gal",
-    "unitLiter": "L",
-    "perUnit": "per {{unit}}",
-    "perKwh": "per kWh",
-    "kwhEquivalent": "kWh equivalent",
-    "kwhEquivalentHelp": "Gasoline cost expressed as an equivalent price per kilowatt-hour for EV comparison.",
-    "awaitingFirstPoll": "Awaiting first poll",
-    "kpis": "Gas price summary",
-    "config": "Configuration",
-    "autoPollHelp": "When on, TeslaSync fetches the latest US average gas price on the schedule below.",
-    "pollIntervalHelp": "How often the auto-poll fetches fresh prices.",
-    "priceTrend": "Price trend",
-    "priceTrendAria": "Line chart of historical gas prices over time",
-    "priceSeries": "Price",
-    "noHistory": "No price history recorded yet. Trigger a poll to get started.",
-    "historyTitle": "Price history",
-    "effectiveFrom": "Effective from",
-    "price": "Price",
-    "unit": "Unit",
-    "efficiency": "Efficiency",
-    "mpg": "mpg",
-    "effectiveTo": "Effective to",
-    "current": "Current",
-    "noHistoryRows": "No price history recorded yet.",
-    "priceTrendDateCol": "Date",
-    "summary": {
-      "title": "Polling status and price",
-      "source": "Auto-poll status, current prices and last poll time use the status response. Prices keep their source per-volume and per-kWh denominations; the history chart is a separate source.",
-      "scope": "Current polling-status snapshot; an exact observation time and price coverage window are not reported."
-    }
-  },
   "operationalSource": {
     "status": {
       "initial": "Loading source",
@@ -1915,6 +1907,13 @@
     "retained": "Showing retained measurements"
   },
   "playground": {
+    "validation": {
+      "required": "Required by the API specification.",
+      "schemaMismatch": "Does not match the API specification ({{constraint}}).",
+      "schemaHint": "API specification: {{schema}}",
+      "invalidJson": "Invalid JSON. The original text can still be sent for diagnostic inspection.",
+      "advisory": "Validation feedback is advisory. Send remains available to inspect raw HTTP errors; non-GET requests still require confirmation."
+    },
     "search": "Search endpoints...",
     "endpoints": "endpoints",
     "noResults": "No matching endpoints",
@@ -2849,6 +2848,11 @@
     "vehicleId": "Vehicle ID",
     "yes": "Yes"
   },
+  "archetypes": {
+    "kpis": {
+      "windowHint": "Bounded at {{limit}} newest rows"
+    }
+  },
   "automations": {
     "builder": {
       "aiBuilder": {
@@ -2963,6 +2967,11 @@
         "generateButton": "Generate diagnosis",
         "title": "Charging diagnosis"
       }
+    }
+  },
+  "chargingPlaces": {
+    "workspace": {
+      "initialPaused": "{{source}} loading is paused. No data has been loaded yet."
     }
   },
   "chart": {
@@ -3488,6 +3497,57 @@
       "unknown": "—",
       "vehicle": "Vehicle"
     }
+  },
+  "gas": {
+    "autoPoll": "Auto-poll",
+    "autoPollHelp": "When on, TeslaSync fetches the latest US average gas price on the schedule below.",
+    "awaitingFirstPoll": "Awaiting first poll",
+    "biweekly": "Bi-weekly",
+    "config": "Configuration",
+    "current": "Current",
+    "currentPrice": "Current price",
+    "daily": "Daily",
+    "disabledShort": "Auto-poll off",
+    "effectiveFrom": "Effective from",
+    "effectiveTo": "Effective to",
+    "efficiency": "Efficiency",
+    "enabledShort": "Auto-poll on",
+    "historyTitle": "Price history",
+    "kpis": "Gas price summary",
+    "kwhEquivalent": "kWh equivalent",
+    "kwhEquivalentHelp": "Gasoline cost expressed as an equivalent price per kilowatt-hour for EV comparison.",
+    "lastPolled": "Last polled",
+    "monthly": "Monthly",
+    "mpg": "mpg",
+    "never": "Never",
+    "noHistory": "No price history recorded yet. Trigger a poll to get started.",
+    "noHistoryRows": "No price history recorded yet.",
+    "perKwh": "per kWh",
+    "perUnit": "per {{unit}}",
+    "pollInterval": "Poll interval",
+    "pollIntervalHelp": "How often the auto-poll fetches fresh prices.",
+    "pollNow": "Poll now",
+    "pollTriggered": "Gas price poll triggered",
+    "price": "Price",
+    "priceSeries": "Price",
+    "priceTrend": "Price trend",
+    "priceTrendAria": "Line chart of historical gas prices over time",
+    "priceTrendDateCol": "Date",
+    "running": "Running",
+    "source": "Source: U.S. Energy information administration",
+    "status": "Status",
+    "stopped": "Stopped",
+    "subtitle": "Automatically fetch US average gas prices from EIA",
+    "summary": {
+      "scope": "Current polling-status snapshot; an exact observation time and price coverage window are not reported.",
+      "source": "Auto-poll status, current prices and last poll time use the status response. Prices keep their source per-volume and per-kWh denominations; the history chart is a separate source.",
+      "title": "Polling status and price"
+    },
+    "title": "Gas price auto-poll",
+    "unit": "Unit",
+    "unitGallon": "gal",
+    "unitLiter": "L",
+    "weekly": "Weekly"
   },
   "geofences": {
     "aiSuggest": {
@@ -4053,6 +4113,13 @@
       "statusUser": "Active — enabled manually on this device."
     }
   },
+  "quietHours": {
+    "severity": {
+      "critical": "Critical",
+      "info": "Info",
+      "warn": "Warning"
+    }
+  },
   "range": {
     "aiPredict": {
       "badge": "Helix",
@@ -4459,10 +4526,14 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
     },
+    "featureConfigRefreshed": "Feature config refreshed",
     "feedback": {
       "bulkUpdate": {
         "success": "Updated {{count}} feedback items"
@@ -4498,6 +4569,7 @@
         "success": "Quiet hours window removed"
       }
     },
+    "regionRefreshed": "Region info refreshed",
     "savedViews": {
       "create": {
         "success": "Saved view created"
@@ -4527,9 +4599,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {

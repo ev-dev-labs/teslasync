@@ -2949,6 +2949,9 @@
     "vehicleLiveState": "Vehicle live state",
     "viewDetail": "View detail"
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "geofences": {
     "aiSuggest": {
       "applyButton": "Apply to form",
@@ -3417,6 +3420,13 @@
       "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
       "statusOff": "Not active — the app is using full quality.",
       "statusUser": "Active — enabled manually on this device."
+    }
+  },
+  "quietHours": {
+    "severity": {
+      "critical": "Critical",
+      "info": "Info",
+      "warn": "Warning"
     }
   },
   "range": {
@@ -4303,10 +4313,14 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
     },
+    "featureConfigRefreshed": "Feature config refreshed",
     "notifications": {
       "archive": {
         "success": "Archived"
@@ -4337,6 +4351,7 @@
         "success": "Quiet hours window removed"
       }
     },
+    "regionRefreshed": "Region info refreshed",
     "savedViews": {
       "create": {
         "success": "Saved view created"
@@ -4366,9 +4381,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {

@@ -2088,6 +2088,9 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "geofences": {
     "aiSuggest": {
       "applyButton": "Apply to form",
@@ -3298,10 +3301,14 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
     },
+    "featureConfigRefreshed": "Feature config refreshed",
     "noChanges": "No changes",
     "noChangesDesc": "Could not detect car unit preferences",
     "notifications": {
@@ -3332,14 +3339,12 @@
       }
     },
     "quietHours": {
-      "created": "Quiet hours window created",
       "delete": {
         "success": "Quiet hours window removed"
       },
-      "deleteError": "Failed to delete quiet hours window",
-      "deleted": "Quiet hours window removed",
-      "saveError": "Failed to save quiet hours window",
-      "updated": "Quiet hours window updated"
+      "save": {
+        "error": "Failed to save quiet hours window"
+      }
     },
     "regionFailed": "Failed to refresh region",
     "regionRefreshed": "Region info refreshed",
@@ -3381,9 +3386,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {

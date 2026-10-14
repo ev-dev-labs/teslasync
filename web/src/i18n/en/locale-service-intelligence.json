@@ -517,6 +517,9 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "impersonation": {
     "toast": {
       "ended": "Impersonation ended",
@@ -766,6 +769,9 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
@@ -829,9 +835,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {

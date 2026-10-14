@@ -172,6 +172,9 @@
         "success": "Export started",
         "error": "Failed to start export"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "account": {
         "success": "Account export queued — track progress in the floating widget",
         "error": "Failed to queue account export"

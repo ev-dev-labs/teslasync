@@ -696,64 +696,6 @@
       "typeConfirmation": "Type PAYER to confirm the billing change"
     }
   },
-  "vehicleSettings": {
-    "title": "Per-vehicle settings",
-    "subtitle": "Override individual settings for this vehicle. Resets fall back to your account-wide values.",
-    "loading": "Loading vehicle settings…",
-    "error": "Could not load vehicle settings.",
-    "source": {
-      "override": "Override",
-      "user": "User default",
-      "vehicle": "Vehicle name",
-      "default": "System default"
-    },
-    "actions": {
-      "save": "Save",
-      "saving": "Saving…",
-      "reset": "Reset to default",
-      "resetting": "Resetting…",
-      "cancel": "Cancel"
-    },
-    "keys": {
-      "nickname": {
-        "label": "Nickname",
-        "help": "Friendly name shown in the vehicle list and page title."
-      },
-      "mute_until": {
-        "label": "Mute alerts until",
-        "help": "Suppresses alerts for this vehicle until the chosen date and time. Clear to receive alerts immediately."
-      },
-      "charge_cost_tariff_id": {
-        "label": "Charge cost tariff",
-        "help": "Tariff identifier used when calculating per-session charge costs for this vehicle."
-      },
-      "units_distance": {
-        "label": "Distance unit",
-        "help": "Override the distance unit (mi or km) for this vehicle's panels."
-      },
-      "units_temperature": {
-        "label": "Temperature unit",
-        "help": "Override the temperature unit (°C or °F) for this vehicle's panels."
-      },
-      "units_energy": {
-        "label": "Energy unit",
-        "help": "Override the energy display unit (kWh) for this vehicle's panels."
-      }
-    },
-    "validation": {
-      "required": "Value is required.",
-      "invalid": "Value is not valid for this setting.",
-      "invalidDate": "Enter a valid date and time."
-    },
-    "toasts": {
-      "saved": "Setting saved.",
-      "reset": "Reverted to default."
-    },
-    "errors": {
-      "save": "Failed to save setting.",
-      "reset": "Failed to reset setting."
-    }
-  },
   "vehicles": {
     "compareButton": "Compare vehicles",
     "quickViewAria": "Quick view {{name}}",
@@ -2431,6 +2373,9 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "geofences": {
     "aiSuggest": {
       "applyButton": "Apply to form",
@@ -2891,6 +2836,13 @@
       "statusNetwork": "Active — your browser or network reported Data Saver / a 2G-class connection.",
       "statusOff": "Not active — the app is using full quality.",
       "statusUser": "Active — enabled manually on this device."
+    }
+  },
+  "quietHours": {
+    "severity": {
+      "critical": "Critical",
+      "info": "Info",
+      "warn": "Warning"
     }
   },
   "range": {
@@ -3768,6 +3720,9 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
@@ -3831,9 +3786,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {
@@ -3970,6 +3922,56 @@
       "status": "Status"
     },
     "unlocked": "Unlocked"
+  },
+  "vehicleSettings": {
+    "actions": {
+      "reset": "Reset to default",
+      "resetting": "Resetting…",
+      "save": "Save",
+      "saving": "Saving…"
+    },
+    "error": "Could not load vehicle settings.",
+    "keys": {
+      "charge_cost_tariff_id": {
+        "help": "Tariff identifier used when calculating per-session charge costs for this vehicle.",
+        "label": "Charge cost tariff"
+      },
+      "mute_until": {
+        "help": "Suppresses alerts for this vehicle until the chosen date and time. Clear to receive alerts immediately.",
+        "label": "Mute alerts until"
+      },
+      "nickname": {
+        "help": "Friendly name shown in the vehicle list and page title.",
+        "label": "Nickname"
+      },
+      "units_distance": {
+        "help": "Override the distance unit (mi or km) for this vehicle's panels.",
+        "label": "Distance unit"
+      },
+      "units_energy": {
+        "help": "Override the energy display unit (kWh) for this vehicle's panels.",
+        "label": "Energy unit"
+      },
+      "units_temperature": {
+        "help": "Override the temperature unit (°C or °F) for this vehicle's panels.",
+        "label": "Temperature unit"
+      }
+    },
+    "source": {
+      "default": "System default",
+      "override": "Override",
+      "user": "User default",
+      "vehicle": "Vehicle name"
+    },
+    "subtitle": "Override individual settings for this vehicle. Resets fall back to your account-wide values.",
+    "title": "Per-vehicle settings",
+    "toasts": {
+      "reset": "Reverted to default.",
+      "saved": "Setting saved."
+    },
+    "validation": {
+      "required": "Value is required."
+    }
   },
   "voiceMode": {
     "actions": {

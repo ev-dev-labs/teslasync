@@ -687,6 +687,7 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {},
   "global": {
     "loading": "Loading"
   },

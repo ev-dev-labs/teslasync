@@ -351,6 +351,9 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "impersonation": {
     "toast": {
       "ended": "Impersonation ended",
@@ -511,6 +514,7 @@
       "byTime": "By time",
       "empty": "No ranked attempts on this segment yet.",
       "orderBy": "Order by",
+      "select": "Select a route segment to view its ranked attempts.",
       "title": "Leaderboard"
     },
     "brief": {
@@ -661,6 +665,9 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
@@ -724,9 +731,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {

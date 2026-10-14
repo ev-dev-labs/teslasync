@@ -943,6 +943,9 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "geofences": {
     "aiSuggest": {
       "applyButton": "Apply to form",
@@ -1273,6 +1276,13 @@
       "statusUser": "Active — enabled manually on this device."
     }
   },
+  "quietHours": {
+    "severity": {
+      "critical": "Critical",
+      "info": "Info",
+      "warn": "Warning"
+    }
+  },
   "range": {
     "aiPredict": {
       "badge": "Helix",
@@ -1511,6 +1521,9 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
@@ -1574,9 +1587,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {

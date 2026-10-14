@@ -377,6 +377,9 @@
       "vehicle": "Vehicle"
     }
   },
+  "gas": {
+    "pollTriggered": "Gas price poll triggered"
+  },
   "help": {
     "drivingRhythm": {
       "body": "Each cell counts drives starting in that weekday-hour slot (your local time). Darker cells are busier. The predictability score rises the more your departures concentrate into a few slots.",
@@ -777,6 +780,9 @@
       "account": {
         "success": "Account export queued — track progress in the floating widget"
       },
+      "bulkDelete": {
+        "error": "Failed to delete exports"
+      },
       "create": {
         "success": "Export started"
       }
@@ -840,9 +846,6 @@
       "gasPrice": {
         "config": {
           "success": "Gas price config updated"
-        },
-        "poll": {
-          "success": "Gas prices updated"
         }
       },
       "polling": {
