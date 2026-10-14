@@ -26,9 +26,9 @@ import { VampireSplitPanel, VampireCulpritPanel, SourceRecovery, sessionPresenta
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate, formatDateTime, formatDayKey } from '@/lib/dateFormat';
+import { formatDayKey } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { localDayKey } from '@/lib/drivesAggregation';
-import { useTimezone } from '@/lib/timezone';
 
 import { request } from '@/api/client';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -72,10 +72,10 @@ export interface DailyDrainBucket {
 }
 
 /**
- * Group drain events into calendar-day buckets in the given IANA timezone,
- * summing battery loss + parked hours per day, oldest first. Events with an
- * unparseable start are skipped. Bucketing must use the *vehicle's* day —
- * UTC slicing misattributed near-midnight sessions for non-UTC users.
+ * Group whole sessions by their start date in the display timezone, oldest
+ * first. Loss and duration belong to the whole session, not that calendar day:
+ * the source supplies no evidence of when within the session SOC was lost.
+ * Sessions with a missing or unparseable start cannot be assigned a date.
  */
 export function buildDailyDrainRollup(
   events: VampireDrainEvent[],
@@ -105,7 +105,7 @@ export default function VampireDrainPage() {
 
   const { formatTemperature } = useUnits();
   const { vehicleId } = useSelectedVehicle();
-  const timeZone = useTimezone('vehicle');
+  const { formatDate, formatDateTime, tz: timeZone, opts: dateOptions } = useDateFormat();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
 
@@ -161,7 +161,7 @@ export default function VampireDrainPage() {
     [events],
   );
 
-  /** Daily rollup — sum battery loss and parked hours per vehicle-calendar day. */
+  /** Whole-session totals grouped by the displayed calendar start date. */
   const daily = useMemo(
     () => buildDailyDrainRollup(events, timeZone),
     [events, timeZone],
@@ -224,7 +224,7 @@ export default function VampireDrainPage() {
     },
     { key: 'drain_pct_per_day', align: 'right', header: t('vampireDrain.columns.rate', 'Rate %/day'), sortable: true, render: (r) => fmtNumber(r.drain_pct_per_day) },
     { key: 'ambient_temp_c_avg', align: 'right', header: t('vampireDrain.columns.temp', 'Ambient'), sortable: true, render: (r) => formatTemperature(r.ambient_temp_c_avg) },
-  ], [t, formatTemperature, fmtNumber, metricPreferences]);
+  ], [t, formatTemperature, fmtNumber, metricPreferences, formatDateTime]);
 
   const tips = useMemo(() => [
     { icon: <Icon icon={ShieldAlert} />, text: t('vampireDrain.tips.sentry', 'Disable Sentry Mode when parked at home to save 1–2 % per day.') },
@@ -405,12 +405,13 @@ export default function VampireDrainPage() {
         </Section>
       </FadeIn>
 
-      {/* 3 — Secondary bento: daily drain + tips */}
+      {/* 3 — Secondary bento: sessions by start date + tips */}
       <FadeIn delay={0.2}>
-        <Section id="vampire-daily" title={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')}>
-          <CardGrid label={t('vampireDrain.sections.daily', 'Daily drain and reduction tips')} items={[
+        <Section id="vampire-daily" title={t('vampireDrain.startDateGroups.section', 'Sessions by start date and reduction tips')}>
+          <CardGrid label={t('vampireDrain.startDateGroups.section', 'Sessions by start date and reduction tips')} items={[
             { id: 'daily-drain', size: 'half', content: (
-          <LayoutCard title={t('vampireDrain.daily.title', 'Daily drain while parked')}>
+          <LayoutCard title={t('vampireDrain.startDateGroups.title', 'Parked sessions by start date')}>
+            <Caption>{t('vampireDrain.startDateGroups.scope', 'Whole-session battery loss and duration are grouped by start date in {{timeZone}}, not distributed across calendar days. Sessions with missing or invalid start dates are excluded from this chart.', { timeZone })}</Caption>
             <SectionErrorBoundary name="VampireDrainDaily">
             {!enabled ? (
               <EmptyState
@@ -431,13 +432,13 @@ export default function VampireDrainPage() {
               />
             ) : (
               <EmbeddedChart toolbar exportable size="standard"
-                title={t('vampireDrain.daily.title', 'Daily drain while parked')}
-                ariaLabel={t('vampireDrain.daily.aria', 'Daily battery loss and parked hours')}
+                title={t('vampireDrain.startDateGroups.title', 'Parked sessions by start date')}
+                ariaLabel={t('vampireDrain.startDateGroups.aria', 'Whole-session battery loss and parked hours grouped by session start date')}
                 data={daily}
                 exportData={daily}
                 fullscreen
                 dataColumns={[
-                  { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDayKey(String(value ?? '')) },
+                  { key: 'date', label: t('vampireDrain.startDateGroups.date', 'Session start date'), format: (value) => formatDayKey(String(value ?? ''), dateOptions) },
                   {
                     key: 'drain_pct',
                     label: t('vampireDrain.daily.loss', 'Battery loss %'),
@@ -457,7 +458,7 @@ export default function VampireDrainPage() {
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={daily} margin={chartMargin}>
                       <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDayKey(v)} />
+                      <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDayKey(v, dateOptions)} />
                       <YAxis yAxisId="left" tick={axisTick} unit="%" width={44} />
                       <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="h" width={44} />
                       <Tooltip content={<ChartTooltip />} />

@@ -47,6 +47,8 @@ import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.unmock('@/lib/timezone')
+
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>()
   const { chartTestDoubles } = await import('@/test/chartTestDoubles')
@@ -110,6 +112,7 @@ import { EmbeddedChart } from '@/components/charts'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat'
+import * as settingsHooks from '@/hooks/useSettings'
 import VampireDrainPage, { buildDailyDrainRollup } from './VampireDrainPage'
 import type { Vehicle } from '@/types/vehicle'
 import type { ParkTruth, VampireSplit } from '@/types/teslaPhysics'
@@ -314,6 +317,11 @@ beforeEach(() => {
   // useSettings would normally seed; pin them so assertions are deterministic.
   setGlobalPrecision(2)
   setGlobalLocale('en-US')
+  const settingsResult = settingsHooks.useSettings()
+  vi.spyOn(settingsHooks, 'useSettings').mockReturnValue({
+    ...settingsResult,
+    settings: { ...settingsResult.settings, timezone_user: 'UTC' },
+  })
   install()
 })
 
@@ -349,7 +357,7 @@ describe('VampireDrainPage', () => {
 
     // Every panel is present — nothing stubbed out.
     expect(panelTitle('Drain rate trend')).toBeInTheDocument()
-    expect(panelTitle('Daily drain while parked')).toBeInTheDocument()
+    expect(panelTitle('Parked sessions by start date')).toBeInTheDocument()
     expect(screen.getByText('Tips to reduce vampire drain')).toBeInTheDocument()
     expect(screen.getByText(/Disable Sentry Mode/)).toBeInTheDocument()
     expect(panelTitle('Drain sessions')).toBeInTheDocument()
@@ -401,6 +409,71 @@ describe('VampireDrainPage', () => {
       { date: '2026-01-15', drain_pct: 8.0, hours: 10.0 },
       { date: '2026-01-16', drain_pct: 1.0, hours: 2.0 },
     ])
+  })
+
+  it('keeps a multi-day session intact in its start-date group, including across DST', () => {
+    expect(buildDailyDrainRollup([{
+      ...eventA,
+      started_at: '2026-03-08T04:30:00Z',
+      ended_at: '2026-03-10T04:30:00Z',
+      duration_hours: 48,
+      drain_pct: 7,
+    }], 'America/New_York')).toEqual([
+      { date: '2026-03-07', drain_pct: 7, hours: 48 },
+    ])
+  })
+
+  it.each(['', 'not-a-date', undefined, null])('excludes an invalid or missing start (%s) without borrowing its end date', (started_at) => {
+    const event = { ...eventA, started_at } as VampireDrainEvent
+    expect(buildDailyDrainRollup([event], 'Pacific/Auckland')).toEqual([])
+  })
+
+  it('separates sessions on either side of local midnight without splitting their totals', () => {
+    expect(buildDailyDrainRollup([
+      { ...eventA, started_at: '2026-01-14T10:59:59Z', drain_pct: 6, duration_hours: 30 },
+      { ...eventB, started_at: '2026-01-14T11:00:00Z', drain_pct: 3, duration_hours: 10 },
+    ], 'Pacific/Auckland')).toEqual([
+      { date: '2026-01-14', drain_pct: 6, hours: 30 },
+      { date: '2026-01-15', drain_pct: 3, hours: 10 },
+    ])
+  })
+
+  it('uses the saved display timezone and locale for start-date grouping and chart labels', async () => {
+    const settingsResult = settingsHooks.useSettings()
+    vi.mocked(settingsHooks.useSettings).mockReturnValue({
+      ...settingsResult,
+      locale: 'de-DE',
+      settings: {
+        ...settingsResult.settings,
+        locale: 'de-DE',
+        tz_display_default: 'user',
+        timezone_user: 'America/New_York',
+      },
+    })
+    // A different vehicle zone must not override the saved user display mode.
+    install({
+      vehicles: [makeVehicle({ timezone: 'Pacific/Auckland' })],
+      events: [{
+        ...eventA,
+        started_at: '2026-01-15T00:30:00Z',
+        ended_at: '2026-01-17T00:30:00Z',
+        duration_hours: 48,
+      }],
+    })
+    renderPage()
+    await screen.findByRole('table', { name: 'Drain sessions' })
+
+    const chart = [...vi.mocked(EmbeddedChart).mock.calls].reverse()
+      .find(([props]) => props.chartKey === 'vampire-drain-daily')?.[0]
+    expect(chart).toMatchObject({
+      title: 'Parked sessions by start date',
+      ariaLabel: 'Whole-session battery loss and parked hours grouped by session start date',
+      exportData: [{ date: '2026-01-14', drain_pct: 6, hours: 48 }],
+    })
+    expect(chart?.dataColumns?.[0].label).toBe('Session start date')
+    expect(chart?.dataColumns?.[0].format?.('2026-01-14')).toBe('14. Jan. 2026')
+    expect(screen.getByText(/Whole-session battery loss and duration are grouped by start date in America\/New_York/)).toBeInTheDocument()
+    expect(screen.queryByText('Daily drain while parked')).not.toBeInTheDocument()
   })
 
   it('keeps every panel on its select-a-vehicle empty state and never queries drain for a null id', async () => {
@@ -509,7 +582,7 @@ describe('VampireDrainPage', () => {
     // Landmark regions let screen-reader users jump between the summary + bento sections.
     expect(screen.getByRole('region', { name: 'Drain summary' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Drain rate trend and gauge' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Daily drain and reduction tips' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Sessions by start date and reduction tips' })).toBeInTheDocument()
 
     // The icon-only refresh button carries a unique, descriptive accessible name
     // (distinct from the generic freshness-chip "Refresh" control).
