@@ -119,6 +119,7 @@ function TagGroup({
                   type="button"
                   variant="ghost"
                   onClick={() => onSelect(ep)}
+                  aria-current={isSelected ? 'true' : undefined}
                   className={cn(
                     '!h-auto !w-full !justify-start !rounded-none !px-3 !py-1.5 text-left text-xs',
                     'hover:!bg-white/[0.05]',
