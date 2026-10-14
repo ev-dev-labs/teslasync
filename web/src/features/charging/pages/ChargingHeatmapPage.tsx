@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity, BarChart3, CalendarClock, MapPin, RefreshCw,
@@ -22,7 +22,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useDataState } from '@/hooks/useDataState';
 
-import { DAYS } from '@/lib/constants';
+import { formatTime } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 
 import {
@@ -31,18 +31,19 @@ import {
   aggregateLocations,
   aggregateByDayOfWeek,
   deriveInsights,
-  formatHourLabel,
 } from '../components/charging-heatmap';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { ChargingHeatmapSummary } from '../components/charging-heatmap-modernization';
 
 export default function ChargingHeatmapPage() {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('charging.heatmap.title', 'Charging Patterns'));
 
   // The header VehiclePicker is the source of truth for the active vehicle.
-  const { vehicleId } = useSelectedVehicle();
+  const { vehicleId: selectedVehicleId, vehiclesState } = useSelectedVehicle();
+  const vehicleId = selectedVehicleId != null && Number.isSafeInteger(selectedVehicleId) && selectedVehicleId > 0
+    ? selectedVehicleId : null;
   const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'charging-heatmap.range',
     defaultPresetId: 'all',
@@ -53,20 +54,41 @@ export default function ChargingHeatmapPage() {
     start: startInstant,
     end: endInstantExclusive,
   });
-  const { data, refetch } = query;
-  const state = useDataState(query, { provenance: 'historical' });
+  const refetch = useCallback(async () => {
+    if (vehicleId == null) throw new Error('Vehicle scope has not resolved');
+    return query.refetch();
+  }, [vehicleId, query.refetch]);
+  const scopedQuery = vehicleId != null
+    ? { ...query, refetch }
+    : { data: undefined, refetch: undefined };
+  const state = useDataState(scopedQuery, { provenance: 'historical' });
   // Background errors/pauses must not replace a previously loaded calendar.
-  const isLoading = !state.hasData && query.isLoading;
+  const isLoading = !state.hasData && (vehicleId != null
+    ? query.isLoading
+    : vehiclesState?.status === 'initial' && !vehiclesState.isRefreshBlocked);
   const isError = state.fatalError != null;
   const error = state.fatalError;
-  const sessions = data ?? [];
+  const sessions = state.data ?? [];
   const hasData = sessions.length > 0;
 
   const { formatEnergy } = useUnits();
+  // Labels describe browser-local bucket identities, not real instants to
+  // convert into another timezone. UTC reference dates keep them stable.
+  const dayLabels = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' });
+    return Array.from({ length: 7 }, (_, day) => formatter.format(new Date(Date.UTC(2024, 0, 7 + day))));
+  }, [locale]);
+  const fullDayLabels = useMemo(() => {
+    const formatter = new Intl.DateTimeFormat(locale, { weekday: 'long', timeZone: 'UTC' });
+    return Array.from({ length: 7 }, (_, day) => formatter.format(new Date(Date.UTC(2024, 0, 7 + day))));
+  }, [locale]);
+  const hourLabels = useMemo(() => Array.from({ length: 24 }, (_, hour) =>
+    formatTime(new Date(Date.UTC(2024, 0, 7, hour)), { locale, tz: 'UTC' }),
+  ), [locale]);
 
   const model = useMemo(() => buildGrid(sessions), [sessions]);
   const insights = useMemo(() => deriveInsights(model), [model]);
-  const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, DAYS), [model]);
+  const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, dayLabels), [model, dayLabels]);
   const locationData = useMemo(
     () => aggregateLocations(sessions, t('charging.heatmap.unknownPlace', 'Unknown')),
     [sessions, t],
@@ -78,6 +100,7 @@ export default function ChargingHeatmapPage() {
     const recorded = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     const energy = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     for (const session of sessions) {
+      if (!session.started_at) continue;
       const started = new Date(session.started_at);
       if (Number.isNaN(started.getTime())) continue;
       if (session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)) {
@@ -86,8 +109,10 @@ export default function ChargingHeatmapPage() {
       }
     }
     return model.grid.flatMap((row, day) => row.map((cell, hour) => ({
-      day: DAYS[day],
-      hour: formatHourLabel(hour),
+      dayIndex: day,
+      hourIndex: hour,
+      day: dayLabels[day],
+      hour: hourLabels[hour],
       count: cell.count,
       energy_wh: recorded[day][hour] > 0 ? energy[day][hour] : null,
       recorded_energy_count: recorded[day][hour],
@@ -99,7 +124,7 @@ export default function ChargingHeatmapPage() {
             ? t('charging.heatmap.partialMeasurements', 'Some returned sessions have no recorded value; the total includes recorded values only.')
             : '',
     })));
-  }, [model, sessions, t]);
+  }, [model, sessions, t, dayLabels, hourLabels]);
   const slotColumns = [
     { key: 'day', label: t('charging.heatmap.day', 'Day') },
     { key: 'hour', label: t('chart.col.time', 'Time') },
@@ -107,7 +132,7 @@ export default function ChargingHeatmapPage() {
     {
       key: 'energy_wh', label: t('charging.heatmap.totalEnergy', 'Total Energy'),
       format: (value: unknown) =>
-        typeof value === 'number' ? formatEnergy(value) : '—',
+        typeof value === 'number' && Number.isFinite(value) ? formatEnergy(value) : '—',
     },
     { key: 'energyStatus', label: t('common.status', 'Status') },
   ];
@@ -121,11 +146,15 @@ export default function ChargingHeatmapPage() {
     let energyCount = 0;
     let costCount = 0;
     for (const s of sessions) {
-      totalEnergyWh += s.total_energy_added_wh ?? 0;
-      totalCost += s.cost_decimal ?? 0;
-      if (s.total_energy_added_wh != null) energyCount += 1;
-      if (s.cost_decimal != null) costCount += 1;
-      const started = new Date(s.started_at).getTime();
+      if (typeof s.total_energy_added_wh === 'number' && Number.isFinite(s.total_energy_added_wh)) {
+        totalEnergyWh += s.total_energy_added_wh;
+        energyCount += 1;
+      }
+      if (typeof s.cost_decimal === 'number' && Number.isFinite(s.cost_decimal)) {
+        totalCost += s.cost_decimal;
+        costCount += 1;
+      }
+      const started = s.started_at ? new Date(s.started_at).getTime() : Number.NaN;
       const ended = s.ended_at ? new Date(s.ended_at).getTime() : Number.NaN;
       if (Number.isFinite(started) && Number.isFinite(ended) && ended > started) {
         totalDurationS += (ended - started) / 1000;
@@ -152,6 +181,7 @@ export default function ChargingHeatmapPage() {
       <Button
         variant="ghost"
         onClick={() => refetch()}
+        disabled={vehicleId == null}
         aria-label={t('common.refresh', 'Refresh')}
         className="h-11 w-11"
       >
@@ -165,10 +195,26 @@ export default function ChargingHeatmapPage() {
       title={t('charging.heatmap.title', 'Charging Patterns')}
       subtitle={t('charging.heatmap.subtitle', 'When and where you charge')}
       secondaryActions={actions}
-      query={query}
+      query={vehicleId != null ? { ...query, refetch } : undefined}
     >
+      {vehiclesState && (
+        <StaleRefreshWarning state={vehiclesState} label={t('nav.vehicles', 'Fleet')} />
+      )}
+      {vehiclesState?.fatalError && (
+        <QueryError
+          error={vehiclesState.fatalError}
+          onRetry={vehiclesState.retry ?? undefined}
+          resourceName={t('nav.vehicles', 'Fleet')}
+        />
+      )}
+      {vehicleId == null && vehiclesState?.hasData && (
+        <EmptyState
+          title={t('common.noVehicleSelected.title', 'No vehicle selected')}
+          message={t('common.noVehicleSelected.desc', 'Add a vehicle to your fleet to see data on this page.')}
+        />
+      )}
       <StaleRefreshWarning state={state} label={t('charging.heatmap.title', 'Charging Patterns')} />
-      {!state.hasData && state.isRefreshBlocked && (
+      {!state.hasData && (state.isRefreshBlocked || (vehicleId == null && vehiclesState?.isRefreshBlocked)) && (
         <AlertBanner variant="warning" role="status">
           {t('charging.heatmap.loadPaused', 'Loading is paused. Charging history will appear when the connection resumes.')}
         </AlertBanner>
@@ -257,7 +303,7 @@ export default function ChargingHeatmapPage() {
                         </thead>
                         <tbody>
                           {slotData.map((slot) => (
-                            <tr key={`${slot.day}-${slot.hour}`}>
+                            <tr key={`${slot.dayIndex}-${slot.hourIndex}`}>
                               <th scope="row">{slot.day} {slot.hour}</th>
                               <td>{slot.hour}</td>
                               <td>{fmtInt(slot.count)}</td>
@@ -294,15 +340,16 @@ export default function ChargingHeatmapPage() {
                     <Caption>{t('charging.heatmap.favorite', 'Favorite Charging Time')}</Caption>
                     <Text as="p" size="sm" weight="semibold" color="primary" className="mt-1">
                       {model.maxCount > 0
-                        ? t('charging.heatmap.favoriteValue', '{{day}}s at {{hour}}', {
-                            day: DAYS[model.favDay],
-                            hour: formatHourLabel(model.favHour),
+                        ? t('charging.heatmap.favoriteValue', '{{day}} at {{hour}}', {
+                            day: fullDayLabels[model.favDay],
+                            hour: hourLabels[model.favHour],
                           })
                         : '—'}
                     </Text>
                     <Caption>
-                      {t('charging.heatmap.favoriteSessions', '{{count}} sessions', {
+                      {t('charging.heatmap.favoriteSessions', '{{formattedCount}} sessions', {
                         count: model.maxCount,
+                        formattedCount: fmtInt(model.maxCount),
                       })}
                     </Caption>
                   </div>
@@ -313,20 +360,23 @@ export default function ChargingHeatmapPage() {
                       value={insights.busiestDayCount}
                       max={barMax}
                       color={chartTokens.series[5]}
-                      sublabel={`${DAYS[insights.busiestDay]} · ${fmtInt(insights.busiestDayCount)}`}
+                      fill="solid"
+                      sublabel={`${dayLabels[insights.busiestDay]} · ${fmtInt(insights.busiestDayCount)}`}
                     />
                     <MetricBar
                       label={t('charging.heatmap.busiestHour', 'Busiest Hour')}
                       value={insights.busiestHourCount}
                       max={barMax}
                       color={chartTokens.series[1]}
-                      sublabel={`${formatHourLabel(insights.busiestHour)} · ${fmtInt(insights.busiestHourCount)}`}
+                      fill="solid"
+                      sublabel={`${hourLabels[insights.busiestHour]} · ${fmtInt(insights.busiestHourCount)}`}
                     />
                     <MetricBar
                       label={t('charging.heatmap.weekdays', 'Weekdays')}
                       value={insights.weekdayCount}
                       max={barMax}
                       color={chartTokens.series[0]}
+                      fill="solid"
                       sublabel={fmtInt(insights.weekdayCount)}
                     />
                     <MetricBar
@@ -334,6 +384,7 @@ export default function ChargingHeatmapPage() {
                       value={insights.weekendCount}
                       max={barMax}
                       color={chartTokens.series[4]}
+                      fill="solid"
                       sublabel={fmtInt(insights.weekendCount)}
                     />
                   </div>

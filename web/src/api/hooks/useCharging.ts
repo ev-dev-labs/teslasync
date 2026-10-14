@@ -50,8 +50,10 @@ export const chargingKeys = {
   detailById: (id: number) => ['charging-session', id] as const,
   telemetry: (id: number) => ['charge-telemetry', id] as const,
   byVehicle: (vehicleId: string) => ['charging-sessions', 'vehicle', vehicleId] as const,
-  history: (vehicleId: string, limit = 1000) =>
-    ['charging-sessions', 'history', vehicleId, limit] as const,
+  history: (vehicleId: string, limit = 1000, window?: { start?: string; end?: string }) =>
+    (window?.start || window?.end
+      ? ['charging-sessions', 'history', vehicleId, limit, window.start ?? null, window.end ?? null] as const
+      : ['charging-sessions', 'history', vehicleId, limit] as const),
 };
 
 export function useChargingSessions(vehicleId?: string) {
@@ -70,13 +72,20 @@ export function useChargingSessions(vehicleId?: string) {
  * models without expanding the ordinary list query or sharing its cache key.
  * The result is an observed window (maximum 1,000 rows), not a lifetime claim.
  */
-export function useChargingHistory(vehicleId?: string, limit = 1000) {
+export function useChargingHistory(
+  vehicleId?: string,
+  limit = 1000,
+  window?: { start?: string; end?: string },
+) {
   const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(boundedLimit) });
+  if (window?.start) params.set('start', window.start);
+  if (window?.end) params.set('end', window.end);
   return useQuery({
-    queryKey: chargingKeys.history(vehicleId ?? '', boundedLimit),
+    queryKey: chargingKeys.history(vehicleId ?? '', boundedLimit, window),
     queryFn: ({ signal }) =>
       request<ChargingSession[]>(
-        `/charging?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        `/charging?${params}`,
         { signal },
       ).then((rows) => validateAnalyticalHistory(rows, 'charging')),
     enabled: !!vehicleId,
@@ -126,8 +135,13 @@ export function useChargingSessionsPaginated(
   const { limit = 50, offset = 0, start, end } = options;
   return useQuery({
     queryKey: ['charging', vehicleId, start, end, limit, offset] as const,
-    queryFn: ({ signal }) => getChargingSessions(vehicleId!, limit, offset, start, end, { signal }),
-    enabled: vehicleId !== null,
+    queryFn: ({ signal }) => {
+      if (vehicleId === null || !Number.isSafeInteger(vehicleId) || vehicleId <= 0) {
+        throw new Error('Vehicle scope has not resolved');
+      }
+      return getChargingSessions(vehicleId, limit, offset, start, end, { signal });
+    },
+    enabled: vehicleId !== null && Number.isSafeInteger(vehicleId) && vehicleId > 0,
     staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });
@@ -319,15 +333,20 @@ export const teslaChargingSessionKeys = {
   byVin: (vin: string) => ['tesla-charging-sessions', vin] as const,
 };
 
-/** Fetches Tesla fleet charging sessions from the local DB (business accounts only). */
-export function useTeslaChargingSessions(vin?: string, options?: { enabled?: boolean }) {
+/** Undefined selects fleet scope; null represents an unresolved, non-fetchable VIN. */
+export function useTeslaChargingSessions(vin?: string | null, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
-    queryFn: ({ signal }) => request<TeslaChargingSessionResponse>(
-      `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`, { signal }
-    ),
+    queryKey: vin === null
+      ? ['tesla-charging-sessions-unresolved']
+      : vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
+    queryFn: ({ signal }) => {
+      if (vin === null) throw new Error('Vehicle scope has not resolved');
+      return request<TeslaChargingSessionResponse>(
+        `/tesla/charging/sessions${vin ? `?vin=${encodeURIComponent(vin)}` : ''}`, { signal }
+      );
+    },
     staleTime: STALE_TIMES.SLOW,
-    enabled: options?.enabled ?? true,
+    enabled: vin !== null && (options?.enabled ?? true),
   });
 }
 

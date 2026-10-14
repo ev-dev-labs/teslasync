@@ -17,6 +17,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { ChargingSession } from '@/api/types';
+import { setGlobalLocale } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
+import { deriveDataState } from '@/api/dataState';
 
 // jsdom lacks matchMedia; chart containers read it on mount.
 vi.hoisted(() => {
@@ -47,6 +50,14 @@ vi.mock('react-i18next', () => {
 });
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+vi.mock('@/api/hooks/useAnnotations', async () => ({
+  ...await vi.importActual<typeof import('@/api/hooks/useAnnotations')>('@/api/hooks/useAnnotations'),
+  useChartAnnotations: () => ({ data: [], isLoading: false, isError: false, error: null }),
+  useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false, isError: false, error: null }),
+  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: vi.fn() }));
 vi.mock('@/api/hooks/useCharging', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useCharging')>(
@@ -98,6 +109,7 @@ function kpiRegion(): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setGlobalLocale('en-GB');
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -107,12 +119,65 @@ beforeEach(() => {
   mockRange.mockReturnValue({
     start: '2026-01-01',
     end: '2026-03-01',
+    startInstant: '2026-01-01T08:00:00.000Z',
+    endInstantExclusive: '2026-03-02T08:00:00.000Z',
     setRange: vi.fn(),
   });
   mockSessions.mockReturnValue(makeQuery({ data: [] }));
 });
 
 describe('ChargingHeatmapPage — KPI band branches', () => {
+  it.each([null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY])('blocks history actions for unresolved or invalid vehicle %s', (vehicleId) => {
+    const query = makeQuery({ data: [], isError: true, error: new Error('old scope failed') });
+    mockSelected.mockReturnValue({
+      vehicleId,
+      vehiclesState: deriveDataState({ data: [] }),
+    });
+    mockSessions.mockReturnValue(query);
+    renderPage();
+
+    expect(mockSessions).toHaveBeenCalledWith(null, expect.objectContaining({ limit: 2000 }));
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
+    expect(within(kpiRegion()).getByText('Total Sessions').closest('[data-operational-metric]'))
+      .toHaveAttribute('data-value-state', 'missing');
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(query.refetch).not.toHaveBeenCalled();
+  });
+
+  it('keeps fleet retry independent while history refresh is disabled', () => {
+    const fleetRetry = vi.fn();
+    const query = makeQuery();
+    mockSelected.mockReturnValue({
+      vehicleId: null,
+      vehiclesState: deriveDataState({ error: new Error('fleet down'), refetch: fleetRetry }),
+    });
+    mockSessions.mockReturnValue(query);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(fleetRetry).toHaveBeenCalledTimes(1);
+    expect(query.refetch).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+  });
+
+  it.each([
+    ['rolling', '2026-10-13T17:45:50.694Z', '2026-10-14T17:45:50.694Z'],
+    ['custom across DST', '2026-03-08T08:00:00.000Z', '2026-03-10T07:00:00.000Z'],
+  ])('forwards the exact %s shared instants rather than calendar labels', (_name, startInstant, endInstantExclusive) => {
+    mockRange.mockReturnValue({
+      start: '2026-03-08',
+      end: '2026-03-09',
+      startInstant,
+      endInstantExclusive,
+      setRange: vi.fn(),
+    });
+    renderPage();
+
+    expect(mockSessions).toHaveBeenCalledWith(7, {
+      limit: 2000, start: startInstant, end: endInstantExclusive,
+    });
+  });
+
   it('shows skeletons (not cards) while the sessions query is in flight', () => {
     mockSessions.mockReturnValue(makeQuery({ isLoading: true, data: undefined }));
     renderPage();
@@ -139,12 +204,61 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
   }
 
   describe('ChargingHeatmapPage — complete returned-session alternatives', () => {
+    it('renders function-valued insight colors as solid fills, including measured-zero bars', () => {
+      mockSessions.mockReturnValue(makeQuery({ data: [session(1, 8, 1000), session(2, 8, null)] }));
+      renderPage();
+
+      for (const [label, series, value] of [
+        ['Busiest Day', 5, 2],
+        ['Busiest Hour', 1, 2],
+        ['Weekdays', 0, 2],
+        ['Weekends', 4, 0],
+      ] as const) {
+        const bar = screen.getByRole('progressbar', { name: label });
+        expect(bar).toHaveAttribute('aria-valuenow', String(value));
+        expect(bar).toHaveAttribute('aria-valuemax', '2');
+        expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({
+          background: chartTokens.series[series],
+        });
+      }
+    });
+
+    it('keeps missing and invalid energy distinct from zero, signed and fractional readings', async () => {
+      const user = userEvent.setup();
+      const readings = [null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, 0, -1250.5, 1250.5];
+      mockSessions.mockReturnValue(makeQuery({
+        data: readings.map((energy, index) => ({
+          ...session(index + 1, index, null),
+          total_energy_added_wh: energy,
+          cost_decimal: index < 5 ? energy : index === 5 ? 0 : index === 6 ? -1.25 : 2.5,
+        })),
+      }));
+      renderPage();
+      await user.click(screen.getByRole('button', { name: /data table/ }));
+      const region = screen.getByRole('region', { name: 'Charging sessions by weekday and hour of day' });
+      for (let hour = 0; hour < 5; hour++) {
+        const row = within(region).getByRole('rowheader', { name: `Mon 0${hour}:00` }).closest('tr')!;
+        expect(within(row).getByRole('cell', { name: '—' })).toBeInTheDocument();
+        expect(within(row).getByText('No recorded measurements in the returned sessions')).toBeInTheDocument();
+      }
+      for (const [hour, expected] of [[5, '0.00 kWh'], [6, '-1.25 kWh'], [7, '1.25 kWh']] as const) {
+        const row = within(region).getByRole('rowheader', { name: `Mon 0${hour}:00` }).closest('tr')!;
+        expect(within(row).getByText(expected)).toBeInTheDocument();
+      }
+      const energyMetric = within(kpiRegion()).getByText('Total Energy').closest('[data-operational-metric]')!;
+      expect(energyMetric.querySelector('[data-operational-value]')).toHaveTextContent('0.00 kWh');
+      const costMetric = within(kpiRegion()).getByText('Total Cost').closest('[data-operational-metric]')!;
+      expect(costMetric.querySelector('[data-operational-value]')).toHaveTextContent('1.25');
+    });
+
     it('keeps all heatmap cells, five legend stops, source charts and raw scoped query', () => {
       mockSessions.mockReturnValue(makeQuery({ data: [session(1, 8, 1000), session(2, 8, null)] }));
       renderPage();
 
       expect(mockSessions).toHaveBeenCalledWith(7, {
-        limit: 2000, start: '2026-01-01', end: '2026-03-01',
+        limit: 2000,
+        start: '2026-01-01T08:00:00.000Z',
+        end: '2026-03-02T08:00:00.000Z',
       });
       const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
       expect(grid.querySelectorAll('[title]')).toHaveLength(168);

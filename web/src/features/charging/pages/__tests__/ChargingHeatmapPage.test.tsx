@@ -6,8 +6,8 @@
  * scoped to the header-selected vehicle and a persisted date range. Its own
  * responsibilities (what these tests exercise) are:
  *
- *   1. One `useChargingSessionsPaginated(vehicleId, {limit:2000,start,end})`
- *      feed keyed on the derived active vehicle + the range.
+ *   1. One `useChargingSessionsPaginated` feed keyed on the active vehicle
+ *      and both precise shared-range instants, not calendar date labels.
  *   2. A KPI band derived from the sessions — count, SI watt-hours → kWh at the
  *      render boundary, currency cost, and the average of *completed* durations.
  *   3. Section-local loading / error / empty branches for EVERY panel — no panel
@@ -23,10 +23,12 @@
  * display conversion and active-vehicle fallback are genuinely exercised.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, renderHook, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { setGlobalLocale } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -53,7 +55,10 @@ vi.hoisted(() => {
   }
 });
 
-const { mockRequest } = vi.hoisted(() => ({ mockRequest: vi.fn() }));
+const { mockRequest, translations } = vi.hoisted(() => ({
+  mockRequest: vi.fn(),
+  translations: {} as Record<string, string>,
+}));
 
 // Replace only `request`; keep the real isApiError/ApiError so <QueryError>
 // classifies an injected ApiError(500) into its "Server error" branch.
@@ -70,7 +75,7 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallback?: unknown, opts?: unknown) => {
-        const template = typeof fallback === 'string' ? fallback : key;
+        const template = translations[key] ?? (typeof fallback === 'string' ? fallback : key);
         const vars = (
           opts && typeof opts === 'object'
             ? opts
@@ -93,6 +98,7 @@ import ChargingHeatmapPage from '../ChargingHeatmapPage';
 import { SelectedVehicleProvider, useSelectedVehicleStore } from '@/store/selectedVehicle';
 import { Button } from '@/components/ui';
 import { ApiError } from '@/lib/resilience';
+import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 const TWO_VEHICLES = [
@@ -204,20 +210,20 @@ function HeaderVehicleControl() {
   return <Button type="button" data-testid="header-vehicle-20" onClick={() => setVehicleId(20)}>Select vehicle 20 in header</Button>;
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/charging-heatmap') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   });
-  return render(
+  return { client, ...render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/charging/heatmap']}>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <SelectedVehicleProvider>
           <ChargingHeatmapPage />
           <HeaderVehicleControl />
         </SelectedVehicleProvider>
       </MemoryRouter>
     </QueryClientProvider>,
-  );
+  ) };
 }
 
 // OperationalBrief keeps the complete display value separate from trust details.
@@ -232,10 +238,92 @@ function kpiValue(label: string): string {
 
 beforeEach(() => {
   mockRequest.mockReset();
+  setGlobalLocale('en-US');
+  for (const key of Object.keys(translations)) delete translations[key];
   window.localStorage.clear();
 });
 afterEach(() => {
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+});
+
+describe('ChargingHeatmapPage — precise server range contract', () => {
+  function bounds(url: string) {
+    return new URL(url, 'http://localhost').searchParams;
+  }
+
+  it('sends the precise rolling 24-hour instants and keys the cache with both', async () => {
+    const now = Date.parse('2026-10-14T17:45:50.694Z');
+    vi.spyOn(Date, 'now').mockReturnValue(now);
+    installRequest();
+    const { client } = renderPage('/charging-heatmap?time_scope=24h');
+    await screen.findByRole('img', { name: GRID_ARIA });
+
+    const start = '2026-10-13T17:45:50.694Z';
+    const end = '2026-10-14T17:45:50.694Z';
+    expect(bounds(chargingCalls()[0]).get('start')).toBe(start);
+    expect(bounds(chargingCalls()[0]).get('end')).toBe(end);
+    expect(client.getQueryData(['charging', 10, start, end, 2000, 0])).toEqual(SESSIONS);
+    expect(kpiValue('Total Energy')).toMatch(/^55(?:\.0+)?\s*kWh$/);
+  });
+
+  it('preserves non-UTC custom midnights across DST and Sunday-first buckets', async () => {
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolvedOptions.call(this), timeZone: 'America/Los_Angeles' };
+    });
+    installRequest();
+    renderPage('/charging-heatmap?from=2026-03-08&to=2026-03-09&time_scope=custom');
+    await screen.findByRole('img', { name: GRID_ARIA });
+
+    expect(bounds(chargingCalls()[0]).get('start')).toBe('2026-03-08T08:00:00.000Z');
+    expect(bounds(chargingCalls()[0]).get('end')).toBe('2026-03-10T07:00:00.000Z');
+    const figure = screen.getByRole('figure', { name: GRID_ARIA });
+    const rows = within(figure).getAllByRole('row');
+    expect(rows[1]).toHaveTextContent('Sun');
+    expect(rows[25]).toHaveTextContent('Mon');
+    // Returned SI rows remain untouched; the server, not loaded-row filtering,
+    // owns the range (the fixture dates intentionally precede this window).
+    expect(kpiValue('Total Sessions')).toBe('6');
+  });
+
+  it('changes the query key for either exact bound and cancels pending requests', async () => {
+    const signals: AbortSignal[] = [];
+    mockRequest.mockImplementation((_url: string, options: { signal: AbortSignal }) => {
+      signals.push(options.signal);
+      return new Promise(() => {});
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const start = '2026-10-13T17:45:50.694Z';
+    const end = '2026-10-14T17:45:50.694Z';
+    const { rerender, unmount } = renderHook(
+      (range: { start: string; end: string }) =>
+        useChargingSessionsPaginated(10, { limit: 2000, ...range }),
+      {
+        initialProps: { start, end },
+        wrapper: ({ children }: { children: ReactNode }) =>
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+      },
+    );
+    await waitFor(() => expect(signals).toHaveLength(1));
+    const nextStart = '2026-10-13T17:46:50.694Z';
+    rerender({ start: nextStart, end });
+    await waitFor(() => expect(signals).toHaveLength(2));
+    expect(signals[0].aborted).toBe(true);
+    const nextEnd = '2026-10-14T17:46:50.694Z';
+    rerender({ start: nextStart, end: nextEnd });
+    await waitFor(() => expect(signals).toHaveLength(3));
+    expect(signals[1].aborted).toBe(true);
+    expect(client.getQueryCache().getAll().map((query) => query.queryKey)).toEqual([
+      ['charging', 10, start, end, 2000, 0],
+      ['charging', 10, nextStart, end, 2000, 0],
+      ['charging', 10, nextStart, nextEnd, 2000, 0],
+    ]);
+    expect(bounds(chargingCalls()[2]).get('end')).toBe(nextEnd);
+    unmount();
+    expect(signals[2].aborted).toBe(true);
+  });
 });
 
 describe('ChargingHeatmapPage — happy path', () => {
@@ -284,11 +372,49 @@ describe('ChargingHeatmapPage — happy path', () => {
     await screen.findByRole('img', { name: GRID_ARIA });
 
     // Busiest slot = Monday 10:00 with 3 sessions (DAYS[1] === 'Mon').
-    expect(screen.getByText('Mons at 10:00')).toBeInTheDocument();
+    expect(screen.getByText('Monday at 10:00 AM')).toBeInTheDocument();
     expect(screen.getByText('3 sessions')).toBeInTheDocument();
     // MetricBar sublabels are distinctive "<label> · <count>" strings.
     expect(screen.getByText('Mon · 3')).toBeInTheDocument();
-    expect(screen.getByText('10:00 · 3')).toBeInTheDocument();
+    expect(screen.getByText('10:00 AM · 3')).toBeInTheDocument();
+  });
+
+  it('preserves populated insight readings with solid function-valued theme colors', async () => {
+    installRequest();
+    renderPage();
+    await screen.findByRole('img', { name: GRID_ARIA });
+
+    for (const [label, series, value] of [
+      ['Busiest Day', 5, 3],
+      ['Busiest Hour', 1, 3],
+      ['Weekdays', 0, 4],
+      ['Weekends', 4, 2],
+    ] as const) {
+      const bar = screen.getByRole('progressbar', { name: label });
+      expect(bar).toHaveAttribute('aria-valuenow', String(value));
+      expect(bar).toHaveAttribute('aria-valuemax', '6');
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({
+        background: chartTokens.series[series],
+      });
+    }
+  });
+
+  it('translates a complete weekday/time phrase without changing Sunday-first hour buckets', async () => {
+    translations['charging.heatmap.favoriteValue'] = 'Um {{hour}} am {{day}}';
+    setGlobalLocale('de-DE');
+    installRequest({ settings: { ...SETTINGS, locale: 'de-DE' } });
+    renderPage();
+    await screen.findAllByRole('img', { name: GRID_ARIA });
+    await waitFor(() => expect(screen.getByText('Um 10:00 am Montag')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /data table/ }));
+    const rows = within(screen.getByRole('region', { name: GRID_ARIA })).getAllByRole('row');
+    expect(rows).toHaveLength(169);
+    expect(rows[1]).toHaveTextContent('So');
+    expect(rows[25]).toHaveTextContent('Mo');
+    expect(rows[35]).toHaveTextContent('10:00');
+    expect(within(rows[35]).getByRole('cell', { name: '3' })).toBeInTheDocument();
+    expect(screen.getByText('Mo · 3')).toBeInTheDocument();
+    expect(kpiValue('Total Energy')).toMatch(/^55[.,]00\s*kWh$/);
   });
 
   it('shows the real breakdown charts (not their empty states) when data exists', async () => {
@@ -332,6 +458,97 @@ describe('ChargingHeatmapPage — average-duration derivation (regression)', () 
 });
 
 describe('ChargingHeatmapPage — loading / error / empty branches', () => {
+  it('keeps empty-fleet prerequisites distinct from successful empty charging history', async () => {
+    installRequest({ vehicles: [] });
+    renderPage();
+    await screen.findByText('No vehicle selected');
+    expect(chargingCalls()).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    expect(kpiValue('Total Sessions')).toBe('—');
+    expect(screen.queryByText('No charging sessions in this range')).not.toBeInTheDocument();
+  });
+
+  it('never requests charging during fleet loading, then enables resolved-vehicle refresh', async () => {
+    let resolveFleet!: (vehicles: typeof TWO_VEHICLES) => void;
+    const fleet = new Promise<typeof TWO_VEHICLES>((resolve) => { resolveFleet = resolve; });
+    installRequest();
+    const request = mockRequest.getMockImplementation()!;
+    mockRequest.mockImplementation((url: string) => url === '/vehicles' ? fleet : request(url));
+    renderPage();
+    await waitFor(() => expect(mockRequest).toHaveBeenCalledWith('/vehicles', expect.anything()));
+    expect(chargingCalls()).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    resolveFleet(TWO_VEHICLES);
+    await screen.findByRole('img', { name: GRID_ARIA });
+    expect(screen.getAllByRole('button', { name: 'Refresh' }).find((el) => el.tagName === 'BUTTON')).toBeEnabled();
+    expect(chargingCalls().every((url) => new URL(url, 'http://localhost').searchParams.get('vehicle_id') === '10')).toBe(true);
+  });
+
+  it('recovers fleet failure independently without issuing a null-scoped history request', async () => {
+    installRequest();
+    const request = mockRequest.getMockImplementation()!;
+    let fleetFailed = true;
+    mockRequest.mockImplementation((url: string) => url === '/vehicles' && fleetFailed
+      ? Promise.reject(new ApiError('fleet down', 500)) : request(url));
+    renderPage();
+    await screen.findByRole('button', { name: 'Retry' });
+    expect(chargingCalls()).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeDisabled();
+    fleetFailed = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByRole('img', { name: GRID_ARIA });
+    expect(chargingCalls().every((url) => /vehicle_id=10\b/.test(url))).toBe(true);
+  });
+
+  it('keeps unknowns and all panel shells when initial history loading is paused', async () => {
+    installRequest();
+    onlineManager.setOnline(false);
+    renderPage('/charging-heatmap?vehicle_id=10');
+    await screen.findByText('Loading is paused. Charging history will appear when the connection resumes.');
+    expect(chargingCalls()).toHaveLength(0);
+    expect(kpiValue('Total Sessions')).toBe('—');
+    for (const name of ['Weekly Charging Heatmap', 'Charging Insights', 'Top Charging Locations', 'Sessions by Day of Week']) {
+      expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+    }
+    onlineManager.setOnline(true);
+    await screen.findByRole('img', { name: GRID_ARIA });
+    expect(kpiValue('Total Sessions')).toBe('6');
+  });
+
+  it('retains history through refresh failure and recovers without requiring a healthy fleet refresh', async () => {
+    installRequest();
+    const { client } = renderPage();
+    await screen.findByRole('img', { name: GRID_ARIA });
+    installRequest({ chargingMode: 'reject', chargingError: new ApiError('history down', 500) });
+    await client.refetchQueries({ queryKey: ['charging'] });
+    await waitFor(() => expect(client.getQueryCache().find({ queryKey: ['charging'] })?.state.status).toBe('error'));
+    expect(screen.getByRole('img', { name: GRID_ARIA })).toBeInTheDocument();
+    expect(kpiValue('Total Energy')).toMatch(/^55(?:\.0+)?\s*kWh$/);
+
+    installRequest({ sessions: [SESSIONS[0]] });
+    const request = mockRequest.getMockImplementation()!;
+    mockRequest.mockImplementation((url: string) => url === '/vehicles'
+      ? Promise.reject(new ApiError('fleet refresh down', 500)) : request(url));
+    await client.refetchQueries({ queryKey: ['vehicles'] });
+    const refresh = screen.getAllByRole('button', { name: 'Refresh' }).find((el) => el.tagName === 'BUTTON')!;
+    expect(refresh).toBeEnabled();
+    fireEvent.click(refresh);
+    await waitFor(() => expect(kpiValue('Total Sessions')).toBe('1'));
+    expect(screen.getByRole('img', { name: GRID_ARIA })).toBeInTheDocument();
+    expect(client.getQueryCache().find({ queryKey: ['charging'] })?.state.status).toBe('success');
+  });
+
+  it.each([null, 0, -1, Number.NaN, Number.POSITIVE_INFINITY])('guards forced typed-query refetch for vehicle %s', async (vehicleId) => {
+    installRequest();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useChargingSessionsPaginated(vehicleId), {
+      wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    const refreshed = await result.current.refetch();
+    expect(refreshed.error?.message).toBe('Vehicle scope has not resolved');
+    expect(chargingCalls()).toHaveLength(0);
+  });
+
   it('shows skeletons (never blank panels) while the feed is in flight', async () => {
     installRequest({ chargingMode: 'pending' });
     const { container } = renderPage();
@@ -387,6 +604,8 @@ describe('ChargingHeatmapPage — loading / error / empty branches', () => {
         screen.getAllByText('No charging sessions in this range').length,
       ).toBeGreaterThanOrEqual(2),
     );
+    expect(kpiValue('Total Sessions')).toBe('0');
+    expect(kpiValue('Total Energy')).toBe('—');
     expect(
       screen.getByText('Insights appear once you have charging history'),
     ).toBeInTheDocument();
