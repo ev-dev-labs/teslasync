@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { Fingerprint, Download } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption, Button, CopyButton } from '@/components/ui';
 import { EmptyState, AlertBanner } from '@/components/feedback';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ServiceEvidencePackDocument } from '../lib/serviceEvidencePack';
 
 export interface ServiceEvidenceIntegrityPanelProps {
@@ -40,6 +41,7 @@ export function ServiceEvidenceIntegrityPanel({
   className,
 }: ServiceEvidenceIntegrityPanelProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
 
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
@@ -95,7 +97,7 @@ export function ServiceEvidenceIntegrityPanel({
             <Caption>
               {t('serviceEvidencePack.integrity.meta', 'Schema {{version}} · generated {{when}}', {
                 version: pack.schemaVersion,
-                when: new Date(pack.generatedAt).toLocaleString(),
+                when: formatDateTime(pack.generatedAt),
               })}
             </Caption>
             <Button type="button" variant="secondary" size="sm" icon={<Download className="h-4 w-4" />} onClick={onExport}>

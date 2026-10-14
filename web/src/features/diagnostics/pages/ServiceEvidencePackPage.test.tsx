@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
+import { formatDateTime } from '@/lib/dateFormat';
 import type { SignalHistoryResponse } from '@/types/telemetry';
 import { analyzeRootCause } from '../lib/rootCauseIntelligence';
 import {
@@ -25,6 +26,13 @@ const mocks = vi.hoisted(() => ({
   palette: ['var(--series-a)', 'var(--series-b)'] as readonly string[],
   line: vi.fn(),
   legend: vi.fn(),
+  datePreferences: { locale: 'en-US', tz: 'America/Los_Angeles' },
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatDateTime: (value: string | Date | null | undefined) => formatDateTime(value, mocks.datePreferences),
+  }),
 }));
 
 vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => mocks.palette }));
@@ -137,6 +145,7 @@ function renderPage() {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.palette = ['var(--series-a)', 'var(--series-b)'];
+  mocks.datePreferences = { locale: 'en-US', tz: 'America/Los_Angeles' };
   mocks.selected.vehicleId = 4;
   mocks.workspace.mockReturnValue(workspace());
   mocks.updates.mockReturnValue(query([]));
@@ -221,6 +230,49 @@ describe('root-cause chart preference adoption', () => {
 });
 
 describe('ServiceEvidencePackPage snapshot integrity', () => {
+  it('updates visible timestamps with locale and timezone preferences without rewriting the snapshot or digest', async () => {
+    const input = workspace();
+    const updatedAt = Date.parse('2026-01-01T00:30:00Z');
+    input.evidenceBundle.sources[0]!.state = deriveDataState({
+      data: history, dataUpdatedAt: updatedAt,
+    }, { provenance: 'historical' });
+    const doc = {
+      ...documentFor(input),
+      ...buildServiceEvidencePackCore({
+        vehicle: { id: 4, displayName: mocks.selected.vehicle.display_name },
+        analysis: input.analysis, windowHours: input.windowHours,
+        now: () => '2026-01-01T01:00:00Z',
+        sources: { histories: input.evidenceBundle.sources },
+      }),
+    };
+    const rawJson = toPrettyJson(doc);
+    const digest = doc.integrity.digestHex;
+    mocks.workspace.mockReturnValue(input);
+    vi.mocked(buildServiceEvidencePack).mockResolvedValueOnce(doc);
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Generate pack' }));
+    await screen.findByRole('button', { name: 'Download JSON' });
+
+    for (const preferences of [
+      { locale: 'en-US', tz: 'America/Los_Angeles' },
+      { locale: 'de-DE', tz: 'Europe/Berlin' },
+    ]) {
+      mocks.datePreferences = preferences;
+      view.refresh();
+      expect(screen.getByText(`Schema ${doc.schemaVersion} · generated ${formatDateTime(doc.generatedAt, preferences)}`))
+        .toBeInTheDocument();
+      expect(screen.getByText(`Last updated: ${formatDateTime(new Date(updatedAt), preferences)}`))
+        .toBeInTheDocument();
+      expect(screen.getByText(digest)).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: 'Pack preview' }).querySelector('code')?.textContent).toBe(rawJson);
+      expect(doc.generatedAt).toBe('2026-01-01T01:00:00Z');
+      expect(doc.snapshot?.sources.find((source) => source.kind === 'history')?.trust.updatedAt).toBe(updatedAt);
+      expect(input.evidenceBundle.sources[0]!.state.updatedAt).toBe(updatedAt);
+      expect(toPrettyJson(doc)).toBe(rawJson);
+    }
+    expect(buildServiceEvidencePack).toHaveBeenCalledOnce();
+  });
+
   it('previews the exact generated document and preserves the raw generation input', async () => {
     const input = workspace();
     const doc = documentFor(input);
@@ -321,6 +373,46 @@ describe('ServiceEvidencePackPage snapshot integrity', () => {
 });
 
 describe('ServiceEvidencePackPage missing versus measured evidence', () => {
+  it.each(['pending', 'failed', 'empty', 'paused', 'refreshing'] as const)(
+    'derives the brief from a complete %s neighbor without hiding populated evidence',
+    (outcome) => {
+      const input = workspace();
+      const retryNeighbor = vi.fn();
+      const empty = { ...history, signal: 'PackVoltage', count: 0, data: [] };
+      const neighbor = deriveDataState({
+        data: outcome === 'empty' ? empty
+          : outcome === 'paused' || outcome === 'refreshing' ? history : undefined,
+        error: outcome === 'failed' ? new Error('Neighbor history failed') : null,
+        isFetching: outcome === 'refreshing',
+        fetchStatus: outcome === 'paused' ? 'paused' : 'idle',
+        refetch: retryNeighbor,
+      }, { provenance: 'historical', unavailable: outcome === 'empty' });
+      mocks.workspace.mockReturnValue({
+        ...input,
+        evidenceBundle: {
+          ...input.evidenceBundle,
+          sources: [...input.evidenceBundle.sources, { signal: 'PackVoltage', state: neighbor }],
+        },
+      });
+      const { container } = renderPage();
+      const brief = screen.getByTestId('service-evidence-summary');
+      expect(brief).toHaveTextContent(outcome === 'paused' ? 'Showing retained measurements'
+        : outcome === 'refreshing' ? 'Refreshing signal evidence' : 'Partial signal evidence');
+      expect(brief.querySelector('[data-operational-metric="service-evidence-hypotheses"]'))
+        .toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByRole('table')).toHaveTextContent('Soc');
+      expect(screen.getByRole('button', { name: 'Generate pack' })).toBeEnabled();
+      const source = container.querySelector('[data-signal-source="PackVoltage"]') as HTMLElement;
+      expect(source).toHaveAttribute('data-source-status', neighbor.status);
+      if (outcome === 'failed' || outcome === 'paused' || outcome === 'empty') {
+        fireEvent.click(within(source).getByRole('button', { name: 'Retry' }));
+        expect(retryNeighbor).toHaveBeenCalledOnce();
+        expect(input.evidenceBundle.refetch).not.toHaveBeenCalled();
+        expect(input.signalsQuery.refetch).not.toHaveBeenCalled();
+      }
+    },
+  );
+
   it('withholds quality and corroboration for resolved empty histories without removing sections or source identities', () => {
     const input = workspace();
     const empty = { ...history, count: 0, data: [] };
