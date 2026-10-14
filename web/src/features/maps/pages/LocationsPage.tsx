@@ -12,7 +12,6 @@
  */
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -42,24 +41,14 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDate } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
-import { request } from '@/api/client';
+import { useVisitedLocations, type VisitedLocation } from '@/api/hooks/useLocations';
 import { AIAutoNameUnnamedLocations } from '@/components/ai';
 import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
 import { chartTokens, typography } from '@/lib/tokens';
-
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-interface VisitedLocation {
-  id: number;
-  address_name: string;
-  visit_count: number;
-  total_duration_s: number;
-  last_visited: string | null;
-}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -102,12 +91,13 @@ export default function LocationsPage() {
   const { t } = useTranslation();
   usePageTitle(t('locations.title', 'Visited locations'));
   const { formatDuration } = useUnits();
+  const { formatDate, formatDateTime } = useDateFormat();
 
   const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
-  const [preview, setPreview] = useState<{ scope: string; location: VisitedLocation } | null>(null);
+  const [preview, setPreview] = useState<{ scope: string; id: number } | null>(null);
   // AI applied-name pending hand-off — when the user clicks Apply on
   // an AI proposal, the proposed name is parked here keyed by
   // location.id. The user then writes it into the canonical
@@ -119,7 +109,6 @@ export default function LocationsPage() {
     defaultPresetId: 'all',
   });
   const sourceScope = JSON.stringify([vehicleId, page, startInstant, endInstantExclusive]);
-  const previewLocation = preview?.scope === sourceScope ? preview.location : null;
   const previousRange = useRef(`${start}:${end}`);
   useEffect(() => {
     const currentRange = `${start}:${end}`;
@@ -128,19 +117,12 @@ export default function LocationsPage() {
     if (page !== 1) setPage(1);
   }, [start, end, page, setPage]);
 
-  const locationsQuery = useQuery({
-    queryKey: ['visited-locations', vehicleId, page, pageSize, startInstant, endInstantExclusive],
-    queryFn: ({ signal }) => {
-      const params = new URLSearchParams({
-        vehicle_id: String(vehicleId),
-        limit: String(pageSize),
-        offset: String((page - 1) * pageSize),
-        from: startInstant,
-        to: endInstantExclusive,
-      });
-      return request<VisitedLocation[]>(`/locations?${params}`, { signal });
-    },
-    enabled: vehicleId !== null,
+  const locationsQuery = useVisitedLocations({
+    vehicleId,
+    page,
+    pageSize,
+    from: startInstant,
+    to: endInstantExclusive,
   });
   const { data: rawLocations, refetch } = locationsQuery;
   const source = deriveDataState(locationsQuery, {
@@ -150,8 +132,27 @@ export default function LocationsPage() {
   const isLoading = locationsQuery.isLoading && !source.hasData;
   const isError = source.fatalError !== null;
   const error = source.fatalError;
+  const isUnresolved = vehicleId !== null && source.status === 'initial';
+  const unresolvedTitle = source.isRefreshBlocked
+    ? t('locations.loadPaused.title', 'Location loading paused')
+    : t('locations.loadUnknown.title', 'Locations not loaded yet');
+  const unresolvedMessage = source.isRefreshBlocked
+    ? t('locations.loadPaused.message', 'The request is paused. Location counts and remaining pages are unknown until it resumes.')
+    : t('locations.loadUnknown.message', 'The request has not resolved. Location counts and remaining pages are unknown.');
 
   const locations = rawLocations;
+  // Resolve identity against the current retained receipt, never a captured row.
+  const previewLocation = preview?.scope === sourceScope
+    ? locations?.find((location) => location.id === preview.id) ?? null
+    : null;
+  useEffect(() => {
+    setPreview((current) => current && (
+      current.scope !== sourceScope || !locations?.some((location) => location.id === current.id)
+    ) ? null : current);
+    setAppliedName((current) => current && (
+      current.scope !== sourceScope || !locations?.some((location) => location.id === current.id)
+    ) ? null : current);
+  }, [sourceScope, locations]);
 
   const locationSearchFields = useMemo(
     () => ['address_name'] as const satisfies ReadonlyArray<keyof VisitedLocation>,
@@ -259,9 +260,9 @@ export default function LocationsPage() {
             onRetry={() => refetch()}
             emptyMessage={vehicleId === null
               ? t('common.noVehicleSelected.title', 'No vehicle selected')
-              : t('locations.noVisitData', 'No visited location data')}
-            emptyActionLabel={vehicleId === null ? undefined : t('locations.resetDateRange', 'Reset date range')}
-            onResetFilters={vehicleId === null ? undefined : resetRange}
+              : isUnresolved ? unresolvedMessage : t('locations.noVisitData', 'No visited location data')}
+            emptyActionLabel={vehicleId === null || isUnresolved ? undefined : t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={vehicleId === null || isUnresolved ? undefined : resetRange}
             ariaLabel={t('locations.byVisitsAria', 'Bar chart of the most-visited locations')}
           />
           <LocationLeaderboardPanel
@@ -275,9 +276,9 @@ export default function LocationsPage() {
             onRetry={() => refetch()}
             emptyMessage={vehicleId === null
               ? t('common.noVehicleSelected.title', 'No vehicle selected')
-              : t('locations.noTimeData', 'No time-spent data available')}
-            emptyActionLabel={vehicleId === null ? undefined : t('locations.resetDateRange', 'Reset date range')}
-            onResetFilters={vehicleId === null ? undefined : resetRange}
+              : isUnresolved ? unresolvedMessage : t('locations.noTimeData', 'No time-spent data available')}
+            emptyActionLabel={vehicleId === null || isUnresolved ? undefined : t('locations.resetDateRange', 'Reset date range')}
+            onResetFilters={vehicleId === null || isUnresolved ? undefined : resetRange}
             ariaLabel={t('locations.byTimeAria', 'Bar chart of locations by hours spent')}
           />
         </section>
@@ -328,11 +329,19 @@ export default function LocationsPage() {
               message={t('common.noVehicleSelected.desc', 'Add a vehicle to your fleet to see data on this page.')}
               actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
             />
+          ) : isUnresolved ? (
+            <EmptyState
+              icon={<Icon icon={MapPin} size="xl" />}
+              title={unresolvedTitle}
+              message={unresolvedMessage}
+            />
           ) : !hasLocations ? (
             <EmptyState
               icon={<MapPin className="h-12 w-12" />}
               title={t('locations.empty.title', 'No locations')}
-              message={t('locations.empty.message', 'No visited locations recorded yet')}
+              message={page > 1
+                ? t('locations.empty.page', 'No locations returned on this page. Use Previous or First page to return to earlier results.')
+                : t('locations.empty.message', 'No visited locations recorded yet')}
               actionTo={{ label: t('locations.empty.cta', 'View drives'), to: '/drives' }}
             />
           ) : !filteredLocations.length ? (
@@ -397,7 +406,7 @@ export default function LocationsPage() {
                             'Inspect {{location}}',
                             { location: loc.address_name || t('locations.unknown', 'unknown location') },
                           )}
-                          onClick={() => setPreview({ scope: sourceScope, location: loc })}
+                          onClick={() => setPreview({ scope: sourceScope, id: loc.id })}
                         >
                           <Icon icon={Eye} size="md" />
                         </Button>
@@ -414,10 +423,19 @@ export default function LocationsPage() {
                   );
                 })}
               </ul>
+            </div>
+          )}
+          {vehicleId !== null && (
+            <div className="mt-4 space-y-3">
+              <Text variant="caption">
+                {t('locations.paging.exploratory', 'Next checks another page when this page is full; total locations and remaining pages are unknown.')}
+              </Text>
               <Pagination
                 page={page}
                 pageSize={pageSize}
-                total={shownCount < pageSize ? (page - 1) * pageSize + shownCount : page * pageSize + 1}
+                total={shownCount}
+                totalKind={source.hasData && !search.trim() ? 'loaded' : 'unknown'}
+                hasNextPage={source.hasData && shownCount === pageSize}
                 onPageChange={setPage}
               />
             </div>
@@ -465,6 +483,11 @@ export default function LocationsPage() {
                   value: previewLocation.last_visited
                     ? formatDate(previewLocation.last_visited)
                     : '—',
+                },
+                {
+                  key: 'loaded-at',
+                  label: t('locations.preview.loadedAt', 'Page loaded at'),
+                  value: source.updatedAt ? formatDateTime(new Date(source.updatedAt)) : '—',
                 },
               ]
             : []
