@@ -80,9 +80,11 @@ const driveRegenSQL = `
 
 // monthlyRegenSQL rolls the same drive set into month buckets. avg_power_w
 // is averaged in SI watts; the handler keeps it in watts (see
-// monthlyRegenRow) rather than converting to kW.
+// monthlyRegenRow) rather than converting to kW. Buckets are UTC calendar
+// months, independent of the database session timezone; the instant filter
+// still selects the exact requested population before bucketing.
 const monthlyRegenSQL = `
-		SELECT DATE_TRUNC('month', started_at) as month,
+		SELECT DATE_TRUNC('month', started_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC' as month,
 			COUNT(*) as drive_count,
 			AVG(ABS(COALESCE(avg_power_w, 0))) as avg_regen_power_w,
 			AVG(avg_speed_mps) as avg_speed_mps,
@@ -95,16 +97,18 @@ const monthlyRegenSQL = `
 		GROUP BY month ORDER BY month`
 
 // lifetimeEnergySQL sums regen/drive energy (SI watt-hours) from the
-// SI-canonical cagg_fleet_stats. The optional [start,end] window is
-// applied against the daily `day` column so the lifetime totals stay in
-// sync with the per-drive and monthly views.
+// drives table. Daily rollups cannot honor partial-day instant bounds.
+// Select whole completed drives by their start instant, preserving the
+// rollup's population (including short drives) without rounding the bounds
+// or waiting for a materialized-view refresh. The parser supplies inclusive
+// SQL bounds, including its exclusive-end adjustment for RFC3339 inputs.
 const lifetimeEnergySQL = `
 		SELECT
-			COALESCE(SUM(total_regen_wh), 0),
-			COALESCE(SUM(total_energy_wh), 0)
-		FROM cagg_fleet_stats
-		WHERE vehicle_id = $1
-			AND ($2::date IS NULL OR day BETWEEN $2::date AND $3::date)`
+			COALESCE(SUM(regen_energy_wh), 0),
+			COALESCE(SUM(energy_used_wh), 0)
+		FROM drives
+		WHERE vehicle_id = $1 AND ended_at IS NOT NULL
+			AND ($2::timestamptz IS NULL OR started_at BETWEEN $2 AND $3)`
 
 // vehicleModelSQL resolves the VIN + model used to estimate battery
 // capacity.
@@ -179,9 +183,9 @@ func (r *regenRepo) MonthlyRegens(ctx context.Context, vehicleID int64, hasRange
 }
 
 // LifetimeEnergy sums lifetime regen/drive energy (watt-hours) from
-// cagg_fleet_stats, optionally scoped to [start, end]. A missing row
+// completed drives, optionally scoped to [start, end] by started_at. A missing row
 // (pgx.ErrNoRows) is treated as zero totals, not an error, because the
-// aggregate is meaningful for a vehicle with no recorded days.
+// aggregate is meaningful for a vehicle with no recorded drives.
 func (r *regenRepo) LifetimeEnergy(ctx context.Context, vehicleID int64, hasRange bool, start, end time.Time) (float64, float64, error) {
 	var regenWh, driveWh float64
 	err := r.db.Pool.QueryRow(ctx, lifetimeEnergySQL,
