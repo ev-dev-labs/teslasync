@@ -1039,6 +1039,8 @@
       "home": "Home",
       "breakdownAria": "Home versus Supercharger charging share",
       "chartAria": "Historical and projected monthly charging cost with confidence band",
+      "predictionChartAria": "Historical and projected monthly charging cost with an approximate prediction interval",
+      "predictionInterval": "Approximate prediction interval",
       "trendAria": "Monthly average cost per kilowatt-hour trend"
     },
     "stats": {
@@ -1229,6 +1231,14 @@
     "detail": {
       "sectionLabel": "Powershare runtime trend and stop reason"
     }
+  },
+  "provenance": {
+    "cached": "Cached",
+    "historical": "Historical",
+    "inferred": "Estimated",
+    "live": "Live",
+    "repaired": "Repaired",
+    "unknown": "Unknown source"
   },
   "tesla_charging": {
     "title": "Tesla charging history",
@@ -1425,6 +1435,13 @@
     },
     "myActivity": {
       "empty": "No recent activity in this window."
+    }
+  },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
     }
   },
   "ai": {
@@ -1767,13 +1784,18 @@
     }
   },
   "analytics": {
+    "charging": {
+      "hour": "Hour"
+    },
     "weeklyDigest": {
       "aiNarration": {
         "badge": "Helix",
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -1912,11 +1934,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -2888,14 +2905,6 @@
       }
     }
   },
-  "provenance": {
-    "cached": "Cached",
-    "historical": "Historical",
-    "inferred": "Estimated",
-    "live": "Live",
-    "repaired": "Repaired",
-    "unknown": "Unknown source"
-  },
   "pwa": {
     "lowBandwidth": {
       "auto": "Automatic (follow the network)",
@@ -2941,6 +2950,13 @@
   },
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
+  },
+  "resaleVault": {
+    "brief": {
+      "cost": {
+        "description": "Recorded cost; the source does not supply a currency denomination. No currency conversion is applied."
+      }
+    }
   },
   "routeEfficiency": {
     "aiSuggestions": {
@@ -3071,18 +3087,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -3145,6 +3154,9 @@
   "teslaOnly": {
     "estimatesDiffer": "Estimates differ",
     "noDetectedDifference": "No detected difference in available estimates"
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -3465,7 +3477,6 @@
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"

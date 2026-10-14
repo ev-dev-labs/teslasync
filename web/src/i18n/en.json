@@ -1,13 +1,4 @@
 {
-  "executionHistoryAvailability": {
-    "failed": "This history section could not be loaded.",
-    "notApplicable": "No vehicle is associated with this execution.",
-    "unavailable": "History availability is unknown.",
-    "truncated": "Only part of this history is shown.",
-    "incomplete": "This execution window is still open; history may be incomplete.",
-    "noActionResults": "No action results are recorded for this execution.",
-    "noTransitions": "No vehicle state transitions were recorded during this execution window."
-  },
   "demoData": {
     "title": "Sample data present",
     "detail": "DRILL vehicles and their drive and charging history are synthetic, not live activity.",
@@ -14483,6 +14474,15 @@
   },
   "automations": {
     "historyPage": {
+      "availability": {
+        "failed": "This history section could not be loaded.",
+        "notApplicable": "No vehicle is associated with this execution.",
+        "unavailable": "History availability is unknown.",
+        "truncated": "Only part of this history is shown.",
+        "incomplete": "This execution window is still open; history may be incomplete.",
+        "noActionResults": "No action results are recorded for this execution.",
+        "noTransitions": "No vehicle state transitions were recorded during this execution window."
+      },
       "title": "Automation history",
       "subtitle": "Review every execution and its outcome across the selected period.",
       "new": "New automation",
@@ -16277,6 +16277,8 @@
       "home": "Home",
       "breakdownAria": "Home versus Supercharger charging share",
       "chartAria": "Historical and projected monthly charging cost with confidence band",
+      "predictionChartAria": "Historical and projected monthly charging cost with an approximate prediction interval",
+      "predictionInterval": "Approximate prediction interval",
       "trendAria": "Monthly average cost per kilowatt-hour trend"
     },
     "stats": {

@@ -62,7 +62,7 @@ export function CostForecastSection({
     <div className="space-y-6">
       <CostStatSection
         title={t('costAnalysis.forecast.title', 'Cost Forecast')}
-        icon={<TrendingUp className="h-4 w-4 text-purple-300" aria-hidden="true" />}
+        icon={<TrendingUp className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
         isLoading={isLoading}
         error={error}
         onRetry={onRetry}
@@ -74,7 +74,7 @@ export function CostForecastSection({
       >
         <EmbeddedChart
           title={t('costAnalysis.forecast.title', 'Cost Forecast')}
-          ariaLabel={t('costAnalysis.forecast.chartAria', 'Historical and projected monthly charging cost with confidence band')}
+          ariaLabel={t('costAnalysis.forecast.predictionChartAria', 'Historical and projected monthly charging cost with an approximate prediction interval')}
           data={chartData}
           exportData={chartData}
           exportable
@@ -95,16 +95,16 @@ export function CostForecastSection({
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData}>
                 <CartesianGrid {...chartGrid} />
-                {areaGradient('forecastBand', '#a855f7', 0.15)}
+                {areaGradient('forecastBand', palette[1], 0.15)}
                 {areaGradient('actualCostFill', palette[0], 0.3)}
                 <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
                 <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
                 <Area {...AREA_DEFAULTS} dataKey="ci_low" stackId="ci" stroke="none" fill="transparent" fillOpacity={0} legendType="none" connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
-                <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.confidence', '95% Confidence')} connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
+                <Area {...AREA_DEFAULTS} dataKey="ci_band" stackId="ci" stroke="none" fill="url(#forecastBand)" name={t('costAnalysis.forecast.predictionInterval', 'Approximate prediction interval')} connectNulls={false} hide={hiddenSeries?.isHidden('ci_band')} />
                 <Area {...AREA_DEFAULTS} dataKey="actual" stroke={palette[0]} fill="url(#actualCostFill)" name={t('costAnalysis.forecast.actual', 'Actual Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('actual')} />
-                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke="#a855f7" strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
+                <Line {...AREA_DEFAULTS} dataKey="forecast" stroke={palette[1]} strokeDasharray="8 4" name={t('costAnalysis.forecast.projected', 'Projected Cost')} connectNulls={false} hide={hiddenSeries?.isHidden('forecast')} />
               </ComposedChart>
             </ResponsiveContainer>
           )}
@@ -146,7 +146,7 @@ export function CostForecastSection({
               <XAxis dataKey="month" tick={axisTickSm} tickLine={false} axisLine={false} />
               <YAxis tick={axisTickSm} tickLine={false} axisLine={false} unit={currencySymbol} />
               <Tooltip content={<ChartTooltip />} />
-              <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke="#06b6d4" dot={{ fill: '#06b6d4', r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
+              <Line {...AREA_DEFAULTS} dataKey="cost_per_kwh" stroke={palette[0]} dot={{ fill: palette[0], r: 3 }} name={t('costAnalysis.forecast.costPerKwh', '$/kWh')} />
             </LineChart>
           </ResponsiveContainer>
         </EmbeddedChart>
