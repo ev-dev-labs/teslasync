@@ -1,0 +1,165 @@
+{
+  "item": "phase6-native-home-energy-scenario-target-remeasure",
+  "status": "DONE_REPORT_NATIVE_NOTRUN_PRIVACY_BLOCKED",
+  "native44Proof": "NOTRUN",
+  "attempt": 0,
+  "authority": {
+    "requestAtUtc": "2026-10-14T06:07:20.229Z",
+    "returnDeadlineUtc": "2026-10-14T06:27:20.229Z",
+    "browserLock": "Explicit user-granted browserlock1/4",
+    "exactQueueRowRead": "| [ ] | 6 | phase6-native-home-energy-scenario-target-remeasure | exact-returned-missing-proof-or-owner | docs\\frontend-audits\\phase6-native-home-energy-scenario-target-remeasure.json; web\\logs\\phase6-native-home-energy-scenario-target-remeasure.log | phase6-fix-home-energy-scenario-mobile-targets | 0 | - | - | ActualSource7pass/min-h-11threeactions NOTnative44proof. RemeasureonlyRecompute/Savebaseline/Reset at390dark+light usingguardedmsedge on shared5173; originalerrorstate capturestopsifanysuccessfulnonfixtureAPI. Export49pxnotfailing/no populatedhousehold required/no mutations/newserver/helper. Safecontext/read-onlyguardrequired; reportactualbounds/hitsorNOTRUN. |",
+    "writes": [
+      "docs\\frontend-audits\\phase6-native-home-energy-scenario-target-remeasure.json",
+      "web\\logs\\phase6-native-home-energy-scenario-target-remeasure.log"
+    ],
+    "reads": [
+      "Full docs\\orchestrator-loop.md",
+      "Exact pending queue row and accepted source fix row2600",
+      "Full docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json",
+      "Full web\\logs\\phase6-fix-home-energy-scenario-mobile-targets.log source7pass receipt",
+      "Existing original NATIVE_MATRIX_COMMAND harness and original API status/path metadata",
+      "Existing frontend-qa.mjs application mode functions and default capture/budget declarations",
+      "Existing playwright.config.ts defaults and configEnv.ts privacy declarations",
+      "Applicable frontend/SI/observability/unit instructions; design contract and mission43-45",
+      "Current ScenarioControls.tsx action callers49/52/55; no source edit"
+    ]
+  },
+  "originalEvidencePreserved": {
+    "report": "docs\\frontend-audits\\phase6-qa-home-energy-whole-home-energy.json",
+    "rawLog": "web\\logs\\phase6-qa-home-energy-whole-home-energy.log",
+    "beforeSha256": "220b8ab75101bad956474585c72ec97bbd01d228303ee101c616111e93ee301c",
+    "afterSha256": "220b8ab75101bad956474585c72ec97bbd01d228303ee101c616111e93ee301c",
+    "unchanged": true,
+    "priorWidthThemeMeasurements": 20,
+    "priorCaptures": 6,
+    "repeatedWidthSweep": false,
+    "newCaptures": 0,
+    "oldTargetHeightPx": 36,
+    "oldExportBoundsPx": {
+      "width": 332,
+      "height": 49
+    },
+    "exportDisposition": "NOT_FAILING; not remeasured, clicked, downloaded or changed",
+    "historicalBackend": "Original unavailable-source matrix had294 API responses, zero successes, HTTP500. Historical evidence is unchanged; current source availability is different.",
+    "remainingOriginalNativeChecklist": "Preserved/open; no page, optimizer, household, theme-matrix, contrast, device or Phase6 approval"
+  },
+  "sourceIntakeContext": {
+    "receipt": "web\\logs\\phase6-fix-home-energy-scenario-mobile-targets.log",
+    "acceptedSourceCommitFromQueue": "d5e34152c8a5266c1456c3542cd36ea904dba4a8",
+    "change": "Three existing callers use min-h-11 md:min-h-9",
+    "sourceBeforeSha256": "7da2c2d9a28655bb2b9b0af5e95c7e98258a6abc9c23bc6d7f35d5fb61e0cccd",
+    "sourceAfterSha256": "7da2c2d9a28655bb2b9b0af5e95c7e98258a6abc9c23bc6d7f35d5fb61e0cccd",
+    "sourceUnchanged": true,
+    "historicalTests": "Baseline3fail; final7pass/0fail; no rerun here",
+    "historicalLint": "exit0; no rerun here",
+    "historicalPreservation": "exit2,15 unchanged unresolved helpers;209->209 source lines,10 retained section declarations; no new preservation pass claimed",
+    "nativeMeaning": "Class tokens, generated CSS and seven jsdom passes do not establish actual rendered44px bounds or hit areas"
+  },
+  "nativeAttempt": {
+    "command": "Existing original inline installed Playwright native harness restricted to two390px themes and three controls; original sweep/capture/drawer/action work removed. Existing frontend-qa application-mode functions reused. Added explicit fail-closed privacy policy checks; no new helper file.",
+    "literalCommandLocation": "web\\logs\\phase6-native-home-energy-scenario-target-remeasure.log between NATIVE_TARGET_REMEASURE_COMMAND_BEGIN and NATIVE_TARGET_REMEASURE_COMMAND_EXIT",
+    "resultMarker": "NATIVE_TARGET_REMEASURE_RESULT",
+    "shellId": "home-energy-target-remeasure",
+    "exit": 2,
+    "startedAtUtc": "2026-10-14T06:11:48.792Z",
+    "finishedAtUtc": "2026-10-14T06:11:53.760Z",
+    "browser": {
+      "channel": "msedge",
+      "version": "155.0.4283.45",
+      "headless": true,
+      "installedExecutable": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+      "baseURL": "http://localhost:5173",
+      "route": "/energy-orchestrator",
+      "contextsCreated": 1,
+      "themesAttempted": ["dark"],
+      "lightContextCreated": false,
+      "requestedViewport": {"width": 390, "height": 900},
+      "serviceWorkers": "block",
+      "acceptDownloads": false,
+      "profile": "Fresh isolated context; no shared/authenticated storage state"
+    },
+    "guards": {
+      "policyAssertedBefore": [
+        "Installed Edge launch at06:11:48.794Z",
+        "Dark context creation at06:11:49.190Z",
+        "Device viewport at06:11:49.412Z",
+        "Navigation at06:11:49.429Z"
+      ],
+      "contextCreatedAtUtc": "2026-10-14T06:11:49.206Z",
+      "contextRequestGuardInstalledAtUtc": "2026-10-14T06:11:49.210Z",
+      "navigationGuard": "Installed before page creation/navigation/device viewport. Local origin5173 only, GET/HEAD/OPTIONS only, original exact API path allowlist and static browser resources; unknown endpoints, writes and external reads aborted.",
+      "successfulSourcePolicy": "No successful nonfixture API read approved. Any2xx/304 stops all measurements/captures and immediately closes context.",
+      "approvedSuccessfulSourceReads": 0,
+      "blockedExternalRequests": 1,
+      "blockedNonReadRequests": 0,
+      "blockedUnapprovedPaths": 3,
+      "responseBodiesReadOrLogged": 0,
+      "queriesPrivateDataOrPageTextLogged": false,
+      "fixturesFulfilled": 0,
+      "actionInvocations": 0,
+      "screenshotsAdded": 0
+    },
+    "observedAPIMetadataOnly": [
+      {"mode": "dark", "path": "/api/v1/system/version", "status": 200},
+      {"mode": "dark", "path": "/api/v1/system/version", "status": 200},
+      {"mode": "dark", "path": "/api/v1/settings", "status": 200},
+      {"mode": "dark", "path": "/api/v1/settings", "status": 200}
+    ],
+    "exactBlocker": {
+      "status": "NOTRUN_PRIVACY_STOP",
+      "reason": "Shared5173 now returned successful unapproved nonfixture API reads during initial dark navigation instead of the original all500 unavailable-source composition. Guard closed context before any target bounds/hits, theme verification or capture.",
+      "firstObservedSuccessfulPath": "/api/v1/system/version",
+      "lastInFlightSuccessfulPath": "/api/v1/settings",
+      "lastRecordedPrivacyStopAtUtc": "2026-10-14T06:11:53.388Z",
+      "successfulResponseMetadataCount": 4,
+      "timingLimit": "Response handler overwrote its stop metadata on each already-in-flight success; last stop timestamp is retained, not represented as the exact first-success timestamp.",
+      "rawCommandError": "page.waitForTimeout: Target page, context or browser has been closed",
+      "disposition": "Intentional fail-closed privacy stop, not a target-size failure, browser-install failure or permission to retry with mocked successful data",
+      "retry": "NOTRUN; no second navigation, light context, household/optimizer reads, action clicks or additional captures after stop"
+    },
+    "measurementsExecuted": 0,
+    "targetResults": [
+      {"mode": "dark", "action": "Recompute from now", "status": "NOTRUN_PRIVACY_STOP", "bounds": null, "hits": null},
+      {"mode": "dark", "action": "Save as stability baseline", "status": "NOTRUN_PRIVACY_STOP", "bounds": null, "hits": null},
+      {"mode": "dark", "action": "Reset to defaults", "status": "NOTRUN_PRIVACY_STOP", "bounds": null, "hits": null},
+      {"mode": "light", "action": "Recompute from now", "status": "NOTRUN_PRIVACY_STOP_BEFORE_CONTEXT", "bounds": null, "hits": null},
+      {"mode": "light", "action": "Save as stability baseline", "status": "NOTRUN_PRIVACY_STOP_BEFORE_CONTEXT", "bounds": null, "hits": null},
+      {"mode": "light", "action": "Reset to defaults", "status": "NOTRUN_PRIVACY_STOP_BEFORE_CONTEXT", "bounds": null, "hits": null}
+    ],
+    "pageErrorsObserved": 0,
+    "notAcceptance": "Zero page errors and completed command cleanup do not prove mounted target bounds,44px hits or page acceptance"
+  },
+  "NOTRUN": [
+    "Actual rendered control44px bounds and hit measurements in both themes",
+    "Populated household/device/optimizer data, independent planning oracle or production mutations",
+    "Original20width sweep, original six captures, new screenshots or export measurement",
+    "TypeScript, audit.sh, lint, build, tests, full suites, preservation reruns and catalog commands",
+    "Source/test/shared/catalog/queue edits, Git, install/download, new helper/server, Docker, seed or nested agents"
+  ],
+  "needs": "Existing owner must provide explicitly authorized read-only native composition without unapproved successful/nonfixture source reads, or separately authorize its safe source scope. Do not repair backend, fake successful data or weaken this guard from this report-only item. Native44 proof remains open.",
+  "finalValidation": {
+    "shellId": "home-energy-report-validation",
+    "command": "Exact literal bounded read-only Node JSON/raw-log/hash/resource validation retained in the ignored exact log",
+    "exit": 0,
+    "commandReleasedAtUtc": "2026-10-14T06:14:12.0087333Z",
+    "rawOutput": [
+      "REPORT_JSON_PARSE=PASS TARGET_RECORDS=6 MEASURED_BOUNDS=0 MEASURED_HITS=0 NATIVE44=NOTRUN",
+      "PRIVACY_STOP=ENFORCED API_SUCCESS_METADATA=4 BODY_READS_LOGGED=0 SECOND_CONTEXT=NOTRUN",
+      "SOURCE_UNCHANGED=True ORIGINAL_REPORT_UNCHANGED=True PRIOR20_MEASUREMENTS_PRESERVED=True PRIOR6_CAPTURES_PRESERVED=True NEW_CAPTURES=0",
+      "BROWSER_CONTEXT_CLOSED=True BROWSER_CLOSED=True BROWSER_LOCK_RELEASED=True NATIVE_COMMAND_EXIT=2",
+      "RECEIPT_VALIDATION_EXIT=0 NOT_PAGE_APPROVAL"
+    ],
+    "limits": "Receipt consistency only; zero target measurements, no new capture or native44 pass"
+  },
+  "release": {
+    "contextClosedAtUtc": "2026-10-14T06:11:53.445Z",
+    "browserClosedAtUtc": "2026-10-14T06:11:53.760Z",
+    "browserLockReleasedAtUtc": "2026-10-14T06:11:53.760Z",
+    "nativeCommandReleasedAtUtc": "2026-10-14T06:11:53.7953147Z",
+    "validationCommandReleasedAtUtc": "2026-10-14T06:14:12.0087333Z",
+    "reportReleaseUtcEvidence": "Exact REPORT_RELEASE_UTC and ALL_OWNED_COMMANDS_RELEASE_UTC recorded after final JSON reparse in the ignored exact log; no further report writes",
+    "status": "RELEASED_NATIVE_NOTRUN_PRIVACY_BLOCKED",
+    "noRetainedResources": "No worker browser, context, helper, bounded native command or lock retained; shared5173 untouched",
+    "notAcceptance": "Report delivery only; source intake preserved, native44NOTRUN, no page or Phase6 approval"
+  }
+}
