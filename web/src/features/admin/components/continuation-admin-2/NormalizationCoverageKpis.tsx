@@ -19,6 +19,7 @@ interface Props extends SectionState {
   windowEnd?: string;
   retained?: boolean;
   sourceStatus?: DataStatus;
+  isRefreshing?: boolean;
 }
 
 export function NormalizationCoverageKpis(props: Props) {
@@ -47,7 +48,7 @@ export function NormalizationCoverageKpis(props: Props) {
       : t('admin.dataQuality.summary.unknownBounds', 'The response has not supplied the scoring window bounds.') };
   const briefMetrics = useOperationalMetrics(metrics);
   const status = sourceBriefStatus({ status: props.sourceStatus ?? (props.error ? 'initialFailure'
-    : props.retained ? 'stale' : props.hasSnapshot ? 'ok' : 'initial'), isRefreshing: false }, props.loading && !props.hasSnapshot, t);
+    : props.retained ? 'stale' : props.hasSnapshot ? 'ok' : 'initial'), isRefreshing: props.isRefreshing ?? false }, props.loading && !props.hasSnapshot, t);
   return (
     <section>
       {props.retained && <Text role="status">{t('developerReference.stats.state.retained', 'Showing retained measurements')}</Text>}

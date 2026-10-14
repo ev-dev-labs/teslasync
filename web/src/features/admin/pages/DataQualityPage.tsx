@@ -13,10 +13,10 @@
  *      alongside the field's own attested/unattested counts and trust state.
  *
  * Evidence honesty is the point of this page: when the scoring window held no
- * rows, coverage is reported as "Unknown", never as 0 %. A 503 from the
- * endpoint means the signal_log pool was not wired on this deployment and is
- * rendered as an explanatory notice rather than a red error, while every panel
- * stays mounted with its own empty state.
+ * rows, coverage is reported as "Unknown", never as 0 %. Only an explicit
+ * SUBSYSTEM_NOT_CONFIGURED 503 means the signal_log pool was not wired and is
+ * rendered as an explanatory notice rather than an outage, while every panel
+ * stays mounted with its own empty state. Other failures remain retryable.
  *
  * The payload is operational (counts, ratios, seconds) — no physical
  * measurement units, so no unit conversion applies.
@@ -47,9 +47,13 @@ export default function DataQualityPage() {
 
   const query = useDataQuality();
   const source = deriveDataState(query);
-  const subsystemMissing = isApiError(source.fatalError) && source.fatalError.status === 503;
+  const subsystemMissing = isApiError(source.fatalError)
+    && source.fatalError.status === 503
+    // httpx's flat envelope puts the exact subsystem marker in its error message.
+    && (source.fatalError.code === 'SUBSYSTEM_NOT_CONFIGURED'
+      || source.fatalError.message === 'SUBSYSTEM_NOT_CONFIGURED');
 
-  // When the 503 notice already explains the empty page, suppress the raw
+  // When the confirmed unsupported notice already explains the empty page, suppress the raw
   // query error for the individual sections so they render calm empty states
   // instead of duplicating a "server error" panel three times.
   const sectionError = subsystemMissing ? null : source.fatalError;
@@ -67,8 +71,9 @@ export default function DataQualityPage() {
         'admin.dataQuality.subtitle',
         'Per-field signal freshness, gaps and duplicates, with normalization-version provenance for the same bounded window.',
       )}
-      query={query}
-      dataSources={[{ id: 'data-quality', label: t('admin.dataQuality.pageTitle', 'Data quality'), query }]}
+      query={subsystemMissing ? undefined : query}
+      dataSources={subsystemMissing ? undefined
+        : [{ id: 'data-quality', label: t('admin.dataQuality.pageTitle', 'Data quality'), query }]}
     >
       <div className="space-y-6">
         {subsystemMissing && (
@@ -94,6 +99,7 @@ export default function DataQualityPage() {
             hasSnapshot={source.hasData}
             retained={source.hasData && (source.status === 'stale' || source.isRefreshing)}
             sourceStatus={source.status}
+            isRefreshing={source.isRefreshing}
             loading={query.isLoading && !source.hasData}
             error={sectionError}
             onRetry={retry}
