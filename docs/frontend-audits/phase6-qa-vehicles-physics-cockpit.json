@@ -1,0 +1,847 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-vehicles-physics-cockpit",
+  "attempt": 1,
+  "actor": "d40e36ab-bef3-4fc7-9c6f-362f244a4a7d",
+  "page": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+  "routes": [
+    "/physics-cockpit"
+  ],
+  "mode": "READONLY/source-only/accepted-page-QA",
+  "outcome": "REPORT_COMPLETE_WITH_NEEDS; NOT an application PASS",
+  "counts": {
+    "confirmedIssues": 4,
+    "conditionalCandidates": 2,
+    "nativeCandidates": 3,
+    "deduplicatedRepairNeeds": 4,
+    "authoredTestDeclarationsInspected": 15,
+    "pageIssues": 2,
+    "supportIssues": 2
+  },
+  "clocks": {
+    "reservationUTC": "2026-10-14T01:24:50.678Z",
+    "firstObservedUTC": "2026-10-14T01:27:49.8776578Z",
+    "returnUTC": "2026-10-14T01:44:50.678Z",
+    "hardUTC": "2026-10-14T01:49:50.678Z",
+    "earlierActualPlus20And25Wins": true,
+    "reset": false
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "initialQueueRow": 71,
+    "latestInspectedQueueRow": 72,
+    "predecessorRow": 2017,
+    "predecessor": "phase5-page-vehicles-physics-cockpit",
+    "acceptedCommit": "d3a404092e055bedbf125b6782f8e8f772e55047",
+    "branchRead": "fix/dashboard-followups",
+    "acceptedPageBlob": "34c889d75af2cf18e0806a961e010b37d379bc12",
+    "acceptedTestBlob": "5496c8765db27abf3e9925bd6b4c30e5b76e375f",
+    "currentPageAndTestMatchAccepted": true,
+    "historicalEvidence": "Source only; prior lint/style0, final tests external catalog startup1/zero cases,375blocked/wider resourceFAILED. Not rerun or native acceptance.",
+    "phases0to5": "remain closed",
+    "phase6": "unfinished",
+    "phase7": "NOTRUN",
+    "narrowAuthority": "Only report/log writable; historical heartbeat/server/gate directions not executed"
+  },
+  "documentReadCoverage": {
+    "docs/orchestrator-loop.md": "FULL1-296",
+    "docs/frontend-design-contract.md": "FULL1-2539 including all addenda; truncated core recovered515-654",
+    "docs/frontend-mission.md": "Relevant1-220,350-1000,1090-1145,1403-1518; not full",
+    "docs/frontend-inventory.md": "Authority1-55 and exact cockpit283; not full",
+    "docs/session-handoff.md": "Current1-155 and conventions2186-2250; not full history",
+    "migration-queue.md": "Current1-77; exact accepted/QA rows; parsed file/objective dedup",
+    "docs/frontend-worker-conventions.md": "FULL",
+    ".github/instructions/react-frontend.instructions.md": "FULL including recovered555-EOF",
+    ".github/instructions/frontend-si-cutover.instructions.md": "FULL",
+    ".github/instructions/unit-conversion.instructions.md": "FULL; current SI contract supersedes legacy examples",
+    ".github/copilot-instructions.md": "Applicable1-160,211-397,508-630"
+  },
+  "confirmedIssues": [
+    {
+      "id": "PC001",
+      "file": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "line": 106,
+      "relatedLines": [
+        97,
+        142,
+        191
+      ],
+      "rule": "MDC-026/initial-paused-is-not-authoritative-empty",
+      "priority": "P2",
+      "owner": "page",
+      "confidence": "confirmed source mechanism",
+      "statement": "heartbeatQuery.isLoading ? 'loading' : 'empty'",
+      "mechanism": "Cold paused queries have no data,isPending=true,isLoading=false,fetchStatus=paused. api/dataState.ts193,204-219 returns initial/isRefreshBlocked=true. Heartbeat/park/certificate instead select empty; cockpit97 explicitly overrides adapter loading=false. SourceContent.tsx55 displays no-record/no-certificate copy although no answer arrived. StaleRefreshWarning cannot explain cold pause because it returns null without data.",
+      "repro": {
+        "mode": "SOURCE TRACE, NOT executed",
+        "input": "selected vehicle7; independently data=undefined,error=null,isPending=true,isLoading=false,isFetching=false,fetchStatus=paused",
+        "expected": "unresolved/deferred source, persistent shell, no server-empty/fatal/vehicle-offline assertion",
+        "actualBySource": "heartbeat106,park142,certificate191 choose empty; cockpit97 suppresses loading despite initial status"
+      },
+      "fix": "Use actual initial/pending/blocked trust for each source body and honest unresolved/deferred context. Preserve independent fatal/retained recovery, unknown readings and no-vehicle prerequisites; no fake connectivity cause or shared writes.",
+      "testGap": "Page259 covers isLoading/empty;312 covers paused retained certificate, not cold pause.",
+      "dedupKey": "PhysicsCockpitPage/cold-paused-body-mapping"
+    },
+    {
+      "id": "PC002",
+      "file": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "line": 31,
+      "relatedPageLines": [
+        29,
+        30,
+        98,
+        118,
+        154
+      ],
+      "rule": "MDC-026/retained-cause-must-be-source-backed",
+      "priority": "P2",
+      "owner": "domain adapter",
+      "confidence": "confirmed source mechanism",
+      "statement": "stale: t('vehicles.evidenceBrief.status.stale', 'Retained after refresh failure')",
+      "mechanism": "Every stale status is labelled refresh failure; canonical English has the same value. api/dataState.ts244-250 also returns stale for paused retained data with refreshError=null. Cockpit/heartbeat/Park pass status but not failure cause. Retention is correct; asserted cause is not.",
+      "repro": {
+        "mode": "SOURCE TRACE, NOT executed",
+        "input": "retained cockpit/heartbeat data,error=null,isError=false,fetchStatus=paused",
+        "expected": "cause-neutral retained/deferred text absent real refreshError",
+        "actualBySource": "summary and review details say Retained after refresh failure"
+      },
+      "fix": "Use approved cause-neutral canonical stale copy or narrowly pass actual existing DataState cause through this domain adapter. Keep paused/failed distinct; do not change DataState or infer vehicle offline.",
+      "testGap": "Adapter test67 supplies stale directly, not proof of refresh error; add legitimate paused/no-error coverage under followup.",
+      "dedupKey": "VehicleEvidenceBrief/stale-cause-label"
+    },
+    {
+      "id": "PC003",
+      "file": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "line": 132,
+      "relatedLines": [
+        15,
+        203
+      ],
+      "rule": "MDC-044/date-preference-boundary",
+      "priority": "P2",
+      "owner": "page",
+      "confidence": "confirmed source mechanism",
+      "statement": "formatDateTime(heartbeat.last_tick_at), formatDateTime(certificate.from/to/issued_at)",
+      "mechanism": "Pure helper imported at15 receives no options in all four timestamp calls. dateFormat.ts37-61 defaults to browser locale/timezone; useDateFormat.ts74-92 already supplies selected locale/tz_display_default. Numeric preference subscriptions cannot inject date options.",
+      "repro": {
+        "mode": "SOURCE TRACE, NOT executed",
+        "input": "browser en-US/America/Los_Angeles; saved de-DE/tz_display_default=utc; tick/from/to/issued_at=2026-03-03T12:00:00Z",
+        "expected": "selected de-DE/UTC labels, reactive to preferences; raw instants untouched",
+        "actualBySource": "browser-default locale/zone, not saved preferences"
+      },
+      "fix": "Use existing useDateFormat for tick and three certificate timestamps. Preserve raw instants, bounds, integrity fields and original export object.",
+      "testGap": "Fixture tick=null and fixed dates; no preference-change assertions.",
+      "dedupKey": "PhysicsCockpitPage/tick-certificate-date-preferences"
+    },
+    {
+      "id": "PC004",
+      "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "line": 113,
+      "relatedPageLines": [
+        101,
+        124,
+        207
+      ],
+      "rule": "MDC-044/provenance-date-preference-boundary",
+      "priority": "P2",
+      "owner": "shared data display",
+      "confidence": "confirmed source mechanism",
+      "statement": "time: new Date(asOf).toLocaleString()",
+      "mechanism": "The Last updated title uses zero-argument Date.toLocaleString; selected locale/timezone never enter the call. Fixing page dates alone leaves three provenance timestamps on browser defaults. This is a presentation finding, not a claim that fetch time is observation time.",
+      "repro": {
+        "mode": "SOURCE TRACE, NOT executed",
+        "input": "positive updatedAt; browser en-US/America/Los_Angeles versus saved de-DE/UTC",
+        "expected": "preference-aware last-fetch timestamp",
+        "actualBySource": "title uses browser locale/zone"
+      },
+      "fix": "Separately lease shared owner and exact covering test. Reuse existing preference-aware mechanism, preserving provenance/status, epoch and native span/title semantics. Review public callers before adding authenticated subscriptions.",
+      "testGap": "No badge test executed/fully inspected; exact covering test must be located/claimed.",
+      "dedupKey": "DataProvenanceBadge/last-updated-date-preferences"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "PCC001",
+      "file": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "line": 155,
+      "relatedLines": [
+        29,
+        30,
+        123,
+        124
+      ],
+      "rule": "MDC-026/provenance-qualification",
+      "classification": "conditional integration candidate, NOT confirmed",
+      "mechanism": "Park/heartbeat say Live vehicle state; heartbeat includes last_tick_at and ParkTruth exposes park_confirmed_at. Types do not establish service lookback/source/freshness. Prior inventory mixed-history concerns are historical, not newly traced backend proof.",
+      "reproRequirement": "Authorized source/contract proof of historical/old Park or tick evidence returned by successful current request, then inspect live qualification. No backend/API run here.",
+      "need": "Establish actual source/observation-versus-fetch semantics before remapping provenance. Preserve honesty and confirmed-Park/count distinctions.",
+      "queueFix": false
+    },
+    {
+      "id": "PCC002",
+      "file": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "line": 44,
+      "rule": "MDC-045/independent-boolean-evidence",
+      "classification": "conditional domain-semantics candidate, NOT confirmed",
+      "mechanism": "No latch string plus door_open=false/null both yield null Charge port; true yields Open. Label may intentionally mean latch evidence rather than independently reported door state.",
+      "reproRequirement": "No charge_port_latch, door_open=false versus null -> identical missing metric by source. Confirm product promise before declaring violation.",
+      "need": "Clarify latch-versus-door scope; keep known false independently if contract promises door state. Do not invent Closed latch meaning.",
+      "queueFix": false
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "PCN001",
+      "file": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "line": 104,
+      "relatedLines": [
+        115,
+        140,
+        151
+      ],
+      "classification": "visual hierarchy candidate, NOTRUN",
+      "mechanism": "Heartbeat/Park nest self-surfaced OperationalBrief inside LayoutCard with another heading. Nesting is source evidence, not composed visual defect proof.",
+      "reproRequirement": "Mounted dark/light/custom comparisons with long labels and narrow/wide allocated widths.",
+      "queueFix": false
+    },
+    {
+      "id": "PCN002",
+      "file": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "line": 73,
+      "classification": "mobile reachability candidate, NOTRUN",
+      "mechanism": "Export declares wrapLabel/min-h-11 md:min-h-9; cards wrap/min-w-0; briefs reflow. Classes do not prove44px rectangles, overflow, safe areas or open-drawer reachability.",
+      "reproRequirement": "320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers, long RTL labels,200% text, review drawers and export/retries.",
+      "queueFix": false
+    },
+    {
+      "id": "PCN003",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 126,
+      "relatedLines": [
+        174,
+        183,
+        248
+      ],
+      "classification": "a11y/composed acceptance candidate, NOTRUN",
+      "mechanism": "Labelled section, list/listitem, busy/status declarations and shared Button/Drawer do not certify focus restoration/trap, AT announcements, contrast/forced-colors/reduced-motion.",
+      "reproRequirement": "Actual keyboard/AT/theme/forced-colors/reduced-motion with independent initial/fatal/retained/paused states and open drawers. Route/auth/download behavior also NOTRUN.",
+      "queueFix": false
+    }
+  ],
+  "deduplicatedRepairNeeds": [
+    {
+      "proposal": "phase6-fix-physics-cockpit-initial-paused",
+      "issues": [
+        "PC001"
+      ],
+      "files": [
+        "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+        "web/src/features/vehicles/pages/PhysicsCockpitPage.test.tsx"
+      ],
+      "status": "parent proposal only; not queued"
+    },
+    {
+      "proposal": "phase6-fix-vehicle-evidence-retained-cause",
+      "issues": [
+        "PC002"
+      ],
+      "files": [
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+        "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx"
+      ],
+      "status": "parent proposal only; any missing canonical copy separately claimed"
+    },
+    {
+      "proposal": "phase6-fix-physics-cockpit-date-preferences",
+      "issues": [
+        "PC003"
+      ],
+      "files": [
+        "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+        "web/src/features/vehicles/pages/PhysicsCockpitPage.test.tsx"
+      ],
+      "status": "parent proposal only; serialize with PC001 or merge one page lease"
+    },
+    {
+      "proposal": "phase6-fix-provenance-badge-date-preferences",
+      "issues": [
+        "PC004"
+      ],
+      "files": [
+        "web/src/components/data-display/DataProvenanceBadge.tsx"
+      ],
+      "status": "parent proposal only; covering test must be located/claimed"
+    }
+  ],
+  "queueDedup": {
+    "method": "Parsed phase6 exact file claims excluding QA/gate/combined/sweep. Corrected probes returned0 existing fixes for PhysicsCockpitPage,VehicleEvidenceBrief,DataProvenanceBadge. GDPR cold-paused and advanced-evidence date roots are different files/objectives.",
+    "invalidProbe": "shell1408 automatic $Matches collision printed1; INVALID and discarded; corrected shell1423 output0 retained",
+    "serialization": "PC001/PC003 share page/test pair: serialize or merge; never parallel writers. Conditional/native candidates are not source fix proposals.",
+    "queueWrites": 0
+  },
+  "preservation": {
+    "baselinePageLines": 183,
+    "currentPageLines": 213,
+    "currentPageTestLines": 320,
+    "layoutCardDeclarations": 3,
+    "vehicleEvidenceBriefDeclarations": 3,
+    "metricOccurrences": 13,
+    "persistentSourceSections": [
+      "Live cockpit readings",
+      "FSD trip-meter heartbeat",
+      "Park truth",
+      "Session certificate"
+    ],
+    "sectionCounts": "4 source surfaces: top brief plus3 cards;3 briefs contain9+3+1=13 metrics. Certificate persistent surface adds trust, not deleted original section.",
+    "actions": [
+      "one guarded certificate JSON download",
+      "three inherited Review details drawers",
+      "independent cockpit/heartbeat/certificate recovery; Park uses cockpit source"
+    ],
+    "rawSIAndSigns": "Page46/49/53/56/58/60 nullish numbers remain raw V/A/Wh/m/mps; display callbacks use existing units/number bridge after validation. No abs/clamp/math in hooks. Signed current and measured zero stay numeric; unknown stays missing.",
+    "qualifiers": "Source heartbeat label/honesty retain resettable trip-meter/non-engagement meaning. Tick absence is not inferred from meter size. Confirmed-Park,counted/reported modes,rejections and source rules/honesty remain.",
+    "export": "Page36 checks selected vehicle equality and75 rechecks handler; retained certificate object passes unchanged to downloadJSON76. csvExport139-154 serializes, no unit/array/hash normalization. Not a byte-for-byte original HTTP-response or real browser download claim.",
+    "sourceTestWrites": 0
+  },
+  "states": {
+    "loading": "Normal isLoading shows source skeletons; cold-paused mapping defect PC001",
+    "fatal": "Only fatalError replaces each source body; neighboring shells/retry callbacks remain",
+    "retained": "Original data kept after error/paused; cockpit warning89,heartbeat retained106,certificate warning199. False generic cause PC002",
+    "noVehicle": "Prerequisite88 and emptyContent112/148/197; top brief unavailable; export disabled; hooks enabled only with vehicleId",
+    "unknownZero": "Nullish numeric inputs missing; validation before custom formatters; measured0 and signed values retained. Nullable rejections safe iteration and nullable certificate arrays preserved in export",
+    "runtime": "NOTRUN"
+  },
+  "workspaceScope": {
+    "vehicle": "useSelectedVehicle24; typed vehicle scope/key/scopedPath at useTeslaPhysics58-76,119-127; snake_case vehicle_id scope.ts132; AbortSignal forwarded; no duplicate local selector",
+    "range": "/physics-cockpit absent from RANGE_ENABLED_PATHS23-77; header vehicle remains enabled. Cockpit/heartbeat latest-state-style reads; certificate displays returned from/to, not workspace range query",
+    "bothBounds": "No startInstant/endInstantExclusive passed to vehicle-only hooks. Not a violation without dated header-owned contract. Both certificate.from/to preserved on screen/export; server window completeness/bound semantics UNKNOWN",
+    "crossScope": "queryPolicy280-294 excludes keepPreviousData except pagination opt-in; scope keys include vehicle; export enforces response vehicle equality. Actual scope-change behavior NOTRUN"
+  },
+  "preferences": {
+    "unitsNumbers": "useUnits derives saved distance/speed/energy display, precision/locale; useNumberFormatting subscribes to precision/locale. V/A/percent no fixed local precision. SI stays raw; extreme/preference runtime checks NOTRUN",
+    "dates": "PC003/PC004 confirmed bypasses; existing useDateFormat is the bridge",
+    "hourCycle": "Intl date helper defaults hour cycle to locale/browser. No independent hour12 setting established by inspected FormatOptions/useDateFormat;12/24h/time-format acceptance NOTRUN, not guessed"
+  },
+  "sourceA11yMobile": {
+    "declarations": [
+      "PageLayout delegates PageContainer and route-focus/error-boundary owners",
+      "localized export name,wrapLabel,min-h-11 below md",
+      "shared Icon/Button controls; no unnamed icon-only page action",
+      "OperationalBrief126 section/aria-busy;174 list/183 listitem; SourceContent44 loading status and60 polite retained status",
+      "compact grid1 base/2 sm/3 md/6 3xl; break-words/min-w-0; LayoutCard wrapping",
+      "shared Button focus/forced-colors/reduced-motion and Drawer reuse"
+    ],
+    "acceptance": "Computed targets,focus/AT/contrast/forced-colors/mission widths/RTL/200% text/open drawers/native-host/download NOTRUN"
+  },
+  "ruleAudit": {
+    "scope": [
+      "PhysicsCockpitPage.tsx",
+      "VehicleEvidenceBrief.tsx",
+      "useTeslaPhysics.ts",
+      "useDataState.ts",
+      "useUnits.ts",
+      "useNumberFormatting.ts",
+      "useOperationalMetrics.tsx"
+    ],
+    "method": "Native Select-String plus manual classification; raw patterns/outputs in log. Tests are fixtures; shared building-block raw HTML/imports and dynamic styles exempt.",
+    "rules": [
+      {
+        "rule": "static-inline-style",
+        "candidateLines": 0,
+        "confirmed": 0
+      },
+      {
+        "rule": "raw-html",
+        "initialInsensitiveMatches": 1,
+        "correctedSensitiveMatches": 0,
+        "confirmed": 0,
+        "exception": "<Button> not native lowercase"
+      },
+      {
+        "rule": "direct-library-import",
+        "candidateLines": 0,
+        "confirmed": 0
+      },
+      {
+        "rule": "old-api-import",
+        "candidateLines": 0,
+        "confirmed": 0
+      },
+      {
+        "rule": "double-prefix",
+        "candidateLines": 0,
+        "confirmed": 0
+      },
+      {
+        "rule": "camelcase-param",
+        "candidateLines": 0,
+        "confirmed": 0,
+        "mechanism": "scopedPath emits vehicle_id"
+      },
+      {
+        "rule": "hidden-section",
+        "candidateLines": 9,
+        "confirmed": 0,
+        "exception": "conditional bodies/mode badges/prerequisites, persistent outer shells"
+      },
+      {
+        "rule": "hardcoded-string",
+        "initialGenericFalseMatches": 10,
+        "correctedJSXMatches": 0,
+        "confirmed": 0,
+        "exception": "request<T> generics; units/source text not authored labels;56 canonical tkeys present,0 missing; split guards NOTRUN"
+      },
+      {
+        "rule": "missing-page-container",
+        "positiveWrapperMatches": 1,
+        "confirmed": 0,
+        "exception": "approved PageLayout wraps PageContainer"
+      },
+      {
+        "rule": "fetch-useeffect",
+        "candidateLines": 0,
+        "confirmed": 0,
+        "exception": "selected-vehicle effects synchronize scope, not data fetching"
+      }
+    ],
+    "backendRules": "NOT_APPLICABLE: no internal Go scope; no SQL/fmt/panic/context zero claim",
+    "contractTotals": {
+      "MDC-026": 2,
+      "MDC-044": 2
+    },
+    "mostIssues": {
+      "PhysicsCockpitPage.tsx": 2,
+      "VehicleEvidenceBrief.tsx": 1,
+      "DataProvenanceBadge.tsx": 1
+    },
+    "limit": "Not all-repository or application PASS;4 contract issues remain"
+  },
+  "tests": {
+    "execution": "NOTRUN",
+    "reason": "Read-only no-change QA; no-change worker convention prohibits new unchanged tests. No source/test changes/full suite/custom helper/browser/API execution.",
+    "pageDeclarations": 11,
+    "adapterDeclarations": 4,
+    "totalDeclarations": 15,
+    "discovered": "NOTRUN",
+    "executed": "NOTRUN",
+    "passed": "NOTRUN",
+    "failed": "NOTRUN",
+    "skipped": "NOTRUN",
+    "names": "All15 exact it names/lines in log shell1281; authored declarations not executed/discovered counts",
+    "coverageRead": "Retained/fatal independence,meter-not-tick,zero,review details,certificate loading/empty/no vehicle/null arrays/raw export,paused retained certificate;adapter signed/missing/invalid/loading",
+    "missingEvidence": [
+      "cold pause all sources",
+      "paused retained cause",
+      "tick/certificate/date preference changes",
+      "badge dates",
+      "mounted/mobile/a11y/export"
+    ]
+  },
+  "commandsAndFailures": {
+    "rawOutput": "Matching log and caller tool transcript; native operations only, no redirect/helper files",
+    "receiptExits": {
+      "1074": 0,
+      "1099": 1,
+      "1118": 0,
+      "1134": 0,
+      "1152": 0,
+      "1167": 0,
+      "1190": 0,
+      "1238": 0,
+      "1281": 0,
+      "1304": 1,
+      "1303": 1,
+      "1323": 0,
+      "1339": 0,
+      "1358": 0,
+      "1383": 0,
+      "1408": 0,
+      "1423": 1,
+      "1432": 0,
+      "1447": 0,
+      "1475": 1,
+      "1514": 0
+    },
+    "operations": "Get-Date/Get-ChildItem discovery;Select-String rules/authority/dedup;Get-FileHash pins;read-only git status/branch/log/show/rev-parse/hash-object without-w;canonical ConvertFrom-Json;Start/Stop-Transcript and assigned JSON Set-Content. Actual check patterns,statements,hashes,counts and numeric exits in log.",
+    "failures": [
+      "1099 rg unavailable, replacement native search",
+      "1134/1152/1238 oversized1.7MB/24.6KB/427KB outputs not fully inspected, superseded by bounded reads;1167 recovered ranges/exact row",
+      "1304 regex quoting ParserError, no scan executed;1323 recovered",
+      "1303 missing guessed metric-reference/definitions.ts; available conversion/export matches retained",
+      "view operationalMetrics.ts missing; actual .tsx resolved and read",
+      "1339 missing guessed routes/routeRegistry.ts nonterminating error with process0; actual App48/587 source route found",
+      "1408 dedup semantic failure despite exit0,$Matches collision; invalid printed1 discarded",
+      "1423 canonical JSON case-distinct keys required-AsHashtable; dedup0 completed but later preference read did not;1432 recovered",
+      "1475 OS206 oversized tool command failed before execution; shortened write used"
+    ],
+    "notRun": [
+      "npx tsc --noEmit",
+      "npm run build",
+      "full tests/lint/gates",
+      "new scoped Vitest",
+      "normal split/namespace guards",
+      "server/browser/Playwright/API/device/native"
+    ],
+    "customHelpers": "none created/run"
+  },
+  "readPins": [
+    {
+      "path": "web/src/features/vehicles/pages/PhysicsCockpitPage.tsx",
+      "beforeSHA256": "4348B05B0C7CCA9D75501EC83A69F724482F421D7D54548C34E8821F86EEF90D",
+      "lines": 213,
+      "afterSHA256": "4348B05B0C7CCA9D75501EC83A69F724482F421D7D54548C34E8821F86EEF90D",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/vehicles/pages/PhysicsCockpitPage.test.tsx",
+      "beforeSHA256": "D208EC0F4F51555FEF719AEFC67F2C5DB4B9558CC1378612E54761C942669699",
+      "lines": 320,
+      "afterSHA256": "D208EC0F4F51555FEF719AEFC67F2C5DB4B9558CC1378612E54761C942669699",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "beforeSHA256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+      "lines": 43,
+      "afterSHA256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useTeslaPhysics.ts",
+      "beforeSHA256": "6D2C93C912837E1F886C9DA7DB3D5617CF594735B5B7D48FDBDD6E1E9BEC7236",
+      "lines": 127,
+      "afterSHA256": "6D2C93C912837E1F886C9DA7DB3D5617CF594735B5B7D48FDBDD6E1E9BEC7236",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "beforeSHA256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "lines": 65,
+      "afterSHA256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "beforeSHA256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "lines": 194,
+      "afterSHA256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "lines": 47,
+      "afterSHA256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "beforeSHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "lines": 462,
+      "afterSHA256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "beforeSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "lines": 168,
+      "afterSHA256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.test.tsx",
+      "beforeSHA256": "65EFD96BA0C6DA2E3AEB0EF14FC9B63B7E7242CE7C986A0A2ADAE3EF19990C68",
+      "lines": 89,
+      "afterSHA256": "65EFD96BA0C6DA2E3AEB0EF14FC9B63B7E7242CE7C986A0A2ADAE3EF19990C68",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/types/teslaPhysics.ts",
+      "beforeSHA256": "7E7D50D4658120F675D69F70A3140F4DA1596A7B714C6CA648E4E36246212B14",
+      "lines": 401,
+      "afterSHA256": "7E7D50D4658120F675D69F70A3140F4DA1596A7B714C6CA648E4E36246212B14",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "beforeSHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "lines": 434,
+      "afterSHA256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/scope.ts",
+      "beforeSHA256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+      "lines": 372,
+      "afterSHA256": "135F29C962A5E0C647C9D3A5724AF2A77FE8795C82ED45ED87D7F0F26A103CC1",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/queryPolicy.ts",
+      "beforeSHA256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "lines": 294,
+      "afterSHA256": "F48B0314865D68357DFB904BCE6D2055C3660963D21A8E8866CDA60E54A04524",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "beforeSHA256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "lines": 148,
+      "afterSHA256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSHA256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "lines": 24,
+      "afterSHA256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "beforeSHA256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "lines": 174,
+      "afterSHA256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "beforeSHA256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "lines": 74,
+      "afterSHA256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "lines": 17,
+      "afterSHA256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "beforeSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "lines": 259,
+      "afterSHA256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSHA256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "lines": 115,
+      "afterSHA256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "beforeSHA256": "804547BCB6E9BE1D6210DC459EFEE9ED7A8CB76999322F98C5CF7D80EA242057",
+      "lines": 131,
+      "afterSHA256": "804547BCB6E9BE1D6210DC459EFEE9ED7A8CB76999322F98C5CF7D80EA242057",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "beforeSHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "lines": 321,
+      "afterSHA256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/operationalMetrics.tsx",
+      "beforeSHA256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "lines": 53,
+      "afterSHA256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "beforeSHA256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "lines": 137,
+      "afterSHA256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "beforeSHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "lines": 500,
+      "afterSHA256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/csvExport.ts",
+      "beforeSHA256": "4DBB7EC4728F6E34365DB08CB64C3C3855F4E17EA19DC2C6EB98BC4705F56396",
+      "lines": 165,
+      "afterSHA256": "4DBB7EC4728F6E34365DB08CB64C3C3855F4E17EA19DC2C6EB98BC4705F56396",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "beforeSHA256": "409641019732349E44D45ADF5E2C13DD93C5B38A0F037564AE43B93FC4099A1E",
+      "lines": 67,
+      "afterSHA256": "409641019732349E44D45ADF5E2C13DD93C5B38A0F037564AE43B93FC4099A1E",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "beforeSHA256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "lines": 93,
+      "afterSHA256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/App.tsx",
+      "beforeSHA256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "lines": 919,
+      "afterSHA256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useSettings.ts",
+      "beforeSHA256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "lines": 146,
+      "afterSHA256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "beforeSHA256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "lines": 38994,
+      "afterSHA256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "afterUTC": "2026-10-14T01:42:55.4662921Z",
+      "unchanged": true
+    }
+  ],
+  "documentPins": [
+    {
+      "path": "docs/orchestrator-loop.md",
+      "SHA256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "lines": 296,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "SHA256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "lines": 2539,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "SHA256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "lines": 1593,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": "docs/frontend-inventory.md",
+      "SHA256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "lines": 1460,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "SHA256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "lines": 2460,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": "docs/frontend-worker-conventions.md",
+      "SHA256": "98850E87F927CC2DD09088183906B5343C1883E6BA6F14EA6E55A328BE485871",
+      "lines": 152,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "SHA256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "lines": 707,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "SHA256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "lines": 629,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "SHA256": "D50C51DDA3AD98344D3B494DDE488E93247647352893B2AE75A68F399D619CA4",
+      "lines": 94,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "SHA256": "76B05E945142640B465CED30F3189D21678C6700E3BBD54F86811BD676941315",
+      "lines": 221,
+      "limit": "read snapshot, not frozen parent documents"
+    },
+    {
+      "path": "migration-queue.md",
+      "SHA256": "EE18F6785F486FBB9C4BDBD3EA77C83E4593F612FD8F89C0ED4477796D5646F4",
+      "lines": 2083,
+      "limit": "read snapshot, not frozen parent documents"
+    }
+  ],
+  "evidenceLimits": [
+    "SOURCE ONLY: deterministic inspected mechanisms and repro inputs, no application reproduction executed",
+    "No backend/service/router,real IDs,hash verification,observation coverage,both-bound server semantics or auth readiness validated",
+    "App lazy/Route declarations are source mount evidence, not successful navigation",
+    "Pins are first-observed snapshots: primary9 early; later supports pinned after first reads then rechecked before/after report write. No global/pre-read concurrency freeze claim",
+    "Only page/test accepted blobs compared; shared support pins are current, not asserted equal to old commit",
+    "Catalog presence/English labels parsed read-only; no split/usage/namespace guard pass or bypass",
+    "Inherited unrelated dirt preserved; no source/tests/catalog/queue/Git writes",
+    "All runtime/visual/a11y/native/compiler/test/lint/build acceptance NOTRUN"
+  ],
+  "verification": {
+    "preWritePinCount": 32,
+    "preWriteDrift": 0,
+    "prewriteJson": "roundtrip recorded in log",
+    "finalDiskParseAndPins": "actual immediate post-final-write command result in matching log; no inferred pass",
+    "postWriteJSONParse": "valid",
+    "postWritePinMatches": 32,
+    "postWriteDrift": 0,
+    "verifiedUTC": "2026-10-14T01:43:33.4789635Z"
+  },
+  "release": {
+    "writeScope": [
+      "docs/frontend-audits/phase6-qa-vehicles-physics-cockpit.json",
+      "web/logs/phase6-qa-vehicles-physics-cockpit.log"
+    ],
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "gitWrites": 0,
+    "commands": "released after final check; no retained server/background work",
+    "reportWrittenUTC": "2026-10-14T01:42:55.4662921Z",
+    "reportLogCommandsReleaseUTC": "2026-10-14T01:43:33.4789635Z"
+  },
+  "snapshotUTC": "2026-10-14T01:42:55.4662921Z"
+}
