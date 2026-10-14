@@ -4,7 +4,7 @@ import { LayoutCard } from '@/components/layout';
 import { Text } from '@/components/ui';
 import { VehicleOperationalBrief } from '../operationalbrief-all/VehicleOperationalBrief';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { HvacCyclingSummary } from '../../lib/hvacCycling';
 import { HvacCyclingSectionBody } from './HvacCyclingSectionBody';
@@ -21,14 +21,14 @@ interface HvacCyclingCoverageCadenceProps {
 export function HvacCyclingCoverageCadence({
   summary,
   state,
-  locale,
   formatDuration,
 }: HvacCyclingCoverageCadenceProps) {
   const { fmtPercent, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat('utc');
   const coverage = summary.coverage;
   const date = (ms: number | null) =>
-    formatDateTime(ms != null ? new Date(ms) : null, { locale });
+    formatDateTime(ms != null ? new Date(ms) : null, { tz: summary.timeZone });
 
   return (
     <section data-testid="hvac-cycling-coverage-cadence">
@@ -38,6 +38,9 @@ export function HvacCyclingCoverageCadence({
             'hvacCycling.coverage.subtitle',
             'Valid unique timestamps define span and cadence even when HVAC state is unknown.',
           )}
+        </Text>
+        <Text as="p" variant="caption" className="mb-4">
+          {t('quietHours.form.timezone', 'Timezone (IANA)')}: {summary.timeZone}
         </Text>
         <HvacCyclingSectionBody summary={summary} state={state}>
           <VehicleOperationalBrief embedded id="hvac-cycling-coverage-summary"

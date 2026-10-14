@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Badge, MetricLabel, Text } from '@/components/ui';
 import type { UnitFormatter } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type {
   HvacCyclingSummary,
@@ -34,12 +34,14 @@ function Detail({ label, value }: { label: string; value: string }) {
 export function HvacCyclingRunDirectory({
   summary,
   state,
-  locale,
   formatDuration,
 }: HvacCyclingRunDirectoryProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat('utc');
+  const date = (ms: number) => formatDateTime(new Date(ms), { tz: summary.timeZone });
   const directory = summary.runDirectory;
+  const resolved = state.vehicleSelected && state.isResolved && !state.isLoading && !state.error;
   const boundaryLabel = (boundary: HvacRunBoundary) => {
     if (boundary === 'observed_transition') {
       return t('hvacCycling.directory.boundary.transition', 'Observed transition');
@@ -62,14 +64,17 @@ export function HvacCyclingRunDirectory({
             'Newest first; each fragment discloses state, observed duration, interval support, boundaries, and eligibility.',
           )}
         </Text>
+        <Text as="p" variant="caption" className="mt-1">
+          {t('quietHours.form.timezone', 'Timezone (IANA)')}: {summary.timeZone}
+        </Text>
         <Text as="p" variant="caption" className="mb-4 mt-1">
           {t(
             'hvacCycling.directory.cap',
             'Showing {{shown}} of {{total}} runs; {{omitted}} omitted by the {{cap}}-run display cap.',
             {
-              shown: fmtInt(directory.displayed),
-              total: fmtInt(directory.total),
-              omitted: fmtInt(directory.omitted),
+              shown: fmtInt(resolved ? directory.displayed : null),
+              total: fmtInt(resolved ? directory.total : null),
+              omitted: fmtInt(resolved ? directory.omitted : null),
               cap: fmtInt(directory.cap),
             },
           )}
@@ -95,7 +100,7 @@ export function HvacCyclingRunDirectory({
                         })}
                       </Text>
                       <Text as="p" variant="caption">
-                        {formatDateTime(new Date(run.startMs), { locale })}
+                        {date(run.startMs)}
                       </Text>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -125,11 +130,11 @@ export function HvacCyclingRunDirectory({
                   <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                     <Detail
                       label={t('hvacCycling.directory.start', 'Start')}
-                      value={formatDateTime(new Date(run.startMs), { locale })}
+                      value={date(run.startMs)}
                     />
                     <Detail
                       label={t('hvacCycling.directory.end', 'End')}
-                      value={formatDateTime(new Date(run.endMs), { locale })}
+                      value={date(run.endMs)}
                     />
                     <Detail
                       label={t('hvacCycling.directory.duration', 'Observed duration')}

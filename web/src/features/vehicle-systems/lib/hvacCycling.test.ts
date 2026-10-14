@@ -1,4 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { renderHook } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+
+import { useDateFormat } from '@/hooks/useDateFormat';
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: 'de-DE',
+    settings: { tz_display_default: 'user', timezone_user: 'Asia/Kathmandu' },
+  }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: null }),
+}));
 
 import {
   DEFAULT_HVAC_MAX_GAP_S,
@@ -404,8 +417,8 @@ describe('summarizeHvacCycling coverage, hourly support, and ordering', () => {
     });
   });
 
-  it('splits hourly duty and observed support at local hour boundaries', () => {
-    const start = new Date(2026, 6, 1, 10, 30, 0, 0);
+  it('splits hourly duty and observed support at explicit UTC hour boundaries', () => {
+    const start = new Date('2026-07-01T10:30:00Z');
     const end = new Date(start.getTime() + 60 * 60_000);
     const result = summarizeHvacCycling(
       [
@@ -415,8 +428,9 @@ describe('summarizeHvacCycling coverage, hourly support, and ordering', () => {
       { maxGapS: 2 * 60 * 60 },
     );
 
-    expect(result.hourlyProfile[start.getHours()]?.observedS).toBe(1_800);
-    expect(result.hourlyProfile[end.getHours()]?.observedS).toBe(1_800);
+    expect(result.timeZone).toBe('UTC');
+    expect(result.hourlyProfile[10]?.observedS).toBe(1_800);
+    expect(result.hourlyProfile[11]?.observedS).toBe(1_800);
     expect(
       result.hourlyProfile.reduce(
         (sum, bucket) => sum + bucket.observedS,
@@ -458,6 +472,107 @@ describe('summarizeHvacCycling coverage, hourly support, and ordering', () => {
         .sort((a, b) => b - a),
     );
     expect(second.runs).toEqual(first.runs);
+  });
+});
+
+describe('HVAC analytical timezone', () => {
+  const timeline = (start: string, end: string) => [
+    { timestamp: start, hvacPower: false },
+    { timestamp: end, hvacPower: true },
+  ];
+
+  it('uses saved locale but keeps the disclosed analytical zone independent of saved display zone', () => {
+    const { result } = renderHook(() => useDateFormat('utc'));
+    const summary = summarizeHvacCycling(timeline(
+      '2026-07-01T23:45:00Z', '2026-07-02T00:15:00Z',
+    ));
+    expect(result.current.locale).toBe('de-DE');
+    expect(result.current.tz).toBe(summary.timeZone);
+    expect(result.current.formatDateTime('2026-07-01T23:45:00Z')).toBe(
+      new Date('2026-07-01T23:45:00Z').toLocaleString('de-DE', {
+        timeZone: summary.timeZone,
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }),
+    );
+    expect(summary.hourlyProfile[23]?.offS).toBe(900);
+    expect(summary.hourlyProfile[0]?.offS).toBe(900);
+    expect(summary.hourlyProfile[0]?.onTransitions).toBe(1);
+    expect(result.current.formatDateTime(null)).toBe('—');
+    expect(result.current.formatDateTime('invalid')).toBe('—');
+  });
+
+  it('allocates durations and transitions in a fractional-offset zone across midnight', () => {
+    const result = summarizeHvacCycling(timeline(
+      '2026-07-01T18:00:00Z', '2026-07-01T18:30:00Z',
+    ), { timeZone: 'Asia/Kathmandu' });
+    expect(result.hourlyProfile[23]?.offS).toBe(900);
+    expect(result.hourlyProfile[0]?.offS).toBe(900);
+    expect(result.hourlyProfile[0]?.onTransitions).toBe(1);
+    expect(result.observedS).toBe(1_800);
+  });
+
+  it('preserves fractional seconds and assigns boundary transitions to the new hour', () => {
+    const result = summarizeHvacCycling([
+      { timestamp: '2026-07-01T18:14:59.250Z', hvacPower: true },
+      { timestamp: '2026-07-01T18:15:00Z', hvacPower: false },
+      { timestamp: '2026-07-01T18:15:00.500Z', hvacPower: true },
+    ], { timeZone: 'Asia/Kathmandu' });
+    expect(result.hourlyProfile[23]?.onS).toBe(0.75);
+    expect(result.hourlyProfile[0]?.offS).toBe(0.5);
+    expect(result.hourlyProfile[0]?.onTransitions).toBe(1);
+    expect(result.totalOnObservedS).toBe(0.75);
+    expect(result.totalOffObservedS).toBe(0.5);
+    expect(result.observedS).toBe(1.25);
+  });
+
+  it.each([
+    {
+      zone: 'America/New_York',
+      start: '2026-03-08T06:30:00Z', end: '2026-03-08T07:30:00Z',
+      buckets: [[1, 1_800], [3, 1_800]], transitionHour: 3,
+    },
+    {
+      zone: 'America/New_York',
+      start: '2026-11-01T05:30:00Z', end: '2026-11-01T06:30:00Z',
+      buckets: [[1, 3_600]], transitionHour: 1,
+    },
+    {
+      zone: 'Australia/Lord_Howe',
+      start: '2026-10-03T15:15:00Z', end: '2026-10-03T16:15:00Z',
+      buckets: [[1, 900], [2, 1_800], [3, 900]], transitionHour: 3,
+    },
+  ])('conserves real seconds across DST in $zone ($start)', ({
+    zone, start, end, buckets, transitionHour,
+  }) => {
+    const result = summarizeHvacCycling(timeline(start, end), {
+      timeZone: zone, maxGapS: 7_200,
+    });
+    for (const [hour, seconds] of buckets) {
+      expect(result.hourlyProfile[hour!]!.offS).toBe(seconds);
+    }
+    expect(result.hourlyProfile.reduce((sum, bucket) => sum + bucket.observedS, 0)).toBe(3_600);
+    expect(result.hourlyProfile.reduce((sum, bucket) => sum + bucket.onTransitions, 0)).toBe(1);
+    expect(result.hourlyProfile[transitionHour]?.onTransitions).toBe(1);
+    expect(result.observedS).toBe(3_600);
+    expect(result.runs[0]?.durationS).toBe(3_600);
+    expect(result.identities.observedDurationBalanced).toBe(true);
+  });
+
+  it('rejects invalid explicit zones instead of silently changing analytical scope', () => {
+    expect(() => summarizeHvacCycling([], { timeZone: 'not/a-zone' })).toThrow(RangeError);
+  });
+
+  it('accounts for missing and invalid dates without creating hourly evidence', () => {
+    const result = summarizeHvacCycling([
+      { timestamp: null, hvacPower: true },
+      { timestamp: 'invalid', hvacPower: false },
+    ], { timeZone: 'Asia/Kathmandu' });
+    expect(result.rows.missingTimestampRows).toBe(1);
+    expect(result.rows.invalidTimestampRows).toBe(1);
+    expect(result.coverage.earliestValidMs).toBeNull();
+    expect(result.coverage.latestValidMs).toBeNull();
+    expect(result.hourlyProfile.every((bucket) => bucket.observedS === 0 && bucket.onTransitions === 0)).toBe(true);
   });
 });
 
@@ -546,6 +661,13 @@ describe('summarizeHvacCycling resilience', () => {
     expect(result.observedS).toBe(0);
     expect(result.dutyCycle).toBeNull();
     expect(result.qualifiedShortCycleRate).toBeNull();
+    expect(result.runDirectory).toEqual({
+      total: 0,
+      displayed: 0,
+      omitted: 0,
+      cap: DEFAULT_HVAC_RUN_DISPLAY_LIMIT,
+      items: [],
+    });
     expect(result.hourlyProfile).toHaveLength(24);
     expect(Object.values(result.identities).every(Boolean)).toBe(true);
   });
