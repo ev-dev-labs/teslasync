@@ -1,8 +1,11 @@
 import type { ComponentType } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
+import { formatDateTime } from '@/lib/dateFormat';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { PhysicsPageShell, usePhysicsPage, type PhysicsPage, type PhysicsSlug } from '../tesla-physics/PhysicsPageShell';
 import { PhysicsInvestigation } from '../tesla-physics/PhysicsInvestigation';
 import PhysicsClocksSection from '../tesla-physics/PhysicsClocksSection';
@@ -20,6 +23,7 @@ import PhysicsVaultSection from '../tesla-physics/PhysicsVaultSection';
 import PhysicsModesSection from '../tesla-physics/PhysicsModesSection';
 import PhysicsNervousSystemSection from '../tesla-physics/PhysicsNervousSystemSection';
 import PhysicsRangeSection from '../tesla-physics/PhysicsRangeSection';
+import { RawRows } from '../tesla-physics/Evidence';
 
 const source = vi.hoisted((): { report: Partial<ExclusiveReport> | undefined; error: Error | null; loading: boolean; paused: boolean; refetch: ReturnType<typeof vi.fn> } => ({
   report: undefined,
@@ -28,6 +32,20 @@ const source = vi.hoisted((): { report: Partial<ExclusiveReport> | undefined; er
   paused: false,
   refetch: vi.fn(),
 }));
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC', distance: 'km' }));
+vi.mock('@/lib/timezone', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => datePreferences.tz,
+}));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...original, useSettings: () => {
+    return { locale: datePreferences.locale, decimals: 2, density: 'comfortable', rangeType: 'rated', settings: {
+      unit_of_temp: 'C', unit_of_pressure: 'bar', decimal_precision: 2, currency_symbol: '$',
+      locale: datePreferences.locale, tz_display_default: 'user', timezone_user: datePreferences.tz, unit_of_length: datePreferences.distance,
+    } };
+  } };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -76,11 +94,20 @@ function metric(briefId: string, metricId: string) {
 }
 
 beforeEach(() => {
+  Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC', distance: 'km' });
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   source.report = boundedReport;
   source.error = null;
   source.loading = false;
   source.paused = false;
   source.refetch.mockClear();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 
 function ShellHarness({ slug }: { slug?: PhysicsSlug }) {
@@ -169,6 +196,134 @@ describe('Tesla physics shell source lifecycle', () => {
 });
 
 describe('Tesla physics nested summary adoption', () => {
+  it('keeps every raw field accessible through the existing row expansion', async () => {
+    const user = userEvent.setup();
+    render(<RawRows title="Evidence" tableId="test:physics-raw-details" t={(_key, fallback) => fallback}
+      rows={[{ id: 'sample', visible: 'Returned value', hidden: 'Full evidence' }]}
+      keyExtractor={row => row.id} mobileColumns={['visible']}
+      columns={[
+        { key: 'visible', header: 'Visible field', render: row => row.visible },
+        { key: 'hidden', header: 'Additional field', render: row => row.hidden, defaultVisible: false },
+      ]} />);
+    await user.click(screen.getByRole('button', { name: /Inspect raw evidence/ }));
+    const expand = screen.getByRole('button', { name: /Expand row/ });
+    expand.focus();
+    await user.keyboard('{Enter}');
+    expect(expand).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText('Additional field', { selector: 'dt' })).toBeInTheDocument();
+    expect(screen.getByText('Full evidence', { selector: 'dd' })).toBeInTheDocument();
+    await user.keyboard(' ');
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText('Full evidence', { selector: 'dd' })).toBeNull();
+  });
+
+  it('opens all six clock fields by keyboard on narrow containers and preserves desktop cells', async () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    const resize = (width: number) => act(() => observers.forEach(({ element, callback }) => callback(
+      [{ target: element, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver,
+    )));
+    const row = { event_time: start, ingest_time: null, display_time: end, gap_s: 0, unknown: true };
+    source.report = { ...boundedReport, clocks: { vehicle_id: 7, latest: row, samples: [row], honesty: 'Returned clocks only.' } };
+    const user = userEvent.setup();
+    renderSection(PhysicsClocksSection);
+    resize(375);
+    expect(document.querySelector('[data-mobile-table]')).not.toBeNull();
+    const quickView = screen.getByRole('button', { name: 'Quick view' });
+    quickView.focus();
+    await user.keyboard('{Enter}');
+    const dialog = screen.getByRole('dialog');
+    for (const label of ['Event time', 'Ingest time', 'Stored ingest lag', 'Elapsed since prior event', 'Display time', 'Unknown flag']) {
+      expect(within(dialog).getByText(label, { selector: 'dt' })).toBeInTheDocument();
+    }
+    expect(within(dialog).getAllByText('unknown', { selector: 'dd' })).toHaveLength(2);
+    expect(within(dialog).getByText(/^0(?:\.0+)? s$/, { selector: 'dd' })).toBeInTheDocument();
+    expect(within(dialog).getByText('Yes', { selector: 'dd' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(quickView).toHaveFocus();
+    await user.click(screen.getByRole('button', { name: /Inspect raw evidence/ }));
+    resize(375);
+    expect(screen.getAllByRole('button', { name: 'Quick view' })).toHaveLength(2);
+    await user.click(screen.getAllByRole('button', { name: 'Quick view' })[1]);
+    expect(within(screen.getByRole('dialog')).getByText('Unknown flag', { selector: 'dt' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    resize(1280);
+    expect(document.querySelector('[data-mobile-table]')).toBeNull();
+    expect(screen.getAllByRole('columnheader', { name: 'Ingest time' })).toHaveLength(2);
+    expect(screen.getAllByRole('columnheader', { name: 'Display time' })).toHaveLength(2);
+  });
+
+  it('updates range efficiency and caption with distance, locale and precision without changing source readings', () => {
+    const range = {
+      vehicle_id: 7, rated_range_m: 400000, est_range_m: 360000, ideal_range_m: 450000,
+      energy_remaining_wh: 62000, recent_wh_per_km: 187.4568, disagree: true,
+      true_range_m: null, honesty: 'Never pick a true range.',
+    };
+    source.report = { ...boundedReport, range };
+    const view = renderSection(PhysicsRangeSection);
+    expect(metric('physics-range-summary', 'recent-efficiency')).toHaveTextContent('187.46 Wh/km');
+    expect(screen.getByText('No true range. Recent Wh/km: 187.46')).toBeInTheDocument();
+    Object.assign(datePreferences, { distance: 'mi' });
+    view.rerender(<MemoryRouter><Harness Component={PhysicsRangeSection} /></MemoryRouter>);
+    expect(metric('physics-range-summary', 'recent-efficiency')).toHaveTextContent('301.68 Wh/mi');
+    expect(screen.getByText('No true range. Recent Wh/mi: 301.68')).toBeInTheDocument();
+    act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+    view.rerender(<MemoryRouter><Harness Component={PhysicsRangeSection} /></MemoryRouter>);
+    expect(metric('physics-range-summary', 'recent-efficiency')).toHaveTextContent('301,7 Wh/mi');
+    expect(screen.getByText('No true range. Recent Wh/mi: 301,7')).toBeInTheDocument();
+    expect(range.recent_wh_per_km).toBe(187.4568);
+    expect(range.rated_range_m).toBe(400000);
+    expect(range.energy_remaining_wh).toBe(62000);
+    expect(range.true_range_m).toBeNull();
+  });
+
+  it.each([null, 0])('keeps missing versus zero range efficiency explicit in mile captions (%s)', (recent) => {
+    datePreferences.distance = 'mi';
+    source.report = { ...boundedReport, range: {
+      vehicle_id: 7, rated_range_m: 400000, est_range_m: 360000, ideal_range_m: 450000,
+      energy_remaining_wh: 62000, recent_wh_per_km: recent, disagree: true,
+      true_range_m: null, honesty: 'Never pick a true range.',
+    } };
+    renderSection(PhysicsRangeSection);
+    expect(metric('physics-range-summary', 'recent-efficiency')).toHaveAttribute('data-value-state', recent == null ? 'missing' : 'value');
+    expect(screen.getByText(`No true range. Recent Wh/mi: ${recent == null ? 'unknown' : '0.00'}`)).toBeInTheDocument();
+  });
+
+  it('updates clock seconds, signed durations, scope and freshness with display preferences', () => {
+    const event = '2026-10-01T00:00:17Z';
+    const ingest = '2026-10-01T00:00:15.5Z';
+    source.report = { ...boundedReport, clocks: {
+      vehicle_id: 7, latest: { event_time: event, ingest_time: ingest, display_time: end, gap_s: 1234.5, unknown: false },
+      samples: [{ event_time: event, ingest_time: ingest, display_time: end, gap_s: 1234.5, unknown: false }],
+      honesty: 'Paired readings only.',
+    } };
+    const view = renderSection(PhysicsClocksSection);
+    const clockLabel = (value: string) => formatDateTime(value, {
+      locale: datePreferences.locale, tz: datePreferences.tz, clock: { second: '2-digit' },
+    });
+    expect(screen.getByRole('cell', { name: clockLabel(event) })).toBeInTheDocument();
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    act(() => { setGlobalLocale('de-DE'); setGlobalPrecision(1); });
+    view.rerender(<MemoryRouter><Harness Component={PhysicsClocksSection} /></MemoryRouter>);
+    expect(screen.getByRole('cell', { name: clockLabel(event) })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: clockLabel(ingest) })).toBeInTheDocument();
+    expect(metric('physics-clocks-summary', 'event')).toHaveTextContent(clockLabel(event));
+    expect(metric('physics-clocks-summary', 'median-lag')).toHaveTextContent('-1,5 s');
+    expect(metric('physics-clocks-summary', 'max-gap')).toHaveTextContent('1.234,5 s');
+    expect(screen.getByRole('cell', { name: '1.234,5 s' })).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('physics-clocks-summary')).getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    const opts = { locale: datePreferences.locale, tz: datePreferences.tz };
+    expect(within(drawer).getAllByText(`Requested: ${formatDateTime(start, opts)} → ${formatDateTime(end, opts)}`).length).toBeGreaterThan(0);
+    expect(within(drawer).getAllByText(`Report received ${formatDateTime(new Date(1790812800000), opts)}`).length).toBeGreaterThan(0);
+  });
+
   const sections = [
     ['clocks', PhysicsClocksSection], ['life', PhysicsLifeTapeSection],
     ['contradictions', PhysicsContradictionsSection], ['meters', PhysicsMetersSection],

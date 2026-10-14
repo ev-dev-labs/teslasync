@@ -5,9 +5,24 @@ import ts from 'typescript';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { lazyBindings, sharedLoaderSpecifiers } from '@/__tests__/lazyRoutes.parse';
 import type { ExclusiveReport } from '@/types/teslaPhysics';
+import { formatDateTime } from '@/lib/dateFormat';
 import { features } from '../components/tesla-physics/PhysicsPageShell';
 import TeslaPhysicsPage from './TeslaPhysicsPage';
 
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/lib/timezone', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => datePreferences.tz,
+}));
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const original = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return { ...original, useSettings: () => {
+    return { locale: datePreferences.locale, decimals: 2, density: 'comfortable', rangeType: 'rated', settings: {
+      unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar', decimal_precision: 2, currency_symbol: '$',
+      locale: datePreferences.locale, tz_display_default: 'user', timezone_user: datePreferences.tz,
+    } };
+  } };
+});
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string, values?: Record<string, unknown>) =>
@@ -118,6 +133,7 @@ async function renderAt(path = '/tesla-physics') {
 
 describe('Tesla Physics consolidated workbench', () => {
   beforeEach(() => {
+    Object.assign(datePreferences, { locale: 'en-US', tz: 'UTC' });
     Object.assign(queryState, { error: null, missing: false, loading: false, paused: false });
   });
 
@@ -275,6 +291,23 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.queryByText('Showing 1–25 of 30')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Inspect raw evidence: Three clocks (30 rows)' }));
     expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument();
+  });
+
+  it('formats mounted evidence boundaries and clock rows in the selected locale and timezone without dropping seconds', async () => {
+    Object.assign(datePreferences, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    await renderAt('/tesla-physics/clocks');
+    const opts = { locale: datePreferences.locale, tz: datePreferences.tz };
+    const evidence = report.evidence;
+    if (!evidence) throw new Error('Evidence fixture must be present');
+    expect(screen.getAllByText(`Requested: ${formatDateTime(evidence.requested_from, opts)} → ${formatDateTime(evidence.requested_to, opts)}`).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(`Recorded: ${formatDateTime(start, opts)} → ${formatDateTime(end, opts)}`).length).toBeGreaterThan(0);
+    const sample = report.clocks.samples[29];
+    expect(screen.getByRole('cell', { name: formatDateTime(sample.event_time, {
+      ...opts, clock: { second: '2-digit' },
+    }) })).toBeInTheDocument();
+    expect(screen.getAllByRole('cell', { name: formatDateTime(end, {
+      ...opts, clock: { second: '2-digit' },
+    }) }).length).toBe(6);
   });
 
   it('calculates lag only from paired event/ingest timestamps and keeps missing timestamps unknown', async () => {
@@ -476,6 +509,20 @@ describe('Tesla Physics consolidated workbench', () => {
     expect(screen.getByText('Rated vs Typical: 40.0 km apart')).toBeInTheDocument();
     expect(screen.getByText('Difference relative to Rated: 10.00%')).toBeInTheDocument();
     expect(screen.getByText(/No true range/)).toBeInTheDocument();
+  });
+
+  it('renders populated recent efficiency consistently in the range brief and caption without deriving true range', async () => {
+    const saved = report.range;
+    report.range = { ...saved, recent_wh_per_km: 187.4568 };
+    try {
+      await renderAt('/tesla-physics/range');
+      const brief = screen.getByTestId('physics-range-summary');
+      expect(brief.querySelector('[data-operational-metric="recent-efficiency"]')).toHaveTextContent('187.46 Wh/km');
+      expect(screen.getByText('No true range. Recent Wh/km: 187.46')).toBeInTheDocument();
+      expect(screen.getByText('Rated vs Typical: 40.0 km apart')).toBeInTheDocument();
+      expect(report.range.recent_wh_per_km).toBe(187.4568);
+      expect(report.range.true_range_m).toBeNull();
+    } finally { report.range = saved; }
   });
 
   it('does not turn an empty Life Tape into a measured zero-duration state', async () => {

@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { PhysicsEvidenceBrief } from '../operationalbrief-n-z/PhysicsEvidenceBrief';
-import { Badge, DataTable, Select } from '@/components/ui';
+import { Badge, DataTable, Select, type MobileDataTablePresentation } from '@/components/ui';
 
 import type { ClockReading } from '@/types/teslaPhysics';
 import { Evidence, RawRows } from './Evidence';
-import { type PhysicsPage, pagination, seconds, unknown, yesNo } from './PhysicsPageShell';
+import { type PhysicsPage, pagination, unknown, yesNo } from './PhysicsPageShell';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage }) {
   const { fmtNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { report, t } = physics;
+  const seconds = (value: number | null | undefined, translate: typeof t) =>
+    value == null ? unknown(translate) : `${fmtNumber(value)} s`;
   const clock = report?.clocks;
   const rows = clock?.samples ?? [];
   const latest = clock?.latest;
@@ -17,9 +21,7 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
   const preciseTime = (value: string | null | undefined) => {
     if (!value) return unknown(t);
     const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? unknown(t) : date.toLocaleString(undefined, {
-      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
-    });
+    return Number.isNaN(date.getTime()) ? unknown(t) : formatDateTime(value, { clock: { second: '2-digit' } });
   };
   const lagFor = (row: ClockReading) => {
     const event = Date.parse(row.event_time);
@@ -51,6 +53,20 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
     { key: 'display', header: t('teslaOnly.displayTime', 'Display time'), render: (row: ClockReading) => preciseTime(row.display_time) },
     { key: 'unknown', header: t('teslaOnly.unknownFlag', 'Unknown flag'), render: (row: ClockReading) => yesNo(row.unknown, t) },
   ];
+  const mobilePresentation: MobileDataTablePresentation<ClockReading> = {
+    roles: { event: 'title', lag: 'primary', gap: 'meta' },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'event': return preciseTime(row.event_time);
+        case 'ingest': return preciseTime(row.ingest_time);
+        case 'lag': return seconds(lagFor(row), t);
+        case 'gap': return seconds(row.gap_s, t);
+        case 'display': return preciseTime(row.display_time);
+        case 'unknown': return yesNo(row.unknown, t);
+        default: return null;
+      }
+    },
+  };
   return <>
     <Evidence title={physics.title} honesty={clock?.honesty}>
       <PhysicsEvidenceBrief physics={physics} id="physics-clocks-summary" available={clock != null}
@@ -78,8 +94,9 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
     <Evidence title={t('teslaOnly.clocksRecent', 'Latest six returned samples (second precision)')}>
       <DataTable tableId="physics:clocks-recent" data={rows.slice(-6).reverse()} columns={columns} pagination={pagination}
         keyExtractor={(row) => row.event_time} mobileColumns={['event', 'lag', 'gap']}
+        mobilePresentation={mobilePresentation}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')} />
-      <Select label={t('teslaOnly.clocksFilter', 'Filter event intervals')} value={gapFilter} onChange={(event) => setGapFilter(event.target.value)}
+      <Select className="max-md:min-h-11" label={t('teslaOnly.clocksFilter', 'Filter event intervals')} value={gapFilter} onChange={(event) => setGapFilter(event.target.value)}
         options={[
           { value: 'all', label: t('teslaOnly.clocksAll', 'All returned samples') },
           { value: 'over60', label: t('teslaOnly.clocksOver60', 'Over one minute') },
@@ -87,7 +104,7 @@ export default function PhysicsClocksSection({ physics }: { physics: PhysicsPage
           { value: 'missing', label: t('teslaOnly.clocksMissing', 'Unknown interval') },
         ]} />
       <RawRows title={physics.title} rows={[...filtered].reverse()} tableId="physics:clocks" t={t} keyExtractor={(row) => row.event_time}
-        mobileColumns={['event', 'lag', 'gap']} columns={columns} />
+        mobileColumns={['event', 'lag', 'gap']} mobilePresentation={mobilePresentation} columns={columns} />
     </Evidence>
   </>;
 }
