@@ -8,6 +8,7 @@ import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Badge, DataTable, Icon, Pagination, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
@@ -24,6 +25,7 @@ export default function ChargingForensicsPage() {
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const { formatDateTime } = useDateFormat();
+  const { fmtInt } = useNumberFormatting();
   const [pagination, setPagination] = useState({ vehicleId, page: 1 });
   const page = pagination.vehicleId === vehicleId ? pagination.page : 1;
   if (pagination.vehicleId !== vehicleId) setPagination({ vehicleId, page: 1 });
@@ -135,9 +137,11 @@ export default function ChargingForensicsPage() {
         value: <div className="min-w-0 space-y-1 break-words">
           <Text as="p" variant="label">{evidence.source}</Text>
           <Text as="p" variant="bodySm">{evidence.summary}</Text>
-          <Text as="p" variant="caption">{evidence.sample_count != null
-            ? t('advancedIntelligence.evidence.sampleLine', '{{count}} samples · {{date}}', {
-              count: evidence.sample_count, date: formatDateTime(evidence.observed_at),
+          <Text as="p" variant="caption">{evidence.sample_count != null && Number.isFinite(evidence.sample_count)
+            ? t('advancedIntelligence.evidence.sampleLine', '{{formattedCount}} samples · {{date}}', {
+              count: evidence.sample_count,
+              formattedCount: fmtInt(evidence.sample_count),
+              date: formatDateTime(evidence.observed_at),
             })
             : formatDateTime(evidence.observed_at)}</Text>
         </div>,
@@ -151,7 +155,7 @@ export default function ChargingForensicsPage() {
           : t('advancedIntelligence.limitations.empty', 'No additional limitations were returned.'),
       },
     ],
-  }), [columns, formatDateTime, t]);
+  }), [columns, formatDateTime, fmtInt, t]);
 
   return (
     <PageLayout

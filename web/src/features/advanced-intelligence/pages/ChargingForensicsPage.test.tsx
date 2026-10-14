@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createInstance, type i18n } from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DataStateSource } from '@/api/dataState';
 import type { ChargingForensicsItem, ChargingForensicsPage as ForensicsResponse } from '@/types/advancedIntelligence';
 import { formatDateTime, formatTime } from '@/lib/dateFormat';
 import { downloadCSV, downloadJSON } from '@/lib/csvExport';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import englishCatalog from '@/i18n/en.json';
 import ChargingForensicsPage from './ChargingForensicsPage';
 
 const mocks = vi.hoisted(() => ({
@@ -15,6 +18,7 @@ const mocks = vi.hoisted(() => ({
   refetch: vi.fn(),
   fetchAll: vi.fn(),
   request: vi.fn(),
+  realI18n: null as i18n | null,
 }));
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
   useChargingForensics: mocks.query,
@@ -47,6 +51,7 @@ vi.mock('react-i18next', () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
       const values = typeof fallbackOrOptions === 'string' ? options : fallbackOrOptions;
       const template = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : String(values?.defaultValue ?? key);
+      if (mocks.realI18n) return mocks.realI18n.t(key, { ...values, defaultValue: template });
       return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''));
     },
     i18n: { language: 'en', changeLanguage: vi.fn() },
@@ -96,17 +101,22 @@ function renderPage(client = new QueryClient({ defaultOptions: { queries: { retr
 }
 
 const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+let savedNumberPreferences = getFormatterPreferences();
 function resize(width: number) {
   act(() => observers.forEach(({ element, callback }) => callback(
     [{ target: element, contentRect: { width } } as ResizeObserverEntry], {} as ResizeObserver,
   )));
 }
 beforeEach(() => {
+  savedNumberPreferences = getFormatterPreferences();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   localStorage.clear();
   vi.clearAllMocks();
   mocks.request.mockReset();
   observers.length = 0;
   mocks.vehicleId = 4;
+  mocks.realI18n = null;
   mocks.query.mockReturnValue(query(payload()));
   vi.stubGlobal('ResizeObserver', class {
     constructor(private callback: ResizeObserverCallback) {}
@@ -117,6 +127,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
+  setGlobalLocale(savedNumberPreferences.locale);
+  setGlobalPrecision(savedNumberPreferences.precision);
   clients.forEach(client => client.clear());
   clients.length = 0;
   onlineManager.setOnline(true);
@@ -160,6 +172,106 @@ describe('ChargingForensicsPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     resize(1440);
     expect(screen.getByRole('table', { name: 'Session reconciliation' })).toBeInTheDocument();
+  });
+
+  describe('real-i18next mobile evidence sample counts', () => {
+    beforeEach(async () => {
+      mocks.realI18n = createInstance();
+      await mocks.realI18n.init({
+        lng: 'en',
+        fallbackLng: false,
+        interpolation: { escapeValue: false },
+        resources: { en: { translation: englishCatalog } },
+      });
+    });
+
+    async function mobileDetails(item: ChargingForensicsItem) {
+      mocks.query.mockReturnValue(query(payload({ items: [item] })));
+      renderPage();
+      resize(375);
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      return within(await screen.findByRole('dialog', { name: 'Session #44' }));
+    }
+
+    it('renders canonical mobile plurals from raw counts and reacts to number preferences without refetching', async () => {
+      const counts = [1, 0, 2, 12345, 1.25];
+      const evidence = counts.map((sample_count, index) => Object.freeze({
+        source: `000001_012345-${index}`,
+        summary: `Test-only observation ${index}.`,
+        sample_count,
+        observed_at: '2026-06-01T12:30:00Z',
+      }));
+      const item = session({ evidence });
+      const detail = await mobileDetails(item);
+      for (const label of ['1 sample', '0 samples', '2 samples', '12,345 samples', '1 samples']) {
+        expect(detail.getByText(`${label} · 2 Jun 2026, 00:30`)).toBeInTheDocument();
+      }
+      expect(detail.queryByText(/\{\{formattedCount\}\}/)).not.toBeInTheDocument();
+      act(() => { setGlobalLocale('de-DE'); });
+      expect(detail.getByText('12.345 samples · 2 Jun 2026, 00:30')).toBeInTheDocument();
+      act(() => { setGlobalLocale('fr-FR'); setGlobalPrecision(4); });
+      expect(detail.getByText('12\u202f345 samples · 2 Jun 2026, 00:30', {
+        normalizer: text => text,
+      })).toBeInTheDocument();
+      expect(detail.getByText('1 sample · 2 Jun 2026, 00:30')).toBeInTheDocument();
+      expect(detail.getByText('1 samples · 2 Jun 2026, 00:30')).toBeInTheDocument();
+      expect(evidence.map(observation => observation.sample_count)).toEqual(counts);
+      for (const observation of evidence) {
+        expect(detail.getByText(observation.source)).toBeInTheDocument();
+        expect(detail.getByText(observation.summary)).toBeInTheDocument();
+        expect(observation.observed_at).toBe('2026-06-01T12:30:00Z');
+      }
+      expect(mocks.refetch).not.toHaveBeenCalled();
+      expect(mocks.request).not.toHaveBeenCalled();
+      expect(item.evidence).toBe(evidence);
+    });
+
+    it.each([
+      { kind: 'null', count: null },
+      { kind: 'NaN', count: Number.NaN },
+      { kind: 'positive infinity', count: Number.POSITIVE_INFINITY },
+      { kind: 'negative infinity', count: Number.NEGATIVE_INFINITY },
+    ])('keeps mobile $kind sample counts date-only rather than fabricating zero or a measurement', async ({ count }) => {
+      const observation = Object.freeze({
+        source: '000001_012345',
+        summary: 'Test-only evidence with no known count.',
+        sample_count: count,
+        observed_at: '2026-06-01T12:30:00Z',
+      });
+      const detail = await mobileDetails(session({ evidence: [observation] }));
+      expect(detail.getByText('000001_012345')).toBeInTheDocument();
+      expect(detail.getByText(observation.summary)).toBeInTheDocument();
+      expect(detail.getAllByText('2 Jun 2026, 00:30')).toHaveLength(2);
+      expect(detail.queryByText(/samples? ·|\{\{formattedCount\}\}|NaN|Infinity/)).not.toBeInTheDocument();
+      expect(Object.is(observation.sample_count, count)).toBe(true);
+      expect(mocks.refetch).not.toHaveBeenCalled();
+    });
+
+    it('preserves unknown mobile observation dates and unsupported source capabilities independently of counted zero', async () => {
+      const evidence = [
+        { source: 'unknown-count-source', summary: 'Test-only unknown count and date.',
+          sample_count: null, observed_at: null },
+        { source: 'zero-count-source', summary: 'Test-only measured zero with no observation date.',
+          sample_count: 0, observed_at: null },
+        { source: 'invalid-date-source', summary: 'Test-only counted observation with invalid date.',
+          sample_count: 1, observed_at: 'not-an-iso-instant' },
+      ];
+      const item = session({ meter_energy_wh: null, expected_cost_minor: null, evidence });
+      const detail = await mobileDetails(item);
+      expect(detail.getByText('0 samples · —')).toBeInTheDocument();
+      expect(detail.getByText('1 sample · —')).toBeInTheDocument();
+      expect(detail.getByText('—')).toBeInTheDocument();
+      expect(detail.getAllByText('Unsupported')).toHaveLength(2);
+      for (const observation of evidence) {
+        expect(detail.getByText(observation.source)).toBeInTheDocument();
+        expect(detail.getByText(observation.summary)).toBeInTheDocument();
+      }
+      expect(detail.getByText('Test-only tariff coverage is absent.')).toBeInTheDocument();
+      expect(evidence.map(observation => observation.sample_count)).toEqual([null, 0, 1]);
+      expect(evidence.map(observation => observation.observed_at)).toEqual([null, null, 'not-an-iso-instant']);
+      expect(item.meter_energy_wh).toBeNull();
+      expect(item.expected_cost_minor).toBeNull();
+    });
   });
 
   it('keeps zero, signed loss and signed discrepancy distinct from unsupported fields', () => {
