@@ -43,12 +43,16 @@ export default function ChargingHeatmapPage() {
 
   // The header VehiclePicker is the source of truth for the active vehicle.
   const { vehicleId } = useSelectedVehicle();
-  const { start, end } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'charging-heatmap.range',
     defaultPresetId: 'all',
   });
 
-  const query = useChargingSessionsPaginated(vehicleId, { limit: 2000, start, end });
+  const query = useChargingSessionsPaginated(vehicleId, {
+    limit: 2000,
+    start: startInstant,
+    end: endInstantExclusive,
+  });
   const { data, refetch } = query;
   const state = useDataState(query, { provenance: 'historical' });
   // Background errors/pauses must not replace a previously loaded calendar.
@@ -72,18 +76,20 @@ export default function ChargingHeatmapPage() {
     // Match the existing browser-local buckets without treating missing Wh as
     // a measured zero in the keyboard/touch/export alternative.
     const recorded = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
+    const energy = Array.from({ length: 7 }, () => new Array<number>(24).fill(0));
     for (const session of sessions) {
       const started = new Date(session.started_at);
       if (Number.isNaN(started.getTime())) continue;
       if (session.total_energy_added_wh != null && Number.isFinite(session.total_energy_added_wh)) {
         recorded[started.getDay()][started.getHours()] += 1;
+        energy[started.getDay()][started.getHours()] += session.total_energy_added_wh;
       }
     }
     return model.grid.flatMap((row, day) => row.map((cell, hour) => ({
       day: DAYS[day],
       hour: formatHourLabel(hour),
       count: cell.count,
-      energy_wh: recorded[day][hour] > 0 ? cell.totalEnergyWh : null,
+      energy_wh: recorded[day][hour] > 0 ? energy[day][hour] : null,
       recorded_energy_count: recorded[day][hour],
       energyStatus: cell.count === 0
         ? t('common.noReading', 'No reading')
@@ -222,7 +228,7 @@ export default function ChargingHeatmapPage() {
                     height={300}
                     mobileHeight={300}
                   >
-                    <HeatmapGrid model={model} formatEnergy={formatEnergy} />
+                    <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} />
                   </EmbeddedChart>
                   <Accordion
                     title={t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {
