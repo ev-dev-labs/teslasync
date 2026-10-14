@@ -543,6 +543,14 @@ func TestStats_EmptyData(t *testing.T) {
 	if !strings.Contains(body, `"monthly_summary":[]`) {
 		t.Errorf("monthly_summary not [] in body: %s", body)
 	}
+	for _, key := range []string{"total_regen_wh", "total_drive_wh", "regen_ratio", "free_charges"} {
+		if !strings.Contains(body, `"`+key+`":0`) {
+			t.Errorf("successful empty %s must be measured zero, body: %s", key, body)
+		}
+	}
+	if strings.Contains(body, `"error"`) {
+		t.Errorf("successful empty response must not report failure: %s", body)
+	}
 
 	var resp statsResp
 	if err := json.Unmarshal([]byte(body), &resp); err != nil {
@@ -597,7 +605,7 @@ func TestStats_MonthlyError_500(t *testing.T) {
 	}
 }
 
-func TestStats_LifetimeEnergyError_NonFatal(t *testing.T) {
+func TestStats_LifetimeEnergyError_RetainsIndependentSources(t *testing.T) {
 	t.Parallel()
 	repo := &fakeRegenRepo{
 		energyErr: errors.New("cagg down"),
@@ -609,20 +617,37 @@ func TestStats_LifetimeEnergyError_NonFatal(t *testing.T) {
 	rec := httptest.NewRecorder()
 	h.Stats(rec, regenRequest("/analytics/regen?vehicle_id=42"))
 
-	// A lifetime-energy failure degrades gauges to zero but the response
-	// still succeeds with the per-drive and monthly data intact.
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200 (energy failure must be non-fatal)", rec.Code)
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500 (body=%s)", rec.Code, rec.Body.String())
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &fields); err != nil {
+		t.Fatalf("decode fields: %v", err)
+	}
+	for _, key := range []string{"total_regen_wh", "total_drive_wh", "regen_ratio", "free_charges"} {
+		if string(fields[key]) != "null" {
+			t.Errorf("%s = %s, want null for unavailable totals", key, fields[key])
+		}
+	}
+	if string(fields["error"]) != `"failed to get regen energy totals"` {
+		t.Errorf("error = %s, want generic energy error", fields["error"])
+	}
+	if strings.Contains(rec.Body.String(), "cagg down") {
+		t.Error("response exposes repository error")
 	}
 	var resp statsResp
 	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("decode: %v", err)
 	}
-	if !almostEqual(resp.TotalRegenWh, 0) || !almostEqual(resp.TotalDriveWh, 0) || !almostEqual(resp.RegenRatio, 0) || !almostEqual(resp.FreeCharges, 0) {
-		t.Errorf("energy-derived fields should be zero, got %+v", resp)
-	}
 	if len(resp.Drives) != 1 || len(resp.MonthlySummary) != 1 {
-		t.Errorf("drives/monthly should survive energy failure: %d/%d", len(resp.Drives), len(resp.MonthlySummary))
+		t.Fatalf("drives/monthly should survive energy failure: %d/%d", len(resp.Drives), len(resp.MonthlySummary))
+	}
+	if resp.Drives[0].ID != 1 || !almostEqual(resp.Drives[0].Distance, 10) ||
+		resp.MonthlySummary[0].Month != "2026-03" || !almostEqual(resp.MonthlyAvgRegen, 9000) {
+		t.Errorf("independent source values changed: %+v", resp)
+	}
+	if !almostEqual(resp.BatteryCapacityWh, largeCapacityWh) || resp.CapacitySource != "vin_estimate" {
+		t.Errorf("capacity estimate lost: %+v", resp)
 	}
 }
 
