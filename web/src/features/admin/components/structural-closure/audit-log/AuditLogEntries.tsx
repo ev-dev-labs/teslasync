@@ -1,9 +1,12 @@
+import { useCallback } from 'react';
 import { History } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
 import { Button, DataTable, Caption } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, QueryError, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { AuditExpandedDetail } from '../../continuation-admin-2/AuditExpandedDetail';
+import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
+import type { AuditLogRow } from '@/types/admin-operator-confidence';
 import type { useAuditLogPage } from '../../../hooks/useAuditLogPage';
 import { useAuditLogColumns } from './auditLogColumns';
 
@@ -12,6 +15,30 @@ type Props = { controller: ReturnType<typeof useAuditLogPage> };
 export function AuditLogEntries({ controller }: Props) {
   const { t, limit, offset, setOffset, expanded, setExpanded, logQuery, subsystemMissing, tableError, rows } = controller;
   const columns = useAuditLogColumns(controller);
+  const exportFilename = `audit-log-${new Date().toISOString().slice(0, 10)}`;
+  const handleExport = useCallback((format: 'csv' | 'json', loadedRows: readonly AuditLogRow[]) => {
+    // Audit evidence is independent of the operator's visible-column layout.
+    const records = loadedRows.map((row) => ({
+      id: row.id,
+      ts: row.ts,
+      actor: row.actor,
+      category: row.category ?? null,
+      action: row.action,
+      entity_type: row.entity_type,
+      entity_id: row.entity_id ?? null,
+      detail: row.detail ?? null,
+      ip: row.ip ?? null,
+      user_agent: row.user_agent ?? null,
+      before: row.before ?? null,
+      after: row.after ?? null,
+      trace_id: row.trace_id ?? null,
+      success: row.success ?? null,
+      prev_row_hash: row.prev_row_hash ?? null,
+      row_hash: row.row_hash ?? null,
+    }));
+    if (format === 'json') downloadJSON(exportFilename, records);
+    else downloadCSV(exportFilename, objectsToCSV(records));
+  }, [exportFilename]);
 
   return (
 <FadeIn delay={0.2}>
@@ -29,7 +56,7 @@ export function AuditLogEntries({ controller }: Props) {
               <Caption>
                 {t('admin.auditLog.pageInfo', 'Showing {{from}}–{{to}}', {
                   from: rows.length === 0 ? 0 : offset + 1,
-                  to: offset + rows.length,
+                  to: rows.length === 0 ? 0 : offset + rows.length,
                 })}
               </Caption>
               <Button
@@ -41,6 +68,13 @@ export function AuditLogEntries({ controller }: Props) {
                 {t('admin.auditLog.nextPage', 'Next')}
               </Button>
             </div>
+            {rows.length > 0 && (
+              <Caption>
+                {t('admin.auditLog.detailsHint', 'Use “{{action}}” to view complete entry details.', {
+                  action: t('table.expand.expand', 'Expand row'),
+                })}
+              </Caption>
+            )}
           </div>
           <SectionErrorBoundary name="audit-log-table">
             {tableError ? (
@@ -71,24 +105,8 @@ export function AuditLogEntries({ controller }: Props) {
                 onExpandedChange={(next) => setExpanded(next)}
                 renderExpanded={(r) => <AuditExpandedDetail row={r} />}
                 exportable
-                exportFilename={`audit-log-${new Date().toISOString().slice(0, 10)}`}
-                exportRow={(row) => ({
-                  id: row.id,
-                  ts: row.ts,
-                  actor: row.actor,
-                  category: row.category ?? '',
-                  action: row.action,
-                  entity_type: row.entity_type,
-                  entity_id: row.entity_id ?? '',
-                  detail: row.detail ?? '',
-                  ip: row.ip ?? '',
-                  user_agent: row.user_agent ?? '',
-                  trace_id: row.trace_id ?? '',
-                  success:
-                    row.success === null || row.success === undefined ? '' : String(row.success),
-                  prev_row_hash: row.prev_row_hash ?? '',
-                  row_hash: row.row_hash ?? '',
-                })}
+                exportFilename={exportFilename}
+                onExport={handleExport}
               />
             )}
           </SectionErrorBoundary>

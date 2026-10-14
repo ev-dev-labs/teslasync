@@ -16,6 +16,16 @@ export function AuditExpandedDetail({ row }: { row: AuditLogRow }) {
   return (
     <div className="min-w-0 space-y-4 p-4">
       <KVList layout="responsive" items={[
+        { id: 'id', label: t('admin.auditLog.detailId', 'Entry ID'), value: <Text mono>{row.id}</Text> },
+        { id: 'actor', label: t('admin.auditLog.colActor', 'Actor'), value: row.actor || '—' },
+        { id: 'category', label: t('admin.auditLog.colCategory', 'Category'), value: row.category ?? '—' },
+        { id: 'entity', label: t('admin.auditLog.colEntity', 'Entity'), value: (
+          <div className="min-w-0 break-words">
+            <Text>{row.entity_type}</Text>
+            {row.entity_id !== null && row.entity_id !== undefined && <Text mono>{`#${row.entity_id}`}</Text>}
+          </div>
+        ) },
+        { id: 'detail', label: t('admin.auditLog.colDetail', 'Detail'), value: <Text className="min-w-0 whitespace-pre-wrap break-words">{row.detail ?? '—'}</Text> },
         { id: 'ip', label: t('admin.auditLog.detailIp', 'IP'), value: <Text mono>{row.ip ?? '—'}</Text> },
         { id: 'ua', label: t('admin.auditLog.detailUa', 'User-agent'), value: row.user_agent ?? '—' },
         ...(row.trace_id ? [{
@@ -30,6 +40,13 @@ export function AuditExpandedDetail({ row }: { row: AuditLogRow }) {
           value: <div className="flex min-w-0 items-start gap-2">
             <Text mono size="xs" className="min-w-0 break-all">{row.row_hash}</Text>
             <CopyButton text={row.row_hash} iconOnly variant="ghost" size="sm" />
+          </div>,
+        }] : []),
+        ...(row.prev_row_hash ? [{
+          id: 'previous-hash', label: t('admin.auditLog.detailPreviousHash', 'Previous row hash'),
+          value: <div className="flex min-w-0 items-start gap-2">
+            <Text mono size="xs" className="min-w-0 break-all">{row.prev_row_hash}</Text>
+            <CopyButton text={row.prev_row_hash} iconOnly variant="ghost" size="sm" />
           </div>,
         }] : []),
       ]} />

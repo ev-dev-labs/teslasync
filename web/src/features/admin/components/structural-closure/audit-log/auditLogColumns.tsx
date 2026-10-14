@@ -1,14 +1,15 @@
 import { useMemo } from 'react';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
-import { Badge, Button, CopyButton, Caption, Text, type Column } from '@/components/ui';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { Badge, CopyButton, Caption, Text, type Column } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { AuditLogRow } from '@/types/admin-operator-confidence';
 import type { useAuditLogPage } from '../../../hooks/useAuditLogPage';
 
 type Controller = ReturnType<typeof useAuditLogPage>;
 
 export function useAuditLogColumns(controller: Controller) {
-  const { t, expanded, toggleExpanded } = controller;
+  const { t } = controller;
+  const { formatDateTime, formatRelative } = useDateFormat();
   const columns = useMemo<Column<AuditLogRow>[]>(
     () => [
       {
@@ -97,20 +98,8 @@ export function useAuditLogColumns(controller: Controller) {
           return <Badge variant="neutral">—</Badge>;
         },
       },
-      {
-        key: 'expand',
-        header: '',
-        align: 'right',
-        render: (r) => (
-          <Button variant="ghost" size="sm" onClick={() => toggleExpanded(r.id)}>
-            {expanded.includes(r.id)
-              ? t('admin.auditLog.hideDetails', 'Hide')
-              : t('admin.auditLog.showDetails', 'Details')}
-          </Button>
-        ),
-      },
     ],
-    [t, expanded],
+    [t, formatDateTime, formatRelative],
   );
 
   return columns;
