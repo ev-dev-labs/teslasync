@@ -6,7 +6,7 @@ import type {
   FleetReservation,
   FleetWorkOrder,
 } from '@/api/hooks/useFleetOps';
-import { aggregateForecast, costCenterAllocations, fleetKpis } from './helpers';
+import { aggregateForecast, costCenterAllocations, fleetKpis, formatMinorUnits } from './helpers';
 
 const reservation = {
   id: 1,
@@ -62,6 +62,22 @@ const workOrder = {
 } satisfies FleetWorkOrder;
 
 describe('fleet operations view model', () => {
+  it.each([
+    { currency: 'JPY', amount: 12500, value: 12500 },
+    { currency: 'USD', amount: 12500, value: 125 },
+    { currency: 'BHD', amount: 12500, value: 12.5 },
+    { currency: 'CLF', amount: 12500, value: 1.25 },
+    { currency: 'JPY', amount: 0, value: 0 },
+    { currency: 'BHD', amount: -12501, value: -12.501 },
+  ])('formats $amount minor units in $currency', ({ currency, amount, value }) => {
+    const expected = new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(value);
+    expect(formatMinorUnits(amount, currency)).toBe(expected);
+  });
+
+  it('preserves the unknown-currency placeholder', () => {
+    expect(formatMinorUnits(12500, null)).toBe('—');
+  });
+
   it('derives KPI values without treating missing forecast as zero precision', () => {
     const values = fleetKpis(
       [reservation],
@@ -77,23 +93,28 @@ describe('fleet operations view model', () => {
     });
   });
 
-  it('allocates reservations and minor-unit maintenance costs by cost center', () => {
-    const center = {
-      id: 3,
-      code: 'FIELD',
-      name: 'Field team',
-      active: true,
-      version: 1,
-      created_at: '2026-08-01T00:00:00Z',
-      updated_at: '2026-08-01T00:00:00Z',
-    } satisfies FleetCostCenter;
-    expect(costCenterAllocations([center], [reservation], [workOrder])[0]).toMatchObject({
-      reservation_count: 1,
-      open_work_order_count: 1,
-      cost_minor: 12500,
-      currency: 'USD',
-    });
-  });
+  it.each(['USD', 'JPY', 'BHD', 'CLF'])(
+    'preserves raw minor-unit maintenance costs and %s currency by cost center',
+    (currency) => {
+      const center = {
+        id: 3,
+        code: 'FIELD',
+        name: 'Field team',
+        active: true,
+        version: 1,
+        created_at: '2026-08-01T00:00:00Z',
+        updated_at: '2026-08-01T00:00:00Z',
+      } satisfies FleetCostCenter;
+      expect(
+        costCenterAllocations([center], [reservation], [{ ...workOrder, currency }])[0],
+      ).toMatchObject({
+        reservation_count: 1,
+        open_work_order_count: 1,
+        cost_minor: 12500,
+        currency,
+      });
+    },
+  );
 
   it('aggregates per-vehicle forecast points while preserving uncertainty width', () => {
     const point = {

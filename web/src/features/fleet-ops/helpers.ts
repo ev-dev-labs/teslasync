@@ -101,5 +101,7 @@ export function aggregateForecast(points: FleetForecastPoint[]): ForecastChartPo
 
 export function formatMinorUnits(amount: number, currency: string | null): string {
   if (!currency) return '—';
-  return new Intl.NumberFormat(undefined, { style: 'currency', currency }).format(amount / 100);
+  const formatter = new Intl.NumberFormat(undefined, { style: 'currency', currency });
+  const exponent = formatter.resolvedOptions().maximumFractionDigits ?? 0;
+  return formatter.format(amount / 10 ** exponent);
 }
