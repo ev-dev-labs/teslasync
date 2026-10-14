@@ -18,8 +18,8 @@
  *      "0% → ?%" (start defaulted to a misleading 0, end to a stray "?");
  *   2. the DURATION regression — an in-progress session (no `ended_at`) must
  *      show "—" (unknown), not the pre-fix "0.00 min" silent-zero;
- *   3. NULL-SAFETY — an absent energy / peak-power reading must coerce to a
- *      finite "0.00" unit string, never "NaN";
+ *   3. NULL-SAFETY — absent energy retains its zero fallback; unavailable
+ *      observed peak power shows "—", never zero or a model assumption;
  *   4. a11y — the panel is exposed as a `region` landmark whose accessible name
  *      is its "Session Details" heading.
  *
@@ -232,7 +232,7 @@ describe('SessionDetailPanel — null safety + regressions', () => {
     expect(rowValue('SOC Range')).toBe('15% → —');
   });
 
-  it('coerces missing energy and peak power to zeroed readings without NaN', () => {
+  it('keeps the missing-energy fallback but does not invent an observed peak', () => {
     renderPanel(
       makeSession({
         total_energy_added_wh: undefined as unknown as number,
@@ -242,7 +242,27 @@ describe('SessionDetailPanel — null safety + regressions', () => {
 
     expect(rowValue('Energy Added')).toBe('0.00 kWh');
     expect(rowValue('Energy Added')).not.toContain('NaN');
-    expect(rowValue('Peak Power')).toBe('0.00 kW');
+    expect(rowValue('Peak Power')).toBe('—');
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'shows unavailable observed peak power for %s without substituting the model assumption',
+    (peak_power_w) => {
+      renderPanel(makeSession({ peak_power_w }));
+
+      expect(rowValue('Peak Power')).toBe('—');
+      expect(rowCount()).toBe(6);
+    },
+  );
+
+  it.each([
+    [0, '0.00 kW'],
+    [11_000, '11.00 kW'],
+    [250_000, '250.00 kW'],
+  ])('preserves a measured peak of %s W', (peak_power_w, expected) => {
+    renderPanel(makeSession({ peak_power_w }));
+
+    expect(rowValue('Peak Power')).toBe(expected);
   });
 
   it('shows an em-dash duration for an in-progress session (regression: no "0.00 min")', () => {

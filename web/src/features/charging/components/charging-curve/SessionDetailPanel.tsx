@@ -42,7 +42,10 @@ export default function SessionDetailPanel({ session }: SessionDetailPanelProps)
       },
       {
         label: t('charging.curve.peakPower', 'Peak Power'),
-        value: fmtWithUnit((session.peak_power_w ?? 0) / 1000, 'kW'),
+        value:
+          session.peak_power_w != null && Number.isFinite(session.peak_power_w)
+            ? fmtWithUnit(session.peak_power_w / 1000, 'kW')
+            : '—',
       },
     ];
     if (session.avg_power_w != null) {
