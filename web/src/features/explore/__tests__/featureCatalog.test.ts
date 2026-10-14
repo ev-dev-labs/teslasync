@@ -80,6 +80,17 @@ describe('featureCatalog', () => {
       expect(out.some((entry) => entry.to === '/action-center')).toBe(true);
     });
 
+    it('describes journeys as vehicle-scoped Autopilot sessions rather than stitched drives', () => {
+      const journey = catalog.find((entry) => entry.to === '/journeys');
+      expect(journey?.description).toBe(
+        'Vehicle-scoped Journey Autopilot sessions: planning, live drive, and debrief.',
+      );
+      expect(filterFeatureCatalog(catalog, 'vehicle-scoped autopilot sessions')).toContain(journey);
+      expect(filterFeatureCatalog(catalog, 'planning live debrief')).toContain(journey);
+      expect(filterFeatureCatalog(catalog, 'consecutive drives')).not.toContain(journey);
+      expect(filterFeatureCatalog(catalog, 'multi-leg trips').some((entry) => entry.to === '/trips')).toBe(true);
+    });
+
     it('matches against the section title', () => {
       const out = filterFeatureCatalog(catalog, 'Diagnostics');
       expect(out.every((e) => e.section === 'Diagnostics')).toBe(true);
