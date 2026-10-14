@@ -8,6 +8,7 @@ import { deriveDataState } from '@/api/dataState';
 import { cn } from '@/lib/cn';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { gaugeTone, severityTokens, typography } from '@/lib/tokens';
@@ -54,6 +55,7 @@ export default function WatchFacePage() {
   const commandMutation = useWatchCommand();
   const operationalMode = useOperationalMode();
   const { unitPrefs } = useUnits();
+  const { fmtInt } = useNumberFormatting();
   const accessUnavailable = summaryQuery.availability === 'not-configured'
     || summaryQuery.availability === 'prerequisite-error';
   const canCommand = operationalMode.canWrite && !accessUnavailable;
@@ -101,7 +103,7 @@ export default function WatchFacePage() {
   // (withAiFeature returns null → the sibling is absent from the
   // DOM, preserving the wearable invariant).
   let watchContent: React.ReactNode;
-  if (isLoading && !source.hasData) {
+  if (isLoading && !source.hasData && !source.isRefreshBlocked) {
     watchContent = (
       <div
         role="status"
@@ -123,6 +125,26 @@ export default function WatchFacePage() {
     );
   } else if (!data && accessUnavailable) {
     watchContent = accessNotice;
+  } else if (!data && !source.fatalError && (source.isRefreshBlocked || operationalMode.isReadOnly)) {
+    watchContent = (
+      <div className="min-w-0 space-y-2 px-4 text-center">
+        {source.isRefreshBlocked ? (
+          <Badge variant="warning" size="sm" role="status">
+            {t('dataSources.status.paused', 'Refresh paused')}
+          </Badge>
+        ) : null}
+        {operationalMode.isReadOnly ? (
+          <>
+            <div className="flex justify-center">
+              <OperationalModeBadge compact />
+            </div>
+            <Text as="p" variant="bodySm" className="break-words text-[var(--text-on-accent)]">
+              {operationalMode.description}
+            </Text>
+          </>
+        ) : null}
+      </div>
+    );
   } else if (source.fatalError || !data) {
     watchContent = (
       <div className="min-w-0 space-y-2 px-4 text-center">
@@ -137,11 +159,8 @@ export default function WatchFacePage() {
       </div>
     );
   } else {
-    // SI boundary: backend `range_km` is in km, derived in
-    // watch_handler.go as RatedRange*1.60934. Multiply by 1000 before
-    // passing it to convertDistanceFromSI.
-    const displayRange = Number.isFinite(data.range_km)
-      ? convertDistanceFromSI(data.range_km * 1000, unitPrefs.distance) : null;
+    const displayRange = Number.isFinite(data.range_m)
+      ? convertDistanceFromSI(data.range_m, unitPrefs.distance) : null;
     // SI boundary: backend `inside_temp_c` is already °C (SI for temp).
     const displayInsideTemp = Number.isFinite(data.inside_temp_c)
       ? convertTempFromSI(data.inside_temp_c, unitPrefs.temperature) : null;
@@ -187,7 +206,7 @@ export default function WatchFacePage() {
               <Text variant="caption" className={cn('min-w-0 break-words', severityTokens.success.fg)}>
                 {data.time_to_full != null && Number.isFinite(data.time_to_full)
                   ? t('watch.timeToFull', '{{minutes}}m to full', {
-                      minutes: Math.round(data.time_to_full),
+                      minutes: fmtInt(data.time_to_full),
                     })
                   : t('watch.timeToFullUnknown', 'Time to full unknown')}
               </Text>
@@ -224,7 +243,7 @@ export default function WatchFacePage() {
           <StatusIcon
             icon={Thermometer}
             active={data.is_climate_on}
-            label={displayInsideTemp == null ? '—' : `${Math.round(displayInsideTemp)}°`}
+            label={displayInsideTemp == null ? '—' : `${fmtInt(displayInsideTemp)}°`}
             ariaLabel={
               data.is_climate_on
                 ? t('watch.action.climateOff', 'Turn climate off')
@@ -304,11 +323,13 @@ export function BatteryGauge({
   distanceUnit: DistanceUnitPref;
 }) {
   const { t } = useTranslation();
+  const { fmtPercent, fmtWithUnit } = useNumberFormatting();
   const knownLevel = level != null && Number.isFinite(level);
   const color = knownLevel ? getBatteryColor(level) : gaugeTone.neutral;
-  const levelLabel = knownLevel ? `${level}%` : '—';
+  // Whole-number labels fit the watch; color and arc retain the raw measurement.
+  const levelLabel = knownLevel ? fmtPercent(level, 0) : '—';
   const rangeLabel = rangeDisplay != null && Number.isFinite(rangeDisplay)
-    ? `${Math.round(rangeDisplay)} ${distanceUnit}` : '—';
+    ? fmtWithUnit(rangeDisplay, distanceUnit, 0) : '—';
 
   return (
     <ProgressRing

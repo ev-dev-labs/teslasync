@@ -30,6 +30,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import { Shield, Thermometer } from 'lucide-react'
 import { gaugeTone, severityTokens } from '@/lib/tokens'
+import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat'
 
 // framer-motion's useReducedMotion (via <Spinner>) probes matchMedia, which
 // jsdom omits. Provide an inert stub so the loading branch renders cleanly.
@@ -119,7 +120,7 @@ function makeSummary(overrides: Partial<WatchSummary> = {}): WatchSummary {
     vehicle_name: 'My Model 3',
     state: 'online',
     battery_level: 72,
-    range_km: 300,
+    range_m: 300000,
     is_charging: false,
     charge_rate: 0,
     time_to_full: 0,
@@ -144,7 +145,13 @@ function renderPage(route = '/watch') {
   )
 }
 
+let previousLocale: string
+let previousPrecision: number
+
 beforeEach(() => {
+  previousLocale = getGlobalLocale()
+  previousPrecision = getGlobalPrecision()
+  setGlobalLocale('en-US')
   hooks.summary = { data: undefined, isLoading: false, error: null }
   hooks.command = { mutate: vi.fn(), isPending: false }
   hooks.unitPrefs = { distance: 'km', temperature: '°C' }
@@ -156,6 +163,8 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
+  setGlobalLocale(previousLocale)
+  setGlobalPrecision(previousPrecision)
 })
 
 describe('WatchFacePage', () => {
@@ -194,7 +203,7 @@ describe('WatchFacePage', () => {
       data: makeSummary({
         vehicle_name: 'My Model 3',
         battery_level: 72,
-        range_km: 300,
+        range_m: 300000,
         state: 'online',
         is_locked: true,
         is_climate_on: false,
@@ -217,6 +226,69 @@ describe('WatchFacePage', () => {
     expect(climate).toHaveTextContent('21°')
     expect(screen.getByRole('img', { name: 'Sentry mode off' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Sentry mode off' })).not.toBeInTheDocument()
+  })
+
+  it.each([false, true])('distinguishes a paused initial request from an empty response (loading=%s)', (isLoading) => {
+    hooks.summary = { data: undefined, isLoading, error: null, fetchStatus: 'paused' }
+    renderPage()
+
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused')
+    expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Loading watch summary…')).not.toBeInTheDocument()
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument()
+    expect(screen.queryByText('Cached')).not.toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: /Battery/ })).not.toBeInTheDocument()
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it.each(['cached', 'as_of'] as const)('explains %s mode without claiming an empty vehicle result', (mode) => {
+    hooks.operational = {
+      mode, label: mode === 'cached' ? 'Cached' : 'As of',
+      description: mode === 'cached' ? 'Cached vehicle data' : 'Historical vehicle data',
+      canWrite: false, isReadOnly: true, writeBlockReason: 'Live mode is required',
+    }
+    renderPage()
+
+    expect(screen.getByRole('status', { name: hooks.operational.description })).toBeInTheDocument()
+    expect(screen.getByText(hooks.operational.description)).toBeInTheDocument()
+    expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Unlock vehicle' })).not.toBeInTheDocument()
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it('preserves initial fatal errors and recovery even when the request is paused', () => {
+    const refetch = vi.fn()
+    hooks.summary = {
+      data: undefined, isLoading: false, error: new Error('watch unavailable'),
+      fetchStatus: 'paused', refetch,
+    }
+    renderPage()
+
+    expect(screen.getByText('Error: watch unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(refetch).toHaveBeenCalledTimes(1)
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
+  })
+
+  it.each(['not-configured', 'prerequisite-error'] as const)('preserves %s access recovery before paused no-data presentation', (availability) => {
+    const recheckAvailability = vi.fn()
+    hooks.summary = {
+      data: undefined, isLoading: false, error: null, fetchStatus: 'paused',
+      availability, recheckAvailability,
+    }
+    renderPage()
+
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument()
+    expect(screen.queryByText('No vehicle found')).not.toBeInTheDocument()
+    if (availability === 'not-configured') {
+      expect(screen.getByRole('link', { name: 'Manage API keys' })).toHaveAttribute('href', '/api-keys')
+    } else {
+      expect(screen.getByText('Watch access could not be checked')).toBeInTheDocument()
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
+      expect(recheckAvailability).toHaveBeenCalledTimes(1)
+    }
+    expect(hooks.command.mutate).not.toHaveBeenCalled()
   })
 
   it('dispatches the correct commands with the vehicle_id parsed from the URL', () => {
@@ -257,16 +329,68 @@ describe('WatchFacePage', () => {
   it('converts range to miles and inside temp to °F at the display boundary', () => {
     hooks.unitPrefs = { distance: 'mi', temperature: '°F' }
     hooks.summary = {
-      data: makeSummary({ range_km: 300, inside_temp_c: 20, is_climate_on: false }),
+      data: makeSummary({ range_m: 300000, inside_temp_c: 20, is_climate_on: false }),
       isLoading: false,
       error: null,
     }
     renderPage()
 
-    // 300 km → 300000 m → ÷1609.344 ≈ 186 mi
+    // 300000 m → ÷1609.344 ≈ 186 mi
     expect(screen.getByText('186 mi')).toBeInTheDocument()
     // 20 °C → 68 °F, shown as the climate control's visible label.
     expect(screen.getByText('68°')).toBeInTheDocument()
+  })
+
+  it('uses locale-aware whole-number labels without changing SI data or raw gauge thresholds', () => {
+    setGlobalLocale('de-DE')
+    setGlobalPrecision(3)
+    hooks.unitPrefs = { distance: 'mi', temperature: '°F' }
+    const summary = Object.freeze(makeSummary({
+      battery_level: 40.4, range_m: 1986690.816, inside_temp_c: 20.4,
+      is_charging: true, time_to_full: 1234.4,
+    }))
+    hooks.summary = { data: summary, isLoading: false, error: null }
+    const { container } = renderPage()
+
+    expect(screen.getByRole('img', { name: 'Battery 40%; range 1.234 mi' })).toBeInTheDocument()
+    expect(screen.getByText('69°')).toBeInTheDocument()
+    expect(screen.getByText('1.234m to full')).toBeInTheDocument()
+    const arc = container.querySelectorAll('circle')[1]
+    expect(arc).toHaveAttribute('stroke', gaugeTone.success)
+    expect(Number(arc.getAttribute('stroke-dashoffset'))).toBeCloseTo(2 * Math.PI * 59 * 0.596)
+    expect(summary.range_m).toBe(1986690.816)
+    expect(summary.inside_temp_c).toBe(20.4)
+    expect(summary.battery_level).toBe(40.4)
+    expect(summary.time_to_full).toBe(1234.4)
+  })
+
+  it.each([null, undefined, Number.NaN, Number.POSITIVE_INFINITY])(
+    'keeps invalid readings (%s) unknown rather than formatting them as zero',
+    (value) => {
+      hooks.summary = {
+        data: { ...makeSummary({ is_charging: true }), battery_level: value, range_m: value,
+          inside_temp_c: value, time_to_full: value },
+        isLoading: false, error: null,
+      }
+      renderPage()
+      expect(screen.getByRole('img', { name: 'Battery Unknown; range —' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Turn climate on' })).toHaveTextContent('—')
+      expect(screen.getByText('Time to full unknown')).toBeInTheDocument()
+      expect(screen.queryByText('0%')).not.toBeInTheDocument()
+      expect(screen.queryByText('0 km')).not.toBeInTheDocument()
+    },
+  )
+
+  it('formats measured zero readings without treating them as missing', () => {
+    hooks.summary = {
+      data: makeSummary({ battery_level: 0, range_m: 0, inside_temp_c: 0,
+        is_charging: true, time_to_full: 0 }),
+      isLoading: false, error: null,
+    }
+    renderPage()
+    expect(screen.getByRole('img', { name: 'Battery 0%; range 0 km' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Turn climate on' })).toHaveTextContent('0°')
+    expect(screen.getByText('0m to full')).toBeInTheDocument()
   })
 
   it('disables the tap controls while a command is pending', () => {
@@ -281,6 +405,18 @@ describe('WatchFacePage', () => {
     expect(screen.getByRole('button', { name: 'Lock vehicle' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Turn climate off' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Lock vehicle' })).toHaveAttribute('aria-busy', 'true')
+  })
+
+  it.each([
+    ['km', 1609.344, '2 km'],
+    ['mi', 1609.344, '1 mi'],
+    ['km', 0, '0 km'],
+    ['mi', 0, '0 mi'],
+  ] as const)('displays canonical %s range from %s meters as %s', (distance, range_m, expected) => {
+    hooks.unitPrefs = { distance, temperature: '°C' }
+    hooks.summary = { data: makeSummary({ range_m }), isLoading: false, error: null }
+    renderPage()
+    expect(screen.getByText(expected)).toBeInTheDocument()
   })
 
   it('keeps the wearable surface chrome-less: the opt-in Helix panel stays hidden when AI is off', () => {
