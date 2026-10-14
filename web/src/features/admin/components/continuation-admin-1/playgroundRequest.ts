@@ -1,11 +1,15 @@
 import { apiUrl } from '@/api/client';
 import { authHeaders } from '@/lib/serverConnection';
+import { assertOperationalWriteAllowed } from '@/lib/operationalMode';
+import { assertNeverQueuedOffline } from '@/api/offlineCache';
 import type { ApiResponse } from '../ResponseViewer';
 
 /** Interactive transport retains raw non-JSON/error responses for the inspector. */
 export async function executeRequest(
   url: string, method: string, body?: string, headers?: Record<string, string>,
 ): Promise<ApiResponse> {
+  assertOperationalWriteAllowed(method, true);
+  assertNeverQueuedOffline(method, url);
   const start = performance.now();
   const options: RequestInit = {
     method,

@@ -39,25 +39,24 @@ interface ResponseViewerProps {
 /* ─── helpers ─────────────────────────────────────────────────────────── */
 
 function formatBytes(bytes: number): string {
-  // Guard against a missing/NaN/Infinity/negative size — the API occasionally
-  // omits Content-Length, and a bare `${bytes}` would render "NaN MB" or a
-  // nonsensical negative size instead of a neutral value.
-  if (!Number.isFinite(bytes) || bytes < 0) return '0 B';
+  if (!Number.isFinite(bytes) || bytes < 0) return '—';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${fmtNumber((bytes / 1024))} KB`;
   return `${fmtNumber((bytes / (1024 * 1024)))} MB`;
 }
 
 function statusColor(status: number): string {
-  if (status < 300) return 'text-green-400';
-  if (status < 400) return 'text-amber-400';
-  return 'text-red-400';
+  if (status >= 200 && status < 300) return 'text-green-400';
+  if (status >= 300 && status < 400) return 'text-amber-400';
+  if (status === 0 || (status >= 400 && status < 600)) return 'text-red-400';
+  return 'text-[var(--text-secondary)]';
 }
 
 function statusBg(status: number): string {
-  if (status < 300) return 'bg-green-500/10 border-green-500/20';
-  if (status < 400) return 'bg-amber-500/10 border-amber-500/20';
-  return 'bg-red-500/10 border-red-500/20';
+  if (status >= 200 && status < 300) return 'bg-green-500/10 border-green-500/20';
+  if (status >= 300 && status < 400) return 'bg-amber-500/10 border-amber-500/20';
+  if (status === 0 || (status >= 400 && status < 600)) return 'bg-red-500/10 border-red-500/20';
+  return 'bg-[var(--surface-2)] border-[var(--border-subtle)]';
 }
 
 /* ─── body formatting ─────────────────────────────────────────────────── */
@@ -116,12 +115,14 @@ const response = await fetch('${url}', {
   method: '${method}',${body && method !== 'GET' ? `\n  headers: { 'Content-Type': 'application/json' },\n  body: JSON.stringify(${body}),` : ''}
 });
 const data = await response.json();`;
-    case 'python':
+    case 'python': {
+      const hasBody = Boolean(body && method !== 'GET');
       return `# Auth: pass headers={"X-API-Key": "YOUR_KEY"}
-import requests
+import requests${hasBody ? '\nimport json' : ''}
 
-response = requests.${method.toLowerCase()}('${url}'${body && method !== 'GET' ? `, json=${body}` : ''})
+response = requests.${method.toLowerCase()}('${url.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'${hasBody ? `, json=json.loads(${JSON.stringify(body)})` : ''})
 data = response.json()`;
+    }
     case 'go':
       if (method === 'GET') {
         return `// Auth: add X-API-Key header to the request
@@ -321,10 +322,11 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
               statusBg(response.status),
             )}>
               <Text size="sm" weight="bold" mono className={statusColor(response.status)}>
-                {response.status} {response.statusText}
+                {Number.isInteger(response.status) && response.status >= 100 && response.status < 600
+                  ? `${response.status} ${response.statusText}` : response.statusText || '—'}
               </Text>
               <Text variant="caption">
-                {fmtNumber(response.duration)}ms · {formatBytes(response.size)}
+                {response.status === 0 || !Number.isFinite(response.duration) || response.duration < 0 ? '—' : `${fmtNumber(response.duration)}ms`} · {response.status === 0 ? '—' : formatBytes(response.size)}
               </Text>
             </div>
 
@@ -338,7 +340,7 @@ export default function ResponseViewer({ response, loading, history, onReplay }:
             </pre>
 
             {/* Response headers */}
-            <ResponseHeaders headers={response.headers} />
+            <ResponseHeaders headers={response.headers ?? {}} />
           </FadeIn>
         )}
       </GlassPanel>

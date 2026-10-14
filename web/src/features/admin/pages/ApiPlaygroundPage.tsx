@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, RefreshCw } from 'lucide-react';
@@ -12,6 +12,8 @@ import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { apiUrl, request } from '@/api/client';
 import { deriveDataState } from '@/api/dataState';
+import { isOperationalModeWriteError } from '@/lib/operationalMode';
+import { isOfflineWriteRejectedError } from '@/api/offlineCache';
 import EndpointSidebar, { type ParsedEndpoint } from '../components/EndpointSidebar';
 import RequestBuilder from '../components/RequestBuilder';
 import ResponseViewer, { SnippetPanel, type ApiResponse, type HistoryEntry } from '../components/ResponseViewer';
@@ -28,7 +30,9 @@ export default function ApiPlaygroundPage() {
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>(loadHistory);
-  const lastRequestRef = useRef<{ method: string; url: string; body?: string }>({ method: 'GET', url: '' });
+  const [submittedRequest, setSubmittedRequest] = useState<{ method: string; url: string; body?: string } | null>(null);
+  const requestGeneration = useRef(0);
+  useEffect(() => () => { requestGeneration.current += 1; }, []);
 
   const specQuery = useQuery<ParsedEndpoint[]>({
     queryKey: ['openapi-spec'],
@@ -44,14 +48,20 @@ export default function ApiPlaygroundPage() {
   const specState = deriveDataState(specQuery);
 
   const handleSelect = useCallback((endpoint: ParsedEndpoint) => {
+    requestGeneration.current += 1;
     setSelected(endpoint);
     setResponse(null);
+    setSubmittedRequest(null);
+    setLoading(false);
   }, []);
   const handleSend = useCallback(async (url: string, method: string, body?: string, headers?: Record<string, string>) => {
+    const generation = ++requestGeneration.current;
     setLoading(true);
-    lastRequestRef.current = { method, url, body };
+    setResponse(null);
+    setSubmittedRequest({ method, url: apiUrl(url), body });
     try {
       const result = await executeRequest(url, method, body, headers);
+      if (generation !== requestGeneration.current) return;
       setResponse(result);
       const entry: HistoryEntry = {
         method, path: url.split('?')[0], status: result.status,
@@ -63,23 +73,22 @@ export default function ApiPlaygroundPage() {
         return next;
       });
     } catch (error) {
+      if (generation !== requestGeneration.current) return;
+      const blocked = isOperationalModeWriteError(error) || isOfflineWriteRejectedError(error);
       const failMessage = error instanceof Error ? error.message : t('playground.requestFailed', 'Request failed');
       setResponse({
-        status: 0, statusText: t('playground.networkError', 'Network error'),
+        status: 0, statusText: blocked ? t('playground.requestFailed', 'Request failed') : t('playground.networkError', 'Network error'),
         headers: {}, body: { error: failMessage }, bodyText: failMessage,
-        duration: 0, size: 0, contentType: 'text/plain',
+        duration: NaN, size: NaN, contentType: 'text/plain',
       });
     } finally {
-      setLoading(false);
+      if (generation === requestGeneration.current) setLoading(false);
     }
   }, [t]);
   const handleReplay = useCallback((entry: HistoryEntry) => {
     const endpoint = findReplayEndpoint(endpoints ?? [], entry);
-    if (endpoint) {
-      setSelected(endpoint);
-      setResponse(null);
-    }
-  }, [endpoints]);
+    if (endpoint) handleSelect(endpoint);
+  }, [endpoints, handleSelect]);
   const allEndpoints = endpoints ?? [];
   const stats = useMemo(() => {
     const list = endpoints ?? [];
@@ -162,11 +171,11 @@ export default function ApiPlaygroundPage() {
                     onSend={handleSend}
                     loading={loading}
                   />
-                  {response && (
+                  {response && submittedRequest && (
                     <SnippetPanel
-                      method={lastRequestRef.current.method}
-                      url={apiUrl(lastRequestRef.current.url)}
-                      body={lastRequestRef.current.body}
+                      method={submittedRequest.method}
+                      url={submittedRequest.url}
+                      body={submittedRequest.body}
                     />
                   )}
                 </section>

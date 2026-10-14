@@ -32,7 +32,7 @@ vi.mock('@/hooks/useSettings', async importOriginal => {
   const { summaryTestPreferences } = await import('../components/operationalbrief-a-g/summaryTestPreferences')
   return { ...actual, useSettings: summaryTestPreferences }
 })
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -67,7 +67,8 @@ vi.mock('@/api/client', async (importOriginal) => {
 import ApiPlaygroundPage, { findReplayEndpoint } from './ApiPlaygroundPage'
 import { request, ApiError } from '@/api/client'
 import type { ParsedEndpoint } from '../components/EndpointSidebar'
-import type { HistoryEntry } from '../components/ResponseViewer'
+import ResponseViewer, { SnippetPanel, type HistoryEntry, type ApiResponse } from '../components/ResponseViewer'
+import { executeRequest } from '../components/continuation-admin-1/playgroundRequest'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -197,6 +198,8 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals()
+  vi.restoreAllMocks()
+  window.history.replaceState({}, '', '/')
 })
 
 /* ─── unit: findReplayEndpoint ─────────────────────────────────────────── */
@@ -686,12 +689,193 @@ describe('ApiPlaygroundPage', () => {
     renderPage()
     fireEvent.click(await screen.findByText('/vehicles'))
     fireEvent.click(screen.getByRole('button', { name: 'Send' }))
-    await screen.findByText('0 Network error')
+    const failure = await screen.findByText('Network error')
+    expect(failure).toHaveClass('text-red-400')
+    expect(failure.closest('div')).toHaveClass('bg-red-500/10')
+    expect(screen.getByText('— · —')).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Response body' })).toHaveTextContent('test-only connection failure')
     expect(screen.getByRole('region', { name: 'Response' })).toHaveAttribute('aria-busy', 'false')
     expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
     expect(sessionStorage.getItem('teslasync-api-playground-history')).toBeNull()
     expect(within(kpiRegion()).getByText('3')).toBeInTheDocument()
     expect(screen.getByTestId('api-playground-history-summary')).toHaveTextContent('0')
+  })
+})
+
+describe('playground live-only raw transport boundary', () => {
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('rejects historical %s before touching raw transport', async method => {
+    window.history.replaceState({}, '', '/?as_of=2026-10-01T00:00:00Z')
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(executeRequest('/vehicles/1/wake', method)).rejects.toMatchObject({
+      code: 'OPERATIONAL_MODE_READ_ONLY', mode: 'as_of',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each(['POST', 'PUT', 'PATCH', 'DELETE'])('rejects offline %s before touching raw transport', async method => {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    await expect(executeRequest('/vehicles/1/wake', method)).rejects.toMatchObject({
+      code: 'OPERATIONAL_MODE_READ_ONLY', mode: 'cached',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it.each(['GET', 'HEAD', 'OPTIONS'])('preserves %s raw inspection in historical mode', async method => {
+    window.history.replaceState({}, '', '/?as_of=2026-10-01T00:00:00Z')
+    const fetchMock = vi.fn().mockResolvedValue(fakeResponse({
+      status: 403, statusText: 'Forbidden', body: '<raw denied>', contentType: 'text/html',
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const result = await executeRequest('/vehicles', method)
+    expect(result).toMatchObject({ status: 403, bodyText: '<raw denied>', body: '<raw denied>' })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps confirmation but reports a historical write refusal without a network-error label or history', async () => {
+    window.history.replaceState({}, '', '/?as_of=2026-10-01T00:00:00Z')
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.click(await screen.findByText('/alerts'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('This is a POST request.')
+    fireEvent.click(screen.getByRole('button', { name: 'Yes, send' }))
+    await screen.findByText('Request failed')
+    expect(screen.queryByText('Network error')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Response body' })).toHaveTextContent('Return to live mode first.')
+    expect(screen.getByText('— · —')).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(sessionStorage.getItem('teslasync-api-playground-history')).toBeNull()
+  })
+})
+
+describe('submitted request completion identity', () => {
+  it.each(['resolve', 'reject'])('retires an old %s completion after endpoint selection without leaking its response or snippet', async outcome => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    let finish!: (response: Response) => void
+    let fail!: (reason: Error) => void
+    const fetchMock = vi.fn().mockReturnValue(new Promise<Response>((resolve, reject) => {
+      finish = resolve
+      fail = reject
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByText('/alerts'))
+    expect(screen.getByRole('region', { name: 'Response' })).toHaveAttribute('aria-busy', 'false')
+    await act(async () => {
+      if (outcome === 'resolve') finish(fakeResponse({ body: { old: 'retired' } }))
+      else fail(new TypeError('retired failure'))
+    })
+    expect(screen.getByText('/api/v1/alerts')).toBeInTheDocument()
+    expect(screen.getByText('Send a request to see the response')).toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: 'Response body' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Code snippet' })).toBeNull()
+    expect(sessionStorage.getItem('teslasync-api-playground-history')).toBeNull()
+  })
+
+  it('keeps a newer submission busy when an older generation finishes and binds only its own snippets', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    let finishOld!: (response: Response) => void
+    let finishNew!: (response: Response) => void
+    const fetchMock = vi.fn()
+      .mockReturnValueOnce(new Promise<Response>(resolve => { finishOld = resolve }))
+      .mockReturnValueOnce(new Promise<Response>(resolve => { finishNew = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByText('/vehicles/{vehicleID}/state'))
+    fireEvent.change(screen.getByPlaceholderText('integer'), { target: { value: '2' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    await act(async () => { finishOld(fakeResponse({ body: { old: true } })) })
+    expect(screen.getByRole('region', { name: 'Response' })).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByRole('button', { name: 'Sending...' })).toBeDisabled()
+    fireEvent.change(screen.getByPlaceholderText('integer'), { target: { value: '3' } })
+    await act(async () => { finishNew(fakeResponse({ body: { current: true } })) })
+    expect(screen.getByRole('region', { name: 'Response body' })).toHaveTextContent('"current": true')
+    fireEvent.click(screen.getByRole('button', { name: 'Code snippet' }))
+    expect(screen.getByLabelText('Generated code snippet')).toHaveTextContent('/api/v1/vehicles/2/state')
+    expect(screen.getByLabelText('Generated code snippet')).not.toHaveTextContent('/vehicles/3/state')
+    const saved = JSON.parse(sessionStorage.getItem('teslasync-api-playground-history') ?? '[]') as HistoryEntry[]
+    expect(saved).toHaveLength(1)
+    expect(saved[0].path).toBe('/vehicles/2/state')
+  })
+
+  it('retires pending transport when history replay selects another endpoint without auto-sending', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    sessionStorage.setItem('teslasync-api-playground-history', JSON.stringify([mkEntry('GET', '/vehicles/4/state')]))
+    let finish!: (response: Response) => void
+    const fetchMock = vi.fn().mockReturnValue(new Promise<Response>(resolve => { finish = resolve }))
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    fireEvent.click(screen.getByTitle(/GET \/vehicles\/4\/state → 200/))
+    await act(async () => { finish(fakeResponse({ body: { retired: true } })) })
+    expect(screen.getByPlaceholderText('integer')).toBeInTheDocument()
+    expect(screen.getByText('Send a request to see the response')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Code snippet' })).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('retires a pending completion on unmount without persisting it', async () => {
+    mockedRequest.mockResolvedValueOnce(SPEC_YAML)
+    let finish!: (response: Response) => void
+    vi.stubGlobal('fetch', vi.fn().mockReturnValue(new Promise<Response>(resolve => { finish = resolve })))
+    const view = renderPage()
+    fireEvent.click(await screen.findByText('/vehicles'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }))
+    view.unmount()
+    await act(async () => { finish(fakeResponse()) })
+    expect(sessionStorage.getItem('teslasync-api-playground-history')).toBeNull()
+  })
+})
+
+describe('raw response metadata and Python snippet correctness', () => {
+  const response: ApiResponse = {
+    status: 204, statusText: 'No Content', headers: {}, body: '', bodyText: '',
+    duration: 0, size: 0, contentType: 'text/plain',
+  }
+
+  it('distinguishes real HTTP zero metadata from missing or invalid measurements', () => {
+    const view = render(<ResponseViewer response={response} loading={false} history={[]} onReplay={() => {}} />)
+    expect(screen.getByText('204 No Content')).toHaveClass('text-green-400')
+    expect(screen.getByText(/0(?:[.,]0+)?ms · 0 B/)).toBeInTheDocument()
+    view.rerender(<ResponseViewer response={{ ...response, duration: NaN, size: -1 }} loading={false} history={[]} onReplay={() => {}} />)
+    expect(screen.getByText('— · —')).toBeInTheDocument()
+    view.rerender(<ResponseViewer response={{ ...response, duration: Infinity, size: Infinity }} loading={false} history={[]} onReplay={() => {}} />)
+    expect(screen.getByText('— · —')).toBeInTheDocument()
+  })
+
+  it('does not style unknown status as HTTP success or invent unknown measurement zero', () => {
+    render(<ResponseViewer response={{ ...response, status: NaN, statusText: '', duration: NaN, size: NaN }} loading={false} history={[]} onReplay={() => {}} />)
+    expect(screen.getByText('—')).not.toHaveClass('text-green-400')
+    expect(screen.getByText('— · —')).toBeInTheDocument()
+  })
+
+  it.each([
+    '{"enabled":true,"disabled":false,"optional":null,"n":0}',
+    '{"text":"apostrophe\'s, \\"quote\\", \\\\slash, \\nnewline","nested":[true,null]}',
+    'null', 'false', '0', '"plain JSON string"',
+  ])('round-trips the original JSON body into a Python json.loads argument: %s', body => {
+    render(<SnippetPanel method="POST" url="/api/v1/alerts" body={body} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Code snippet' }))
+    expect(screen.getByRole('button', { name: 'cURL' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'JavaScript' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Go' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Python' }))
+    const snippet = screen.getByLabelText('Generated code snippet').textContent ?? ''
+    expect(snippet).toContain('import json')
+    expect(snippet).toContain(`json=json.loads(${JSON.stringify(body)})`)
+    const encoded = snippet.match(/json=json\.loads\((.*)\)\)/)?.[1]
+    expect(encoded).toBeDefined()
+    expect(JSON.parse(encoded!)).toBe(body)
+    expect(JSON.parse(JSON.parse(encoded!))).toEqual(JSON.parse(body))
   })
 })
