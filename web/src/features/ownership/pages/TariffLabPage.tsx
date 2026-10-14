@@ -135,8 +135,8 @@ export default function TariffLabPage() {
   const result = publication.result;
   const results = useMemo(() => result?.results ?? [], [result?.results]);
   const currency = results[0]?.currency;
-  const money = (minor: number | null | undefined) =>
-    currency == null ? '—' : formatCurrencyMinor(minor, currency, units.unitPrefs.locale);
+  const money = (minor: number | null | undefined, denomination: string | null | undefined) =>
+    formatCurrencyMinor(minor, denomination, units.unitPrefs.locale);
 
   const chartData = useMemo(
     () =>
@@ -250,7 +250,7 @@ export default function TariffLabPage() {
       header: t('ownership.tariff.plan.demand', 'Demand charge'),
       render: (row) => (
         <span className="tabular-nums">
-          {row.demand_charge_minor_per_w > 0
+          {row.demand_charge_minor_per_w != null && Number.isFinite(row.demand_charge_minor_per_w)
             ? `${formatCurrencyMinor(row.demand_charge_minor_per_w * 1000, row.currency, units.unitPrefs.locale)}/kW`
             : '—'}
         </span>
@@ -317,7 +317,7 @@ export default function TariffLabPage() {
       key: 'annual',
       align: 'right',
       header: t('ownership.tariff.result.annual', 'Annualised cost'),
-      render: (row) => <span className="tabular-nums">{money(row.annual_cost_minor)}</span>,
+      render: (row) => <span className="tabular-nums">{money(row.annual_cost_minor, row.currency)}</span>,
       sortable: true,
     },
     {
@@ -328,7 +328,7 @@ export default function TariffLabPage() {
         <span
           className={`tabular-nums ${(row.delta_vs_current_minor ?? 0) < 0 ? 'text-[var(--text-secondary)]' : (row.delta_vs_current_minor ?? 0) > 0 ? 'text-[var(--text-secondary)]' : ''}`}
         >
-          {money(row.delta_vs_current_minor)}
+          {money(row.delta_vs_current_minor, row.currency)}
         </span>
       ),
       sortable: true,
@@ -354,7 +354,7 @@ export default function TariffLabPage() {
       header: t('ownership.tariff.result.shift', 'Load-shift upside'),
       render: (row) => (
         <span className="tabular-nums text-[var(--text-secondary)]">
-          {row.load_shift_saving_minor > 0 ? money(row.load_shift_saving_minor) : '—'}
+          {money(row.load_shift_saving_minor, row.currency)}
         </span>
       ),
     },
@@ -379,8 +379,8 @@ export default function TariffLabPage() {
       header: t('ownership.tariff.result.breakdown', 'Energy / standing / demand'),
       render: (row) => (
         <Text as="span" variant="caption">
-          {money(row.energy_cost_minor)} · {money(row.standing_cost_minor)} ·{' '}
-          {money(row.demand_cost_minor)}
+          {money(row.energy_cost_minor, row.currency)} · {money(row.standing_cost_minor, row.currency)} ·{' '}
+          {money(row.demand_cost_minor, row.currency)}
         </Text>
       ),
     },
@@ -505,7 +505,7 @@ export default function TariffLabPage() {
                 missingReason: currency == null && result?.max_saving_minor != null
                   ? t('ownership.tariff.brief.currencyUnknown', 'Replay currency not supplied; the tariff editor currency is not a result denomination.')
                   : undefined,
-                display: specialistDisplay(money),
+                display: specialistDisplay((minor) => money(minor, currency)),
                 tone: (result?.max_saving_minor ?? 0) > 0 ? 'positive' : 'default',
                 context: bestResult?.name,
               },
@@ -647,7 +647,7 @@ export default function TariffLabPage() {
                         <div className="flex justify-between gap-3 text-sm">
                           <span>{band.label}</span>
                           <span className="tabular-nums text-[var(--text-muted)]">
-                            {units.formatEnergy(band.energy_wh)} · {money(band.cost_minor)}
+                            {units.formatEnergy(band.energy_wh)} · {money(band.cost_minor, row.currency)}
                           </span>
                         </div>
                         <div

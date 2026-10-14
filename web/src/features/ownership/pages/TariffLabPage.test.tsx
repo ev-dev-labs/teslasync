@@ -526,6 +526,113 @@ describe('TariffLabPage — confirm-gated delete', () => {
 });
 
 
+describe('TariffLabPage — supplied monetary values', () => {
+  function resultCell(plan: string, column: string) {
+    const economics = card('Ranked plan economics');
+    const headers = within(economics).getAllByRole('columnheader');
+    const index = headers.findIndex(header => header.textContent?.includes(column));
+    expect(index).toBeGreaterThanOrEqual(0);
+    const row = within(economics).getByText(plan).closest('tr');
+    if (!row) throw new Error(`Missing result row: ${plan}`);
+    return within(row).getAllByRole('cell')[index];
+  }
+
+  it.each([
+    { value: 0, currency: 'USD', expected: '$0.00' },
+    { value: -123, currency: 'USD', expected: '-$1.23' },
+    { value: 123, currency: 'USD', expected: '$1.23' },
+    { value: 123.5, currency: 'USD', expected: '$1.24' },
+    { value: -123.5, currency: 'USD', expected: '-$1.24' },
+    { value: 0, currency: 'JPY', expected: '¥0' },
+    { value: 1234.5, currency: 'KWD', expected: 'KWD 1.235' },
+  ])('renders $value minor units in $currency without discarding sign or zero', ({ value, currency, expected }) => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({
+        max_saving_minor: value,
+        results: [makeResult({
+          currency, annual_cost_minor: value, delta_vs_current_minor: value,
+          load_shift_saving_minor: value, energy_cost_minor: value,
+          standing_cost_minor: value, demand_cost_minor: value,
+          bands: [{ label: 'Measured band', energy_wh: 0, share_pct: 0, price_minor_per_wh: 0, cost_minor: value }],
+        })],
+      }),
+    });
+    renderPage();
+
+    for (const column of ['Annualised cost', 'vs current', 'Load-shift upside']) {
+      expect(resultCell('Replay Nights', column)).toHaveTextContent(expected);
+    }
+    expect(resultCell('Replay Nights', 'Energy / standing / demand'))
+      .toHaveTextContent(`${expected} · ${expected} · ${expected}`);
+    expect(summaryMetric('Arbitrage summary', 'saving')).toHaveTextContent(expected);
+    expect(card('Where your energy actually landed')).toHaveTextContent(expected);
+  });
+
+  it.each(['missing', 'null', 'nan', 'infinite', 'negative-infinite'] as const)(
+    'keeps %s monetary inputs unknown rather than measured zero',
+    input => {
+      const result = makeResult({ load_shift_saving_minor: 0, delta_vs_current_minor: null });
+      const simulation = makeSimulation({ max_saving_minor: null, results: [result] });
+      const tariff = makeTariff({ demand_charge_minor_per_w: 0 });
+      if (input === 'missing') {
+        Reflect.deleteProperty(result, 'load_shift_saving_minor');
+        Reflect.deleteProperty(simulation, 'max_saving_minor');
+        Reflect.deleteProperty(tariff, 'demand_charge_minor_per_w');
+      } else {
+        const value = input === 'null' ? null
+          : input === 'nan' ? NaN : input === 'infinite' ? Infinity : -Infinity;
+        Object.assign(result, { load_shift_saving_minor: value, delta_vs_current_minor: value });
+        Object.assign(tariff, { demand_charge_minor_per_w: value });
+        simulation.max_saving_minor = value;
+      }
+      mockTariffs.mockReturnValue(makeQuery({ items: [tariff] }));
+      mockSimulate.mockReturnValue({ ...makeMutation(), data: simulation });
+      renderPage();
+
+      expect(resultCell('Replay Nights', 'Load-shift upside')).toHaveTextContent(/^—$/);
+      expect(resultCell('Replay Nights', 'vs current')).toHaveTextContent(/^—$/);
+      expect(summaryMetric('Arbitrage summary', 'saving')).toHaveTextContent('—');
+      expect(summaryMetric('Arbitrage summary', 'saving')).not.toHaveTextContent('$0.00');
+      const row = within(card('Your rate plan library')).getByText('EV Nights').closest('tr');
+      expect(row).not.toHaveTextContent('/kW');
+    },
+  );
+
+  it.each([
+    { value: 0, expected: '$0.00/kW' },
+    { value: -0.012345, expected: '-$0.12/kW' },
+    { value: 0.012345, expected: '$0.12/kW' },
+  ])('renders a finite demand charge of $value without a positivity gate', ({ value, expected }) => {
+    mockTariffs.mockReturnValue(makeQuery({ items: [makeTariff({ demand_charge_minor_per_w: value })] }));
+    renderPage();
+    const row = within(card('Your rate plan library')).getByText('EV Nights').closest('tr');
+    expect(row).toHaveTextContent(expected);
+  });
+
+  it('uses each returned plan denomination instead of the first result or editor currency', () => {
+    mockSimulate.mockReturnValue({
+      ...makeMutation(),
+      data: makeSimulation({
+        results: [
+          makeResult(),
+          makeResult({
+            tariff_id: 2, name: 'Yen plan', currency: 'JPY', rank: 2,
+            annual_cost_minor: 123, delta_vs_current_minor: -123,
+            load_shift_saving_minor: 0,
+          }),
+          makeResult({ tariff_id: 3, name: 'Unknown denomination', currency: '', rank: 3, load_shift_saving_minor: 0 }),
+        ],
+      }),
+    });
+    renderPage();
+    expect(resultCell('Yen plan', 'Annualised cost')).toHaveTextContent('¥123');
+    expect(resultCell('Yen plan', 'vs current')).toHaveTextContent('-¥123');
+    expect(resultCell('Yen plan', 'Load-shift upside')).toHaveTextContent('¥0');
+    expect(resultCell('Unknown denomination', 'Load-shift upside')).toHaveTextContent(/^—$/);
+  });
+});
+
 describe('TariffLabPage — restrained page adoption', () => {
   it('names each comparison switch with its plan without changing selected IDs', () => {
     const mutate = vi.fn();
