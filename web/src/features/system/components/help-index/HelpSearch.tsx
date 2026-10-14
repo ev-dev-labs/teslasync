@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { BookOpen, Compass, LifeBuoy, Search as SearchIcon, Wrench } from 'lucide-react'
 
 import { cn } from '@/lib/cn'
+import { explainUnavailability } from '@/lib/dataUnavailability'
 import { Input, Text } from '@/components/ui'
 import {
   searchHelpIndex,
@@ -15,14 +16,12 @@ import {
 /**
  * Searchable in-app help index (HELP-06).
  *
- * The static, deterministic baseline: no network, no AI, no ranking that
- * depends on a model or a clock. Typing the same query always produces the
- * same ordered list, which is what makes it usable as documentation.
+ * Static, deterministic baseline: no network, AI, model or clock.
  *
  * Keyboard model — a combobox over a listbox, wired explicitly because the
- * results are navigational rather than a form value:
+ * results are navigation or readable information rather than a form value:
  *   ↓ / ↑    move the active option (wrapping)
- *   Enter    navigate to the active option
+ *   Enter    navigate to the active option only when it has a destination
  *   Escape   clear the query and the active option
  * `aria-activedescendant` keeps DOM focus in the text field while the screen
  * reader announces the active option, so the query stays editable throughout.
@@ -34,6 +33,8 @@ const KIND_ICON: Record<HelpEntryKind, typeof BookOpen> = {
   task: LifeBuoy,
   page: Compass,
 }
+
+const FILTER_SCOPE_EXPLANATION = explainUnavailability('filter_scope')
 
 const KIND_LABEL: Record<HelpEntryKind, { key: string; fallback: string }> = {
   glossary: { key: 'helpIndex.kind.glossary', fallback: 'Definition' },
@@ -76,6 +77,12 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
 
   const onKeyDown = useCallback(
     (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        setQuery('')
+        setActiveIndex(0)
+        return
+      }
       if (results.length === 0) return
       if (event.key === 'ArrowDown') {
         event.preventDefault()
@@ -83,13 +90,9 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
       } else if (event.key === 'ArrowUp') {
         event.preventDefault()
         setActiveIndex((index) => (index - 1 + results.length) % results.length)
-      } else if (event.key === 'Enter') {
+      } else if (event.key === 'Enter' && results[activeIndex]?.route) {
         event.preventDefault()
         go(results[activeIndex])
-      } else if (event.key === 'Escape') {
-        event.preventDefault()
-        setQuery('')
-        setActiveIndex(0)
       }
     },
     [results, activeIndex, go],
@@ -145,15 +148,17 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
               id={`${listboxId}-${index}`}
               role="option"
               aria-selected={active}
+              aria-disabled={entry.route ? undefined : true}
               data-help-entry-id={entry.id}
               className={cn(
-                'cursor-pointer rounded-lg border p-2.5 transition-colors',
+                'rounded-lg border p-2.5 transition-colors',
+                entry.route && 'cursor-pointer hover:bg-[var(--surface-2)]',
                 active
                   ? 'border-[var(--theme-primary)]/50 bg-[rgba(var(--theme-primary-rgb),0.08)]'
-                  : 'border-[var(--glass-border)] bg-[var(--surface-1)] hover:bg-[var(--surface-2)]',
+                  : 'border-[var(--glass-border)] bg-[var(--surface-1)]',
               )}
               onMouseEnter={() => setActiveIndex(index)}
-              onClick={() => go(entry)}
+              onClick={entry.route ? () => go(entry) : undefined}
             >
               <div className="flex items-start gap-2.5">
                 <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--theme-primary)]" aria-hidden />
@@ -166,6 +171,11 @@ export function HelpSearch({ pathname, className }: HelpSearchProps) {
                       {t(kindLabel.key, kindLabel.fallback)}
                     </span>
                   </div>
+                  {!entry.route && entry.id === 'troubleshooting:unavailable:filter_scope' && (
+                    <Text as="p" variant="bodySm" color="muted" className="mt-0.5">
+                      {t(FILTER_SCOPE_EXPLANATION.bodyKey, FILTER_SCOPE_EXPLANATION.bodyFallback)}
+                    </Text>
+                  )}
                   <Text as="p" variant="bodySm" color="muted" className="mt-0.5">
                     {t(entry.summaryKey, entry.summaryFallback)}
                   </Text>
