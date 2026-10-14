@@ -496,3 +496,79 @@ describe('<Drawer>', () => {
     expect(parentClose).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('<Drawer> default footer target', () => {
+  it('allocates the mobile target only to the default footer Close and restores desktop sizing', () => {
+    render(
+      <Drawer open onClose={vi.fn()} title="Filters">
+        <p>Body</p>
+      </Drawer>,
+    );
+    const dialog = screen.getByRole('dialog');
+    const footerClose = dialog.querySelector('[data-drawer-footer] button');
+    const headerClose = screen.getAllByRole('button', { name: 'Close' })[0];
+    // jsdom verifies the allocation classes, not a measured native hitbox.
+    expect(footerClose).toHaveClass('h-11', 'min-w-11', 'md:h-10', 'md:min-w-0', 'px-4', 'text-sm');
+    expect(footerClose).not.toHaveClass('h-10');
+    expect(headerClose).toHaveClass('h-11', 'w-11', 'p-0');
+    expect(headerClose).not.toHaveClass('min-w-11', 'md:h-10', 'md:min-w-0');
+  });
+
+  it('keeps the default footer Close non-submitting and uses the latest close callback', () => {
+    const firstClose = vi.fn();
+    const secondClose = vi.fn();
+    const { rerender } = render(
+      <Drawer open onClose={firstClose} title="Filters">
+        <p>Body</p>
+      </Drawer>,
+    );
+    const footerClose = screen.getAllByRole('button', { name: 'Close' })[1];
+    expect(footerClose).toHaveAttribute('type', 'button');
+    fireEvent.click(footerClose);
+    expect(firstClose).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <Drawer open onClose={secondClose} title="Filters">
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(screen.getAllByRole('button', { name: 'Close' })[1]).toBe(footerClose);
+    fireEvent.click(footerClose);
+    expect(firstClose).toHaveBeenCalledTimes(1);
+    expect(secondClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves custom footer targets and null-footer suppression unchanged', () => {
+    const onClose = vi.fn();
+    const customAction = vi.fn();
+    const { rerender } = render(
+      <Drawer
+        open
+        onClose={onClose}
+        title="Filters"
+        footer={<button type="button" className="h-9" onClick={customAction}>Save</button>}
+      >
+        <p>Body</p>
+      </Drawer>,
+    );
+    const save = screen.getByRole('button', { name: 'Save' });
+    expect(save).toHaveClass('h-9');
+    expect(save).not.toHaveClass('h-11', 'min-w-11', 'md:h-10', 'md:min-w-0');
+    expect(save.closest('[data-drawer-footer]')).not.toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(1);
+    fireEvent.click(save);
+    expect(customAction).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+
+    rerender(
+      <Drawer open onClose={onClose} title="Filters" footer={null}>
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(screen.getByRole('dialog').querySelector('[data-drawer-footer]')).toBeNull();
+    const headerClose = screen.getByRole('button', { name: 'Close' });
+    expect(headerClose).toHaveClass('h-11', 'w-11');
+    fireEvent.click(headerClose);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+});

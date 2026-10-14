@@ -195,7 +195,12 @@ export function Drawer({
           >
             {footer === undefined ? (
               <div className="flex justify-end">
-                <Button type="button" variant="secondary" onClick={onClose}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={onClose}
+                  className="h-11 min-w-11 md:h-10 md:min-w-0"
+                >
                   {t('common.close', 'Close')}
                 </Button>
               </div>
