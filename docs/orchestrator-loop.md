@@ -6,6 +6,16 @@ still apply.
 
 ## Invariants — after every action and every health check
 
+- **Live means actively running only:** count only agents whose actual lifecycle
+  status is `running`. Idle, completed, failed, and cancelled agents are not live,
+  even when retained in the subagent list. Never count a historical launch,
+  reservation, returned result, or retained conversation as running work.
+- After intake, immediately close/cancel the delivered agent through an exposed
+  lifecycle operation when available. Never wake an idle agent merely to request
+  closure. If the host exposes no close/cancel operation, record that limitation
+  and the actual retained-idle count; exclude those agents from every live census
+  and claim. Do not claim that retained idle agents were closed or that idle is
+  zero when it is not.
 - **I1:** Keep 32 actual running subagents whenever actionable pending items
   exist, subject to real runtime capacity and permissions. Queue statuses are
   never a live-worker count.
@@ -36,7 +46,12 @@ honestly; intake is not native/application acceptance.
 3. Refill actual running slots to 32.
 4. Everything else.
 
-Print the actual census as `live X/32 | [~] Y | pending Z`; X and Y must match.
+Print the actual census as
+`active X/32 | idle Y | [~] Z | pending N`.
+`X` and `Z` must match. Refill before lower-priority work if `X < 32` while
+actionable pending items exist. Idle must be zero after intake when the host
+supports closure; otherwise report the real retained count and missing
+close/cancel capability explicitly instead of inventing success.
 
 The sole ten-minute health-check schedule uses this exact prompt:
 
