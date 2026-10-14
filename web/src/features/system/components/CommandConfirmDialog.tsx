@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Modal, Input, Button, Heading, Text, HelperText } from '@/components/ui';
+import { Modal, Input, Button, Heading, Text } from '@/components/ui';
 import { AlertTriangle } from 'lucide-react';
 import type { CommandDef } from '../commands';
 
@@ -101,11 +101,9 @@ export function CommandConfirmDialog({
 
         {confirmInput && (
           <div className="mb-4">
-            <HelperText className="mb-2">
-              {t('commands.confirm.typeToConfirm', { word: confirmInput, defaultValue: 'Type "{{word}}" to confirm:' })}
-            </HelperText>
             <Input
               ref={inputRef}
+              label={t('commands.confirm.typeToConfirm', { word: confirmInput, defaultValue: 'Type "{{word}}" to confirm:' })}
               value={inputValue}
               onChange={e => setInputValue(e.target.value)}
               placeholder={confirmInput}
@@ -115,13 +113,14 @@ export function CommandConfirmDialog({
           </div>
         )}
 
-        <div className="flex items-center justify-end gap-2 pt-2">
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
+            wrapLabel
             onClick={onClose}
-            className="text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0 text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-2)]"
           >
             {t('common.cancel', 'Cancel')}
           </Button>
@@ -129,10 +128,11 @@ export function CommandConfirmDialog({
             type="button"
             variant="danger"
             size="sm"
+            wrapLabel
             loading={loading}
             disabled={!canConfirm}
             onClick={onConfirm}
-            className={cn(remaining > 0 && 'opacity-50')}
+            className={cn('min-h-11 min-w-11 md:min-h-9 md:min-w-0', remaining > 0 && 'opacity-50')}
           >
             {remaining > 0
               ? t('commands.confirm.countdown', {

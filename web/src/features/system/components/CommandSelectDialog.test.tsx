@@ -58,6 +58,30 @@ function renderDialog(
 }
 
 describe('CommandSelectDialog', () => {
+  it('affordance: declares mobile44 Cancel minima with desktop compact restoration and wrapping', () => {
+    renderDialog();
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    expect(cancel).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'h-auto', 'whitespace-normal');
+    expect(cancel).not.toHaveClass('h-9');
+    expect(cancel.querySelector('span')).toHaveClass('break-words');
+    expect(screen.getByRole('button', { name: /Low/ })).toHaveClass('h-auto', 'w-full', 'p-3');
+  });
+
+  it.each(['loading', 'empty'] as const)('affordance: preserves mobile44 cancellation without selection in the %s state', state => {
+    const { onClose, onSelect } = renderDialog({
+      loading: state === 'loading',
+      def: state === 'empty'
+        ? makeDef({ selectConfig: { paramName: 'cop_temp', options: [] } })
+        : makeDef(),
+    });
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    expect(cancel).toHaveClass('min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0');
+    expect(cancel).toBeEnabled();
+    fireEvent.click(cancel);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
   it('renders a named dialog with one button per option, descriptions, a decorative icon and Cancel', () => {
     renderDialog();
 
