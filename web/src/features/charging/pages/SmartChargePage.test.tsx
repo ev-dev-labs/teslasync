@@ -281,13 +281,15 @@ const backendRatePlans: RatePlanInfo[] = [
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <SmartChargePage />
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  const result = render(page());
+  return { ...result, rerenderPage: () => result.rerender(page()) };
 }
 
 const optimizeButton = () => screen.getByRole('button', { name: /Find Cheapest Window/i });
@@ -931,6 +933,98 @@ describe('SmartChargePage — plan history', () => {
     expect(within(rows[1]).getByText('Affordable')).toBeInTheDocument();
     expect(within(rows[1]).getByText('$2.00')).toBeInTheDocument();
     expect(within(rows[2]).getByText('$9.00')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['active loading', { isPending: true, isLoading: true, isFetching: true, status: 'pending', fetchStatus: 'fetching' }],
+    ['paused without data', { isPending: true, status: 'pending', fetchStatus: 'paused' }],
+    ['successful empty', { data: null }],
+    ['initial failure', { isError: true, error: new Error('profile load failed') }],
+  ])('blocks autopilot defaults during %s without hiding independent sources', (_label, query) => {
+    const save = optimizeState();
+    const preview = optimizeState();
+    const run = optimizeState();
+    const refetch = vi.fn();
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotPreview.mockReturnValue(preview);
+    mockAutopilotRun.mockReturnValue(run);
+    mockAutopilotProfile.mockReturnValue(makeQuery({ ...query, refetch }));
+    mockAutopilotSavings.mockReturnValue(makeQuery({ data: { total_savings: 0, runs: 0 } }));
+    renderPage();
+
+    expect(screen.getByText('Charging Autopilot')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Enable autopilot' })).toBeDisabled();
+    for (const name of ['Save Autopilot', 'Preview next run', 'Run now']) {
+      const button = screen.getByRole('button', { name });
+      expect(button).toBeDisabled();
+      fireEvent.click(button);
+    }
+    expect(save.mutate).not.toHaveBeenCalled();
+    expect(preview.mutate).not.toHaveBeenCalled();
+    expect(run.mutate).not.toHaveBeenCalled();
+    expect(screen.getByText('$0.00 across 0 runs')).toBeInTheDocument();
+    expect(optimizeButton()).toBeEnabled();
+    expect(screen.getByText('No charge plans yet. Optimize a schedule above to get started.')).toBeInTheDocument();
+    if (!('isFetching' in query && query.isFetching)) {
+      fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+      expect(refetch).toHaveBeenCalledOnce();
+    }
+  });
+
+  it('hydrates authoritative zero/false values after a paused profile recovers', () => {
+    const save = optimizeState();
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: false, ready_by: '00:00', target_soc: 0,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 0, trip_override: false,
+      precondition: false, max_amps: 0, battery_capacity_kwh: 0,
+    };
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotProfile.mockReturnValue(makeQuery({ isPending: true, fetchStatus: 'paused' }));
+    const { rerenderPage } = renderPage();
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeDisabled();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    rerenderPage();
+    expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('00:00');
+    expect(screen.getByLabelText('Max amps')).toHaveValue(0);
+    expect(screen.getByRole('switch', { name: 'Precondition before departure' })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
+    expect(save.mutate).toHaveBeenCalledWith(profile);
+    expect(screen.getByRole('button', { name: 'Preview next run' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+  });
+
+  it('uses the retained profile during a failed refresh and preserves edits on recovery', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const save = optimizeState();
+    const preview = optimizeState();
+    const run = optimizeState();
+    const refetch = vi.fn();
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotPreview.mockReturnValue(preview);
+    mockAutopilotRun.mockReturnValue(run);
+    mockAutopilotProfile.mockReturnValue(makeQuery({
+      data: profile, isError: true, error: new Error('profile refresh failed'), refetch,
+    }));
+    const { rerenderPage } = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Ready by (daily)'), { target: { value: '05:30' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
+    expect(save.mutate).toHaveBeenCalledWith({ ...profile, ready_by: '05:30' });
+    fireEvent.click(screen.getByRole('button', { name: 'Preview next run' }));
+    expect(preview.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(run.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: { ...profile }, refetch }));
+    rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('05:30');
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
   });
 
   it('preserves autopilot profile controls, preview/run actions and retained realized savings', () => {

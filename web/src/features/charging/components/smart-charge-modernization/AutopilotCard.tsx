@@ -64,13 +64,14 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
     }
   }, [stored, hydrated]);
 
+  const profileReady = stored != null && hydrated;
   const ratePlans = safeArray(ratePlansState.data);
   const ratePlanOptions = ratePlans.length
     ? ratePlans.map(plan => ({ value: plan.id, label: `${plan.name} (${plan.utility})` }))
     : [{ value: 'pge-ev2a', label: 'PG&E EV2-A' }];
 
   const handleSave = () => {
-    if (!vehicleId) return;
+    if (!vehicleId || !profileReady) return;
     const profile: AutopilotProfile = {
       vehicle_id: vehicleId,
       enabled,
@@ -86,10 +87,10 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
     saveMutation.mutate(profile);
   };
   const handlePreview = () => {
-    if (vehicleId) previewMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
+    if (vehicleId && profileReady) previewMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
   };
   const handleRun = () => {
-    if (vehicleId) runMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
+    if (vehicleId && profileReady && enabled) runMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
   };
 
   const preview = previewMutation.data ?? null;
@@ -124,45 +125,52 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
         <Badge variant={enabled ? 'success' : 'neutral'} size="sm">
           {enabled ? t('autopilot.on', 'Autopilot on') : t('autopilot.off', 'Autopilot off')}
         </Badge>
-        <Toggle checked={enabled} onChange={setEnabled} aria-label={t('autopilot.enable', 'Enable autopilot')} />
+        <Toggle checked={enabled} onChange={setEnabled} disabled={!profileReady}
+          aria-label={t('autopilot.enable', 'Enable autopilot')} />
       </div>}>
       <StaleRefreshWarning state={profileState} />
       {profileState.fatalError && <QueryError error={profileState.fatalError} onRetry={() => void profileQuery.refetch()} />}
-      {profileQuery.isLoading && !profileState.hasData ? <Skeleton height={180} /> : (
         <Grid cols={columns}>
           <div className="min-w-0 space-y-4">
+            {profileQuery.isLoading && !profileState.hasData && <Skeleton height={180} />}
+            {!profileReady && !profileState.fatalError && vehicleId && (
+              <Button variant="secondary" onClick={() => void profileQuery.refetch()}
+                disabled={profileQuery.isFetching}>
+                {t('error.retry', 'Retry')}
+              </Button>
+            )}
             <Input label={t('autopilot.readyBy', 'Ready by (daily)')} type="time"
-              value={readyBy} onChange={event => setReadyBy(event.target.value)} />
+              disabled={!profileReady} value={readyBy} onChange={event => setReadyBy(event.target.value)} />
             <Slider id="autopilot-current-soc" label={t('autopilot.currentSoc', 'Current SOC')}
-              formatValue={value => `${value}%`} min={0} max={100} step={1} value={currentSoc} onChange={setCurrentSoc} />
+              disabled={!profileReady} formatValue={value => `${value}%`} min={0} max={100} step={1} value={currentSoc} onChange={setCurrentSoc} />
             <Slider id="autopilot-target-soc" label={t('autopilot.targetSoc', 'Target SOC')}
-              formatValue={value => `${value}%`} min={20} max={100} step={5} value={targetSoc} onChange={setTargetSoc} />
+              disabled={!profileReady} formatValue={value => `${value}%`} min={20} max={100} step={5} value={targetSoc} onChange={setTargetSoc} />
             <Slider id="autopilot-daily-cap" label={t('autopilot.dailyCap', 'Daily health cap')}
-              formatValue={value => `${value}%`} min={50} max={100} step={5} value={dailyCap} onChange={setDailyCap} />
+              disabled={!profileReady} formatValue={value => `${value}%`} min={50} max={100} step={5} value={dailyCap} onChange={setDailyCap} />
             <StaleRefreshWarning state={ratePlansState} />
             {ratePlansState.fatalError && <QueryError error={ratePlansState.fatalError}
               onRetry={() => void ratePlansQuery.refetch()} resourceName={t('chargePlanner.ratePlansResource', 'rate plans')} compact />}
             <Select label={t('autopilot.ratePlan', 'Rate plan')} options={ratePlanOptions}
-              value={ratePlanId} onChange={event => setRatePlanId(event.target.value)} />
+              disabled={!profileReady} value={ratePlanId} onChange={event => setRatePlanId(event.target.value)} />
             <Input label={t('autopilot.maxAmps', 'Max amps')} type="number" min={8} max={80}
-              value={String(maxAmps)} onChange={event => setMaxAmps(Number(event.target.value))} />
+              disabled={!profileReady} value={String(maxAmps)} onChange={event => setMaxAmps(Number(event.target.value))} />
             <div className="flex flex-wrap gap-5">
               <Toggle label={t('autopilot.tripOverride', 'Trip override (allow 100%)')}
-                checked={tripOverride} onChange={setTripOverride} size="sm" />
+                disabled={!profileReady} checked={tripOverride} onChange={setTripOverride} size="sm" />
               <Toggle label={t('autopilot.precondition', 'Precondition before departure')}
-                checked={precondition} onChange={setPrecondition} size="sm" />
+                disabled={!profileReady} checked={precondition} onChange={setPrecondition} size="sm" />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleSave} disabled={!vehicleId || saveMutation.isPending} loading={saveMutation.isPending}>
+              <Button onClick={handleSave} disabled={!vehicleId || !profileReady || saveMutation.isPending} loading={saveMutation.isPending}>
                 {t('autopilot.save', 'Save Autopilot')}
               </Button>
               <Button variant="secondary" onClick={handlePreview}
-                disabled={!vehicleId || previewMutation.isPending} loading={previewMutation.isPending}
+                disabled={!vehicleId || !profileReady || previewMutation.isPending} loading={previewMutation.isPending}
                 icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}>
                 {t('autopilot.preview', 'Preview next run')}
               </Button>
               <Button variant="secondary" onClick={handleRun}
-                disabled={!vehicleId || !enabled || runMutation.isPending} loading={runMutation.isPending}
+                disabled={!vehicleId || !profileReady || !enabled || runMutation.isPending} loading={runMutation.isPending}
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                 title={t('autopilot.runHint', 'Schedule the optimal window on the vehicle now')}>
                 {t('autopilot.run', 'Run now')}
@@ -234,7 +242,6 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
             )}
           </div>
         </Grid>
-      )}
     </LayoutCard>
   );
 }
