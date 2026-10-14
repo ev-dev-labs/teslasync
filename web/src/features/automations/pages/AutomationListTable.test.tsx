@@ -241,7 +241,7 @@ describe('AutomationListTable — data rendering', () => {
   it('colours a non-zero failure count rose and a zero count muted', () => {
     renderTable();
     const failing = screen.getByText('3'); // bravo — the only "3" in the table
-    expect(failing.className).toContain('text-rose-300');
+    expect(failing.className).toContain('text-[var(--status-danger)]');
     const zeros = screen.getAllByText('0'); // alpha + charlie failure cells
     expect(zeros.length).toBeGreaterThanOrEqual(1);
     expect(zeros[0].className).toContain('text-[var(--text-muted)]');
@@ -293,16 +293,13 @@ describe('AutomationListTable — controlled sorting', () => {
     expect(nameOrder()).toEqual(['Charlie', 'bravo', 'Alpha']);
   });
 
-  it('sorts a corrupt last_triggered_at as oldest instead of corrupting the order', () => {
-    // Input order is [valid, invalid]; the NaN-comparator guard must coerce the
-    // invalid timestamp to 0 so it sorts BEFORE the valid one ascending. Without
-    // the guard a NaN return leaves the input order untouched ('Aardvark' first).
+  it('sorts a corrupt last_triggered_at as unknown after measured timestamps', () => {
     const validRow = makeAutomation({ id: 41, name: 'Aardvark', last_triggered_at: '2025-06-01T12:00:00Z' });
     const corruptRow = makeAutomation({ id: 42, name: 'Zebra', last_triggered_at: 'not-a-real-date' });
     renderTable({ automations: [validRow, corruptRow], totalCount: 2 });
     expect(nameOrder()).toEqual(['Aardvark', 'Zebra']); // default name asc
     fireEvent.click(screen.getByRole('button', { name: 'Last triggered' }));
-    expect(nameOrder()).toEqual(['Zebra', 'Aardvark']); // corrupt (0) sorts first asc
+    expect(nameOrder()).toEqual(['Aardvark', 'Zebra']); // Unknown timestamps remain last.
   });
 });
 
@@ -338,6 +335,12 @@ describe('AutomationListTable — controlled selection', () => {
 
 // ── Render states ─────────────────────────────────────────────────────────
 describe('AutomationListTable — render states', () => {
+  it('does not claim an empty inventory while a query is paused without data', () => {
+    renderTable({ automations: [], totalCount: 0, hasData: false });
+    expect(screen.getByRole('status')).toHaveTextContent('—');
+    expect(screen.queryByText('No automations yet')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
   it('shows an accessible loading status and no table while loading', () => {
     renderTable({ isLoading: true });
     const status = screen.getByRole('status');
@@ -375,6 +378,27 @@ describe('AutomationListTable — render states', () => {
 
 // ── Null-safety & accessibility ─────────────────────────────────────────────
 describe('AutomationListTable — null-safety & a11y', () => {
+  it('renders measured signed and fractional counts without substituting zero', () => {
+    renderTable({
+      automations: [makeAutomation({ name: 'Measured', execution_count: -2, failure_count: 0.5 })],
+      totalCount: 1,
+    });
+    expect(screen.getByText('-2')).toBeInTheDocument();
+    expect(screen.getByText('0.5')).toBeInTheDocument();
+  });
+
+  it('renders missing status, invalid counters and invalid time as unknown', () => {
+    renderTable({
+      automations: [makeAutomation({
+        name: 'Unavailable', execution_count: NaN, failure_count: Infinity,
+        auto_disabled: undefined, last_triggered_at: 'invalid',
+      })],
+      totalCount: 1,
+    });
+    expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
+    expect(screen.queryByText('Enabled')).not.toBeInTheDocument();
+    expect(screen.queryByText('Disabled')).not.toBeInTheDocument();
+  });
   it('renders em-dash placeholders for null description and last_triggered', () => {
     const sparse = makeAutomation({
       id: 7,

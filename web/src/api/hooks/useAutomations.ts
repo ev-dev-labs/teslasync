@@ -1,6 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
-import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
@@ -44,9 +43,86 @@ export const automationKeys = {
 export function useAutomations() {
   return useQuery({
     queryKey: automationKeys.all,
-    queryFn: ({ signal }) => request<Automation[]>('/automations', { signal }),
+    queryFn: ({ signal }) => request<Automation[]>('/automations', { signal }).then((value) => assertAutomationInventory(value)),
     refetchInterval: INTERVALS.STANDARD,
-    select: safeArray,
+  });
+}
+
+/** List-only derived fields; no stored auto-disable authority exists. */
+export type AutomationListItem = Omit<Automation,
+  'enabled' | 'auto_disabled' | 'execution_count' | 'failure_count' | 'last_triggered_at'
+> & {
+  enabled?: boolean | null;
+  auto_disabled?: boolean | null;
+  execution_count?: number | null;
+  failure_count?: number | null;
+  last_triggered_at?: string | null;
+};
+
+export function automationNumber(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+export function automationStatus(a: AutomationListItem): 'active' | 'disabled' | 'auto-disabled' | null {
+  if (a.auto_disabled === true) return 'auto-disabled';
+  if (a.auto_disabled !== false || typeof a.enabled !== 'boolean') return null;
+  return a.enabled ? 'active' : 'disabled';
+}
+
+export function automationTimestamp(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() !== '' && Number.isFinite(Date.parse(value))
+    ? value : null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value);
+}
+
+/** Validate the supported base row; derived history/status fields may be unknown. */
+export function assertAutomationInventory<T extends AutomationListItem>(value: T[]): T[];
+export function assertAutomationInventory(value: unknown): AutomationListItem[];
+export function assertAutomationInventory(value: unknown): AutomationListItem[] {
+  if (!Array.isArray(value) || !value.every((row: unknown) =>
+    isRecord(row)
+    && Number.isSafeInteger(row.id) && Number(row.id) > 0
+    && typeof row.name === 'string'
+    && typeof row.enabled === 'boolean'
+    && (row.description == null || typeof row.description === 'string')
+    && (row.vehicle_id == null || (Number.isSafeInteger(row.vehicle_id) && Number(row.vehicle_id) > 0))
+    && automationTimestamp(row.created_at) != null
+    && automationTimestamp(row.updated_at) != null
+    && (row.auto_disabled == null || typeof row.auto_disabled === 'boolean')
+    && ['execution_count', 'failure_count'].every((key) =>
+      row[key] == null || (Number.isSafeInteger(row[key]) && Number(row[key]) >= 0))
+    && (row.last_triggered_at == null || automationTimestamp(row.last_triggered_at) != null)
+  )) {
+    throw new Error('Invalid automation inventory response');
+  }
+  return value;
+}
+
+export function assertRoutineTemplates(value: unknown): RoutineTemplate[] {
+  if (!Array.isArray(value) || !value.every((row: unknown) =>
+    isRecord(row)
+    && typeof row.id === 'string' && row.id.trim() !== ''
+    && typeof row.name === 'string'
+    && typeof row.description === 'string'
+    && (row.event === 'enter' || row.event === 'exit')
+    && Array.isArray(row.actions)
+    && row.actions.every((action: unknown) =>
+      isRecord(action) && typeof action.command === 'string' && action.command.trim() !== ''
+      && (action.params == null || isRecord(action.params)))
+  )) {
+    throw new Error('Invalid automation routine templates response');
+  }
+  return value;
+}
+
+export function useAutomationList() {
+  return useQuery({
+    queryKey: automationKeys.all,
+    queryFn: ({ signal }) => request<AutomationListItem[]>('/automations', { signal }).then(assertAutomationInventory),
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -405,9 +481,8 @@ export const routineKeys = {
 export function useRoutineTemplates() {
   return useQuery({
     queryKey: routineKeys.all,
-    queryFn: ({ signal }) => request<RoutineTemplate[]>('/automations/routine-templates', { signal }),
+    queryFn: ({ signal }) => request<RoutineTemplate[]>('/automations/routine-templates', { signal }).then(assertRoutineTemplates),
     staleTime: STALE_TIMES.STATIC,
-    select: safeArray,
   });
 }
 

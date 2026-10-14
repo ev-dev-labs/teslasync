@@ -12,9 +12,8 @@ import { AlertBanner, OperationalWriteNotice, QueryError, StaleRefreshWarning } 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
-import { useAutomations, useBulkAutomationsUpdate, type AutomationBulkResult } from '@/api/hooks/useAutomations';
+import { useAutomationList, automationNumber, automationStatus, useBulkAutomationsUpdate, type AutomationBulkResult, type AutomationListItem } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import type { Automation } from '@/api/types';
 import { AutomationListTable } from './AutomationListTable';
 import { AutomationStatusPanel } from './AutomationStatusPanel';
 import { RoutineWizard } from '../components/RoutineWizard';
@@ -28,12 +27,12 @@ export default function AutomationListPage() {
   const navigate = useNavigate();
   usePageTitle(t('automationList.title', 'Automation rules'));
 
-  const automationsQuery = useAutomations();
+  const automationsQuery = useAutomationList();
   const { data: rowsRaw, refetch } = automationsQuery;
   const automationsState = useDataState(automationsQuery);
   const isLoading = !automationsState.hasData && automationsQuery.isLoading;
   const error = automationsState.fatalError;
-  const automations: Automation[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
+  const automations: AutomationListItem[] = useMemo(() => rowsRaw ?? [], [rowsRaw]);
 
   const vehiclesQuery = useVehicles();
   const vehiclesState = useDataState(vehiclesQuery);
@@ -62,9 +61,7 @@ export default function AutomationListPage() {
     let result = automations;
     if (statusFilter !== 'all') {
       result = result.filter((a) => {
-        if (statusFilter === 'active') return a.enabled && !a.auto_disabled;
-        if (statusFilter === 'disabled') return !a.enabled && !a.auto_disabled;
-        return a.auto_disabled;
+        return automationStatus(a) === statusFilter;
       });
     }
     const q = search.trim().toLowerCase();
@@ -79,17 +76,21 @@ export default function AutomationListPage() {
   }, [automations, statusFilter, search]);
 
   const stats = useMemo(() => {
-    let active = 0;
-    let disabled = 0;
-    let autoDisabled = 0;
-    let totalRuns = 0;
-    let totalFailures = 0;
+    let active: number | undefined = 0;
+    let disabled: number | undefined = 0;
+    let autoDisabled: number | undefined = 0;
+    let totalRuns: number | undefined = 0;
+    let totalFailures: number | undefined = 0;
     for (const a of automations) {
-      if (a.auto_disabled) autoDisabled += 1;
-      else if (a.enabled) active += 1;
-      else disabled += 1;
-      totalRuns += a.execution_count ?? 0;
-      totalFailures += a.failure_count ?? 0;
+      const status = automationStatus(a);
+      if (status == null) active = disabled = autoDisabled = undefined;
+      else if (status === 'auto-disabled' && autoDisabled != null) autoDisabled += 1;
+      else if (status === 'active' && active != null) active += 1;
+      else if (status === 'disabled' && disabled != null) disabled += 1;
+      const runs = automationNumber(a.execution_count);
+      const failures = automationNumber(a.failure_count);
+      totalRuns = totalRuns != null && runs != null ? totalRuns + runs : undefined;
+      totalFailures = totalFailures != null && failures != null ? totalFailures + failures : undefined;
     }
     return {
       total: automations.length,
@@ -280,10 +281,11 @@ export default function AutomationListPage() {
               error={error}
               onRetry={refetch}
               totalCount={automations.length}
+              hasData={automationsState.hasData}
             />
           </div>
           <AutomationStatusPanel
-            stats={stats}
+            stats={{ ...stats, total: automationsState.hasData ? stats.total : undefined }}
             isLoading={isLoading}
             error={error}
             onRetry={refetch}

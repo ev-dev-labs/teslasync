@@ -24,13 +24,56 @@
  * render deterministic.
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, waitFor, within, act, fireEvent } from '@testing-library/react';
+import { render, renderHook, screen, waitFor, within, act, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { Automation } from '@/api/types';
+import { automationNumber, automationTimestamp, automationStatus, assertAutomationInventory } from '@/api/hooks/useAutomations';
+import { request } from '@/api/client';
 import type { Vehicle } from '@/types/vehicle';
+
+vi.mock('@/api/client', () => ({ request: vi.fn() }));
+
+describe('automation inventory hook boundary', () => {
+  const base = {
+    id: 1, name: 'Supported base row', enabled: false,
+    created_at: '2026-01-01T00:00:00Z', updated_at: '2026-01-01T00:00:00Z',
+  };
+
+  it('accepts base rows without nonexistent extension counters and measured zero', () => {
+    expect(assertAutomationInventory([base])).toEqual([base]);
+    expect(assertAutomationInventory([])).toEqual([]);
+    expect(assertAutomationInventory([{ ...base, execution_count: 0, failure_count: 0 }])).toHaveLength(1);
+  });
+
+  it.each([
+    null, {}, { items: [] }, [null], [{ ...base, enabled: 'false' }],
+    [{ ...base, name: 3 }], [{ ...base, vehicle_id: '1' }],
+    [{ ...base, execution_count: NaN }], [{ ...base, last_triggered_at: 'bad' }],
+  ])('rejects malformed inventory %j', (payload) => {
+    expect(() => assertAutomationInventory(payload)).toThrow('Invalid automation inventory response');
+  });
+
+  it('keeps valid cache data on invalid refresh and recovers with successful empty data', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useAutomations')>('@/api/hooks/useAutomations');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    vi.mocked(request).mockResolvedValueOnce([base]).mockResolvedValueOnce({ items: [] }).mockResolvedValueOnce([]);
+    const { result, unmount } = renderHook(() => actual.useAutomationList(), {
+      wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    await waitFor(() => expect(result.current.data).toEqual([base]));
+    await act(async () => { await result.current.refetch(); });
+    expect(result.current.isError).toBe(true);
+    expect(result.current.data).toEqual([base]);
+    await act(async () => { await result.current.refetch(); });
+    expect(result.current.isError).toBe(false);
+    expect(result.current.data).toEqual([]);
+    unmount();
+    client.clear();
+  });
+});
 
 vi.mock('../components/RoutineWizard', () => ({
   RoutineWizard: ({ actionsDisabled }: { actionsDisabled?: boolean }) => (
@@ -58,6 +101,36 @@ vi.hoisted(() => {
 });
 
 describe('AutomationListPage source recovery and partial bulk outcomes', () => {
+  it('keeps initial inventory totals unknown when fetching is paused without data', () => {
+    useAutomationsMock.mockReturnValue({
+      ...makeQuery(), isPending: true, fetchStatus: 'paused',
+    });
+    renderPage();
+    expect(captured.table.hasData).toBe(false);
+    expect(captured.table.isLoading).toBe(false);
+    expect(captured.status.stats).toMatchObject({ total: undefined });
+  });
+
+  it('distinguishes invalid inputs from measured zero, signed and fractional values', () => {
+    for (const input of [null, undefined, '', '0', NaN, Infinity, -Infinity, false]) {
+      expect(automationNumber(input)).toBeNull();
+    }
+    for (const input of [0, -2, 0.25, -0.5]) expect(automationNumber(input)).toBe(input);
+    for (const input of [null, undefined, '', 'not-a-date', 0]) expect(automationTimestamp(input)).toBeNull();
+    expect(automationTimestamp('2024-01-01T00:00:00Z')).toBe('2024-01-01T00:00:00Z');
+    expect(automationStatus({ ...AUTOMATIONS[0], auto_disabled: undefined })).toBeNull();
+  });
+
+  it('keeps incomplete inventory counters and status totals unknown', () => {
+    useAutomationsMock.mockReturnValue(makeQuery({
+      data: [{ ...AUTOMATIONS[0], execution_count: undefined, failure_count: NaN, auto_disabled: undefined }],
+    }));
+    renderPage();
+    expect(captured.status.stats).toMatchObject({
+      total: 1, active: undefined, disabled: undefined, autoDisabled: undefined,
+      totalRuns: undefined, totalFailures: undefined,
+    });
+  });
   it('retains failed bulk IDs with their reasons and retries only those IDs', async () => {
     const mutateAsync = vi.fn()
       .mockResolvedValueOnce({ updated: 1, failed: [{ id: 2, reason: 'Rule unavailable' }] })
@@ -205,6 +278,7 @@ vi.mock('@/api/hooks/useAutomations', async () => {
   return {
     ...actual,
     useAutomations: () => useAutomationsMock(),
+    useAutomationList: () => useAutomationsMock(),
     useBulkAutomationsUpdate: () => useBulkMock(),
   };
 });

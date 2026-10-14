@@ -3,7 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 
 import { GlassPanel, Button as UiButton, Badge, Text, Select, PanelTitle } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { useRoutineTemplates, useInstallRoutine } from '@/api/hooks/useAutomations';
 import { useGeofencesFull } from '@/api/hooks/useLocations';
 import type { RoutineTemplate } from '@/api/types';
@@ -23,10 +24,10 @@ function RoutineCard({
   const install = useInstallRoutine();
 
   return (
-    <GlassPanel hover glow="cyan" className="p-5 flex flex-col gap-3">
+    <GlassPanel hover className="p-5 flex flex-col gap-3">
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-          <Icons.location className="h-5 w-5 text-cyan-400" aria-hidden="true" />
+        <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-[var(--surface-2)] border border-[var(--border-subtle)] flex items-center justify-center">
+          <Icons.location className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <Text as="h3" size="sm" weight="semibold" color="primary" className="truncate">
@@ -35,11 +36,11 @@ function RoutineCard({
           <Text as="p" variant="bodySm" className="mt-0.5">
             {routine.event === 'enter'
               ? t('automations.routines.onEnter', 'On geofence enter')
-              : t('automations.routines.onExit', 'On geofence exit')}
+              : routine.event === 'exit' ? t('automations.routines.onExit', 'On geofence exit') : '—'}
           </Text>
         </div>
         <Badge variant="neutral" size="sm">
-          {t('automations.routines.actionCount', '{{count}} actions', { count: routine.actions.length })}
+          {Array.isArray(routine.actions) ? t('automations.routines.actionCount', '{{count}} actions', { count: routine.actions.length }) : '—'}
         </Badge>
       </div>
 
@@ -72,8 +73,11 @@ function RoutineCard({
  */
 export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }) {
   const { t } = useTranslation();
-  const { data: routines, isLoading, isError, error, refetch } = useRoutineTemplates();
-  const { data: geofences } = useGeofencesFull();
+  const templatesQuery = useRoutineTemplates();
+  const templatesState = useDataState(templatesQuery);
+  const { data: routines, refetch } = templatesQuery;
+  const geofencesQuery = useGeofencesFull();
+  const { data: geofences } = geofencesQuery;
   const [placeId, setPlaceId] = useState<string>('');
 
   const places = useMemo(
@@ -82,7 +86,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
   );
   const selectedPlace = places.find((g) => String(g.id) === placeId) ?? null;
 
-  if (isLoading) {
+  if (!templatesState.hasData && templatesQuery.isLoading) {
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -95,23 +99,38 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
     );
   }
 
-  if (isError) {
+  if (templatesState.fatalError) {
     return (
       <QueryError
-        error={error}
+        error={templatesState.fatalError}
         onRetry={() => refetch()}
         resourceName={t('automations.routines.resource', 'Geofence routines')}
       />
     );
   }
 
-  if ((routines ?? []).length === 0) return null;
+  if (!templatesState.hasData || routines?.length === 0) {
+    return (
+      <div className="space-y-4">
+        <StaleRefreshWarning state={templatesState} label={t('automations.routines.resource', 'Geofence routines')} />
+        {templatesState.hasData ? (
+          <EmptyState message={t('automations.routines.resource', 'Geofence routines')} />
+        ) : (
+          <>
+            <PanelTitle>{t('automations.routines.title', 'Geofence routines')}</PanelTitle>
+            <Text role="status" color="secondary">—</Text>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
+      <StaleRefreshWarning state={templatesState} label={t('automations.routines.resource', 'Geofence routines')} />
       <div className="flex flex-wrap items-center gap-3">
         <PanelTitle className="flex items-center gap-2">
-          <Icons.location className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.location className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t('automations.routines.title', 'Geofence routines')}
         </PanelTitle>
         <div className="min-w-52 flex-1 sm:max-w-72">
@@ -127,24 +146,33 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
         </div>
       </div>
 
-      {places.length === 0 ? (
+      {geofencesQuery.isLoading && (
+        <Skeleton className="h-10 w-full" />
+      )}
+      {geofencesQuery.isError && (
+        <QueryError
+          error={geofencesQuery.error}
+          onRetry={() => geofencesQuery.refetch()}
+          resourceName={t('automations.routines.place', 'Place')}
+        />
+      )}
+      {!geofencesQuery.isLoading && !geofencesQuery.isError && places.length === 0 && (
         <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.location className="h-8 w-8" />}
           message={t('automations.routines.noPlaces', 'Create a geofence place first to install routines.')}
         />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {(routines ?? []).map((routine) => (
-            <RoutineCard
-              key={routine.id}
-              routine={routine}
-              placeId={selectedPlace ? selectedPlace.id : null}
-              placeName={selectedPlace?.name ?? ''}
-              disabled={actionsDisabled}
-            />
-          ))}
-        </div>
       )}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {(routines ?? []).map((routine) => (
+          <RoutineCard
+            key={routine.id}
+            routine={routine}
+            placeId={selectedPlace ? selectedPlace.id : null}
+            placeName={selectedPlace?.name ?? ''}
+            disabled={actionsDisabled || geofencesQuery.isLoading || geofencesQuery.isError}
+          />
+        ))}
+      </div>
     </div>
   );
 }

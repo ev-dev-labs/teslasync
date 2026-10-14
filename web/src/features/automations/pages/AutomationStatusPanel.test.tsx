@@ -55,6 +55,11 @@ function setup(overrides: Partial<PanelProps> = {}) {
 }
 
 describe('AutomationStatusPanel', () => {
+  it('keeps a paused initial inventory unknown rather than reporting successful zero', () => {
+    setup({ stats: { total: undefined }, isLoading: false });
+    expect(screen.getByText('Active: —')).toBeInTheDocument();
+    expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
+  });
   // The panel header is rendered outside every conditional branch, so it is a
   // stable anchor the other branch-specific assertions can lean on.
   it('always renders the panel title regardless of state', () => {
@@ -138,7 +143,8 @@ describe('AutomationStatusPanel', () => {
   it('treats an all-undefined payload as empty without rendering NaN', () => {
     setup({ stats: {} as unknown as AutomationStatusStats });
 
-    expect(screen.getByText('No automations to summarize yet')).toBeInTheDocument();
+    expect(screen.getByText('Active: —')).toBeInTheDocument();
+    expect(screen.queryByText('No automations to summarize yet')).not.toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
@@ -150,7 +156,8 @@ describe('AutomationStatusPanel', () => {
     // active 2/2 → 100%.
     expect(screen.getByText('2 · 100%')).toBeInTheDocument();
     // disabled + auto-disabled both default to 0 → two "0 · 0%" readouts.
-    expect(screen.getAllByText('0 · 0%')).toHaveLength(2);
+    expect(screen.getByText('Disabled: —')).toBeInTheDocument();
+    expect(screen.getByText('Auto-disabled: —')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
     // Coalesced auto-disabled = 0 → no warning banner.
     expect(screen.queryByText('Attention needed')).not.toBeInTheDocument();
