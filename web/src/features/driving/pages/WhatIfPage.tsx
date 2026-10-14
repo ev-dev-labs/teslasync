@@ -9,7 +9,7 @@ import { GlassPanel, PanelTitle, Text, Button, Badge, Select, Slider, Toggle } f
 
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
-import { Skeleton, EmptyState, QueryError, DataSourceNotice, SectionErrorBoundary } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, DataSourceNotice, SectionErrorBoundary, resolveDataSourceStatus } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { useDrives, useDrive, useDriveTelemetry } from '@/api/hooks/useDriving';
@@ -78,8 +78,8 @@ export default function WhatIfPage() {
 
   const driveQuery = useDrive(activeId);
   const telemetryQuery = useDriveTelemetry(activeId);
-  const driveData = activeId ? driveQuery.data : undefined;
-  const telemetryData = activeId ? telemetryQuery.data : undefined;
+  const driveData = activeId && !driveQuery.isPlaceholderData ? driveQuery.data : undefined;
+  const telemetryData = activeId && !telemetryQuery.isPlaceholderData ? telemetryQuery.data : undefined;
 
   const [knobs, setKnobs] = useState<WhatIfKnobs>(DEFAULT_KNOBS);
   const result = useMemo(
@@ -117,14 +117,47 @@ export default function WhatIfPage() {
   const maxTotal = Math.max(result.baseline.total, result.scenario.total, 1);
   const saves = result.energyDeltaWh <= 0;
   const baselineDurationS = driveData?.durationS;
-  const drivesState = useDataState(drivesQuery);
-  const driveState = useDataState(driveQuery);
-  const telemetryState = useDataState(telemetryQuery);
-  const loading = (!listResolved && drivesQuery.isLoading) ||
-    (Boolean(activeId) && driveQuery.isLoading && !driveState.hasData);
-  const missingEnergyMessage = activeId && driveState.hasData
-    ? t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')
-    : t('whatIf.brief.noDrive', 'No selected recorded drive');
+  const drivesState = useDataState({ ...drivesQuery, data: listResolved ? drivesQuery.data : undefined });
+  const driveState = useDataState({ ...driveQuery, data: driveData });
+  const telemetryState = useDataState({ ...telemetryQuery, data: telemetryData });
+  const sources = [
+    { id: 'drives', label: t('whatIf.pickDrive', 'Choose a drive'), query: { ...drivesQuery, data: listResolved ? drivesQuery.data : undefined }, enabled: Boolean(vehicleIdStr) },
+    { id: 'drive', label: t('whatIf.baseline', 'Actual drive'), query: { ...driveQuery, data: driveData }, enabled: Boolean(activeId) },
+    { id: 'telemetry', label: t('whatIf.breakdown', 'Energy breakdown'), query: { ...telemetryQuery, data: telemetryData }, enabled: Boolean(activeId) },
+  ];
+  const statuses = sources.filter((source) => source.enabled).map(resolveDataSourceStatus);
+  const primaryStatus = resolveDataSourceStatus(sources[activeId ? 1 : 0]);
+  const loading = Boolean(vehicleIdStr) && primaryStatus === 'loading';
+  const retained = [drivesState, driveState, telemetryState].some((state) =>
+    state.hasData && (state.isRefreshing || state.isRefreshBlocked || state.refreshError != null));
+  const missingEnergyMessage = !vehicleIdStr
+    ? t('driving.brief.selectVehicle', 'Select a vehicle')
+    : primaryStatus === 'failed'
+      ? t('driving.brief.unavailable', 'Source unavailable')
+      : primaryStatus === 'paused' && !(activeId ? driveState.hasData : listResolved)
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : !listResolved || (activeId && !driveState.hasData)
+          ? t('dataSources.status.pending', 'Pending')
+          : activeId
+            ? t('whatIf.noEnergy', 'This drive lacks the energy data needed to simulate.')
+            : t('whatIf.brief.noDrive', 'No selected recorded drive');
+  const sourceStatus = !vehicleIdStr
+    ? t('operations.status.prerequisite', 'Prerequisite required')
+    : statuses.includes('failed')
+      ? t('driving.brief.unavailable', 'Source unavailable')
+      : statuses.includes('refreshFailed')
+        ? t('dataSources.status.refreshFailed', 'Cached · refresh failed')
+        : statuses.includes('paused')
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : statuses.includes('loading')
+            ? t('driving.brief.loading', 'Loading source')
+            : statuses.includes('pending')
+              ? t('dataSources.status.pending', 'Pending')
+              : statuses.includes('refreshing')
+                ? t('dataSources.status.refreshing', 'Refreshing')
+                : !activeId || !result.ok
+                  ? t('driving.brief.unavailable', 'Source unavailable')
+                  : t('driving.brief.available', 'Source available');
   const summaryMetrics: readonly StatMetric[] = [
     {
       metricId: 'energy', occurrenceId: 'scenario-energy',
@@ -154,7 +187,7 @@ export default function WhatIfPage() {
       title={t('whatIf.title', 'What-If Simulator')}
       subtitle={t('whatIf.subtitle', 'Replay a real drive under different conditions')}
       query={[drivesQuery, driveQuery, telemetryQuery]}
-      busy={drivesQuery.isLoading || loading || telemetryQuery.isLoading}
+      busy={statuses.some((status) => status === 'loading' || status === 'refreshing')}
       contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           {driveOptions.length > 0 && (
@@ -176,19 +209,18 @@ export default function WhatIfPage() {
           title={t('whatIf.kpis', 'Simulated drive outcome')}
           description={t('whatIf.brief.description', 'Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.')}
           metrics={summaryMetrics}
-          scope={driveData ? formatDateShort(driveData.startTs) : t('whatIf.brief.noDrive', 'No selected recorded drive')}
+          scope={driveData ? formatDateShort(driveData.startTs) : loading
+            ? t('driving.brief.loading', 'Loading source')
+            : missingEnergyMessage}
           provenance={t('whatIf.brief.provenance', 'Selected drive and telemetry, recomputed locally with the current simulation knobs.')}
           loading={loading}
           unavailable={!activeId || !result.ok}
-          retained={Boolean(drivesState.refreshError || driveState.refreshError || telemetryState.refreshError)}
+          retained={retained}
+          sourceStatus={sourceStatus}
         />
         </SectionErrorBoundary>
       </FadeIn>
-      <DataSourceNotice sources={[
-        { id: 'drives', label: t('whatIf.pickDrive', 'Choose a drive'), query: drivesQuery, enabled: Boolean(vehicleIdStr) },
-        { id: 'drive', label: t('whatIf.baseline', 'Actual drive'), query: driveQuery, enabled: Boolean(activeId) },
-        { id: 'telemetry', label: t('whatIf.breakdown', 'Energy breakdown'), query: telemetryQuery, enabled: Boolean(activeId) },
-      ]} />
+      <DataSourceNotice sources={sources} />
       {drivesState.fatalError ? (
         <GlassPanel className="p-4 sm:p-5">
           <QueryError error={drivesState.fatalError} onRetry={() => drivesQuery.refetch()} />
