@@ -119,6 +119,52 @@ describe('OwnershipBrief real OperationalBrief and numeric bridge', () => {
       { source: 'Warranty register', summary: 'Recorded coverage', sample_count: 2, observed_at: null },
     ];
 
+    it('formats evidence instants and observation bounds with saved preferences without changing raw data or business dates', () => {
+      const datedQuality = Object.freeze({
+        ...quality,
+        window_start: '2026-01-01T00:30:00Z',
+        window_end: '2026-01-01T08:30:00Z',
+      });
+      const datedEvidence = Object.freeze({
+        source: 'Recorded service', summary: 'Business date 2026-01-01',
+        sample_count: 2, observed_at: '2026-01-01T00:45:00Z',
+      });
+      const opts = { locale: 'de-DE', tz: 'America/Los_Angeles' };
+      render(<EvidencePanel quality={datedQuality} evidence={[datedEvidence]}
+        source={{ data: {}, dataUpdatedAt: Date.parse('2026-01-02T00:00:00Z') }} />);
+      const region = screen.getByRole('region', { name: 'Data quality' });
+      expect(within(region).getByRole('row', {
+        name: `Observation window ${formatDateTime(datedQuality.window_start, opts)} – ${formatDateTime(datedQuality.window_end, opts)}`,
+      })).toBeInTheDocument();
+      const sources = screen.getByRole('region', { name: 'Evidence sources' });
+      expect(sources).toHaveTextContent(`2 samples · ${formatDateTime(datedEvidence.observed_at, opts)}`);
+      expect(sources).not.toHaveTextContent(formatDateTime('2026-01-02T00:00:00Z', opts));
+      expect(screen.getByText('Business date 2026-01-01')).toBeInTheDocument();
+      expect(datedQuality.window_start).toBe('2026-01-01T00:30:00Z');
+      expect(datedQuality.window_end).toBe('2026-01-01T08:30:00Z');
+      expect(datedEvidence.observed_at).toBe('2026-01-01T00:45:00Z');
+    });
+
+    it('keeps missing and invalid evidence timestamps unknown and preserves a partial observation window', () => {
+      const opts = { locale: 'de-DE', tz: 'America/Los_Angeles' };
+      const { rerender } = render(<EvidencePanel
+        quality={{ ...quality, window_start: '2026-01-01T00:30:00Z', window_end: null }}
+        evidence={[
+          { source: 'Invalid observation', summary: 'Unparseable source time', observed_at: 'invalid' },
+          { source: 'Missing observation', summary: 'No source time', sample_count: 0, observed_at: null },
+        ]} />);
+      expect(screen.getByRole('row', {
+        name: `Observation window ${formatDateTime('2026-01-01T00:30:00Z', opts)} – —`,
+      })).toBeInTheDocument();
+      const sources = screen.getByRole('region', { name: 'Evidence sources' });
+      expect(within(sources).getByText('—')).toBeInTheDocument();
+      expect(within(sources).getByText('0 samples · —')).toBeInTheDocument();
+      expect(sources).not.toHaveTextContent('Invalid Date');
+      rerender(<EvidencePanel quality={{ ...quality, window_start: 'invalid', window_end: 'invalid' }}
+        evidence={[]} />);
+      expect(screen.getByRole('row', { name: 'Observation window — – —' })).toBeInTheDocument();
+    });
+
     it.each([
       ['sufficient', 'success'],
       ['limited', 'warning'],

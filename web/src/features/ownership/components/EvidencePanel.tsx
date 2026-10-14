@@ -1,12 +1,13 @@
 import { AlertTriangle, Database, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
-import { Table, Badge, Icon, Text } from '@/components/ui';
-import { formatDateTime } from '@/lib/dateFormat';
+import { Table, Icon, Text } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { DataQuality, Evidence } from '@/types/ownership';
 import type { DataStateSource } from '@/api/dataState';
 import { OwnershipPanel } from './OwnershipPanel';
+import { VerdictBadge } from './VerdictBadge';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 interface EvidencePanelProps {
@@ -16,12 +17,6 @@ interface EvidencePanelProps {
   unsupported?: string[] | null;
   source?: DataStateSource<unknown>;
   sourceEnabled?: boolean;
-}
-
-function qualityVariant(status: DataQuality['status'] | undefined) {
-  if (status === 'sufficient') return 'success' as const;
-  if (status === 'limited') return 'warning' as const;
-  return 'danger' as const;
 }
 
 /**
@@ -39,6 +34,7 @@ export function EvidencePanel({
   sourceEnabled,
 }: EvidencePanelProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
@@ -68,9 +64,7 @@ export function EvidencePanel({
           </div>
           {quality ? (
             <>
-              <Badge variant={qualityVariant(quality.status)} dot>
-                {quality.status}
-              </Badge>
+              <VerdictBadge value={quality.status} />
               <Table aria-label={t('ownership.evidence.title', 'Evidence, quality, and limitations')}><tbody>
                 <tr>
                   <th scope="row" className="text-[var(--text-muted)]">
