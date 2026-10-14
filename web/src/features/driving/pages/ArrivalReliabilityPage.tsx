@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDriveHistory } from '@/api/hooks/useDriving';
@@ -41,7 +41,6 @@ export default function ArrivalReliabilityPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveHistory(vehicleIdStr, DRIVE_HISTORY_LIMIT);
   const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
-  const [nowMs] = useState(() => Date.now());
   const hasCachedData =
     vehicleId != null && drivesState.hasData;
   const isResolved =
@@ -49,6 +48,11 @@ export default function ArrivalReliabilityPage() {
   const drives = useMemo<Drive[]>(
     () => (vehicleId != null ? drivesQuery.data ?? [] : []),
     [drivesQuery.data, vehicleId],
+  );
+  // Snapshot identity includes successful refetches that structurally share data.
+  const nowMs = useMemo(
+    () => Date.now(),
+    [drives, vehicleId, drivesQuery.dataUpdatedAt],
   );
   const analysis = useMemo(
     () =>

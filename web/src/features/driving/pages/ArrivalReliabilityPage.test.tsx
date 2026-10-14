@@ -167,6 +167,7 @@ function readyHistory(): Drive[] {
 
 interface QueryStub {
   data: unknown;
+  dataUpdatedAt?: number;
   isLoading: boolean;
   isSuccess: boolean;
   isError: boolean;
@@ -284,7 +285,7 @@ describe('ArrivalReliabilityPage', () => {
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
   });
 
-  it('freezes the analysis clock across query changes', () => {
+  it('advances recency for new history without replacing drive observation timestamps', () => {
     const view = renderPage();
     const quality = within(screen.getByTestId('arrival-evidence-quality'));
     expect(quality.getByText('Recency (days)').closest('[data-operational-metric]')).toHaveTextContent(
@@ -307,7 +308,81 @@ describe('ArrivalReliabilityPage', () => {
       within(screen.getByTestId('arrival-evidence-quality'))
         .getByText('Recency (days)')
         .closest('[data-operational-metric]'),
-    ).toHaveTextContent('1.0');
+    ).toHaveTextContent('11.0');
+  });
+
+  it.each(['history snapshot', 'vehicle'] as const)(
+    'includes newly completed drives after a new %s while excluding true future records',
+    (change) => {
+      const initialData = readyHistory();
+      h.history = query({ data: initialData, dataUpdatedAt: FROZEN_NOW });
+      const view = renderPage();
+      const advancedNow = FROZEN_NOW + 10 * 86_400_000;
+      vi.mocked(Date.now).mockReturnValue(advancedNow);
+      if (change === 'vehicle') h.vehicleId = 8;
+      h.history = query({
+        data: [
+          ...initialData,
+          driveAt('2026-08-17T12:00:00.000Z'),
+          driveAt('2026-08-19T12:00:00.000Z'),
+          driveAt('2026-08-18T11:45:00.000Z'),
+        ],
+        dataUpdatedAt: advancedNow,
+      });
+      view.rerenderPage();
+
+      const quality = within(screen.getByTestId('arrival-evidence-quality'));
+      expect(
+        quality.getByText('Included drives').closest('[data-operational-metric]'),
+      ).toHaveTextContent('7');
+      expect(
+        quality.getByText('Future rows').closest('[data-operational-metric]'),
+      ).toHaveTextContent('2');
+      expect(
+        quality.getByText('Recency (days)').closest('[data-operational-metric]'),
+      ).toHaveTextContent('1.0');
+      expectEverySection();
+    },
+  );
+
+  it('advances for an accepted identical snapshot but not for a failed refresh or timezone change', () => {
+    const data = readyHistory();
+    h.history = query({ data, dataUpdatedAt: FROZEN_NOW });
+    const view = renderPage();
+    const acceptedAt = FROZEN_NOW + 10 * 86_400_000;
+    vi.mocked(Date.now).mockReturnValue(acceptedAt);
+    h.history = query({ data, dataUpdatedAt: acceptedAt });
+    view.rerenderPage();
+    const recency = () =>
+      within(screen.getByTestId('arrival-evidence-quality'))
+        .getByText('Recency (days)')
+        .closest('[data-operational-metric]');
+    expect(recency()).toHaveTextContent('11.0');
+
+    vi.mocked(Date.now).mockReturnValue(acceptedAt + 5 * 86_400_000);
+    h.history = query({
+      data,
+      dataUpdatedAt: acceptedAt,
+      isError: true,
+      error: new Error('refresh unavailable'),
+    });
+    h.timeZone = 'America/Los_Angeles';
+    view.rerenderPage();
+    expect(recency()).toHaveTextContent('11.0');
+    expectEverySection();
+  });
+
+  it('advances for a vehicle change even when the history reference is unchanged', () => {
+    const view = renderPage();
+    vi.mocked(Date.now).mockReturnValue(FROZEN_NOW + 10 * 86_400_000);
+    h.vehicleId = 8;
+    view.rerenderPage();
+    expect(h.historyHook).toHaveBeenLastCalledWith('8', 1_000);
+    expect(
+      within(screen.getByTestId('arrival-evidence-quality'))
+        .getByText('Recency (days)')
+        .closest('[data-operational-metric]'),
+    ).toHaveTextContent('11.0');
   });
 
   it('keeps every shell visible with one live loading status', () => {
