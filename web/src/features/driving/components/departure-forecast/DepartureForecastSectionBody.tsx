@@ -91,7 +91,11 @@ export function DepartureForecastSectionBody({
     return (
       <PassiveState
         className={className}
-        message={t(
+        message={state.isRefreshBlocked ? t(
+          'chargingPlaces.workspace.initialPaused',
+          '{{source}} loading is paused. No data has been loaded yet.',
+          { source: t('departure.title', 'Departure Forecast') },
+        ) : t(
           'departure.states.pendingPassive',
           'Departure-history availability has not resolved.',
         )}

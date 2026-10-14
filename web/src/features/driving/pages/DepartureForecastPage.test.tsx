@@ -161,6 +161,9 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   refetch: () => void;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
+  isFetching: boolean;
+  isPending: boolean;
 }
 
 function query(overrides: Partial<QueryStub> = {}): QueryStub {
@@ -173,6 +176,9 @@ function query(overrides: Partial<QueryStub> = {}): QueryStub {
     isError,
     error: null,
     refetch: historyRefetch,
+    fetchStatus: isLoading ? 'fetching' : 'idle',
+    isFetching: isLoading,
+    isPending: isLoading,
     ...overrides,
   };
 }
@@ -279,9 +285,9 @@ describe('DepartureForecastPage', () => {
     expect(within(table).getAllByRole('row')).toHaveLength(25);
   });
 
-  it('preserves every modeled window while a retained history refresh is paused offline', () => {
+  it('preserves every modeled window while a retained history refresh is paused and recovers', () => {
     h.history = { ...query({ data: weekdayCommute(12) }), fetchStatus: 'paused' };
-    renderPage();
+    const view = renderPage();
     expectEverySection();
     const notice = screen.getByTestId('stale-refresh-warning');
     expect(notice).toHaveTextContent(
@@ -291,8 +297,48 @@ describe('DepartureForecastPage', () => {
     expect(notice).toHaveAttribute('role', 'status');
     expect(notice).not.toHaveTextContent(/offline|failed/i);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('departure-kpis')).getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('departure-loading-status')).not.toBeInTheDocument();
     fireEvent.click(within(notice).getByRole('button', { name: 'Refresh' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
+    h.history = query({ data: weekdayCommute(12) });
+    view.rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('departure-kpis')).getByText('Returned evidence')).toBeInTheDocument();
+    expectEverySection();
+  });
+
+  it('distinguishes paused initial history from loading or empty and recovers through an active load', () => {
+    h.history = query({ isSuccess: false, isPending: true, fetchStatus: 'paused' });
+    const view = renderPage();
+
+    expectEverySection();
+    const notice = screen.getByTestId('departure-paused-status');
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(notice).toHaveTextContent('Departure Forecast loading is paused. No data has been loaded yet.');
+    expect(notice).not.toHaveTextContent(/offline|failed/i);
+    expect(screen.queryByTestId('departure-loading-status')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    const kpis = within(screen.getByTestId('departure-kpis'));
+    expect(kpis.getByText('Source paused')).toBeInTheDocument();
+    expect(kpis.queryByText('0')).not.toBeInTheDocument();
+    expect(kpis.queryByText('Support index needs qualifying departures')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('departure-next-24')).queryByRole('table')).not.toBeInTheDocument();
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+
+    h.history = query({ isLoading: true });
+    view.rerenderPage();
+    expect(screen.queryByTestId('departure-paused-status')).not.toBeInTheDocument();
+    expect(screen.getByTestId('departure-loading-status')).toBeInTheDocument();
+
+    h.history = query({ data: [] });
+    view.rerenderPage();
+    expectEverySection();
+    expect(screen.queryByTestId('departure-loading-status')).not.toBeInTheDocument();
+    expect(kpis.getByText('0')).toBeInTheDocument();
+    expect(screen.getByText('No drives were returned, so no peak, horizon likelihood, or planning marker is inferred.')).toBeInTheDocument();
   });
 
   it('renders the ready state with all persistent evidence sections', () => {
@@ -396,7 +442,7 @@ describe('DepartureForecastPage', () => {
       error: new Error('refresh unavailable'),
     });
 
-    renderPage();
+    const view = renderPage();
 
     expectEverySection();
     expect(
@@ -410,6 +456,37 @@ describe('DepartureForecastPage', () => {
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);
     expect(historyRefetch).toHaveBeenCalledTimes(1);
+    h.history = query({
+      data: cached,
+      isError: true,
+      error: new Error('refresh unavailable'),
+      fetchStatus: 'fetching',
+      isFetching: true,
+    });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Updating…' })).toBeDisabled();
+    expect(quality.getAllByText(String(cached.length)).length).toBeGreaterThan(0);
+    h.history = query({ data: cached });
+    view.rerenderPage();
+    expect(screen.queryByTestId('departure-refresh-error')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('departure-kpis')).getByText('Returned evidence')).toBeInTheDocument();
+    expectEverySection();
+  });
+
+  it('shows only the refresh failure recovery when retained history is also paused', () => {
+    h.history = query({
+      data: weekdayCommute(12),
+      isError: true,
+      error: new Error('refresh unavailable'),
+      fetchStatus: 'paused',
+    });
+    renderPage();
+    expectEverySection();
+    expect(screen.getByTestId('departure-refresh-error')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
+    expect(within(screen.getByTestId('departure-kpis')).getByText('Retained evidence')).toBeInTheDocument();
   });
 
   it('shows no prior-only peak, horizon, or marker for empty history', () => {

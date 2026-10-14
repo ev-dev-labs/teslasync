@@ -91,13 +91,42 @@ export function DepartureForecastQueryStatus({
             variant="ghost"
             size="sm"
             onClick={state.onRetry}
+            disabled={state.fetchStatus === 'fetching'}
+            aria-busy={state.fetchStatus === 'fetching' || undefined}
           >
+            {state.fetchStatus === 'fetching'
+              ? t('freshness.updating', 'Updating…')
+              : t('departure.states.retry', 'Retry')}
+          </Button>
+        </div>
+      </AlertBanner>
+    );
+  }
+  if (!state.isResolved && state.isRefreshBlocked) {
+    return (
+      <AlertBanner
+        className="mt-4"
+        variant="info"
+        role="status"
+        aria-live="polite"
+        data-testid="departure-paused-status"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <Text as="p" variant="caption">
+            {t(
+              'chargingPlaces.workspace.initialPaused',
+              '{{source}} loading is paused. No data has been loaded yet.',
+              { source: t('departure.title', 'Departure Forecast') },
+            )}
+          </Text>
+          <Button type="button" variant="ghost" size="sm" onClick={state.onRetry}>
             {t('departure.states.retry', 'Retry')}
           </Button>
         </div>
       </AlertBanner>
     );
   }
+  if (!state.isResolved) return null;
   if (state.isResolved && forecast.totalDepartures === 0) {
     return (
       <EmptyState /* no-action: recorded drives train this read-only model automatically. */

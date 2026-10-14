@@ -60,7 +60,9 @@ export default function DepartureForecastPage() {
   const state: DepartureForecastQueryState = {
     vehicleSelected: vehicleId != null,
     isLoading:
-      vehicleId != null && drivesState.status === 'initial',
+      vehicleId != null && drivesState.status === 'initial' && !drivesState.isRefreshBlocked,
+    isRefreshBlocked: vehicleId != null && drivesState.isRefreshBlocked,
+    fetchStatus: drivesQuery.fetchStatus,
     isResolved,
     error:
       drivesState.fatalError,
@@ -80,7 +82,7 @@ export default function DepartureForecastPage() {
         'Vehicle-timezone departure patterns from returned drive starts, expressed as modeled likelihood estimates',
       )}
     >
-      {drivesState.isRefreshBlocked && (
+      {hasCachedData && state.isRefreshBlocked && !state.refreshError && (
         <StaleRefreshWarning state={drivesState} label={t('departure.title', 'Departure Forecast')} />
       )}
       <FadeIn>

@@ -23,6 +23,8 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone }: Pr
     ? t('departure.states.selectVehicleKpi', 'Select a vehicle above to load departure evidence.')
     : state.isLoading ? t('departure.states.loadingKpi', 'Waiting for returned drive history…')
       : state.error ? t('departure.states.errorKpi', 'Departure history is unavailable; use the status below to retry.')
+        : !state.isResolved && state.isRefreshBlocked
+          ? t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', { source: t('departure.title', 'Departure Forecast') })
         : !state.isResolved ? t('departure.states.pendingKpi', 'Departure-history availability has not resolved.') : null;
   const percentDisplay = { formatter: (raw: number) => ({ value: fmtNumber(raw, undefined, locale), unit: '%' }) };
   const metrics: readonly StatMetric[] = [
@@ -66,8 +68,13 @@ export function DepartureEvidenceBrief({ forecast, state, locale, timeZone }: Pr
       description={t('departure.brief.description', 'Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.')}
       scope={t('departure.brief.window', 'Next 24 hours · {{timezone}}; history coverage is limited to returned rows', { timezone: timeZone })}
       provenance={t('departure.brief.source', 'Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command.')}
-      loading={state.isLoading} error={state.error} showError={false} retained={state.refreshError != null} onRetry={state.onRetry}
+      loading={state.isLoading} error={state.error} showError={false} retained={ready && (state.refreshError != null || state.isRefreshBlocked || state.fetchStatus === 'fetching')} onRetry={state.onRetry}
       statusLabel={!state.vehicleSelected ? t('driving.brief.selectVehicle', 'Select a vehicle')
+        : state.error || state.refreshError ? undefined
+        : state.isRefreshBlocked ? ready
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : t('energyFlow.state.pausedTitle', 'Source paused')
+        : ready && state.fetchStatus === 'fetching' ? t('freshness.updating', 'Updating…')
         : !state.isResolved && !state.isLoading && !state.error ? t('driving.brief.awaiting', 'Awaiting evidence') : undefined} />
     <DepartureForecastQueryStatus forecast={forecast} state={state} />
   </section>;
