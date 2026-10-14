@@ -109,10 +109,11 @@ export const notificationKeys = {
     ['notification-logs', 'count', grouped, filters ?? {}] as const,
   // Grouped/threaded inbox cache sits beside `logsFiltered` so a
   // same-filter swap between flat and grouped views doesn't fight the cache.
-  // Members of a single group reuse `logsFiltered` keyed on `{ group_key }`
-  // so expand-row payloads dedupe with matching flat-list queries.
+  // Complete member arrays must not share a cache with one flat-list page.
   groups: (filters?: NotificationFilters) =>
     ['notification-logs', 'groups', filters ?? {}] as const,
+  groupMembers: (filters: NotificationFilters) =>
+    ['notification-logs', 'group-members', filters] as const,
   // Bell preview cache is keyed only by `limit` so every Layout mount
   // reuses the same entry. It sits under the `notification-logs` prefix so
   // bulk mark-read invalidation cascades into it without bespoke wiring.
@@ -949,6 +950,8 @@ export function useNotificationGroups(
  * Inherits filters (severity/vehicle/from/to/etc.) from the parent inbox so
  * the expanded list mirrors the same window the user is viewing — anything
  * that didn't make it into the group's `count` won't show up here either.
+ * Parent limit/offset paginate threads, not their members. Read member pages
+ * with the existing created_at/id cursor and return the original flat shape.
  */
 export function useGroupMembers(
   groupKey: string | null | undefined,
@@ -957,14 +960,31 @@ export function useGroupMembers(
 ) {
   const trimmed = (groupKey ?? '').trim();
   const enabled = trimmed.length > 0 && (options?.enabled ?? true);
-  const merged: NotificationFilters = { ...filters, group_key: trimmed };
+  const merged: NotificationFilters = { ...filters, group_key: trimmed, limit: ANALYSIS_PAGE_SIZE, offset: 0 };
   const qs = serializeNotificationFilters(merged);
   return useQuery({
-    queryKey: enabled
-      ? notificationKeys.logsFiltered(merged)
-      : ['notification-logs', 'group-members', 'disabled'],
-    queryFn: ({ signal }) =>
-      request<NotificationLog[]>(`/notifications/logs${qs ? `?${qs}` : ''}`, { signal }),
+    queryKey: notificationKeys.groupMembers(merged),
+    queryFn: async ({ signal }): Promise<NotificationLog[]> => {
+      const members: NotificationLog[] = [];
+      let cursor: Pick<NotificationLog, 'created_at' | 'id'> | undefined;
+      for (;;) {
+        const params = new URLSearchParams(qs);
+        if (cursor) {
+          params.set('before_created_at', cursor.created_at);
+          params.set('before_id', String(cursor.id));
+        }
+        const page = await request<NotificationLog[]>(`/notifications/logs?${params}`, { signal });
+        if (!Array.isArray(page)) throw new Error('Invalid notification members response');
+        members.push(...page);
+        if (page.length < ANALYSIS_PAGE_SIZE) return members;
+        const last = page[page.length - 1]!;
+        if (!last.created_at || !Number.isSafeInteger(last.id) || last.id <= 0 ||
+            (cursor && cursor.created_at === last.created_at && cursor.id === last.id)) {
+          throw new Error('Notification member cursor did not advance');
+        }
+        cursor = { created_at: last.created_at, id: last.id };
+      }
+    },
     enabled,
     select: safeArray,
     staleTime: STALE_TIMES.QUICK,
