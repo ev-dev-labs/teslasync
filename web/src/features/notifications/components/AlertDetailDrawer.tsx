@@ -5,7 +5,8 @@ import { EntityPreviewDrawer } from '@/components/data-display';
 import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { EmptyState, InlineCallout, QueryError, Skeleton } from '@/components/feedback';
 import { AlertDetailTimeline } from '@/features/admin/components/AlertDetailTimeline';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDataState } from '@/hooks/useDataState';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { buildContextHref } from '@/lib/contextNavigation';
 import { localDayKey } from '@/lib/drivesAggregation';
@@ -68,9 +69,20 @@ export function AlertDetailDrawer({
 }: AlertDetailDrawerProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const activeAlert = detail ?? alert;
-  const isAcknowledged = Boolean(activeAlert?.acknowledged_at);
-  const alertDay = localDayKey(activeAlert?.created_at);
+  const { formatDateTime, tz } = useDateFormat('user');
+  const matchingDetail = detail?.id === alert?.id ? detail : undefined;
+  const detailState = useDataState({ data: matchingDetail, error, isLoading, refetch: onRetry });
+  const activeAlert = detailState.data ?? alert;
+  const lifecycleKnown = matchingDetail !== undefined &&
+    (matchingDetail.acknowledged_at === null || Boolean(matchingDetail.acknowledged_at?.trim()));
+  const isAcknowledged = lifecycleKnown && Boolean(matchingDetail?.acknowledged_at);
+  const canWriteLifecycle = lifecycleKnown && !isLoading && !detailState.fatalError && !detailState.refreshError;
+  const lifecycleLabel = !lifecycleKnown
+    ? t('common.unknown', 'Unknown')
+    : isAcknowledged
+      ? t('operations.alerts.lifecycleAcknowledged', 'Acknowledged')
+      : t('operations.alerts.lifecycleOpen', 'Open');
+  const alertDay = localDayKey(activeAlert?.created_at, tz);
 
   const remediation = activeAlert
     ? t(
@@ -97,25 +109,23 @@ export function AlertDetailDrawer({
       eyebrow={t('operations.alerts.drawerEyebrow', 'Alert evidence')}
       title={activeAlert?.title ?? t('operations.alerts.drawerTitle', 'Alert details')}
       description={activeAlert?.message}
-      statusLabel={
-        isAcknowledged
-          ? t('operations.alerts.lifecycleAcknowledged', 'Acknowledged')
-          : t('operations.alerts.lifecycleOpen', 'Open')
-      }
+      statusLabel={lifecycleLabel}
       statusTone={
-        isAcknowledged
+        !lifecycleKnown
+          ? 'neutral'
+          : isAcknowledged
           ? 'success'
           : activeAlert?.severity === 'critical'
             ? 'danger'
-            : activeAlert?.severity === 'warning'
+            : activeAlert?.severity === 'warning' || activeAlert?.severity === 'warn'
               ? 'warning'
-              : 'info'
+              : activeAlert?.severity === 'info' ? 'info' : 'neutral'
       }
       fields={[
         {
           key: 'severity',
           label: t('operations.alerts.severity', 'Severity'),
-          value: activeAlert?.severity ?? '—',
+          value: activeAlert?.severity || t('common.unknown', 'Unknown'),
         },
         {
           key: 'vehicle',
@@ -137,24 +147,27 @@ export function AlertDetailDrawer({
           key: 'owner',
           label: t('operations.alerts.owner', 'Owner'),
           value:
-            activeAlert?.acknowledged_by?.trim() ||
-            t('operations.alerts.awaitingOwner', 'Awaiting acknowledgement'),
+            !lifecycleKnown
+              ? t('common.unknown', 'Unknown')
+              : matchingDetail?.acknowledged_by?.trim() ||
+                (isAcknowledged
+                  ? t('common.unknown', 'Unknown')
+                  : t('operations.alerts.awaitingOwner', 'Awaiting acknowledgement')),
         },
         {
           key: 'state',
           label: t('operations.alerts.resolutionState', 'Resolution state'),
-          value: isAcknowledged
-            ? t('operations.alerts.lifecycleAcknowledged', 'Acknowledged')
-            : t('operations.alerts.lifecycleOpen', 'Open'),
+          value: lifecycleLabel,
         },
       ]}
       primaryAction={
-        activeAlert
+        activeAlert && canWriteLifecycle
           ? {
               label: isAcknowledged
                 ? t('operations.alerts.reopen', 'Reopen alert')
                 : t('operations.alerts.acknowledge', 'Acknowledge alert'),
               onClick: () => {
+                if (!canWriteLifecycle) return;
                 if (isAcknowledged) onReopen(activeAlert.id);
                 else onAcknowledge(activeAlert.id);
               },
@@ -238,9 +251,9 @@ export function AlertDetailDrawer({
       <div>
         <PanelTitle>{t('alerts.timeline.title', 'Audit timeline')}</PanelTitle>
         <div className="mt-3">
-          {detail ? (
+          {detailState.hasData ? (
             <>
-              {error && (
+              {detailState.refreshError && (
                 <InlineCallout
                   variant="warning"
                   action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
@@ -252,10 +265,10 @@ export function AlertDetailDrawer({
                   )}
                 </InlineCallout>
               )}
-              <AlertDetailTimeline events={detail.events} />
+              <AlertDetailTimeline events={detailState.data?.events ?? []} />
             </>
-          ) : error ? (
-            <QueryError error={error} onRetry={onRetry} resourceName={t('operations.alerts.auditTrail', 'alert audit trail')} />
+          ) : detailState.fatalError ? (
+            <QueryError error={detailState.fatalError} onRetry={detailState.retry ?? undefined} resourceName={t('operations.alerts.auditTrail', 'alert audit trail')} />
           ) : isLoading ? (
             <div className="space-y-3" aria-label={t('common.loading', 'Loading')}>
               <Skeleton className="h-14" />
@@ -265,7 +278,7 @@ export function AlertDetailDrawer({
           ) : (
             <EmptyState
               icon={<Icons.notifications className="h-6 w-6" />}
-              title={t('alerts.timeline.empty', 'No events yet')}
+              title={t('common.unknown', 'Unknown')}
               message={t(
                 'operations.alerts.auditUnavailable',
                 'The alert summary is available, but its audit trail has not loaded.',
