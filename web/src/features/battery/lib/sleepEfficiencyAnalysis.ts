@@ -181,10 +181,19 @@ export interface SleepSentryEvidenceGroup {
   sourceIndex: number | null;
   /** Group averages are independent; mean(loss)/mean(duration) is not mean(rate). */
   measurements: {
+    count: SleepMeasurement;
     drainRate: SleepMeasurement;
     durationHours: SleepMeasurement;
     batteryLost: SleepMeasurement;
+    temperatureC: SleepMeasurement;
   };
+}
+
+export interface SleepSentryRowEvidence {
+  sourceIndex: number;
+  mode: 'on' | 'off' | null;
+  category: 'included' | 'invalid_mode' | 'missing_count' | 'invalid_count' | 'zero_count' | 'duplicate_mode';
+  measurements: SleepSentryEvidenceGroup['measurements'];
 }
 
 export interface SleepCapacityContext {
@@ -220,6 +229,16 @@ export interface SleepSentryAnalysis {
   drainRateDifference: number | null;
   context: SleepCapacityContext;
   projection: SleepSentryProjection;
+  provenance: {
+    rows: readonly SleepSentryRowEvidence[];
+    duplicatePolicy: 'first_count_bearing_group_wins';
+    /** The payload does not identify sample- versus duration-weighted averages. */
+    averageWeighting: 'unknown';
+    /** Neither count * mean(duration) nor recent events proves group exposure. */
+    groupExposureHours: 'unknown';
+    comparisonBasis: 'observational_group_averages';
+    causalEffectEstablished: false;
+  };
 }
 
 export type SleepEventRecency =
@@ -264,7 +283,9 @@ export interface SleepEventAggregates {
   medianDurationHours: number | null;
   /** Signed sum, not gross consumption or whole-period loss; rows may overlap. */
   totalBatteryLost: number | null;
+  /** Each accepted event has one vote, not a duration-weighted rate. */
   medianDrainRate: number | null;
+  /** Fraction of accepted event rows, not fraction of exposed time. */
   sentryShare: number | null;
   temperatureCoverage: number | null;
   last24HoursCount: number;
@@ -884,13 +905,14 @@ function buildEventAnalysis(
   };
 }
 
-function sentryMetric(
-  value: unknown,
-  allowNegative = false,
-): number | null {
-  const number = finiteNumber(value);
-  if (number == null || Math.abs(number) > Number.MAX_SAFE_INTEGER) return null;
-  return allowNegative || number >= 0 ? number : null;
+function sentryMeasurements(row: SleepSentryGroup | undefined): SleepSentryEvidenceGroup['measurements'] {
+  return {
+    count: measurement(row?.count, nonnegativeInteger),
+    drainRate: measurement(row?.avg_drain_rate, signedNumber),
+    durationHours: measurement(row?.avg_duration_hours, nonnegativeNumber),
+    batteryLost: measurement(row?.avg_battery_lost, signedPercentage),
+    temperatureC: measurement(row?.avg_temp, signedNumber),
+  };
 }
 
 function buildSentryGroup(
@@ -912,28 +934,21 @@ function buildSentryGroup(
       avgBatteryLost: null,
       avgTempC: null,
       sourceIndex: null,
-      measurements: {
-        drainRate: measurement(undefined, signedNumber),
-        durationHours: measurement(undefined, nonnegativeNumber),
-        batteryLost: measurement(undefined, signedPercentage),
-      },
+      measurements: sentryMeasurements(undefined),
     };
   }
   const row = rows[sourceIndex];
+  const measurements = sentryMeasurements(row);
   return {
     mode: sentryMode ? 'on' : 'off',
     available: true,
     count: positiveInteger(row?.count),
-    avgDrainRate: signedNumber(row?.avg_drain_rate),
-    avgDurationHours: sentryMetric(row?.avg_duration_hours),
-    avgBatteryLost: signedPercentage(row?.avg_battery_lost),
-    avgTempC: sentryMetric(row?.avg_temp, true),
+    avgDrainRate: measurements.drainRate.value,
+    avgDurationHours: measurements.durationHours.value,
+    avgBatteryLost: measurements.batteryLost.value,
+    avgTempC: measurements.temperatureC.value,
     sourceIndex,
-    measurements: {
-      drainRate: measurement(row?.avg_drain_rate, signedNumber),
-      durationHours: measurement(row?.avg_duration_hours, nonnegativeNumber),
-      batteryLost: measurement(row?.avg_battery_lost, signedPercentage),
-    },
+    measurements,
   };
 }
 
@@ -1006,6 +1021,26 @@ function buildSentryAnalysis(
     comparisonAvailable,
     drainRateDifference,
     context,
+    provenance: {
+      rows: rows.map((row, sourceIndex): SleepSentryRowEvidence => {
+        const mode = typeof row?.sentry_mode === 'boolean'
+          ? row.sentry_mode ? 'on' : 'off' : null;
+        const measurements = sentryMeasurements(row);
+        const count = measurements.count;
+        const category = mode == null ? 'invalid_mode'
+          : count.status === 'missing' ? 'missing_count'
+          : count.status === 'invalid' ? 'invalid_count'
+          : count.value === 0 ? 'zero_count'
+          : sourceIndex === (mode === 'on' ? on : off).sourceIndex ? 'included'
+          : 'duplicate_mode';
+        return { sourceIndex, mode, category, measurements };
+      }),
+      duplicatePolicy: 'first_count_bearing_group_wins',
+      averageWeighting: 'unknown',
+      groupExposureHours: 'unknown',
+      comparisonBasis: 'observational_group_averages',
+      causalEffectEstablished: false,
+    },
     projection: {
       available: projectionAvailable,
       basis: 'signed_net_rate_730_hours',

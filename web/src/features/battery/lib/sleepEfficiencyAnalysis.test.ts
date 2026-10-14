@@ -265,6 +265,101 @@ describe('sleepEfficiencyAnalysis state accounting', () => {
 
 describe('sleepEfficiencyAnalysis Sentry evidence', () => {
   it.each([
+    { value: undefined, status: 'missing' },
+    { value: null, status: 'missing' },
+    { value: Number.NaN, status: 'invalid' },
+    { value: Infinity, status: 'invalid' },
+    { value: -Infinity, status: 'invalid' },
+    { value: Number.MAX_VALUE, status: 'invalid' },
+    { value: 0, status: 'measured' },
+    { value: 0.125, status: 'measured' },
+  ] as const)('exposes independent group metric validity for $value', ({ value, status }) => {
+    const result = analyze({
+      sentry_comparison: [{
+        sentry_mode: true, count: 2,
+        avg_drain_rate: value, avg_duration_hours: value,
+        avg_battery_lost: value, avg_temp: value,
+      }],
+    });
+    expect(result.sentry.on.available).toBe(true);
+    for (const key of ['drainRate', 'durationHours', 'batteryLost', 'temperatureC'] as const) {
+      expect(result.sentry.on.measurements[key]).toEqual({
+        status, value: status === 'measured' ? value : null,
+      });
+    }
+    expect(result.sentry.on.measurements.count).toEqual({ status: 'measured', value: 2 });
+    expect(result.sentry.provenance.rows[0]?.measurements).toEqual(result.sentry.on.measurements);
+    expect(result.sentry.provenance.causalEffectEstablished).toBe(false);
+  });
+
+  it('keeps signed fractional metrics independent of invalid duration', () => {
+    const result = analyze({
+      sentry_comparison: [{
+        sentry_mode: true, count: 1, avg_drain_rate: -0.125,
+        avg_battery_lost: -0.25, avg_duration_hours: -0.5, avg_temp: -3.75,
+      }],
+    });
+    expect(result.sentry.on.measurements).toEqual({
+      count: { status: 'measured', value: 1 },
+      drainRate: { status: 'measured', value: -0.125 },
+      batteryLost: { status: 'measured', value: -0.25 },
+      durationHours: { status: 'invalid', value: null },
+      temperatureC: { status: 'measured', value: -3.75 },
+    });
+    expect(result.sentry.on.avgDurationHours).toBeNull();
+  });
+
+  it('accounts for every group without merging duplicates or replacing invalid metrics', () => {
+    const result = analyze({
+      sentry_comparison: [
+        { count: 1 },
+        { sentry_mode: true },
+        { sentry_mode: true, count: -1 },
+        { sentry_mode: true, count: 0.5 },
+        { sentry_mode: true, count: 0, avg_drain_rate: 0 },
+        { sentry_mode: true, count: 2, avg_drain_rate: Number.NaN },
+        { sentry_mode: true, count: 3, avg_drain_rate: 0.5 },
+        { sentry_mode: false, count: 4, avg_drain_rate: 0 },
+      ],
+    });
+    expect(result.sentry.provenance.rows.map(row => row.category)).toEqual([
+      'invalid_mode', 'missing_count', 'invalid_count', 'invalid_count',
+      'zero_count', 'included', 'duplicate_mode', 'included',
+    ]);
+    expect(result.sentry.provenance.rows.map(row => row.sourceIndex)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(result.sentry.provenance.rows[4]?.measurements.count).toEqual({ status: 'measured', value: 0 });
+    expect(result.sentry.on).toMatchObject({ available: true, sourceIndex: 5, count: 2, avgDrainRate: null });
+    expect(result.sentry.comparisonAvailable).toBe(true);
+    expect(result.sentry.drainRateDifference).toBeNull();
+    expect(result.sentry.provenance).toMatchObject({
+      duplicatePolicy: 'first_count_bearing_group_wins',
+      averageWeighting: 'unknown',
+      groupExposureHours: 'unknown',
+      comparisonBasis: 'observational_group_averages',
+      causalEffectEstablished: false,
+    });
+    expect(Object.isFrozen(result.sentry.provenance.rows)).toBe(true);
+  });
+
+  it('keeps event sample shares and medians distinct from time exposure and backend groups', () => {
+    const result = analyze({
+      recent_events: [
+        event({ id: 1, duration_hours: 0.5, drain_rate: 2, sentry_mode: true }),
+        event({ id: 2, duration_hours: 8, drain_rate: 0 }),
+        event({ id: 2, duration_hours: 100, drain_rate: 100, sentry_mode: true }),
+      ],
+    });
+    expect(result.events.aggregates).toMatchObject({
+      count: 2, totalDurationHours: 8.5, medianDrainRate: 1, sentryShare: 0.5,
+    });
+    expect(result.events.exposure.uniqueHours).toBe(4);
+    expect(result.events.accounting.categories.duplicate_id).toBe(1);
+    expect(result.sentry.hasAnyEvidence).toBe(false);
+    expect(result.sentry.provenance.groupExposureHours).toBe('unknown');
+    expect(result.sentry.provenance.rows).toEqual([]);
+  });
+
+  it.each([
     { on: 0, off: 0, difference: 0, excess: 0 },
     { on: 0.5, off: 0.25, difference: 0.25, excess: 0.25 },
     { on: 0.125, off: 0.375, difference: -0.25, excess: 0 },
