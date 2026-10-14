@@ -1,0 +1,3724 @@
+{
+  "item": "phase6-qa-explore-explore",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "sourceReviewStatus": "COMPLETE bounded source walkthrough",
+  "inputPinGate": "PARTIAL: three late support baselines; full handoff/queue/English catalog drift; exact queue row and relevant Explore subtree rechecked",
+  "createdAt": "2026-10-14T02:52:47.868994+00:00",
+  "reservation": "2026-10-14T02:37:46.371Z",
+  "returnDeadline": "2026-10-14T02:57:46.371Z",
+  "hardDeadline": "2026-10-14T03:02:46.371Z",
+  "clockPolicy": "No reset; earlier actual actor creation metadata not exposed",
+  "page": "web/src/features/explore/pages/ExplorePage.tsx",
+  "routes": [
+    {
+      "path": "/explore",
+      "evidence": [
+        {
+          "file": "web/src/App.tsx",
+          "line": 340,
+          "endLine": 340,
+          "source": "const Explore = lazy(() => import('./features/explore/pages/ExplorePage'))"
+        },
+        {
+          "file": "web/src/App.tsx",
+          "line": 579,
+          "endLine": 579,
+          "source": "        <Route path=\"explore\" element={<SafeRoute name=\"Explore\"><Explore /></SafeRoute>} />"
+        },
+        {
+          "file": "web/src/lib/routeRegistry.ts",
+          "line": 128,
+          "endLine": 128,
+          "source": "  { path: \"/explore\", name: \"Explore\", label: \"Explore\", i18nKey: \"routes.explore\" },"
+        }
+      ],
+      "mount": "SOURCE_ONLY; native NOTRUN"
+    }
+  ],
+  "purpose": "Find and open eligible destinations with URL filters and source-honest counts",
+  "primaryGoal": "Preserve every section/action/path/count/gate/native-link/preference/trust mechanism",
+  "findings": [
+    {
+      "id": "F01",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "initial-source-recovery",
+      "title": "Initial fleet failure has no retry",
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "line": 252,
+      "detail": "fatalError gets brief attention, but no brief actions. StaleRefreshWarning returns null without retained data although deriveDataState forwards refetch. Independent catalog remains usable.",
+      "fix": "Add existing source-scoped retry for fatal initial failure, keeping local catalog and retained warning retry.",
+      "owner": "page ExplorePage/test",
+      "priority": "P1",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 240,
+          "endLine": 253,
+          "source": "            provenance={t('explore.brief.provenance', 'Local navigation catalog, authentication mode, and the vehicles query snapshot. Catalog counts are derived, not vehicle telemetry.')}\n            attention={sourceStatus === 'unavailable' || sourceStatus === 'pending' || sourceStatus === 'offline'\n              ? [{\n                key: 'fleet-source',\n                title: statusLabels[sourceStatus],\n                description: vehicles == null\n                  ? t('explore.brief.vehiclesMissing', 'No fleet list is available; vehicle-gated destinations remain hidden.')\n                  : t('explore.brief.offlineRetained', 'Fleet refresh is paused; retained vehicles still determine destination eligibility.'),\n                tone: 'warning',\n              }]\n              : []}\n          />\n          <StaleRefreshWarning state={fleetState} label={t('explore.kpi.vehicles', 'Vehicles')} />\n        </FadeIn>"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 58,
+          "endLine": 60,
+          "source": "  // the skeleton's and the page error surface's job, not this component's.\n  if (!state.hasData) return null;\n  if (state.status === 'ok') return null;"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 200,
+          "endLine": 219,
+          "source": "  const retry = typeof source.refetch === 'function'\n    ? () => { void source.refetch?.() }\n    : null\n\n  if (!hasData) {\n    const failed = error != null || (source.isError ?? false)\n    return {\n      data: undefined,\n      hasData: false,\n      status: failed ? 'initialFailure' : 'initial',\n      // A failed or not-yet-resolved load has established nothing about\n      // provenance — claiming `live` here would be a lie.\n      provenance: 'unknown',\n      isRefreshing: false,\n      isRefreshBlocked: isPaused,\n      refreshError: null,\n      fatalError: failed ? (error ?? new Error('Request failed')) : null,\n      updatedAt: null,\n      ageMs: null,\n      retry,"
+        }
+      ],
+      "priorAudit": "audit-page-130 states issue retained",
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    },
+    {
+      "id": "F02",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "auth-source-trust",
+      "title": "Catalog ready can coexist with unresolved auth eligibility",
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "line": 82,
+      "detail": "Boolean convenience hook is false for loading/failed contract and resolved open mode. Three auth-gated destinations hide safely, but page source status only tracks fleet; no auth warning or recovery.",
+      "fix": "Use existing useAuthMode/useDataState independently; preserve conservative gates, explain unresolved/retained auth and source-specific retry.",
+      "owner": "page plus separately owned canonical copy",
+      "priority": "P1",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 78,
+          "endLine": 95,
+          "source": "  // exactly what the user would see in the legacy nav.\n  const vehiclesQuery = useVehicles();\n  const { data: vehicles } = vehiclesQuery;\n  const fleetState = useDataState(vehiclesQuery);\n  const isForwardAuth = useIsForwardAuth();\n  const vehicleCount = vehicles?.length ?? 0;\n\n  const query = searchParams.get('q') ?? '';\n  const selectedSection = searchParams.get('section') ?? 'all';\n\n  // ── Catalog ─────────────────────────────────────────────────────────\n  const visibleCatalog = useMemo(() => {\n    const all = buildFeatureCatalog();\n    return all.filter((entry) => {\n      if (entry.minVehicles && vehicleCount < entry.minVehicles) return false;\n      if (entry.requiresAuth && !isForwardAuth) return false;\n      return true;\n    });"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 149,
+          "endLine": 165,
+          "source": "  const sourceStatus = fleetState.fatalError\n    ? 'unavailable'\n    : fleetState.isRefreshBlocked\n      ? 'offline'\n      : fleetState.refreshError\n        ? 'retained'\n        : !fleetState.hasData\n          ? 'pending'\n          : fleetState.isRefreshing\n            ? 'refreshing'\n            : 'ready';\n  const statusLabels = {\n    unavailable: t('explore.brief.status.unavailable', 'Fleet unavailable'),\n    offline: t('explore.brief.status.offline', 'Fleet offline'),\n    retained: t('explore.brief.status.retained', 'Retained fleet'),\n    pending: t('explore.brief.status.pending', 'Fleet pending'),\n    refreshing: t('explore.brief.status.refreshing', 'Fleet refreshing'),"
+        },
+        {
+          "file": "web/src/api/hooks/useAuthMode.ts",
+          "line": 59,
+          "endLine": 80,
+          "source": "    queryKey: authModeKeys.all,\n    queryFn: ({ signal }) => request<AuthModeResponse>('/system/auth-mode', { signal }),\n    staleTime: AUTH_MODE_STALE_MS,\n    refetchOnWindowFocus: false,\n    refetchInterval: false,\n  })\n}\n\n/**\n * Convenience boolean. Returns `true` ONLY when the contract has\n * resolved to `mode === 'forward_auth'`. While the query is loading\n * (or has errored) the value is `false` so consumers default to the\n * safe \"no auth\" rendering — features wrapped in <RequiresAuth>\n * therefore briefly show their placeholder rather than briefly\n * showing their content and then yanking it away.\n */\nexport function useIsForwardAuth(): boolean {\n  const { data } = useAuthMode()\n  return data?.mode === 'forward_auth'\n}\n\n/**"
+        }
+      ],
+      "priorAudit": "audit-page-130 auth issue retained",
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    },
+    {
+      "id": "F03",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "paused-not-offline",
+      "title": "Paused fetch is labeled Fleet offline",
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "line": 152,
+      "detail": "isRefreshBlocked comes only from fetchStatus paused; page maps to offline and Fleet offline in brief/drawer context. Shared warning explicitly avoids this inference. Paused test encodes this label, not connectivity proof.",
+      "fix": "Use neutral paused/deferred label through exact existing Explore canonical leaf/projection; preserve retained payload and adjust only matching assertions.",
+      "owner": "ExplorePage/test + canonical catalog owner; not shared warning",
+      "priority": "P1",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 149,
+          "endLine": 165,
+          "source": "  const sourceStatus = fleetState.fatalError\n    ? 'unavailable'\n    : fleetState.isRefreshBlocked\n      ? 'offline'\n      : fleetState.refreshError\n        ? 'retained'\n        : !fleetState.hasData\n          ? 'pending'\n          : fleetState.isRefreshing\n            ? 'refreshing'\n            : 'ready';\n  const statusLabels = {\n    unavailable: t('explore.brief.status.unavailable', 'Fleet unavailable'),\n    offline: t('explore.brief.status.offline', 'Fleet offline'),\n    retained: t('explore.brief.status.retained', 'Retained fleet'),\n    pending: t('explore.brief.status.pending', 'Fleet pending'),\n    refreshing: t('explore.brief.status.refreshing', 'Fleet refreshing'),"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "line": 193,
+          "endLine": 219,
+          "source": "  const isPaused = source.fetchStatus === 'paused'\n  const isRefreshing = hasData && (source.isFetching ?? false)\n  const updatedAt =\n    hasData && typeof source.dataUpdatedAt === 'number' && source.dataUpdatedAt > 0\n      ? source.dataUpdatedAt\n      : null\n  const ageMs = updatedAt == null ? null : Math.max(0, now() - updatedAt)\n  const retry = typeof source.refetch === 'function'\n    ? () => { void source.refetch?.() }\n    : null\n\n  if (!hasData) {\n    const failed = error != null || (source.isError ?? false)\n    return {\n      data: undefined,\n      hasData: false,\n      status: failed ? 'initialFailure' : 'initial',\n      // A failed or not-yet-resolved load has established nothing about\n      // provenance — claiming `live` here would be a lie.\n      provenance: 'unknown',\n      isRefreshing: false,\n      isRefreshBlocked: isPaused,\n      refreshError: null,\n      fatalError: failed ? (error ?? new Error('Request failed')) : null,\n      updatedAt: null,\n      ageMs: null,\n      retry,"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 68,
+          "endLine": 81,
+          "source": "  // A paused query does not prove the device is offline.\n  const defaultMessage = state.refreshError != null\n      ? t(\n          'dataSources.staleMessage',\n          'Previously loaded data remains visible while affected sources recover.',\n        )\n      : t(\n          'dataState.stale.message',\n          'The latest values are temporarily unavailable. Previously loaded data remains visible.',\n        );\n\n  const defaultTitle = label != null\n    ? t('dataState.staleNamed.title', '{{label}} may be out of date', { label })\n    : t('dataState.stale.title', 'Data may be stale');"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.test.tsx",
+          "line": 286,
+          "endLine": 295,
+          "source": "  it.each(['error', 'paused'] as const)('labels retained fleet evidence honestly during %s while preserving eligibility', mode => {\n    const { rerenderPage, getLocation } = renderPage('/explore?section=vehicles');\n    const before = screen.getAllByTestId(/^explore-card-/).map(link => link.getAttribute('href'));\n    if (mode === 'error') state.vehicleError = new Error('Refresh unavailable');\n    else state.vehicleFetchStatus = 'paused';\n    rerenderPage();\n    const overview = screen.getByTestId('explore-operational-brief');\n    expect(within(overview).getAllByText(mode === 'error' ? 'Retained fleet' : 'Fleet offline').length)\n      .toBeGreaterThan(0);\n    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();"
+        }
+      ],
+      "priorAudit": null,
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    },
+    {
+      "id": "F04",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "hardcoded-string",
+      "title": "199 feature descriptions and one fallback bypass i18n",
+      "file": "web/src/features/explore/featureCatalog.ts",
+      "line": 57,
+      "detail": "Raw English descriptions go straight to Highlight and search haystack; no description key. Current suggestion display IS translated and not counted again.",
+      "fix": "Add stable description identity and canonical copy at existing owners; localize display/search while retaining English search, all paths/gates/order/descriptions.",
+      "owner": "integration featureCatalog/ExplorePage/canonical catalog; serialized exact leases",
+      "priority": "P2",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 43,
+          "endLine": 47,
+          "source": "  /** 1-line description shown under the label on a feature card. */\n  description: string;\n  /** Optional gating from navSections — surfaced to the page so it can hide rows. */\n  minVehicles?: number;\n  requiresAuth?: boolean;"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 56,
+          "endLine": 59,
+          "source": " */\nconst DESCRIPTIONS: Record<string, string> = {\n  // ── Home ───────────────────────────────────────────────────────────\n  '/': 'Your daily summary — battery, last drive, charging, and alerts at a glance.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 321,
+          "endLine": 325,
+          "source": "        description:\n          DESCRIPTIONS[item.to] ??\n          `Open ${item.label}.` /* visible fallback so the page never breaks */,\n        minVehicles: item.minVehicles,\n        requiresAuth: item.requiresAuth,"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 366,
+          "endLine": 373,
+          "source": "  )?.section;\n  if (exactSection) return entries.filter((entry) => entry.section === exactSection);\n  const tokens = q.split(/\\s+/);\n  return entries.filter((e) => {\n    const haystack = `${e.label} ${translate(e.labelKey, e.label)} ${e.section} ${translate(e.sectionKey, e.section)} ${e.description} ${e.to}`.toLowerCase();\n    return tokens.every((tok) => haystack.includes(tok));\n  });\n}"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 452,
+          "endLine": 464,
+          "source": "            <Text as=\"div\" size=\"sm\" weight=\"medium\" color=\"primary\" className=\"break-words\">\n              <Highlight text={t(entry.labelKey, entry.label)} query={query} />\n            </Text>\n            <Text\n              as=\"p\"\n              variant=\"bodySm\"\n              className=\"mt-1 break-words leading-relaxed\"\n            >\n              <Highlight text={entry.description} query={query} />\n            </Text>\n          </div>\n        </div>\n      </a>"
+        }
+      ],
+      "priorAudit": "audit-page-130 P227/G122; Phase5 explicitly retained",
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 200,
+      "locations": [
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 59,
+          "endLine": 59,
+          "source": "  '/': 'Your daily summary — battery, last drive, charging, and alerts at a glance.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 60,
+          "endLine": 60,
+          "source": "  '/action-center': 'Prioritized decisions with evidence, confidence, safe actions, and no fabricated impact.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 61,
+          "endLine": 61,
+          "source": "  '/explore': 'Browse and search every feature in TeslaSync with a 1-line description for each.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 62,
+          "endLine": 62,
+          "source": "  '/live': 'Real-time map of where your vehicle is right now.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 63,
+          "endLine": 63,
+          "source": "  '/timeline': 'Hour-by-hour history of drives, charges, and events.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 64,
+          "endLine": 64,
+          "source": "  '/activity': 'Unified timeline of drives, charging, alerts, software updates, and annotations.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 65,
+          "endLine": 65,
+          "source": "  '/weekly-digest': 'A printable weekly recap of usage, range, and cost.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 68,
+          "endLine": 68,
+          "source": "  '/vehicles': 'Manage every Tesla on your account — VIN, options, status.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 69,
+          "endLine": 69,
+          "source": "  '/vehicle-management': 'Fleet API options, specs, warranty, pricing, and payer roles per vehicle.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 70,
+          "endLine": 70,
+          "source": "  '/digital-twin': 'A live 3D model of your car mirroring doors, lights, and motion.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 71,
+          "endLine": 71,
+          "source": "  '/day-log': 'What happened today — drives, charges, lock, sentry, and signal events.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 72,
+          "endLine": 72,
+          "source": "  '/vehicle-comparison': 'Side-by-side stats for two or more of your vehicles.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 73,
+          "endLine": 73,
+          "source": "  '/locations': 'Frequent destinations — home, work, favorite Superchargers.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 74,
+          "endLine": 74,
+          "source": "  '/parking': 'Parking patterns, dwell time, location mix, and recurring occupancy.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 75,
+          "endLine": 75,
+          "source": "  '/utilization': 'Vehicle availability and productive use across your fleet.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 76,
+          "endLine": 76,
+          "source": "  '/time-machine': 'Reconstruct vehicle state at any recorded point in time.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 77,
+          "endLine": 77,
+          "source": "  '/physics-cockpit': 'Live Gear, charge state, port latch, BMS, and trip meters.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 78,
+          "endLine": 78,
+          "source": "  '/tesla-physics': 'One grouped workbench for 15 Tesla-only investigations and their evidence.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 79,
+          "endLine": 79,
+          "source": "  '/science': 'OCV, DCIR, thermal, weather, and tire claims with n, CI, and residuals.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 80,
+          "endLine": 80,
+          "source": "  '/fleet-operations': 'Coordinate drivers, bookings, policies, work orders, and utilization.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 81,
+          "endLine": 81,
+          "source": "  '/resale-vault': 'Create verifiable, selectively disclosed vehicle-history reports.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 84,
+          "endLine": 84,
+          "source": "  '/intelligence/twin-lab': 'Run calibrated vehicle counterfactuals with explicit uncertainty and sensitivity.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 85,
+          "endLine": 85,
+          "source": "  '/intelligence/firmware-canary': 'Gate firmware rollout using matched pre/post cohorts instead of simple averages.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 86,
+          "endLine": 86,
+          "source": "  '/intelligence/component-survival': 'Model event-free component horizons, competing risks, and intervention sensitivity.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 87,
+          "endLine": 87,
+          "source": "  '/intelligence/road-hazards': 'Reveal privacy-safe crash and airbag clusters without exposing exact coordinates.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 88,
+          "endLine": 88,
+          "source": "  '/intelligence/behavioral-sentinel': 'Detect command and telemetry behavior shifts without claiming attack attribution.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 89,
+          "endLine": 89,
+          "source": "  '/intelligence/charging-forensics': 'Separate recorded charging facts from unsupported meter and billing assumptions.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 90,
+          "endLine": 90,
+          "source": "  '/intelligence/journey-assurance': 'Stress-test departure readiness against reserve, climate, and uncertainty.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 91,
+          "endLine": 91,
+          "source": "  '/intelligence/charging-site-twin': 'Simulate charging-site queues, failures, and fallback capacity before deployment.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 92,
+          "endLine": 92,
+          "source": "  '/intelligence/federated-learning': 'Train local aggregate models with explicit privacy-budget accounting.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 93,
+          "endLine": 93,
+          "source": "  '/intelligence/emergency-resilience': 'Build confirmed emergency energy plans from vehicles, home reserve, and loads.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 94,
+          "endLine": 94,
+          "source": "  '/intelligence/causal-lab': 'Run confirmed treatment/control analyses with transparent effect limitations.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 95,
+          "endLine": 95,
+          "source": "  '/intelligence/tco-optimizer': 'Compare ownership scenarios without inventing prices, tariffs, or depreciation.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 98,
+          "endLine": 98,
+          "source": "  '/drives': 'Every drive with route, energy used, and efficiency.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 99,
+          "endLine": 99,
+          "source": "  '/trips': 'Multi-leg trips grouped into a single journey.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 100,
+          "endLine": 100,
+          "source": "  '/journeys': 'Named journeys stitched from consecutive drives.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 101,
+          "endLine": 101,
+          "source": "  '/trip-planner': 'Plan a route with charging stops and ETA before you leave.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 102,
+          "endLine": 102,
+          "source": "  '/navigation': 'Send a destination to the car or save it for later.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 103,
+          "endLine": 103,
+          "source": "  '/geofences': 'Trigger automations when the car enters or leaves a zone.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 104,
+          "endLine": 104,
+          "source": "  '/mileage': 'Odometer log with monthly and yearly totals.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 105,
+          "endLine": 105,
+          "source": "  '/lifetime-stats': 'Every drive ever — distance, energy, and time totals.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 106,
+          "endLine": 106,
+          "source": "  '/drive-score': 'Smoothness rating per drive (acceleration, braking, cornering).',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 107,
+          "endLine": 107,
+          "source": "  '/fsd': 'Supervised self-driving distance, usage share, and data confidence.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 108,
+          "endLine": 108,
+          "source": "  '/speed-profile': 'Speed-vs-time chart for any drive.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 109,
+          "endLine": 109,
+          "source": "  '/driving-dynamics': 'G-forces, lateral and longitudinal acceleration analysis.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 110,
+          "endLine": 110,
+          "source": "  '/regen-efficiency': 'How much energy regenerative braking recaptures.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 111,
+          "endLine": 111,
+          "source": "  '/route-efficiency': 'Compare actual vs predicted Wh/mile for a route.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 112,
+          "endLine": 112,
+          "source": "  '/logbook': 'Review and annotate a searchable chronological trip log.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 113,
+          "endLine": 113,
+          "source": "  '/mileage-budget': 'Track distance budgets and forecast when thresholds will be reached.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 114,
+          "endLine": 114,
+          "source": "  '/driving-rhythm': 'See recurring departure, duration, and travel-time patterns.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 115,
+          "endLine": 115,
+          "source": "  '/speed-sweetspot': 'Find the speed band where your vehicle is most efficient.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 116,
+          "endLine": 116,
+          "source": "  '/efficiency-target': 'Set an efficiency goal and measure progress toward it.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 117,
+          "endLine": 117,
+          "source": "  '/cold-start': 'Quantify the energy and range cost of cold departures.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 118,
+          "endLine": 118,
+          "source": "  '/drive-compare': 'Compare two drives across route, speed, energy, and conditions.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 119,
+          "endLine": 119,
+          "source": "  '/explorer': 'Slice and inspect drive history with advanced filters.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 120,
+          "endLine": 120,
+          "source": "  '/drive-calendar': 'Browse driving activity and totals on a calendar.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 121,
+          "endLine": 121,
+          "source": "  '/milestones': 'Celebrate distance, efficiency, and ownership achievements.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 122,
+          "endLine": 122,
+          "source": "  '/drive-dna': 'Profile the repeatable characteristics of your driving style.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 123,
+          "endLine": 123,
+          "source": "  '/what-if': 'Simulate how speed, weather, load, and climate change efficiency.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 124,
+          "endLine": 124,
+          "source": "  '/departure-forecast': 'Predict likely departure times from historical routines.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 125,
+          "endLine": 125,
+          "source": "  '/arrival-reliability': 'Estimate arrival-time reliability and route uncertainty.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 126,
+          "endLine": 126,
+          "source": "  '/destination-transitions': 'Map recurring movement between destinations and likely next stops.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 127,
+          "endLine": 127,
+          "source": "  '/journey-fragmentation': 'Measure trip chains, stopovers, and avoidable journey fragments.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 128,
+          "endLine": 128,
+          "source": "  '/seasonal-efficiency': 'Compare efficiency patterns across seasons and weather regimes.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 129,
+          "endLine": 129,
+          "source": "  '/segments': 'Race your historical best on repeated road segments.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 132,
+          "endLine": 132,
+          "source": "  '/charging': 'All charging sessions — Supercharger, home, third-party.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 133,
+          "endLine": 133,
+          "source": "  '/tesla-charging-history': 'Tesla-provided charging history pulled from your account.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 134,
+          "endLine": 134,
+          "source": "  '/charging-curve': 'Power vs SOC curve for any charging session.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 135,
+          "endLine": 135,
+          "source": "  '/charging-heatmap': 'When and where you charge, visualised as a heatmap.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 136,
+          "endLine": 136,
+          "source": "  '/smart-charge': 'Schedule charging for off-peak or solar-surplus windows.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 137,
+          "endLine": 137,
+          "source": "  '/powershare': 'Use your vehicle as a backup home battery (V2H).',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 138,
+          "endLine": 138,
+          "source": "  '/charger-health': 'Track charging-site performance, faults, and declining power.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 139,
+          "endLine": 139,
+          "source": "  '/charge-interruption': 'Explain incomplete sessions and recurring charging interruptions.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 140,
+          "endLine": 140,
+          "source": "  '/charger-resilience': 'Measure dependence on individual sites and charging alternatives.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 141,
+          "endLine": 141,
+          "source": "  '/charge-departure-alignment': 'Check whether charging finishes before predicted departures.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 142,
+          "endLine": 142,
+          "source": "  '/charging-thermal-tax': 'Quantify battery-heating overhead during charging sessions.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 145,
+          "endLine": 145,
+          "source": "  '/battery': 'Pack health: SoH, full-charge capacity, and degradation curve.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 146,
+          "endLine": 146,
+          "source": "  '/battery-cells': 'Per-cell voltage and temperature spread.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 147,
+          "endLine": 147,
+          "source": "  '/battery-degradation': 'Capacity loss over time vs fleet average.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 148,
+          "endLine": 148,
+          "source": "  '/projected-range': 'Range forecast adjusted for weather, terrain, and driving style.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 149,
+          "endLine": 149,
+          "source": "  '/vampire-drain': 'Standby energy loss while parked and asleep.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 150,
+          "endLine": 150,
+          "source": "  '/sleep-efficiency': 'How quickly the car drops into low-power sleep when parked.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 151,
+          "endLine": 151,
+          "source": "  '/battery-passport': 'Issue a verifiable battery health and provenance certificate.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 152,
+          "endLine": 152,
+          "source": "  '/pack-capacity': 'Estimate usable pack capacity from charging and driving evidence.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 153,
+          "endLine": 153,
+          "source": "  '/cycle-stress': 'Measure depth-of-discharge and cycle stress on the battery.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 154,
+          "endLine": 154,
+          "source": "  '/range-buffer': 'Track reserve-range habits and low-state-of-charge exposure.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 155,
+          "endLine": 155,
+          "source": "  '/battery-care': 'Turn battery behavior into practical longevity recommendations.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 156,
+          "endLine": 156,
+          "source": "  '/charge-advisor': 'Recommend charging limits and timing for battery care.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 159,
+          "endLine": 159,
+          "source": "  '/energy': 'Daily kWh in and out of the pack.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 160,
+          "endLine": 160,
+          "source": "  '/energy-flow': 'Animated flow diagram showing where the energy is going right now.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 161,
+          "endLine": 161,
+          "source": "  '/power-flow': 'Live power draw and regen at the wheels.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 162,
+          "endLine": 162,
+          "source": "  '/energy-products': 'Solar production and Powerwall stats from your Tesla account.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 163,
+          "endLine": 163,
+          "source": "  '/energy-ledger': 'Reconcile vehicle energy, cost, charging losses, and sources.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 164,
+          "endLine": 164,
+          "source": "  '/energy-orchestrator': 'Optimize vehicles, solar, Powerwall, tariffs, and panel capacity.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 167,
+          "endLine": 167,
+          "source": "  '/tire-pressure': 'Current and historical pressure per tire.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 168,
+          "endLine": 168,
+          "source": "  '/drivetrain-health': 'Motor temperatures, inverter status, and fault codes.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 169,
+          "endLine": 169,
+          "source": "  '/software-updates': 'Available firmware updates and changelog.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 170,
+          "endLine": 170,
+          "source": "  '/maintenance': 'Tire rotations, brake fluid, cabin filter — overdue items first.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 171,
+          "endLine": 171,
+          "source": "  '/tire-differential-drift': 'Detect persistent pressure drift between tires.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 172,
+          "endLine": 172,
+          "source": "  '/firmware-impact': 'Compare efficiency and reliability before and after firmware updates.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 173,
+          "endLine": 173,
+          "source": "  '/service-intelligence': 'Match recalls and service bulletins to vehicle evidence.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 174,
+          "endLine": 174,
+          "source": "  '/diagnostics/service-evidence': 'Export an integrity-checked package of service evidence.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 177,
+          "endLine": 177,
+          "source": "  '/climate-control': 'Pre-heat, pre-cool, or run Dog Mode remotely.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 178,
+          "endLine": 178,
+          "source": "  '/media-player': 'See what is playing and control playback.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 179,
+          "endLine": 179,
+          "source": "  '/cabin-thermal': 'Model cabin heating, cooling, and heat-retention behavior.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 180,
+          "endLine": 180,
+          "source": "  '/hvac-cycling': 'Detect excessive compressor cycling and unstable HVAC operation.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 181,
+          "endLine": 181,
+          "source": "  '/comfort-consistency': 'Measure how consistently the cabin holds its target temperature.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 182,
+          "endLine": 182,
+          "source": "  '/preconditioning-effectiveness': 'Score cabin and battery readiness before departure.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 185,
+          "endLine": 185,
+          "source": "  '/statistics': 'Bar and pie charts across every metric in the system.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 186,
+          "endLine": 186,
+          "source": "  '/analytics': 'Long-range trends and correlations you can drill into.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 187,
+          "endLine": 187,
+          "source": "  '/period-compare': 'Pick two date ranges and see what changed.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 188,
+          "endLine": 188,
+          "source": "  '/efficiency': 'Wh/mile broken down by speed, climate, and elevation.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 189,
+          "endLine": 189,
+          "source": "  '/temperature-impact': 'How outside temperature affects range and efficiency.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 190,
+          "endLine": 190,
+          "source": "  '/cost-analysis': 'Electricity cost per drive and per mile.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 191,
+          "endLine": 191,
+          "source": "  '/tco': 'Total cost of ownership — energy, insurance, service, depreciation.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 192,
+          "endLine": 192,
+          "source": "  '/share-card': 'Design privacy-aware visual summaries ready to share.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 193,
+          "endLine": 193,
+          "source": "  '/analytics/carbon': 'Track charging emissions and lower-carbon alternatives.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 194,
+          "endLine": 194,
+          "source": "  '/drive-archetypes': 'Discover recurring drive patterns and representative journeys.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 195,
+          "endLine": 195,
+          "source": "  '/benchmarks/privacy': 'Compare with similar vehicles without uploading raw trips.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 198,
+          "endLine": 198,
+          "source": "  '/commands': 'Send a remote command (wake, lock, climate, port, …).',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 199,
+          "endLine": 199,
+          "source": "  '/command-history': 'Audit log of every command sent and its result.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 200,
+          "endLine": 200,
+          "source": "  '/command-reliability': 'Measure command latency, success rate, and recurring failures.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 203,
+          "endLine": 203,
+          "source": "  '/automations': 'Trigger actions on geofence, time, or vehicle state.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 204,
+          "endLine": 204,
+          "source": "  '/automations/history': 'Review automation runs, outcomes, and execution details over time.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 205,
+          "endLine": 205,
+          "source": "  '/notifications/studio': 'Build a custom alert rule with conditions and channels.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 206,
+          "endLine": 206,
+          "source": "  '/notifications/rules': 'Manage existing alert rules.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 207,
+          "endLine": 207,
+          "source": "  '/notifications/packs': 'Preview curated or AI-proposed alert groups, install them, and manage installed packs.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 210,
+          "endLine": 210,
+          "source": "  '/notifications/inbox': 'Recent alerts and system messages.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 211,
+          "endLine": 211,
+          "source": "  '/notifications/channels': 'Where alerts are sent — email, SMS, push, webhook.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 212,
+          "endLine": 212,
+          "source": "  '/notifications/browser': 'Enable browser push notifications for this device.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 213,
+          "endLine": 213,
+          "source": "  '/notifications/quiet-hours': 'Mute non-critical alerts during set times.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 214,
+          "endLine": 214,
+          "source": "  '/notifications/health': 'Understand alert fatigue, notification delivery error budgets, and tail latency together.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 217,
+          "endLine": 217,
+          "source": "  '/security-access': 'Manage who can drive, charge, and unlock your vehicle.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 218,
+          "endLine": 218,
+          "source": "  '/safety-settings': 'Speed limit, valet mode, and safety-related preferences.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 219,
+          "endLine": 219,
+          "source": "  '/guard-mode': 'Sentry Mode, dashcam, and event-recording settings.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 222,
+          "endLine": 222,
+          "source": "  '/tesla-account': 'Linked Tesla account, refresh-token status, and re-auth.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 223,
+          "endLine": 223,
+          "source": "  '/tesla-orders': 'Active orders on your Tesla account.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 224,
+          "endLine": 224,
+          "source": "  '/fleet-api': 'Fleet API rate-limit usage and registration details.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 225,
+          "endLine": 225,
+          "source": "  '/tesla-region': 'Switch Fleet API region (NA, EU, China).',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 226,
+          "endLine": 226,
+          "source": "  '/tesla-features': 'Tesla feature-flag previews exposed by your firmware version.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 227,
+          "endLine": 227,
+          "source": "  '/account/2fa': 'Enroll or disable two-factor authentication on your account.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 228,
+          "endLine": 228,
+          "source": "  '/account/sessions': 'Browser and device sessions — revoke any of them.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 229,
+          "endLine": 229,
+          "source": "  '/account/privacy': 'Recently viewed pages, cookies, and analytics consent.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 230,
+          "endLine": 230,
+          "source": "  '/me/activity': 'Your recent page views and actions in this app.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 233,
+          "endLine": 233,
+          "source": "  '/settings': 'Units, theme, locale, density, and every app preference.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 234,
+          "endLine": 234,
+          "source": "  '/settings/fleet-setup': 'Connect Tesla, refresh the Fleet token, subscribe telemetry, and confirm streaming.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 235,
+          "endLine": 235,
+          "source": "  '/chatbot': 'Ask Helix anything about your car or this app.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 236,
+          "endLine": 236,
+          "source": "  '/dev-tools': 'In-app developer surface — flags, debuggers, and inspectors.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 239,
+          "endLine": 239,
+          "source": "  '/integrations/helix': 'Configure the Helix AI assistant — provider, model, API key, and cost cap.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 240,
+          "endLine": 240,
+          "source": "  '/api-keys': 'Issue and revoke API keys for external integrations.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 241,
+          "endLine": 241,
+          "source": "  '/gas-price': 'Compare your $/mile against gasoline at current prices.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 242,
+          "endLine": 242,
+          "source": "  '/intelligence-packs': 'Install signed, sandboxed community analytics and automations.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 245,
+          "endLine": 245,
+          "source": "  '/data-export': 'Export drives, charging sessions, and signals to CSV.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 246,
+          "endLine": 246,
+          "source": "  '/backup': 'Take a full backup of the database or restore from one.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 247,
+          "endLine": 247,
+          "source": "  '/data-repair': 'Re-derive trips, sessions, and analytics from raw signals.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 250,
+          "endLine": 250,
+          "source": "  '/system-status': 'Health of every dependent service — MQTT, Redis, DB, Tesla API.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 251,
+          "endLine": 251,
+          "source": "  '/tesla-api-usage': 'Explore observed Tesla signal and request costs across selected dates.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 252,
+          "endLine": 252,
+          "source": "  '/outage': 'What queued, replayed with original event time, or stayed unknown.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 253,
+          "endLine": 253,
+          "source": "  '/db-health': 'Database size, query latency, and replication lag.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 254,
+          "endLine": 254,
+          "source": "  '/anomaly-detection': 'Auto-detected outliers in charging, range, and drives.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 255,
+          "endLine": 255,
+          "source": "  '/diagnostics/rul': 'Estimate remaining useful life for monitored components.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 256,
+          "endLine": 256,
+          "source": "  '/diagnostics/root-cause': 'Rank evidence-backed explanations for vehicle anomalies.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 257,
+          "endLine": 257,
+          "source": "  '/dashcam': 'Search, redact, and reconstruct Dashcam and Sentry incidents locally.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 258,
+          "endLine": 258,
+          "source": "  '/signal-correlation': 'Find signals that move together across a selected time window.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 259,
+          "endLine": 259,
+          "source": "  '/signal-entropy': 'Measure signal variability and information density.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 260,
+          "endLine": 260,
+          "source": "  '/signal-trend': 'Detect robust long-term telemetry trends and direction changes.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 261,
+          "endLine": 261,
+          "source": "  '/signal-change-points': 'Locate statistically meaningful shifts in signal behavior.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 262,
+          "endLine": 262,
+          "source": "  '/signal-deadband': 'Recommend noise thresholds that preserve meaningful telemetry.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 263,
+          "endLine": 263,
+          "source": "  '/signal-mutual-information': 'Discover nonlinear dependencies between telemetry signals.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 264,
+          "endLine": 264,
+          "source": "  '/signals': 'Live values for every telemetry signal the car publishes.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 265,
+          "endLine": 265,
+          "source": "  '/admin/live-signals': 'Inspect a single signal in real time with history.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 266,
+          "endLine": 266,
+          "source": "  '/admin/ingest-xray': 'See every payload as it lands from Fleet Telemetry.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 267,
+          "endLine": 267,
+          "source": "  '/admin/dlq': 'Dead-letter queue — messages that failed to ingest.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 268,
+          "endLine": 268,
+          "source": "  '/admin/flags': 'Runtime feature flags — toggle without redeploy.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 269,
+          "endLine": 269,
+          "source": "  '/admin/schema-drift': 'Detect divergence between code models and the live DB schema.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 270,
+          "endLine": 270,
+          "source": "  '/admin/slow-queries': 'Top slow SQL queries with explain plans.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 271,
+          "endLine": 271,
+          "source": "  '/admin/vehicle-cost': 'Per-vehicle infrastructure cost attribution.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 272,
+          "endLine": 272,
+          "source": "  '/admin/data-quality': 'Signal freshness, gaps, duplicates, and normalization provenance.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 273,
+          "endLine": 273,
+          "source": "  '/admin/disk-forecast': 'When will the database run out of disk?',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 274,
+          "endLine": 274,
+          "source": "  '/admin/secret-rotation': 'Track and rotate secrets, tokens, and credentials.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 275,
+          "endLine": 275,
+          "source": "  '/admin/audit-log': 'Every privileged action with actor, target, and timestamp.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 276,
+          "endLine": 276,
+          "source": "  '/admin/gdpr-exports': 'Generate and download a complete user-data export.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 277,
+          "endLine": 277,
+          "source": "  '/state-debugger': 'Inspect the per-vehicle finite-state machine in real time.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 278,
+          "endLine": 278,
+          "source": "  '/mqtt-inspector': 'Subscribe to any MQTT topic and watch messages flow.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 279,
+          "endLine": 279,
+          "source": "  '/redis-signals': 'Dump the Redis live-signal cache for a vehicle.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 280,
+          "endLine": 280,
+          "source": "  '/admin/telemetry/coverage': 'Which Fleet Telemetry fields are wired vs missing.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 281,
+          "endLine": 281,
+          "source": "  '/api-logs': 'Recent HTTP requests with status, duration, and payload size.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 282,
+          "endLine": 282,
+          "source": "  '/api-playground': 'Try any API endpoint with parameter forms.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 285,
+          "endLine": 285,
+          "source": "  '/ownership/insurance-telematics': 'Driving-risk scoring and premium evidence for your insurer.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 286,
+          "endLine": 286,
+          "source": "  '/ownership/tariff-lab': 'Compare utility rate plans against your real charging history.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 287,
+          "endLine": 287,
+          "source": "  '/ownership/charging-reconciliation': 'Match charging invoices to sessions and raise disputes.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 288,
+          "endLine": 288,
+          "source": "  '/ownership/driver-attribution': 'Cluster driving fingerprints to attribute trips to drivers.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 289,
+          "endLine": 289,
+          "source": "  '/ownership/warranty-command': 'Coverage windows, expiry risk, and claim-readiness evidence.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 290,
+          "endLine": 290,
+          "source": "  '/ownership/data-governance': 'Plan retention and purge policies before anything is deleted.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 291,
+          "endLine": 291,
+          "source": "  '/ownership/model-trust': 'Score prediction accuracy, calibration, bias, and drift.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 292,
+          "endLine": 292,
+          "source": "  '/ownership/jurisdiction-compliance': 'Apportion distance by region for road-usage charges.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 293,
+          "endLine": 293,
+          "source": "  '/ownership/consumables-lifecycle': 'Wear-part life remaining from real usage stress.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 294,
+          "endLine": 294,
+          "source": "  '/ownership/subscription-roi': 'Whether each recurring feature earns back its cost.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 297,
+          "endLine": 297,
+          "source": "  '/roadmap': 'Upcoming features grouped by quarter.',"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 323,
+          "endLine": 323,
+          "source": "          `Open ${item.label}.` /* visible fallback so the page never breaks */,"
+        }
+      ]
+    },
+    {
+      "id": "F05",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "locale-timezone-display",
+      "title": "Fleet load time ignores saved display preferences",
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "line": 175,
+      "detail": "Date.toISOString forces UTC/ISO regardless of saved locale/timezone/12-24h. Query-load meaning is correct; it is not vehicle observation freshness.",
+      "fix": "Use existing useDateFormat at render boundary; retain raw timestamp and query-load/unknown semantics.",
+      "owner": "ExplorePage/test",
+      "priority": "P2",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 173,
+          "endLine": 175,
+          "source": "  const scopeLabel = t('explore.brief.scope', 'Visible catalog and returned fleet list · no date window');\n  const freshnessLabel = fleetState.updatedAt == null\n    ? t('explore.brief.freshnessUnknown', 'Fleet load time not supplied')"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 75,
+          "endLine": 95,
+          "source": "  // `??` only substitutes null/undefined, so an empty string or a legacy\n  // out-of-union value persisted in `tz_display_default` would slip through\n  // and defeat the previous `as TzMode` cast (yielding an invalid mode).\n  // Validate against the known set and fall back to the 'vehicle' default —\n  // the same normalisation posture useSettings already applies to a blank\n  // `locale`.\n  const requestedMode = mode ?? settings.tz_display_default\n  const effectiveMode: TzMode = isTzMode(requestedMode) ? requestedMode : 'vehicle'\n  const tz = useTimezone(effectiveMode)\n\n  const opts = useMemo<FormatOptions>(() => ({ locale, tz }), [locale, tz])\n\n  const formatDate = useCallback<DateFormatter>(\n    (value, override) => libFormatDate(value, { ...opts, ...override }),\n    [opts],\n  )\n  const formatDateTime = useCallback<DateFormatter>(\n    (value, override) => libFormatDateTime(value, { ...opts, ...override }),\n    [opts],\n  )\n  const formatTime = useCallback<DateFormatter>("
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.test.tsx",
+          "line": 252,
+          "endLine": 268,
+          "source": "  it('opens the built-in details drawer with complete filter, scope and source context, then closes it', () => {\n    state.vehicleUpdatedAt = Date.parse('2026-10-06T22:00:00Z');\n    const { getLocation } = renderPage('/explore?q=powershare&section=charging');\n    const overview = screen.getByTestId('explore-operational-brief');\n    expect(within(overview).getAllByText('Visible catalog and returned fleet list · no date window').length)\n      .toBeGreaterThan(0);\n    expect(within(overview).getAllByText('Fleet last loaded: 2026-10-06T22:00:00.000Z').length)\n      .toBeGreaterThan(0);\n    const review = within(overview).getByRole('button', { name: 'Review details' });\n    review.focus();\n    fireEvent.click(review);\n    const drawer = screen.getByRole('dialog', { name: 'Feature overview details' });\n    expect(within(drawer).getByText('Operational metrics')).toBeInTheDocument();\n    expect(within(drawer).getByText('matching filter')).toBeInTheDocument();\n    expect(within(drawer).getByText('Search: powershare · Category: charging')).toBeInTheDocument();\n    expect(within(drawer).getByText('Visible catalog and returned fleet list · no date window', { selector: '[data-drawer-header] span' })).toBeInTheDocument();\n    expect(within(drawer).getByText('Fleet last loaded: 2026-10-06T22:00:00.000Z', { selector: '[data-drawer-header] span' })).toBeInTheDocument();"
+        }
+      ],
+      "priorAudit": "audit-page-130 date issue; Phase5 retained ISO obligation",
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    },
+    {
+      "id": "F06",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "empty-reason",
+      "title": "Category-only no-match blames an empty query",
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "line": 573,
+      "detail": "Unknown section or disappeared gated category can yield zero groups with q empty. EmptyResult receives no selected category and always says No features match empty quoted query. Existing clear resets both filters as intended.",
+      "fix": "Explain category-only/combined miss via existing i18n; preserve URL state and current explicit all-parameter clear.",
+      "owner": "page plus exact missing canonical copy if required",
+      "priority": "P2",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 85,
+          "endLine": 108,
+          "source": "  const query = searchParams.get('q') ?? '';\n  const selectedSection = searchParams.get('section') ?? 'all';\n\n  // ── Catalog ─────────────────────────────────────────────────────────\n  const visibleCatalog = useMemo(() => {\n    const all = buildFeatureCatalog();\n    return all.filter((entry) => {\n      if (entry.minVehicles && vehicleCount < entry.minVehicles) return false;\n      if (entry.requiresAuth && !isForwardAuth) return false;\n      return true;\n    });\n  }, [vehicleCount, isForwardAuth]);\n\n  const filtered = useMemo(\n    () => filterFeatureCatalog(visibleCatalog, query, (key, fallback) => t(key, fallback)),\n    [visibleCatalog, query, t],\n  );\n  const allGroups = useMemo(() => groupFeatureCatalog(filtered), [filtered]);\n  const grouped = useMemo(\n    () => selectedSection === 'all'\n      ? allGroups\n      : allGroups.filter((group) => slugify(group.section) === selectedSection),\n    [allGroups, selectedSection],\n  );"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 303,
+          "endLine": 313,
+          "source": "              query={query}\n              catalog={visibleCatalog}\n              onPickSuggestion={(to) => {\n                setSearchParams({}, { replace: true });\n                navigate(to);\n              }}\n              onClear={() => setSearchParams({}, { replace: true })}\n            />\n          ) : (\n            <div className=\"space-y-8\">\n              {grouped.map(({ section, sectionKey, entries }) => ("
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 529,
+          "endLine": 539,
+          "source": "  query,\n  catalog,\n  onPickSuggestion,\n  onClear,\n}: {\n  query: string;\n  catalog: FeatureCatalogEntry[];\n  onPickSuggestion: (to: string) => void;\n  onClear: () => void;\n}) {\n  const { t } = useTranslation();"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 568,
+          "endLine": 579,
+          "source": "\n  return (\n    <GlassPanel className=\"p-6 text-center sm:p-8\" data-testid=\"explore-empty\">\n      <Icons.search className=\"mx-auto h-6 w-6 text-[var(--text-muted)]\" aria-hidden=\"true\" />\n      <SectionTitle className=\"mt-3\">\n        {t('explore.empty.title', 'No features match \"{{query}}\"', { query })}\n      </SectionTitle>\n      <Text as=\"p\" variant=\"bodySm\" className=\"mx-auto mt-1 max-w-md\">\n        {t(\n          'explore.empty.body',\n          'Try a different word, or open the command palette (⌘K) to search across pages, settings, and actions.',\n        )}"
+        }
+      ],
+      "priorAudit": "audit-page-130 empty issue retained",
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    },
+    {
+      "id": "F07",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "shortcut-overlay-ownership",
+      "title": "Slash handler ignores overlay/modifier/handled contexts",
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "line": 138,
+      "detail": "Only INPUT/TEXTAREA/contentEditable are excluded. A slash from non-editable Review Drawer/select or modified/already-handled event reaches preventDefault and search.focus. Shared drawer key owner handles Tab/Escape, not slash. Actual focus escape remains NOTRUN.",
+      "fix": "Respect defaultPrevented/modifiers/composition/editable and existing active overlay ownership; retain slash search, no new focus engine.",
+      "owner": "ExplorePage/test",
+      "priority": "P1",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 132,
+          "endLine": 145,
+          "source": "  useEffect(() => {\n    const onKey = (e: KeyboardEvent) => {\n      const target = e.target as HTMLElement | null;\n      const tag = target?.tagName;\n      const inEditable =\n        tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable;\n      if (!inEditable && e.key === '/') {\n        e.preventDefault();\n        inputRef.current?.focus();\n      }\n    };\n    document.addEventListener('keydown', onKey);\n    return () => document.removeEventListener('keydown', onKey);\n  }, []);"
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 152,
+          "endLine": 164,
+          "source": "                <Text as=\"p\" variant=\"bodySm\" className={cn('mt-1', compact ? 'basis-full text-xs leading-snug' : 'max-w-2xl')}>\n                  {description}\n                </Text>\n              </div>\n\n              <div className=\"flex min-w-0 flex-wrap items-center gap-2\">\n                {actions}\n                <Button\n                  type=\"button\"\n                  variant=\"outline\"\n                  size=\"sm\"\n                  wrapLabel\n                  className=\"min-h-11 md:min-h-9\""
+        },
+        {
+          "file": "web/src/hooks/useDialogFocus.ts",
+          "line": 173,
+          "endLine": 184,
+          "source": "    const handleKeyDown = (e: KeyboardEvent) => {\n      if (e.key === 'Escape') {\n        if (!closeOnEscapeRef.current) return;\n        // Stop the bubble so a dialog nested inside another surface\n        // (a Popover host, a Drawer) does not close both at once.\n        e.stopPropagation();\n        onCloseRef.current?.();\n        return;\n      }\n      if (e.key !== 'Tab') return;\n      // Re-query on every keypress: dialogs reveal and hide controls\n      // as the user works (expanding sections, async-loaded forms)."
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.test.tsx",
+          "line": 730,
+          "endLine": 743,
+          "source": "    it('does not steal slash typing from the actual search input and removes its shortcut on unmount', () => {\n      const { unmount } = renderPage();\n      const search = screen.getByRole('searchbox');\n      search.focus();\n      expect(fireEvent.keyDown(search, { key: '/' })).toBe(true);\n      expect(search).toHaveFocus();\n\n      const link = screen.getByTestId('explore-card-/charging');\n      link.focus();\n      expect(fireEvent.keyDown(link, { key: '/' })).toBe(false);\n      expect(search).toHaveFocus();\n      unmount();\n      expect(fireEvent.keyDown(document, { key: '/' })).toBe(true);\n    });"
+        }
+      ],
+      "priorAudit": "audit-page-130 shortcut issue retained",
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    },
+    {
+      "id": "F08",
+      "classification": "SOURCE_CONFIRMED",
+      "rule": "direct-library-import",
+      "title": "Motion-preference hook bypasses vendor boundary",
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "line": 1,
+      "detail": "One direct framer-motion import outside components. Component FadeIn/barrel imports are building-block exceptions, not additional violations. This is boundary debt, not demonstrated animation failure.",
+      "fix": "Use narrowly owned cycle-safe existing motion vendor boundary/export; do not import recursive motion barrel back into a hook used by FadeIn. Preserve OS OR low-bandwidth and duration API.",
+      "owner": "shared/integration useMotionPreference + motion boundary; separate lease",
+      "priority": "P2",
+      "confidence": "high for source mechanism; native NOTRUN",
+      "evidence": [
+        {
+          "file": "web/src/hooks/useMotionPreference.ts",
+          "line": 1,
+          "endLine": 3,
+          "source": "import { useReducedMotion as useFramerReducedMotion } from 'framer-motion'\n\nimport { useLowBandwidthMode } from '@/hooks/useLowBandwidthMode'"
+        },
+        {
+          "file": "web/src/hooks/useMotionPreference.ts",
+          "line": 44,
+          "endLine": 49,
+          "source": "export function useMotionPreference(defaultMs = 250): MotionPreference {\n  const osReduce = useFramerReducedMotion() ?? false\n  const { enabled: lowBandwidth } = useLowBandwidthMode()\n  const reduce = osReduce || lowBandwidth\n  return { reduce, durationMs: reduce ? 0 : defaultMs }\n}"
+        },
+        {
+          "file": "web/src/components/motion/index.ts",
+          "line": 14,
+          "endLine": 15,
+          "source": "// Re-export framer-motion primitives for advanced use cases (story slides, custom transitions)\nexport { AnimatePresence, motion } from 'framer-motion';"
+        }
+      ],
+      "priorAudit": null,
+      "queueDisposition": "No narrow exact repair objective located; prior source/audit acceptance is not a repair claim",
+      "occurrences": 1
+    }
+  ],
+  "conditionalNativeCandidates": [
+    {
+      "id": "C01",
+      "classification": "CONDITIONAL_NATIVE",
+      "title": "Search/Clear target minimums",
+      "detail": "Search Input md minimum40; Clear sm/wrap minimum36. Actual rectangles/spacing/WCAG exceptions unmeasured. Category/review/warning retry now allocate mobile44; do not requeue PillFilterBar fix.",
+      "owner": "page allocation, not global Button/Input rewrite",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 261,
+          "endLine": 269,
+          "source": "            <Input\n              id=\"explore-search\"\n              label={t('explore.searchLabel', 'Filter features')}\n              ref={inputRef}\n              type=\"search\"\n              autoComplete=\"off\"\n              value={query}\n              onChange={(e) => updateQuery(e.target.value)}\n              placeholder={t("
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 607,
+          "endLine": 615,
+          "source": "      <Button\n        variant=\"secondary\"\n        size=\"sm\"\n        wrapLabel\n        onClick={onClear}\n        className=\"mt-5\"\n      >\n        {t('explore.empty.clear', 'Clear filter')}\n      </Button>"
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 29,
+          "endLine": 34,
+          "source": "const sizeClasses: Record<NonNullable<InputProps['size']>, string> = {\n  sm: 'min-h-9 px-3 py-1.5 text-sm',\n  md: 'min-h-10 px-3 py-2 text-sm',\n  lg: 'min-h-12 px-4 py-2.5 text-base',\n  auto: 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row',\n};"
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 44,
+          "endLine": 48,
+          "source": "const wrappingSizes = {\n  sm: 'h-auto min-h-9 py-1.5',\n  md: 'h-auto min-h-10 py-2',\n  lg: 'h-auto min-h-12 py-2.5',\n  auto: 'h-auto py-d-pad-y',"
+        }
+      ],
+      "verification": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "classification": "CONDITIONAL_INTEGRATION",
+      "title": "Workspace vehicle affordance",
+      "detail": "Explore absent from range-enabled/vehicle-disabled sets means header vehicle enabled, range disabled; page uses whole fleet. Confirm deliberate next-route selection vs misleading current-scope picker before repair.",
+      "owner": "workspaceScope/shell after intent confirmation",
+      "evidence": [
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 156,
+          "endLine": 168,
+          "source": "export function getWorkspaceRouteScope(pathname: string): WorkspaceRouteScope {\n  const normalized = normalizePathname(pathname);\n  const vehicleDisabled =\n    VEHICLE_DISABLED_PATHS.has(normalized) ||\n    VEHICLE_DISABLED_PREFIXES.some((prefix) =>\n      isAtOrBelow(normalized, prefix),\n    );\n\n  return {\n    range: RANGE_ENABLED_PATHS.has(normalized),\n    vehicle: !vehicleDisabled,\n  };\n}"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 193,
+          "endLine": 199,
+          "source": "        query: query || t('explore.brief.noSearch', 'No search filter'),\n        category: selectedSection === 'all' ? t('explore.all', 'All') : selectedSection,\n      }),\n    },\n    {\n      metricId: 'count', occurrenceId: 'vehicles', rawValue: vehicles?.length,\n      label: t('explore.kpi.vehicles', 'Vehicles'),"
+        }
+      ],
+      "verification": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "classification": "CONDITIONAL_PAYLOAD",
+      "title": "Null/malformed successful fleet response",
+      "detail": "Invoked select safeArray maps null/nonarray success to[] -> Vehicles0/Catalog ready. Mechanism confirmed; server shape/completeness and actual occurrence unknown. Test undefined data is not successful malformed payload.",
+      "owner": "useVehicles response contract; preserve valid empty[]",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useVehicles.ts",
+          "line": 73,
+          "endLine": 80,
+          "source": "export function useVehicles() {\n  return useQuery({\n    queryKey: vehicleKeys.all,\n    queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),\n    staleTime: STALE_TIMES.FAST,\n    select: safeArray,\n  });\n}"
+        },
+        {
+          "file": "web/src/lib/safeArray.ts",
+          "line": 9,
+          "endLine": 14,
+          "source": "export function safeArray<T>(value: T[] | T | null | undefined): T[] {\n  if (Array.isArray(value)) return value;\n  if (value == null) return [];\n  console.warn('[safeArray] Expected array, got:', typeof value);\n  return [];\n}"
+        }
+      ],
+      "verification": "NOTRUN"
+    },
+    {
+      "id": "C04",
+      "classification": "CONDITIONAL_LOCALIZATION",
+      "title": "Localized typo suggestion ranking",
+      "detail": "Search supports translated names; suggestion display now translates, but scoring uses fallback registry/catalog labels. Localized typo may lack useful results. Preserve ranking until multilingual intent is confirmed.",
+      "owner": "Explore suggestion adapter, not global algorithm rewrite",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 541,
+          "endLine": 565,
+          "source": "  // (so we pick up hidden pages too) and (b) catalog labels (so we match\n  // the user's mental model). De-dupe by path; honor the catalog's\n  // visibility gates so we never suggest a hidden page.\n  const visiblePaths = useMemo(() => new Set(catalog.map((c) => c.to)), [catalog]);\n  const suggestions = useMemo(() => {\n    const fromRegistry = closestRoutes(query, ROUTE_REGISTRY, 5);\n    const fromLabels = closestRoutes(\n      query,\n      catalog.map((c) => ({\n        path: c.to,\n        name: c.label.replace(/\\s+/g, ''),\n        label: c.label,\n        i18nKey: c.labelKey,\n      })),\n      5,\n    );\n    const seen = new Set<string>();\n    const merged: typeof fromRegistry = [];\n    for (const r of [...fromRegistry, ...fromLabels]) {\n      if (!visiblePaths.has(r.path)) continue;\n      if (seen.has(r.path)) continue;\n      seen.add(r.path);\n      merged.push(r);\n    }\n    merged.sort((a, b) => a.distance - b.distance);"
+        },
+        {
+          "file": "web/src/lib/closestRoute.ts",
+          "line": 27,
+          "endLine": 38,
+          "source": "  const q = normalize(query)\n  if (!q) return []\n\n  const scored: RouteSuggestion[] = []\n  for (const r of registry) {\n    if (r.hidden) continue\n    const pathDist = levenshtein(q, normalize(r.path))\n    const labelDist = levenshtein(q, normalize(r.label))\n    const distance = Math.min(pathDist, labelDist)\n    if (distance <= 6) scored.push({ ...r, distance })\n  }\n  scored.sort((a, b) => a.distance - b.distance || a.path.localeCompare(b.path))"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 592,
+          "endLine": 598,
+          "source": "                  wrapLabel\n                  onClick={() => onPickSuggestion(s.path)}\n                  className=\"w-full justify-between border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]\"\n                >\n                  <span className=\"flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-start\">\n                    <span className=\"min-w-0 break-words\">{t(s.i18nKey, s.label)}</span>\n                    <Caption className=\"break-all\">{s.path}</Caption>"
+        }
+      ],
+      "verification": "NOTRUN"
+    },
+    {
+      "id": "C05",
+      "classification": "NATIVE_ONLY",
+      "title": "Composed matrix unverified",
+      "detail": "No mounted route/device/browser/capture/contrast/screen-reader/keyboard/forced-colors/RTL/200% text/allocated-container/viewport check. Source classes and historical declarations are not application acceptance.",
+      "owner": "separately authorized QA",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 64,
+          "endLine": 66,
+          "source": "\n/** Full-width card-grid reflow with a readable minimum card width. */\nconst CARD_GRID ="
+        },
+        {
+          "file": "web/src/components/ui/Drawer.tsx",
+          "line": 126,
+          "endLine": 132,
+          "source": "        className={cn(\n          'absolute top-0 bottom-[var(--shell-chrome-bottom)] flex w-full max-w-none flex-col glass-panel rounded-none border-0 shadow-e3',\n          DRAWER_WIDTHS[size],\n          side === 'right' ? 'right-0 border-l border-[var(--border-default)]' : 'left-0 border-r border-[var(--border-default)]',\n          className,\n        )}\n      >"
+        },
+        {
+          "file": "web/src/components/motion/FadeIn.tsx",
+          "line": 23,
+          "endLine": 33,
+          "source": "export function FadeIn({ children, delay = 0, className = '' }: FadeInProps) {\n  const { reduce, durationMs } = useMotionPreference(400)\n  // framer-motion never resolves a transition with a non-finite delay, which\n  // would strand `children` at the initial `opacity: 0` (invisible). Coerce a\n  // bad computed delay to 0, and skip it altogether under reduced motion.\n  const safeDelay = reduce || !Number.isFinite(delay) ? 0 : Math.max(0, delay)\n  return (\n    <motion.div\n      initial={reduce ? false : { opacity: 0, y: 12 }}\n      animate={{ opacity: 1, y: 0 }}\n      transition={{ duration: durationMs / 1000, delay: safeDelay, ease: 'easeOut' }}"
+        }
+      ],
+      "verification": "NOTRUN"
+    }
+  ],
+  "objectiveCheck": {
+    "existingArtifactBefore": "ABSENT C05/C06",
+    "queue": {
+      "file": "migration-queue.md",
+      "line": 272,
+      "endLine": 272,
+      "source": "| [~] | 6 | phase6-qa-explore-explore | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-explore-explore.json; web\\logs\\phase6-qa-explore-explore.log | phase5-page-explore-explore | 1 | reserved02:37:46.371Z; actor pending | - | ExplorePage/direct supports, only source-declared synthetic contracts. |",
+      "priorLine": 252
+    },
+    "dependency": {
+      "file": "migration-queue.md",
+      "line": 2251,
+      "endLine": 2251,
+      "source": "| [x] | 5 | phase5-page-explore-explore | original-page-migration | web\\src\\features\\explore\\pages\\ExplorePage.tsx; web\\src\\features\\explore\\pages\\ExplorePage.test.tsx | - | 1 | actual terminal/scope/log intake andsource release | 4a361965fa9dff4e96968976b46a2417d30dba9a | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/explore; audit=docs\\frontend-audits\\audit-page-130.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require parent claim. Read session phase5-page-worker-instructions.txt. Actual worker=16595c35-8863-4a79-a0d3-2b99479401de; lifecycle=terminalexternalmodel408/connecttimeout,0turns;noSourceWork/noattemptcharged,claimreleased. Independent originalpage firstreal sourceattempt1 reserved after Onboarding partialintake; old0turnmodel408 uncharged. Exactpage/testonly, no shared/catalog/native scope. Actualactor=ee953d3d-5956-4201-a9be-5a0ba0c48679, health running294s; LastConsumed=-1, original20/25min clock. Currentindividualdelivery: Restrainedsurfaces/native-linkfocus/neutralunderlinehighlight/translatedsuggestions+3tests; page624vs623/fivesections/original758linetestprefixbyteidentical; lint0/ninecase-sensitivescans0/hooks/cache/trust/header retained. ActualVitest1 after132.17s external5artifactguard/ZEROexecuted, NOTpass. No newkeys; ONEparentroot; featureCatalog description/localization/nav and locale-timezone freshness originalISO obligations remain separatelyowned. Writesreleased/no commands.  Status=[x]/attempt1 unchanged. Source-only external0tests NOTbehavior/native/fullgate; actualnamedscopedproof ifspecified. Actualcommit=4a361965fa9dff4e96968976b46a2417d30dba9a pushed=true. |",
+      "priorLine": 2231
+    },
+    "decision": "Finished source migration is not this distinct Phase6 QA objective; no remigration"
+  },
+  "deduplication": {
+    "method": "Repeated exact file-owner/objective queue searches; no queue writes",
+    "priorAuditCarried": [
+      "F01",
+      "F02",
+      "F04",
+      "F05",
+      "F06",
+      "F07"
+    ],
+    "completedObjectivesNotRequeued": [
+      {
+        "file": "migration-queue.md",
+        "line": 1539,
+        "endLine": 1539,
+        "source": "| [x] | 3 | phase3-full-test-explore-review-metadata-fixtures | integration | web\\src\\features\\explore\\pages\\ExplorePage.test.tsx | - | 2 | 2026-10-10T02:32:59.127Z | see archived receipts | - / 2 / 2026-10-10T02:32:59.127Z / ONE untouched coherent Explore review metadata duplicate fixture group. Own ONLY web\\src\\features\\explore\\pages\\ExplorePage.test.tsx originalSHA11f0f9fbaf526208d69e45d0253005bfec636e315f16bd1ee6ba1cbbb4f319d0. Frozen only1failingcase logs\\phase3-877-explore-frozen2.log: drawer scope duplicates header Caption span and fleet metric context div. Same adjacent freshness assertion also duplicates by shipping ExplorePage.tsx L201 scopeLabel/freshnessLabel context and L237-238 header props. ONLY insert , { selector: '[data-drawer-header] span' } into TWO within(drawer).getByText string queries: Visible catalog and returned fleet list · no date window; Fleet last loaded: 2026-10-06T22:00:00.000Z. Preserve original strings/default exact/dialog/positive matchers/filter/URL/metrics/provenance/limits/close/focus/routes and allotherbytes. Earlier within(overview).getAllByText remain unchanged. No shipping changes/removing legitimate context/no weakening/allby or new cases. PageSHA98629fdbecca0fb6aa890e98a3acb0cd530ff8cb21295987a163fe427eda977cc; OperationalBrief/Drawer pins same physics/daylogaccepted. Exact2UTF8insertions/inverses unchanged calls/assertions/cases/lines/sections; expected8optionsASTnodes. Once ONLY owned Vitest forks maxWorkers2 then strictownedESLint max-warnings0; redirectedlogs; honest native/SDK exits/hashclosure/identity limits. Max2attempts STOP different failure no widening/rerun. Actual877DONE458/compiler870PASSnext885/sevenexhaustedunwaived/fullgateFAILED/buildNOTRUN.; actor context idle verified 2026-10-10T02:32:58.440Z: Blocked terminal consumed once;parentSDK195exit0 26closedhashes unchanged source zero validation;malformed65char parent shipping pin rootcause. Captured runner absent/unrelatedreuseuntouched;rapid native publisher PID24848exit1 identity unavailable explicitly not absent. Sourcelease released for same-row final attempt.; failure=Attempt1 STOP PREEDIT: parent transcribed shipping pin with extra c;sourceunchanged/zeroVitestESLint. Actual shippingSHA VERIFIED SDK194 98629fdbeca0fb6aa890e98a3acb0cd530ff8cb21295987a163fe427eda977cc (64hex), authoritative replacement for invalid65char earlier PageSHA. Preserve attempt1report/manifest/failedpublication logs SDK188exit1/190exit1/193closureexit0. Same row retry max2 no equivalent thirditem;next FINALattempt2 uses correct64hex shippingpin and same2insertions/ownership/alloriginal constraints.; actor=0b04d096-dbe1-430e-b91f-551f9763d51e; actor context idle verified 2026-10-10T02:38:18.206Z: Finalattempt2 terminalidle consumed once;parentSDK206exit0 exact2UTF8insertions/inverses allotherbytes preserved873calls196assertions36directcases4parameterizeddeclarations46runtimecases759splitlines;AST5488to5496 optionsonly. 59hashes3terminalartifactsclosed7capturedidentities absent/reuseuntouched;46PASS/nativeVitestSDK200exit0/ownedESLintSDK202exit0emptyraw once;publisher203exit0finalizer204exit0 immutablevalidationrunnerverified. Uncaptured ancestry/children/OSstructuredargv/cwd explicitly disclosed;attempt1 malformed parentpin/failure preserved;lease released.; Accepted actual884/DONE459 parentSDK206exit0 logs\\phase3-full-test-explore-review-metadata-fixtures-attempt2-parent-final-intake.json exact2header-span scope/freshnessselectors only retaining strings/default/dialog/positive/earlieroverviewqueries/filterURL/focus/provenance/context. FinalSHA1d4ddfcf9cf70ad2b57d53bdb24203b38bf6ddce5498b42e653a0c5bd0d9ac8f. Compiler870PASSnext885;sevenexhaustedunwaived/fullgateFAILED/buildNOTRUN. |",
+        "priorLine": 1519
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 855,
+        "endLine": 855,
+        "source": "| [x] | 6 | phase6-native-drives-trend-control-allocation | measured-native-chart-control-fix | web\\src\\components\\charts\\MetricSwitcherChart.tsx; web\\src\\components\\charts\\MetricSwitcherChart.test.tsx; web\\src\\components\\forms\\PillFilterBar.tsx; web\\src\\components\\forms\\__tests__\\PillFilterBar.test.tsx | phase3-chart-container,primitive-button | 2 | actualactor=7d6fef62-30b0-4790-808e-592099ddf7ea; attempt2 release15:52:49.674Z; turns1/2/3 consumed; ALL claims released; old attempt1 retained | 1140cdaac130a06c717e1e170996daf5aece2a01 | Same measured36px/clipped trend failure, exactfourfile shared corrective scope. Threeclass changes implement fullrow bounded/shrinkable chartallocation and realPillFilterBar44px belowmd with md36/auto restoration, no descendantAPI/globalButton/header edits. All originalassertion expressions/source behavior retained; strictlint/ownedtyping0. Initial3fileJSON34executed/32pass/2fail, numericcommandexitunknown after180sspawn timeout. Ownnestedcharttestregistration and formsCSSreducedmotion/media filtering corrected; finalcorrected runner emitted no freshreport and was stopped at14:44:54 boundary, NOTRUN/NOTPASS, causeunknown. ExtraCSSrelativeconfigloadfailed1; rgENOENT/null and caseinsensitiveButton falsepositives retained, correctedbuiltin/rawscans noeligiblefindings; existingcanonicalrecharts allowed. Preservationexit2 is unchangeddynamicPillidentity/unresolved, notpass. Exact4paths WIP e75e98460 preserved. Superseding actual attempt2 direct initial27executed/26pass/1fail/native1; actual clickevent oracle fixed, freshchart8/8/native0 plus unchangedforms19/19 reused validates27unique, NOTonegreen27command. Rawlog/twofreshJSON/fourSHA checked; strictlint/ownedfixturetyping0, parentexacttestdiff committed/pushed1140cdaac. Requirementnames: bounds the five metric trend allocation and reflows caller actions below md; generates 44px touch minima below md and restores original md density; moves real roving focus and controlled selection with Left Right Home and End. SOURCE accepted only, native/global/fullpilot NOTRUN; original scanner/preservation findings not rewritten or magically passed. |",
+        "priorLine": 835
+      }
+    ],
+    "fixedHistoricalIssues": [
+      "Semantic card surfaces replace fixed-white remnants",
+      "Neutral underlined highlights replace primary25",
+      "Suggested names translated",
+      "Category/review/retained retry mobile44 source allocation",
+      "Drawer metadata fixture header selectors narrowed"
+    ]
+  },
+  "artifactOwnership": [
+    "docs/frontend-audits/phase6-qa-explore-explore.json",
+    "web/logs/phase6-qa-explore-explore.log"
+  ],
+  "release": {
+    "state": "RELEASED",
+    "at": "2026-10-14T02:56:17.903258+00:00",
+    "artifacts": [
+      "docs/frontend-audits/phase6-qa-explore-explore.json",
+      "web/logs/phase6-qa-explore-explore.log"
+    ],
+    "sourceWrites": "NONE; source/test/catalog/queue/Git never claimed",
+    "commands": "RELEASED after this bounded command; no background/service/helper/test command started; no commands left running by this worker",
+    "acceptance": "No application/native acceptance; overall PARTIAL input-pin/command-log gate"
+  },
+  "dataSources": [
+    {
+      "name": "Catalog",
+      "hook": "buildFeatureCatalog",
+      "owner": "web/src/features/explore/featureCatalog.ts",
+      "endpoint": null,
+      "evidence": [
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 25,
+          "endLine": 25,
+          "source": "import { navSections } from '@/components/layout/Layout';"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 307,
+          "endLine": 329,
+          "source": "  for (const section of navSections) {\n    for (const raw of section.items) {\n      const item = raw as NavItem & {\n        minVehicles?: number;\n        requiresAuth?: boolean;\n      };\n      out.push({\n        to: item.to,\n        label: item.label,\n        labelKey: item.labelKey,\n        section: section.title,\n        sectionKey: section.titleKey,\n        icon: item.icon,\n        color: item.color,\n        description:\n          DESCRIPTIONS[item.to] ??\n          `Open ${item.label}.` /* visible fallback so the page never breaks */,\n        minVehicles: item.minVehicles,\n        requiresAuth: item.requiresAuth,\n      });\n    }\n  }\n  return out;"
+        }
+      ],
+      "trust": "Local derived navigation, not telemetry/auth enforcement"
+    },
+    {
+      "name": "Fleet list",
+      "hook": "useVehicles",
+      "owner": "web/src/api/hooks/useVehicles.ts",
+      "endpoint": "/vehicles -> /api/v1/vehicles",
+      "key": [
+        "vehicles"
+      ],
+      "policy": "AbortSignal; FAST30000ms; safeArray; no page range/selected-vehicle filter",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useVehicles.ts",
+          "line": 73,
+          "endLine": 80,
+          "source": "export function useVehicles() {\n  return useQuery({\n    queryKey: vehicleKeys.all,\n    queryFn: ({ signal }) => request<Vehicle[]>('/vehicles', { signal }),\n    staleTime: STALE_TIMES.FAST,\n    select: safeArray,\n  });\n}"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "line": 90,
+          "endLine": 95,
+          "source": "export function apiUrl(path: string): string {\n  const demoBase = getDemoApiBase()\n  if (demoBase !== null) return `${demoBase}${normalizePath(path)}`\n  return `${getApiBase()}/api/v1${normalizePath(path)}`\n}\n"
+        },
+        {
+          "file": "internal/api/router.go",
+          "line": 3362,
+          "endLine": 3363,
+          "source": "\t\tr.Route(\"/vehicles\", func(r chi.Router) {\n\t\t\tr.Get(\"/\", vehicleHandler.List)"
+        }
+      ],
+      "limits": "Only route registration; no handler/auth/completeness/pagination guarantee"
+    },
+    {
+      "name": "Auth mode",
+      "hook": "useIsForwardAuth -> useAuthMode",
+      "owner": "web/src/api/hooks/useAuthMode.ts",
+      "endpoint": "/system/auth-mode",
+      "key": [
+        "auth",
+        "mode"
+      ],
+      "policy": "AbortSignal;300000ms stale; no interval/focus refetch; boolean-only consumption",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useAuthMode.ts",
+          "line": 59,
+          "endLine": 80,
+          "source": "    queryKey: authModeKeys.all,\n    queryFn: ({ signal }) => request<AuthModeResponse>('/system/auth-mode', { signal }),\n    staleTime: AUTH_MODE_STALE_MS,\n    refetchOnWindowFocus: false,\n    refetchInterval: false,\n  })\n}\n\n/**\n * Convenience boolean. Returns `true` ONLY when the contract has\n * resolved to `mode === 'forward_auth'`. While the query is loading\n * (or has errored) the value is `false` so consumers default to the\n * safe \"no auth\" rendering — features wrapped in <RequiresAuth>\n * therefore briefly show their placeholder rather than briefly\n * showing their content and then yanking it away.\n */\nexport function useIsForwardAuth(): boolean {\n  const { data } = useAuthMode()\n  return data?.mode === 'forward_auth'\n}\n\n/**"
+        },
+        {
+          "file": "internal/api/router.go",
+          "line": 4418,
+          "endLine": 4418,
+          "source": "\t\t\t\tGet(\"/auth-mode\", systemAuthModeHandler.ServeHTTP)"
+        }
+      ],
+      "limits": "Deployment-mode gate is not per-request authorization proof"
+    },
+    {
+      "name": "Display preferences",
+      "hook": "useOperationalMetrics -> useUnits/useFormatting -> useSettings",
+      "endpoint": "/settings",
+      "key": [
+        "settings"
+      ],
+      "evidence": [
+        {
+          "file": "web/src/hooks/useOperationalMetrics.tsx",
+          "line": 11,
+          "endLine": 24,
+          "source": "export function useOperationalMetrics(\n  metrics: readonly StatMetric[], preferences?: MetricPreferences,\n): readonly OperationalBriefMetric[] {\n  const { t } = useTranslation();\n  const { unitPrefs } = useUnits();\n  const { currencySymbol } = useFormatting();\n  const effective = useMemo<MetricPreferences>(() => preferences ?? {\n    units: unitPrefs,\n    currency: { kind: 'symbol', value: currencySymbol },\n  }, [preferences, unitPrefs, currencySymbol]);\n\n  return useMemo(() => formatOperationalMetrics(metrics, effective, (key, fallback) => t(key, fallback)),\n    [metrics, effective, t]);\n}"
+        },
+        {
+          "file": "web/src/hooks/useSettings.ts",
+          "line": 82,
+          "endLine": 91,
+          "source": "  const query = useQuery({\n    queryKey: ['settings'],\n    queryFn: getSettings,\n    staleTime: 5 * 60 * 1000,\n    refetchOnMount: 'always',\n    retry: 1,\n  })\n  const { data: settings, refetch } = query\n  const settingsState = useDataState(query)\n  const settingsUnavailable = !settingsState.hasData || settings == null"
+        },
+        {
+          "file": "web/src/api/settings.ts",
+          "line": 22,
+          "endLine": 24,
+          "source": "// === Settings ===\n/** Fetches current application settings (units, language, cost). */\nexport const getSettings = () => request<AppSettings>('/settings')"
+        }
+      ],
+      "trust": "Defaults while missing; retained cached preferences; only integer counts consumed, no cost estimates. getSettings signature does not establish cancellation."
+    },
+    {
+      "name": "URL/suggestions",
+      "endpoint": null,
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 117,
+          "endLine": 129,
+          "source": "  const updateQuery = (next: string) => {\n    const params = new URLSearchParams(searchParams);\n    if (next) params.set('q', next);\n    else params.delete('q');\n    setSearchParams(params, { replace: true });\n  };\n  const updateSection = (next: string) => {\n    const params = new URLSearchParams(searchParams);\n    if (next === 'all') params.delete('section');\n    else params.set('section', next);\n    setSearchParams(params, { replace: true });\n  };\n"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 541,
+          "endLine": 566,
+          "source": "  // (so we pick up hidden pages too) and (b) catalog labels (so we match\n  // the user's mental model). De-dupe by path; honor the catalog's\n  // visibility gates so we never suggest a hidden page.\n  const visiblePaths = useMemo(() => new Set(catalog.map((c) => c.to)), [catalog]);\n  const suggestions = useMemo(() => {\n    const fromRegistry = closestRoutes(query, ROUTE_REGISTRY, 5);\n    const fromLabels = closestRoutes(\n      query,\n      catalog.map((c) => ({\n        path: c.to,\n        name: c.label.replace(/\\s+/g, ''),\n        label: c.label,\n        i18nKey: c.labelKey,\n      })),\n      5,\n    );\n    const seen = new Set<string>();\n    const merged: typeof fromRegistry = [];\n    for (const r of [...fromRegistry, ...fromLabels]) {\n      if (!visiblePaths.has(r.path)) continue;\n      if (seen.has(r.path)) continue;\n      seen.add(r.path);\n      merged.push(r);\n    }\n    merged.sort((a, b) => a.distance - b.distance);\n    return merged.slice(0, 5);"
+        }
+      ],
+      "trust": "Local filters and inferred edit distance; no mutation"
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "OperationalBrief -> Drawer",
+    "PillFilterBar pressed-filters mode",
+    "Input/Button/GlassPanel/Badge/Typography",
+    "StaleRefreshWarning",
+    "FadeIn/useMotionPreference",
+    "Local SectionFilter/SectionBand/FeatureCard/Highlight/EmptyResult"
+  ],
+  "sectionWalkthrough": [
+    {
+      "name": "Feature overview brief and attention",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 227,
+          "endLine": 253,
+          "source": "        {/* Catalog counts remain usable independently of the fleet source. */}\n        <FadeIn>\n          <OperationalBrief\n            compact\n            testId=\"explore-operational-brief\"\n            eyebrow={t('explore.brief.eyebrow', 'Feature discovery')}\n            title={t('explore.overview', 'Feature overview')}\n            description={t('explore.brief.description', 'Catalog counts follow visibility gates; showing follows your search and category. Fleet availability is independent of catalog navigation.')}\n            statusLabel={statusLabels[sourceStatus]}\n            statusTone={sourceStatus === 'ready' ? 'neutral' : 'warning'}\n            metrics={operationalMetrics}\n            scope={<Caption>{scopeLabel}</Caption>}\n            freshness={<Caption>{freshnessLabel}</Caption>}\n            provenance={t('explore.brief.provenance', 'Local navigation catalog, authentication mode, and the vehicles query snapshot. Catalog counts are derived, not vehicle telemetry.')}\n            attention={sourceStatus === 'unavailable' || sourceStatus === 'pending' || sourceStatus === 'offline'\n              ? [{\n                key: 'fleet-source',\n                title: statusLabels[sourceStatus],\n                description: vehicles == null\n                  ? t('explore.brief.vehiclesMissing', 'No fleet list is available; vehicle-gated destinations remain hidden.')\n                  : t('explore.brief.offlineRetained', 'Fleet refresh is paused; retained vehicles still determine destination eligibility.'),\n                tone: 'warning',\n              }]\n              : []}\n          />\n          <StaleRefreshWarning state={fleetState} label={t('explore.kpi.vehicles', 'Vehicles')} />\n        </FadeIn>"
+        }
+      ],
+      "dataLineage": "Catalog after vehicle/auth gates -> Features/Categories; filtered group intersection -> Showing; returned fleet length -> Vehicles; four dimensionless raw counts.",
+      "states": "Local counts persist through fleet pending/failure; unknown fleet missing, not zero; retained eligibility survives. F01-F03 apply.",
+      "actions": "Review details; retained Refresh"
+    },
+    {
+      "name": "Search and wrapping category controls",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 255,
+          "endLine": 297,
+          "source": "        {/* Match the rule-template gallery: labeled search, outlined category\n            buttons, and a visible count of results. */}\n        <div\n          data-testid=\"explore-search-panel\"\n        >\n          <GlassPanel className=\"p-4 sm:p-5\">\n            <Input\n              id=\"explore-search\"\n              label={t('explore.searchLabel', 'Filter features')}\n              ref={inputRef}\n              type=\"search\"\n              autoComplete=\"off\"\n              value={query}\n              onChange={(e) => updateQuery(e.target.value)}\n              placeholder={t(\n                'explore.searchPlaceholder',\n                'Filter features by name, section, or description (press / to focus)',\n              )}\n              aria-label={t('explore.searchLabel', 'Filter features')}\n              icon={<Icons.search className=\"h-4 w-4\" aria-hidden=\"true\" />}\n              data-testid=\"explore-search\"\n            />\n            {allGroups.length > 0 && (\n              <SectionFilter\n                groups={allGroups.map((g) => ({\n                  section: g.section,\n                  sectionKey: g.sectionKey,\n                  count: g.entries.length,\n                }))}\n                total={filtered.length}\n                selected={selectedSection}\n                onSelect={updateSection}\n              />\n            )}\n            <Caption role=\"status\" className=\"mt-4 block\">\n              {t('explore.showing', '{{count}} of {{total}} features', {\n                count: matchCount,\n                total: totalFeatures,\n              })}\n            </Caption>\n          </GlassPanel>\n        </div>\n"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 117,
+          "endLine": 129,
+          "source": "  const updateQuery = (next: string) => {\n    const params = new URLSearchParams(searchParams);\n    if (next) params.set('q', next);\n    else params.delete('q');\n    setSearchParams(params, { replace: true });\n  };\n  const updateSection = (next: string) => {\n    const params = new URLSearchParams(searchParams);\n    if (next === 'all') params.delete('section');\n    else params.set('section', next);\n    setSearchParams(params, { replace: true });\n  };\n"
+        }
+      ],
+      "dataLineage": "q/section URL -> translated/English AND-token/exact-section search -> ordered groups -> pressed filters. Individual changes preserve other URL params and replace history.",
+      "states": "Search stays usable independently. Filter control visible only with matching groups is intentional filter visibility, not source-null deletion.",
+      "actions": "Search edit; category/All; slash focus"
+    },
+    {
+      "name": "All categorized result bands",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 319,
+          "endLine": 332,
+          "source": "                  query={query}\n                  onNavigate={(to) => navigate(to)}\n                />\n              ))}\n            </div>\n          )}\n        </FadeIn>\n      </div>\n    </PageLayout>\n  );\n}\n\n// ─── Category filter ────────────────────────────────────────────────\n"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 379,
+          "endLine": 405,
+          "source": "  const { t } = useTranslation();\n  return (\n    <section\n      id={`explore-section-${slugify(section)}`}\n      aria-labelledby={`explore-section-heading-${slugify(section)}`}\n      className=\"scroll-mt-24\"\n    >\n      <div className=\"mb-3 flex items-baseline justify-between gap-3\">\n        <SectionTitle id={`explore-section-heading-${slugify(section)}`} className=\"min-w-0 break-words\">\n          {t(sectionKey, section)}\n        </SectionTitle>\n        <Badge variant=\"neutral\" size=\"sm\" className=\"shrink-0 tabular-nums\">\n          {entries.length}\n        </Badge>\n      </div>\n      <ul className={CARD_GRID} data-testid={`explore-section-${slugify(section)}`}>\n        {entries.map((entry) => (\n          <FeatureCard\n            key={entry.to}\n            entry={entry}\n            query={query}\n            onNavigate={onNavigate}\n          />\n        ))}\n      </ul>\n    </section>\n  );"
+        },
+        {
+          "file": "web/src/features/explore/featureCatalog.ts",
+          "line": 307,
+          "endLine": 351,
+          "source": "  for (const section of navSections) {\n    for (const raw of section.items) {\n      const item = raw as NavItem & {\n        minVehicles?: number;\n        requiresAuth?: boolean;\n      };\n      out.push({\n        to: item.to,\n        label: item.label,\n        labelKey: item.labelKey,\n        section: section.title,\n        sectionKey: section.titleKey,\n        icon: item.icon,\n        color: item.color,\n        description:\n          DESCRIPTIONS[item.to] ??\n          `Open ${item.label}.` /* visible fallback so the page never breaks */,\n        minVehicles: item.minVehicles,\n        requiresAuth: item.requiresAuth,\n      });\n    }\n  }\n  return out;\n}\n\n/** Group a flat catalog by section, preserving navSections order. */\nexport function groupFeatureCatalog(\n  entries: FeatureCatalogEntry[],\n): { section: string; sectionKey: string; entries: FeatureCatalogEntry[] }[] {\n  const order = navSections.map((s) => s.title);\n  const buckets = new Map<string, FeatureCatalogEntry[]>();\n  for (const e of entries) {\n    const bucket = buckets.get(e.section);\n    if (bucket) bucket.push(e);\n    else buckets.set(e.section, [e]);\n  }\n  return order\n    .filter((title) => buckets.has(title))\n    .map((title) => {\n      const bucket = buckets.get(title)!;\n      return { section: title, sectionKey: bucket[0].sectionKey, entries: bucket };\n    });\n}\n\n/**"
+        }
+      ],
+      "dataLineage": "Every22 static group and199 destination from existing navSections; one shell for each eligible match group; stable slug IDs and translated headings, badge, ul/li/native links.",
+      "states": "Gate/filter omission has explicit empty alternative. No new data, zero placeholders or fabricated destinations.",
+      "actions": "Plain SPA/native feature click; cmd/ctrl/shift/middle behavior retained"
+    },
+    {
+      "name": "No-match explanation/suggestions/clear",
+      "evidence": [
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 303,
+          "endLine": 313,
+          "source": "              query={query}\n              catalog={visibleCatalog}\n              onPickSuggestion={(to) => {\n                setSearchParams({}, { replace: true });\n                navigate(to);\n              }}\n              onClear={() => setSearchParams({}, { replace: true })}\n            />\n          ) : (\n            <div className=\"space-y-8\">\n              {grouped.map(({ section, sectionKey, entries }) => ("
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 541,
+          "endLine": 566,
+          "source": "  // (so we pick up hidden pages too) and (b) catalog labels (so we match\n  // the user's mental model). De-dupe by path; honor the catalog's\n  // visibility gates so we never suggest a hidden page.\n  const visiblePaths = useMemo(() => new Set(catalog.map((c) => c.to)), [catalog]);\n  const suggestions = useMemo(() => {\n    const fromRegistry = closestRoutes(query, ROUTE_REGISTRY, 5);\n    const fromLabels = closestRoutes(\n      query,\n      catalog.map((c) => ({\n        path: c.to,\n        name: c.label.replace(/\\s+/g, ''),\n        label: c.label,\n        i18nKey: c.labelKey,\n      })),\n      5,\n    );\n    const seen = new Set<string>();\n    const merged: typeof fromRegistry = [];\n    for (const r of [...fromRegistry, ...fromLabels]) {\n      if (!visiblePaths.has(r.path)) continue;\n      if (seen.has(r.path)) continue;\n      seen.add(r.path);\n      merged.push(r);\n    }\n    merged.sort((a, b) => a.distance - b.distance);\n    return merged.slice(0, 5);"
+        },
+        {
+          "file": "web/src/features/explore/pages/ExplorePage.tsx",
+          "line": 568,
+          "endLine": 616,
+          "source": "\n  return (\n    <GlassPanel className=\"p-6 text-center sm:p-8\" data-testid=\"explore-empty\">\n      <Icons.search className=\"mx-auto h-6 w-6 text-[var(--text-muted)]\" aria-hidden=\"true\" />\n      <SectionTitle className=\"mt-3\">\n        {t('explore.empty.title', 'No features match \"{{query}}\"', { query })}\n      </SectionTitle>\n      <Text as=\"p\" variant=\"bodySm\" className=\"mx-auto mt-1 max-w-md\">\n        {t(\n          'explore.empty.body',\n          'Try a different word, or open the command palette (⌘K) to search across pages, settings, and actions.',\n        )}\n      </Text>\n\n      {suggestions.length > 0 && (\n        <div className=\"mt-5 text-left\" data-testid=\"explore-empty-suggestions\">\n          <Text as=\"p\" variant=\"label\" className=\"mb-2 text-center\">\n            {t('explore.empty.didYouMean', 'Did you mean')}\n          </Text>\n          <ul className=\"mx-auto flex max-w-md flex-col gap-1\">\n            {suggestions.map((s) => (\n              <li key={s.path}>\n                <Button\n                  variant=\"ghost\"\n                  wrapLabel\n                  onClick={() => onPickSuggestion(s.path)}\n                  className=\"w-full justify-between border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] hover:bg-[var(--surface-2)]\"\n                >\n                  <span className=\"flex min-w-0 flex-wrap items-baseline justify-between gap-x-3 gap-y-1 text-start\">\n                    <span className=\"min-w-0 break-words\">{t(s.i18nKey, s.label)}</span>\n                    <Caption className=\"break-all\">{s.path}</Caption>\n                  </span>\n                </Button>\n              </li>\n            ))}\n          </ul>\n        </div>\n      )}\n\n      <Button\n        variant=\"secondary\"\n        size=\"sm\"\n        wrapLabel\n        onClick={onClear}\n        className=\"mt-5\"\n      >\n        {t('explore.empty.clear', 'Clear filter')}\n      </Button>\n    </GlassPanel>"
+        }
+      ],
+      "dataLineage": "Registry+catalog fallback-label scores -> eligible visiblePaths intersection -> path dedupe -> sort distance -> first5; suggestion names translated, paths raw.",
+      "states": "Filter no-match distinct from fleet-empty/fatal. F06 inaccurate category-only reason; C04 localized typo ranking conditional.",
+      "actions": "Suggestion clears URL search then navigates; Clear resets all search parameters; command-palette guidance only text"
+    },
+    {
+      "name": "Evidence/details drawer",
+      "evidence": [
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "line": 247,
+          "endLine": 320,
+          "source": "        open={detailsOpen}\n        onClose={() => setDetailsOpen(false)}\n        title={t('operations.detailTitle', '{{title}} details', { title })}\n        description={description}\n        headerMeta={\n          <>\n            <Badge variant={statusTone} dot>{statusLabel}</Badge>\n            {renderMetadata(scope)}\n            {renderMetadata(freshness)}\n          </>\n        }\n      >\n        <div className=\"space-y-6\">\n          <OperationalNarrativeDetails narrative={resolvedNarrative} />\n\n          <div className=\"space-y-3\">\n            <PanelTitle>{t('operations.metrics', 'Operational metrics')}</PanelTitle>\n            {metrics.map((metric) => (\n              <div\n                key={metric.key}\n                className=\"rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3\"\n              >\n                <div className=\"flex min-w-0 flex-wrap items-baseline justify-between gap-3\">\n                  <MetricLabel>{metric.label}</MetricLabel>\n                  <Text\n                    as=\"span\"\n                    size=\"sm\"\n                    weight=\"bold\"\n                    aria-busy={(metric.loading ?? loading) || undefined}\n                    className={cn('min-w-0 break-words tabular-nums', TONE_TEXT[metric.tone ?? 'neutral'])}\n                  >\n                    {(metric.loading ?? loading) ? (\n                      <span aria-hidden=\"true\" className=\"block h-5 w-20 max-w-full rounded bg-[var(--surface-3)]\" />\n                    ) : metric.value}\n                  </Text>\n                </div>\n                <Text as=\"div\" size=\"xs\" color=\"muted\" className=\"mt-1\">\n                  {metric.detail}\n                </Text>\n              </div>\n            ))}\n          </div>\n\n          <div className=\"space-y-3\">\n            <PanelTitle>{t('operations.attention', 'Attention')}</PanelTitle>\n            {attention.length > 0 ? (\n              attention.map((item) => (\n                <div\n                  key={item.key}\n                  className=\"rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3\"\n                >\n                  <Text\n                    as=\"p\"\n                    size=\"sm\"\n                    weight=\"semibold\"\n                    className={TONE_TEXT[item.tone ?? 'info']}\n                  >\n                    {item.title}\n                  </Text>\n                  <Text as=\"p\" size=\"xs\" color=\"muted\" className=\"mt-1\">\n                    {item.description}\n                  </Text>\n                </div>\n              ))\n            ) : (\n              <Text as=\"p\" variant=\"bodySm\">\n                {t('operations.noAttention', 'No current attention items.')}\n              </Text>\n            )}\n          </div>\n        </div>\n      </Drawer>\n    </>\n  )"
+        }
+      ],
+      "dataLineage": "Same raw metrics/status/scope/freshness plus source-derived fallback narrative with not_scored confidence. No invented confidence/independent query.",
+      "states": "Retains rich metric context during refresh/error/pause; attention section explicit no-attention fallback.",
+      "actions": "Review details open; real shared close icon/footer/Escape/backdrop, focus/scroll contracts source-only"
+    }
+  ],
+  "states": {
+    "nullUnknown": "Undefined fleet -> em dash/missing; conservative zero only for gates; local navigation retained. Successful null coercion C03 is conditional.",
+    "loading": "Fleet pending attention without global gate; auth pending not exposed F02.",
+    "error": "Initial fleet unavailable no retry F01; independent results survive.",
+    "empty": "[] -> measured Vehicles0; compare hidden; catalog survives. Filter miss owns suggestions/clear F06.",
+    "paused": "Retained eligibility persists; page wrongly claims offline F03; shared warning now avoids that claim.",
+    "retained": "Refresh error keeps payload/filter/last-success time; warning offers source retry when available.",
+    "refreshing": "Retained values + Fleet refreshing; no destructive gate.",
+    "partial": "No partial-list/completeness metadata supplied; do not infer historical full total."
+  },
+  "SIAndPreferences": {
+    "raw": "Four dimensionless counts; no physical measurement/sign conversion or telemetry chart.",
+    "zero": "Real fleet[] and no-match Showing0 stay values; unknown fleet remains undefined.",
+    "numeric": "formatMetric validates finite nonnegative safe integer and uses saved locale,0 fraction digits; filter counts reactive fmtInt.",
+    "date": "F05 ISO UTC bypass; query success time is not observation time.",
+    "persistence": "Stable q/section/slug identities; no preference reset/write.",
+    "scope": "No date window or second workspace picker; fleet is returned list, not selected vehicle. Header picker intent C02."
+  },
+  "responsive": {
+    "source": "1/sm2/lg3/2xl4/3xl5 cards; wrapping controls; min-w-0/break-words descriptions/paths; drawer body contained scroll and shell chrome offset; no metadata deletion",
+    "groups": [
+      {
+        "line": 185,
+        "name": "Home"
+      },
+      {
+        "line": 198,
+        "name": "Vehicles"
+      },
+      {
+        "line": 216,
+        "name": "Driving"
+      },
+      {
+        "line": 254,
+        "name": "Charging"
+      },
+      {
+        "line": 271,
+        "name": "Battery"
+      },
+      {
+        "line": 289,
+        "name": "Energy"
+      },
+      {
+        "line": 301,
+        "name": "Cabin"
+      },
+      {
+        "line": 313,
+        "name": "Service"
+      },
+      {
+        "line": 327,
+        "name": "Reports"
+      },
+      {
+        "line": 344,
+        "name": "Commands"
+      },
+      {
+        "line": 353,
+        "name": "Automation"
+      },
+      {
+        "line": 364,
+        "name": "Notifications"
+      },
+      {
+        "line": 375,
+        "name": "Advanced intelligence"
+      },
+      {
+        "line": 393,
+        "name": "Ownership intelligence"
+      },
+      {
+        "line": 409,
+        "name": "Tesla physics"
+      },
+      {
+        "line": 417,
+        "name": "Security"
+      },
+      {
+        "line": 426,
+        "name": "Account"
+      },
+      {
+        "line": 441,
+        "name": "Settings"
+      },
+      {
+        "line": 451,
+        "name": "Integrations"
+      },
+      {
+        "line": 461,
+        "name": "Data"
+      },
+      {
+        "line": 470,
+        "name": "Diagnostics"
+      },
+      {
+        "line": 509,
+        "name": "About"
+      }
+    ],
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "native": "NOTRUN"
+  },
+  "accessibility": {
+    "strengths": [
+      "Explicit localized search ID/name/ref",
+      "Pressed filter group not document tabs",
+      "Heading-linked sections and ul/li native anchors",
+      "Shared focus outlines and forced-color marks",
+      "Escaped regex and React text, no HTML injection",
+      "Existing Drawer focus/labels/close/scroll",
+      "OS OR low-bandwidth motion suppression"
+    ],
+    "issues": [
+      "F07",
+      "C01"
+    ],
+    "verification": "NOTRUN for keyboard/assistive-tech/contrast/targets"
+  },
+  "i18n": {
+    "localized": "Page/brief/filter titles and suggestion display use existing keys/fallbacks; labels/sections search supports translations and English.",
+    "missing": "F04 descriptors and Open fallback; selected filter context displays technical slug.",
+    "scope": "Read relevant Explore subtree and nav/route keys; no full-catalog guard/generation executed",
+    "exploreSubtreeBeforeC11Sha256": "c89711bb7fbf239a104a9fabaec38cc9bb618c2de6130039039b3ef2a1430906",
+    "exploreSubtreeAfterSha256": "c89711bb7fbf239a104a9fabaec38cc9bb618c2de6130039039b3ef2a1430906",
+    "canonicalSplitExploreParity": true
+  },
+  "tests": [
+    {
+      "file": "web/src/features/explore/pages/ExplorePage.test.tsx",
+      "declarationCount": 43,
+      "declarations": [
+        {
+          "line": 164,
+          "declaration": "it('renders the page title, interpolated subtitle, search box, and sets the document title', () => {"
+        },
+        {
+          "line": 185,
+          "declaration": "it('derives the four KPI counters from the visible catalog', () => {"
+        },
+        {
+          "line": 195,
+          "declaration": "it('passes only the original raw counts through the real bridge and preserves count semantics', () => {"
+        },
+        {
+          "line": 217,
+          "declaration": "it('keeps unknown fleet distinct from a successful empty fleet without hiding independent counts', () => {"
+        },
+        {
+          "line": 242,
+          "declaration": "it('formats fleet counts with saved locale while retaining integer raw values', () => {"
+        },
+        {
+          "line": 252,
+          "declaration": "it('opens the built-in details drawer with complete filter, scope and source context, then closes it', () => {"
+        },
+        {
+          "line": 286,
+          "declaration": "it.each(['error', 'paused'] as const)('labels retained fleet evidence honestly during %s while preserving eligibility', mode => {"
+        },
+        {
+          "line": 305,
+          "declaration": "it('reports a failed empty fleet source without replacing the independent discovery results', () => {"
+        },
+        {
+          "line": 317,
+          "declaration": "it('keeps retained counts during an active refresh and closes the actual details drawer with Escape', () => {"
+        },
+        {
+          "line": 336,
+          "declaration": "it('renders each visible section as a landmark band with a heading and one <li> per card', () => {"
+        },
+        {
+          "line": 352,
+          "declaration": "it('renders rectangular category buttons and scopes results via a shareable URL', () => {"
+        },
+        {
+          "line": 367,
+          "declaration": "it('finds visible translated labels and section names without losing English matches', () => {"
+        },
+        {
+          "line": 386,
+          "declaration": "it('filters cards, reflects the query in the URL, and updates the \"Showing\" KPI only', () => {"
+        },
+        {
+          "line": 404,
+          "declaration": "it('hydrates the filter from an initial ?q= in the URL', () => {"
+        },
+        {
+          "line": 412,
+          "declaration": "it('wraps a single matched token in <mark> without touching surrounding markup', () => {"
+        },
+        {
+          "line": 418,
+          "declaration": "it('highlights every token of a multi-word query independently', () => {"
+        },
+        {
+          "line": 429,
+          "declaration": "it('escapes regex metacharacters in the query so highlighting never throws', () => {"
+        },
+        {
+          "line": 440,
+          "declaration": "it('shows a self-contained empty state (no anchor strip) and clears via the button', () => {"
+        },
+        {
+          "line": 455,
+          "declaration": "it('offers a \"did you mean\" suggestion for a near-miss and navigates + clears on pick', () => {"
+        },
+        {
+          "line": 472,
+          "declaration": "it('navigates on a plain left-click of a card', () => {"
+        },
+        {
+          "line": 478,
+          "declaration": "it('lets the browser handle cmd/ctrl-click (opens a new tab, no SPA navigation)', () => {"
+        },
+        {
+          "line": 486,
+          "declaration": "it('hides minVehicles-gated cards below the threshold and reflects the fleet size', () => {"
+        },
+        {
+          "line": 495,
+          "declaration": "it('shows minVehicles-gated cards once the fleet is large enough', () => {"
+        },
+        {
+          "line": 500,
+          "declaration": "it('hides requiresAuth cards in open mode and shows them under forward-auth', () => {"
+        },
+        {
+          "line": 514,
+          "declaration": "it('is null-safe when the vehicles query has no data yet', () => {"
+        },
+        {
+          "line": 523,
+          "declaration": "it('uses pressed filter buttons, not document tabs or arrow-driven selection', () => {"
+        },
+        {
+          "line": 542,
+          "declaration": "it('renders every eligible feature link in catalog order with its complete description and native destination', () => {"
+        },
+        {
+          "line": 557,
+          "declaration": "it('intersects query and category while preserving unrelated URL state and restoring query matches with All', () => {"
+        },
+        {
+          "line": 578,
+          "declaration": "it('recovers an empty category intersection without treating the catalog or fleet as an empty source', () => {"
+        },
+        {
+          "line": 592,
+          "declaration": "it('keeps full long translated labels, stable category identity and complete descriptions in wrapping controls', () => {"
+        },
+        {
+          "line": 614,
+          "declaration": "it('allows a long localized clear action to wrap while preserving empty-result recovery', () => {"
+        },
+        {
+          "line": 626,
+          "declaration": "it('keeps every suggested destination readable within an adaptive action and clears scope on keyboard-generated navigation', () => {"
+        },
+        {
+          "line": 642,
+          "declaration": "it.each(["
+        },
+        {
+          "line": 656,
+          "declaration": "it.each(['paused', 'fetching', 'idle'] as const)("
+        },
+        {
+          "line": 679,
+          "declaration": "it('preserves selected filters and retained fleet eligibility across a refresh failure', () => {"
+        },
+        {
+          "line": 691,
+          "declaration": "it('does not replace independent search results when the fleet source fails without data', () => {"
+        },
+        {
+          "line": 701,
+          "declaration": "it.each([{ ctrlKey: true }, { shiftKey: true }, { button: 1 }])("
+        },
+        {
+          "line": 712,
+          "declaration": "it('accepts a keyboard-generated category activation without implementing tab arrow semantics', () => {"
+        },
+        {
+          "line": 730,
+          "declaration": "it('does not steal slash typing from the actual search input and removes its shortcut on unmount', () => {"
+        },
+        {
+          "line": 746,
+          "declaration": "it('focuses the search box on \"/\" and ignores other keys', () => {"
+        },
+        {
+          "line": 762,
+          "declaration": "it('keeps native feature destinations and keyboard navigation on semantic surfaces with shared focus treatment', () => {"
+        },
+        {
+          "line": 783,
+          "declaration": "it('preserves every dense search hit and complete descriptions with neutral, non-color-only emphasis', () => {"
+        },
+        {
+          "line": 800,
+          "declaration": "it('localizes a long suggested destination without changing near-match ranking, retained fleet gates or clear-and-open navigation', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovery": "NOTRUN",
+      "passed": "NOTRUN",
+      "failed": "NOTRUN",
+      "skipped": "NOTRUN"
+    },
+    {
+      "file": "web/src/features/explore/__tests__/featureCatalog.test.ts",
+      "declarationCount": 15,
+      "declarations": [
+        {
+          "line": 22,
+          "declaration": "it('builds an entry for every visible navSections item', () => {"
+        },
+        {
+          "line": 28,
+          "declaration": "it('every navSections route has a description (no orphan pages)', () => {"
+        },
+        {
+          "line": 40,
+          "declaration": "it('every description key matches a real navSections route', () => {"
+        },
+        {
+          "line": 49,
+          "declaration": "it('descriptions are short and non-empty', () => {"
+        },
+        {
+          "line": 61,
+          "declaration": "it('returns all entries for an empty query', () => {"
+        },
+        {
+          "line": 66,
+          "declaration": "it('matches case-insensitively against the label', () => {"
+        },
+        {
+          "line": 71,
+          "declaration": "it('matches against the description text', () => {"
+        },
+        {
+          "line": 78,
+          "declaration": "it('describes the Action Center as a decision surface with evidence', () => {"
+        },
+        {
+          "line": 83,
+          "declaration": "it('matches against the section title', () => {"
+        },
+        {
+          "line": 89,
+          "declaration": "it('matches translated labels and sections while retaining English search', () => {"
+        },
+        {
+          "line": 103,
+          "declaration": "it('uses AND-token matching across multiple words', () => {"
+        },
+        {
+          "line": 113,
+          "declaration": "it('returns empty for a clearly absent term', () => {"
+        },
+        {
+          "line": 119,
+          "declaration": "it('preserves navSections order', () => {"
+        },
+        {
+          "line": 128,
+          "declaration": "it('places each entry in exactly one group', () => {"
+        },
+        {
+          "line": 134,
+          "declaration": "it('skips empty sections after filtering', () => {"
+        }
+      ],
+      "execution": "NOTRUN",
+      "discovery": "NOTRUN",
+      "passed": "NOTRUN",
+      "failed": "NOTRUN",
+      "skipped": "NOTRUN"
+    }
+  ],
+  "testDeclarationLimits": "58 declarations=43 page+15 catalog, not runtime discovery/pass. Four page it.each literal arrays2/2/3/3. All execution NOTRUN. Mocked vehicle/auth/i18n source declarations only. Paused/date assertions encode F03/F05; no new tests authored.",
+  "preservation": {
+    "sourceLineCount": 624,
+    "catalogLineCount": 376,
+    "groups": 22,
+    "destinations": 199,
+    "sectionNames": [
+      "Feature overview brief and attention",
+      "Search and wrapping category controls",
+      "All categorized result bands",
+      "No-match explanation/suggestions/clear",
+      "Evidence/details drawer"
+    ],
+    "actions": [
+      "search",
+      "category/All",
+      "slash focus",
+      "native card",
+      "eligible suggestion",
+      "clear filters",
+      "details open/close",
+      "retained retry"
+    ],
+    "callSites": {
+      "OperationalBrief": 1,
+      "GlassPanel": 2,
+      "ChartContainer": 0,
+      "section": 1
+    },
+    "data": "Preserve all paths/groups/descriptions/actions/raw counts/gates/URL policies/retention/safe marks/native destinations/preferences/shared owners; no source/test writes.",
+    "sourceSha256": "38457c3e3e80845d18d259dd315e96206bdc6408365c855eea5313d5e0f994cb"
+  },
+  "duplicatedPatterns": [
+    "Explore repeats identical shell eligibility policy; historical G123 remains shared review, not extra counted defect. No replacement registry/component family proposed."
+  ],
+  "requiredSharedChanges": [
+    {
+      "name": "Exact canonical Explore paused/description/empty copy",
+      "existingOwnerFile": "web/src/i18n/en.json",
+      "usedBy": [
+        "ExplorePage",
+        "featureCatalog"
+      ],
+      "dependsOn": "Separate serialized canonical/projection leases"
+    },
+    {
+      "name": "Cycle-safe existing motion vendor boundary",
+      "existingOwnerFile": "web/src/components/motion/index.ts",
+      "usedBy": [
+        "useMotionPreference/FadeIn"
+      ],
+      "dependsOn": "Separate shared owner; no recursive barrel shortcut"
+    }
+  ],
+  "competingImplementations": "No new query/theme/formatter/router/overlay/catalog implementation created",
+  "priority": "P1 recovery/auth/pause/shortcut; P2 i18n/time/boundary",
+  "evidenceLimits": {
+    "source": "Bounded page/direct-support ranges only; unrelated exports/deeper backend and every destination page not audited.",
+    "tests": "NOTRUN",
+    "lint": "NOTRUN",
+    "TypeScript": "NOTRUN; npx tsc --noEmit prohibited",
+    "build": "NOTRUN",
+    "browser": "NOTRUN",
+    "server": "NOTRUN",
+    "networkAPI": "NOTRUN",
+    "businessActions": "NOTRUN",
+    "Git": "NOTRUN",
+    "agentsInstallsHelpers": "NOTRUN; no helper files",
+    "applicationAcceptance": false,
+    "clock": "Actual actor creation unavailable; original reservation retained",
+    "commandFailure": "C15 host206 before execution; full rejected literal only in caller transcript. Inline C05/C11/C12 failures retained honestly.",
+    "pinLimit": "Late baselines and root drift prevent clean pre/post gate",
+    "lateInstructionCompletion": "React applicable instructions461-629 and unit-conversion closing221 read before final release; current handoff1-80 reread. Parent historical compiler receipt is not this worker execution/acceptance."
+  },
+  "summary": {
+    "confirmedOwnerFindings": 8,
+    "conditionalNativeCandidates": 5,
+    "groupedRules": {
+      "initial-source-recovery": 1,
+      "auth-source-trust": 1,
+      "paused-not-offline": 1,
+      "hardcoded-string": 1,
+      "locale-timezone-display": 1,
+      "empty-reason": 1,
+      "shortcut-overlay-ownership": 1,
+      "direct-library-import": 1
+    },
+    "literalPolicyViolations": {
+      "hardcoded-string": 200,
+      "direct-library-import": 1
+    },
+    "countPolicy": "200 exact descriptor/fallback sites grouped as one objective; no render-site double count. Eight owner findings, not eight literal sites; candidates excluded.",
+    "testDeclarations": 58,
+    "executedTests": "NOTRUN",
+    "filesWithMostIssues": [
+      {
+        "file": "web/src/features/explore/pages/ExplorePage.tsx",
+        "ownerFindings": 6
+      },
+      {
+        "file": "web/src/features/explore/featureCatalog.ts",
+        "ownerFindings": 1,
+        "literalSites": 200
+      },
+      {
+        "file": "web/src/hooks/useMotionPreference.ts",
+        "ownerFindings": 1
+      }
+    ]
+  },
+  "inputPins": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "beforeSha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "beforeBytes": 16978,
+      "beforeLines": 296,
+      "afterSha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "afterBytes": 16978,
+      "afterLines": 296,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "beforeSha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "beforeBytes": 182554,
+      "beforeLines": 2539,
+      "afterSha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "afterBytes": 182554,
+      "afterLines": 2539,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "beforeSha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "beforeBytes": 31079,
+      "beforeLines": 1593,
+      "afterSha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "afterBytes": 31079,
+      "afterLines": 1593,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "beforeSha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "beforeBytes": 1743758,
+      "beforeLines": 1460,
+      "afterSha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "afterBytes": 1743758,
+      "afterLines": 1460,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "beforeSha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "beforeBytes": 163930,
+      "beforeLines": 2460,
+      "afterSha256": "09fa66582fceaceb709073d64299b2ca24842837d7c8ed43ef6f3af40c80bfeb",
+      "afterBytes": 170173,
+      "afterLines": 2561,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": false,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "beforeSha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "beforeBytes": 8608,
+      "beforeLines": 152,
+      "afterSha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "afterBytes": 8608,
+      "afterLines": 152,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "migration-queue.md",
+      "beforeSha256": "b99617a253dbc607c066727a63da9a4d09d03ffecf3ce8bd4476dedea6a90948",
+      "beforeBytes": 2607992,
+      "beforeLines": 2354,
+      "afterSha256": "01b3676f9d5b25b6ddd31f246b5a59deb053dcb0055ead33ab6f825befe7b9c7",
+      "afterBytes": 2613693,
+      "afterLines": 2418,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": false,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "beforeSha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "beforeBytes": 37483,
+      "beforeLines": 707,
+      "afterSha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "afterBytes": 37483,
+      "afterLines": 707,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "beforeSha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "beforeBytes": 22645,
+      "beforeLines": 629,
+      "afterSha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "afterBytes": 22645,
+      "afterLines": 629,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "beforeSha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "beforeBytes": 3585,
+      "beforeLines": 94,
+      "afterSha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "afterBytes": 3585,
+      "afterLines": 94,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "beforeSha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "beforeBytes": 6501,
+      "beforeLines": 221,
+      "afterSha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "afterBytes": 6501,
+      "afterLines": 221,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-130.json",
+      "beforeSha256": "5f1cc9e2c2c24d85fb064faf208fdbff206299724dafe5be87943da29819a2c1",
+      "beforeBytes": 29510,
+      "beforeLines": 338,
+      "afterSha256": "5f1cc9e2c2c24d85fb064faf208fdbff206299724dafe5be87943da29819a2c1",
+      "afterBytes": 29510,
+      "afterLines": 338,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/features/explore/pages/ExplorePage.tsx",
+      "beforeSha256": "38457c3e3e80845d18d259dd315e96206bdc6408365c855eea5313d5e0f994cb",
+      "beforeBytes": 24372,
+      "beforeLines": 624,
+      "afterSha256": "38457c3e3e80845d18d259dd315e96206bdc6408365c855eea5313d5e0f994cb",
+      "afterBytes": 24372,
+      "afterLines": 624,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/features/explore/pages/ExplorePage.test.tsx",
+      "beforeSha256": "aa158f65576c1202fba629d38ede22eabad8cd65e7588a0e7f4263b903e01019",
+      "beforeBytes": 41211,
+      "beforeLines": 825,
+      "afterSha256": "aa158f65576c1202fba629d38ede22eabad8cd65e7588a0e7f4263b903e01019",
+      "afterBytes": 41211,
+      "afterLines": 825,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/features/explore/featureCatalog.ts",
+      "beforeSha256": "44f7af4c21610c280a22bd0ccc6f6ab365e802b473b4c7cb1cbc242de42a1c13",
+      "beforeBytes": 25761,
+      "beforeLines": 376,
+      "afterSha256": "44f7af4c21610c280a22bd0ccc6f6ab365e802b473b4c7cb1cbc242de42a1c13",
+      "afterBytes": 25761,
+      "afterLines": 376,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/features/explore/__tests__/featureCatalog.test.ts",
+      "beforeSha256": "d0b43829c34ebc5101942d3ac26b06d92da0826c84aa48bece9240a08b2d4064",
+      "beforeBytes": 6003,
+      "beforeLines": 144,
+      "afterSha256": "d0b43829c34ebc5101942d3ac26b06d92da0826c84aa48bece9240a08b2d4064",
+      "afterBytes": 6003,
+      "afterLines": 144,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "beforeSha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "beforeBytes": 70205,
+      "beforeLines": 1898,
+      "afterSha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "afterBytes": 70205,
+      "afterLines": 1898,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/api/hooks/useAuthMode.ts",
+      "beforeSha256": "72c9d48982b728eeb9eab545547ba9ea97f90a808b772b978fd5bb8642d69dea",
+      "beforeBytes": 3668,
+      "beforeLines": 97,
+      "afterSha256": "72c9d48982b728eeb9eab545547ba9ea97f90a808b772b978fd5bb8642d69dea",
+      "afterBytes": 3668,
+      "afterLines": 97,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "AFTER first source read (late pin)"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "beforeSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "beforeBytes": 17825,
+      "beforeLines": 458,
+      "afterSha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "afterBytes": 17825,
+      "afterLines": 458,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "beforeBytes": 15482,
+      "beforeLines": 434,
+      "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "afterBytes": 15482,
+      "afterLines": 434,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "beforeSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "beforeBytes": 2035,
+      "beforeLines": 65,
+      "afterSha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "afterBytes": 2035,
+      "afterLines": 65,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "beforeSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "beforeBytes": 1161,
+      "beforeLines": 24,
+      "afterSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "afterBytes": 1161,
+      "afterLines": 24,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "beforeSha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "beforeBytes": 5253,
+      "beforeLines": 146,
+      "afterSha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "afterBytes": 5253,
+      "afterLines": 146,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/usePageTitle.ts",
+      "beforeSha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "beforeBytes": 1280,
+      "beforeLines": 30,
+      "afterSha256": "d04d8c90812c380005924cd4f004be273f2e89b64d57aa1df880b15bb49e9a9b",
+      "afterBytes": 1280,
+      "afterLines": 30,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "beforeBytes": 10783,
+      "beforeLines": 259,
+      "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "afterBytes": 10783,
+      "afterLines": 259,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "beforeBytes": 658,
+      "beforeLines": 17,
+      "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "afterBytes": 658,
+      "afterLines": 17,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/forms/PillFilterBar.tsx",
+      "beforeSha256": "780d6656aa7db39388a4bfde08d9928220279dcec2ff7e3a06323f0343bda031",
+      "beforeBytes": 7179,
+      "beforeLines": 196,
+      "afterSha256": "780d6656aa7db39388a4bfde08d9928220279dcec2ff7e3a06323f0343bda031",
+      "afterBytes": 7179,
+      "afterLines": 196,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "beforeSha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "beforeBytes": 11591,
+      "beforeLines": 321,
+      "afterSha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "afterBytes": 11591,
+      "afterLines": 321,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "beforeSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "beforeBytes": 4093,
+      "beforeLines": 115,
+      "afterSha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "afterBytes": 4093,
+      "afterLines": 115,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "beforeSha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "beforeBytes": 4738,
+      "beforeLines": 116,
+      "afterSha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "afterBytes": 4738,
+      "afterLines": 116,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "beforeBytes": 5174,
+      "beforeLines": 93,
+      "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "afterBytes": 5174,
+      "afterLines": 93,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "beforeSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "beforeBytes": 1493,
+      "beforeLines": 39,
+      "afterSha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "afterBytes": 1493,
+      "afterLines": 39,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "beforeSha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "beforeBytes": 2081,
+      "beforeLines": 49,
+      "afterSha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "afterBytes": 2081,
+      "afterLines": 49,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/closestRoute.ts",
+      "beforeSha256": "54c775f14319130d7a4a4fe72e809f0b36bdd8e7c5220f1ff3f1b029d256bb91",
+      "beforeBytes": 2412,
+      "beforeLines": 81,
+      "afterSha256": "54c775f14319130d7a4a4fe72e809f0b36bdd8e7c5220f1ff3f1b029d256bb91",
+      "afterBytes": 2412,
+      "afterLines": 81,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "beforeSha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "beforeBytes": 31836,
+      "beforeLines": 289,
+      "afterSha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "afterBytes": 31836,
+      "afterLines": 289,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "beforeBytes": 4411,
+      "beforeLines": 168,
+      "afterSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "afterBytes": 4411,
+      "afterLines": 168,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "beforeSha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "beforeBytes": 92115,
+      "beforeLines": 1716,
+      "afterSha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "afterBytes": 92115,
+      "afterLines": 1716,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+      "beforeBytes": 1843667,
+      "beforeLines": 39002,
+      "afterSha256": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+      "afterBytes": 1846735,
+      "afterLines": 39035,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": false,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/i18n/en/locale-explore.json",
+      "beforeSha256": "38d93cef8d444b8ffca27742c03e5e4756e8f2bae67b8a16b1696b036f393e2b",
+      "beforeBytes": 28756,
+      "beforeLines": 898,
+      "afterSha256": "38d93cef8d444b8ffca27742c03e5e4756e8f2bae67b8a16b1696b036f393e2b",
+      "afterBytes": 28756,
+      "afterLines": 898,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "beforeSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "beforeBytes": 68125,
+      "beforeLines": 919,
+      "afterSha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "afterBytes": 68125,
+      "afterLines": 919,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/icons.ts",
+      "beforeSha256": "c07f3b2df5f796e6e9406b5df741b8d9c874ad024f45a593658588213cc5aae7",
+      "beforeBytes": 11278,
+      "beforeLines": 492,
+      "afterSha256": "c07f3b2df5f796e6e9406b5df741b8d9c874ad024f45a593658588213cc5aae7",
+      "afterBytes": 11278,
+      "afterLines": 492,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "beforeSha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "beforeBytes": 7868,
+      "beforeLines": 137,
+      "afterSha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "afterBytes": 7868,
+      "afterLines": 137,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "beforeSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "beforeBytes": 6545,
+      "beforeLines": 194,
+      "afterSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "afterBytes": 6545,
+      "afterLines": 194,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "beforeSha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "beforeBytes": 4608,
+      "beforeLines": 106,
+      "afterSha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "afterBytes": 4608,
+      "afterLines": 106,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "beforeSha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "beforeBytes": 2801,
+      "beforeLines": 53,
+      "afterSha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "afterBytes": 2801,
+      "afterLines": 53,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/safeArray.ts",
+      "beforeSha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "beforeBytes": 859,
+      "beforeLines": 28,
+      "afterSha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "afterBytes": 859,
+      "afterLines": 28,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/constants.ts",
+      "beforeSha256": "76641391606b3616c45c2f0c1ea9bda0b130f4e190d6218e771ae1aeb64501e3",
+      "beforeBytes": 6343,
+      "beforeLines": 191,
+      "afterSha256": "76641391606b3616c45c2f0c1ea9bda0b130f4e190d6218e771ae1aeb64501e3",
+      "afterBytes": 6343,
+      "afterLines": 191,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/api/queryPolicy.ts",
+      "beforeSha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "beforeBytes": 11340,
+      "beforeLines": 294,
+      "afterSha256": "f48b0314865d68357dfb904bce6d2055c3660963d21a8e8866cda60e54a04524",
+      "afterBytes": 11340,
+      "afterLines": 294,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/ui/Drawer.tsx",
+      "beforeSha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+      "beforeBytes": 6711,
+      "beforeLines": 211,
+      "afterSha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+      "afterBytes": 6711,
+      "afterLines": 211,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useDialogFocus.ts",
+      "beforeSha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "beforeBytes": 11105,
+      "beforeLines": 272,
+      "afterSha256": "c4f2e20b692e4c18a288ae5f99093d11a40b1920af70c61e22eec394ba414e73",
+      "afterBytes": 11105,
+      "afterLines": 272,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "beforeBytes": 5230,
+      "beforeLines": 148,
+      "afterSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "afterBytes": 5230,
+      "afterLines": 148,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "beforeBytes": 18863,
+      "beforeLines": 462,
+      "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "afterBytes": 18863,
+      "afterLines": 462,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "docs/CONTRIBUTING.md",
+      "beforeSha256": "6ac302d828f961845a40205abcf4b162e62c90228136345043e7faf8e86f3a8c",
+      "beforeBytes": 13700,
+      "beforeLines": 286,
+      "afterSha256": "6ac302d828f961845a40205abcf4b162e62c90228136345043e7faf8e86f3a8c",
+      "afterBytes": 13700,
+      "afterLines": 286,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "internal/api/router.go",
+      "beforeSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "beforeBytes": 260353,
+      "beforeLines": 5363,
+      "afterSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "afterBytes": 260353,
+      "afterLines": 5363,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": ".github/instructions/observability.instructions.md",
+      "beforeSha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "beforeBytes": 4267,
+      "beforeLines": 45,
+      "afterSha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "afterBytes": 4267,
+      "afterLines": 45,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/api/settings.ts",
+      "beforeSha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "beforeBytes": 7750,
+      "beforeLines": 133,
+      "afterSha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "afterBytes": 7750,
+      "afterLines": 133,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "AFTER first source read (late pin)"
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "beforeSha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "beforeBytes": 6443,
+      "beforeLines": 172,
+      "afterSha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "afterBytes": 6443,
+      "afterLines": 172,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "beforeSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "beforeBytes": 2095,
+      "beforeLines": 47,
+      "afterSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "afterBytes": 2095,
+      "afterLines": 47,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "BEFORE detailed walkthrough; timestamped raw log"
+    },
+    {
+      "file": "web/src/components/motion/index.ts",
+      "beforeSha256": "b1bd3971b43540fb5b37f4bd81a816354ea9e4977e93edd79448441a962ee7e7",
+      "beforeBytes": 581,
+      "beforeLines": 15,
+      "afterSha256": "b1bd3971b43540fb5b37f4bd81a816354ea9e4977e93edd79448441a962ee7e7",
+      "afterBytes": 581,
+      "afterLines": 15,
+      "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+      "unchanged": true,
+      "baselineTiming": "AFTER first source read (late pin)"
+    }
+  ],
+  "pinSummary": {
+    "total": 59,
+    "unchanged": 56,
+    "drifted": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "lateBaselines": [
+      "web/src/api/hooks/useAuthMode.ts",
+      "web/src/api/settings.ts",
+      "web/src/components/motion/index.ts"
+    ],
+    "exactQueueRowUnchanged": true,
+    "relevantExploreSubtreeUnchangedSinceC11": true,
+    "qualification": "Full handoff/queue/canonical root drift disclosed without writer attribution. Current handoff header read; exact QA row/relevant Explore subtree stable. No whole-repo stability or pre-read proof for late support baselines."
+  },
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    "docs/frontend-audits/audit-page-130.json",
+    "web/src/features/explore/pages/ExplorePage.tsx",
+    "web/src/features/explore/featureCatalog.ts",
+    "web/src/features/explore/pages/ExplorePage.test.tsx",
+    "web/src/features/explore/__tests__/featureCatalog.test.ts",
+    "web/src/api/hooks/useAuthMode.ts",
+    "web/src/api/dataState.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/usePageTitle.ts",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/forms/PillFilterBar.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/ui/Input.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/Drawer.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/motion/index.ts",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/lib/closestRoute.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "web/src/lib/safeArray.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/lib/numberFormat.ts",
+    "docs/session-handoff.md",
+    "docs/frontend-inventory.md",
+    "migration-queue.md",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/client.ts",
+    "web/src/components/layout/Layout.tsx",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/App.tsx",
+    "internal/api/router.go",
+    "web/src/hooks/useDialogFocus.ts",
+    "web/src/api/settings.ts",
+    "web/src/lib/constants.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-explore.json"
+  ],
+  "readRanges": {
+    "docs/orchestrator-loop.md": [
+      [
+        1,
+        296
+      ]
+    ],
+    "docs/frontend-design-contract.md": [
+      [
+        1,
+        2539
+      ]
+    ],
+    "docs/frontend-mission.md": [
+      [
+        1,
+        1593
+      ]
+    ],
+    "docs/frontend-worker-conventions.md": [
+      [
+        1,
+        152
+      ]
+    ],
+    "docs/CONTRIBUTING.md": [
+      [
+        1,
+        286
+      ]
+    ],
+    ".github/copilot-instructions.md": [
+      [
+        1,
+        707
+      ]
+    ],
+    ".github/instructions/react-frontend.instructions.md": [
+      [
+        1,
+        629
+      ]
+    ],
+    ".github/instructions/frontend-si-cutover.instructions.md": [
+      [
+        1,
+        94
+      ]
+    ],
+    ".github/instructions/unit-conversion.instructions.md": [
+      [
+        1,
+        221
+      ]
+    ],
+    ".github/instructions/observability.instructions.md": [
+      [
+        1,
+        45
+      ]
+    ],
+    "docs/frontend-audits/audit-page-130.json": [
+      [
+        1,
+        338
+      ]
+    ],
+    "web/src/features/explore/pages/ExplorePage.tsx": [
+      [
+        1,
+        624
+      ]
+    ],
+    "web/src/features/explore/featureCatalog.ts": [
+      [
+        1,
+        376
+      ]
+    ],
+    "web/src/features/explore/pages/ExplorePage.test.tsx": [
+      [
+        1,
+        825
+      ]
+    ],
+    "web/src/features/explore/__tests__/featureCatalog.test.ts": [
+      [
+        1,
+        144
+      ]
+    ],
+    "web/src/api/hooks/useAuthMode.ts": [
+      [
+        1,
+        97
+      ]
+    ],
+    "web/src/api/dataState.ts": [
+      [
+        1,
+        434
+      ]
+    ],
+    "web/src/hooks/useDataState.ts": [
+      [
+        1,
+        65
+      ]
+    ],
+    "web/src/hooks/useOperationalMetrics.tsx": [
+      [
+        1,
+        24
+      ]
+    ],
+    "web/src/hooks/useSettings.ts": [
+      [
+        1,
+        146
+      ]
+    ],
+    "web/src/hooks/usePageTitle.ts": [
+      [
+        1,
+        30
+      ]
+    ],
+    "web/src/components/layout/PageContainer.tsx": [
+      [
+        1,
+        259
+      ]
+    ],
+    "web/src/components/layout/layout-reference/PageLayout.tsx": [
+      [
+        1,
+        17
+      ]
+    ],
+    "web/src/components/forms/PillFilterBar.tsx": [
+      [
+        1,
+        196
+      ]
+    ],
+    "web/src/components/data-display/OperationalBrief.tsx": [
+      [
+        1,
+        321
+      ]
+    ],
+    "web/src/components/feedback/StaleRefreshWarning.tsx": [
+      [
+        1,
+        115
+      ]
+    ],
+    "web/src/components/ui/Input.tsx": [
+      [
+        1,
+        116
+      ]
+    ],
+    "web/src/components/ui/Button.tsx": [
+      [
+        1,
+        93
+      ]
+    ],
+    "web/src/components/ui/Drawer.tsx": [
+      [
+        1,
+        211
+      ]
+    ],
+    "web/src/components/motion/FadeIn.tsx": [
+      [
+        1,
+        39
+      ]
+    ],
+    "web/src/components/motion/index.ts": [
+      [
+        1,
+        15
+      ]
+    ],
+    "web/src/hooks/useMotionPreference.ts": [
+      [
+        1,
+        49
+      ]
+    ],
+    "web/src/lib/closestRoute.ts": [
+      [
+        1,
+        81
+      ]
+    ],
+    "web/src/lib/workspaceScope.ts": [
+      [
+        1,
+        168
+      ]
+    ],
+    "web/src/lib/metric-reference/formatMetric.ts": [
+      [
+        1,
+        137
+      ]
+    ],
+    "web/src/hooks/useUnits.ts": [
+      [
+        1,
+        194
+      ]
+    ],
+    "web/src/hooks/useFormatting.ts": [
+      [
+        1,
+        106
+      ]
+    ],
+    "web/src/lib/operationalMetrics.tsx": [
+      [
+        1,
+        53
+      ]
+    ],
+    "web/src/lib/safeArray.ts": [
+      [
+        1,
+        28
+      ]
+    ],
+    "web/src/hooks/useDateFormat.ts": [
+      [
+        1,
+        148
+      ]
+    ],
+    "web/src/hooks/useNumberFormatting.ts": [
+      [
+        1,
+        47
+      ]
+    ],
+    "web/src/lib/numberFormat.ts": [
+      [
+        1,
+        172
+      ]
+    ],
+    "docs/session-handoff.md": {
+      "beforeDrift": [
+        [
+          1,
+          47
+        ],
+        [
+          504,
+          564
+        ],
+        [
+          2219,
+          2270
+        ]
+      ],
+      "afterDrift": [
+        [
+          1,
+          80
+        ]
+      ],
+      "note": "Current header reread after detected full-file drift; original ranges are historical read coordinates."
+    },
+    "docs/frontend-inventory.md": [
+      [
+        181,
+        181
+      ],
+      [
+        477,
+        478
+      ],
+      [
+        1270,
+        1270
+      ]
+    ],
+    "migration-queue.md": "Exact owner/duplicate searches and relevant preamble, not full prose audit",
+    "web/src/api/hooks/useVehicles.ts": [
+      [
+        1,
+        185
+      ]
+    ],
+    "web/src/api/client.ts": [
+      [
+        85,
+        112
+      ],
+      [
+        335,
+        458
+      ]
+    ],
+    "web/src/components/layout/Layout.tsx": [
+      [
+        183,
+        545
+      ]
+    ],
+    "web/src/lib/routeRegistry.ts": [
+      [
+        120,
+        134
+      ]
+    ],
+    "web/src/App.tsx": [
+      [
+        340,
+        340
+      ],
+      [
+        553,
+        583
+      ],
+      [
+        600,
+        648
+      ]
+    ],
+    "internal/api/router.go": "Registration-only grep /vehicles and /system/auth-mode",
+    "web/src/hooks/useDialogFocus.ts": [
+      [
+        110,
+        235
+      ]
+    ],
+    "web/src/api/settings.ts": [
+      [
+        1,
+        100
+      ]
+    ],
+    "web/src/lib/constants.ts": [
+      [
+        1,
+        65
+      ]
+    ],
+    "web/src/i18n/en.json": "Explore subtree only",
+    "web/src/i18n/en/locale-explore.json": "Explore subtree only"
+  },
+  "commandReceipts": {
+    "log": "web/logs/phase6-qa-explore-explore.log",
+    "failedChecks": [
+      {
+        "id": "C05",
+        "exit": 1,
+        "reason": "cp1252 console encoding; UTF8 retry0"
+      },
+      {
+        "id": "C11",
+        "exit": 1,
+        "reason": "Static Layout boundary StopIteration"
+      },
+      {
+        "id": "C12",
+        "exit": 1,
+        "reason": "Wrong boundary retry; C13 actual ].map corrected0"
+      },
+      {
+        "id": "C15",
+        "exit": 1,
+        "reason": "Host command too long206, not launched"
+      },
+      {
+        "id": "C15B",
+        "exit": 1,
+        "reason": "Unmatched parenthesis, no update; C15BR same script corrected0"
+      }
+    ],
+    "rawPolicyGreps": "C13/C14 exact bounded matches; component raw/vendor imports excepted; useEffect listener/title are not data fetch; PageLayout delegates to PageContainer",
+    "commandLogLimit": "Successful/bounded literal check scripts and outputs logged. C15 prelaunch oversized payload remains only in caller transcript; no claim it is fully pasted in log. Initial Python stderr final diagnostics manually disclosed, full tracebacks for C05/C11/C12 retained; C15B full diagnostic remains caller transcript.",
+    "shellExitPolicy": "Wrapper shell exit0 can surround inner Python exit1; numeric inner exits are separately logged",
+    "prohibitedChecks": "All application tests/lint/tsc/build/helpers/browser/server/network/API/Git/agents/installs/business actions NOTRUN"
+  },
+  "artifactChecks": {
+    "json": "PASS",
+    "citations": 272,
+    "queueCitationRelocations": [
+      [
+        252,
+        272
+      ],
+      [
+        2231,
+        2251
+      ],
+      [
+        1519,
+        1539
+      ],
+      [
+        835,
+        855
+      ]
+    ],
+    "findings": 8,
+    "candidates": 5,
+    "hardcodedLiteralSites": 200,
+    "testDeclarations": 58,
+    "inputPins": "PARTIAL",
+    "checkedAt": "2026-10-14T02:56:17.903258+00:00",
+    "finalSnapshotParity": "PASS previous logged findings/summary unchanged; final snapshot below"
+  },
+  "actor": "41b98a12-a2b8-4095-8baf-fc6dccaa16f1",
+  "actorEvidence": "Current session-handoff.md line55; approximate launch around02:40 does not supersede conservative reservation."
+}
