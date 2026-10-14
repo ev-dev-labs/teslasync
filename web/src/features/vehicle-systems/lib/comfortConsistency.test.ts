@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { formatDateTime } from '@/lib/dateFormat';
 
 import {
   DEFAULT_COMFORT_BAND_C,
@@ -444,6 +446,7 @@ describe('summarizeComfortConsistency resilience', () => {
       setpointDisagreementC: 0,
       windowDisplayLimit: 0,
     });
+
     expect(invalid.thresholds).toEqual({
       comfortBandC: DEFAULT_COMFORT_BAND_C,
       maxGapS: DEFAULT_COMFORT_MAX_GAP_S,
@@ -520,6 +523,70 @@ describe('summarizeComfortConsistency resilience', () => {
     expect(result.consistencyScore).toBeNull();
     expect(result.confidence).toBe(0);
     expect(result.hourlyProfile).toHaveLength(24);
+    expect(Object.values(result.identities).every(Boolean)).toBe(true);
+  });
+});
+
+describe('browser-local hourly duration contract', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  function interval(start: string, end: string) {
+    return summarizeComfortConsistency([
+      row(0, 21, { timestamp: start }),
+      row(0, 21, { timestamp: end }),
+    ], { maxGapS: 86_400 });
+  }
+
+  it('keeps browser-local buckets when saved locale and display timezone differ', () => {
+    vi.stubEnv('TZ', 'America/New_York');
+    const start = '2026-07-02T03:30:00Z';
+    const savedDisplay = { locale: 'de-DE', tz: 'Asia/Kolkata' };
+    expect(formatDateTime(start, savedDisplay)).toContain('09:00');
+    const result = interval(start, '2026-07-02T04:30:00Z');
+
+    expect(new Date(start).getHours()).toBe(23);
+    expect(result.hourlyProfile.map((bucket) => bucket.hour))
+      .toEqual(Array.from({ length: 24 }, (_, hour) => hour));
+    expect(result.hourlyProfile[23]?.observedS).toBe(1_800);
+    expect(result.hourlyProfile[0]?.observedS).toBe(1_800);
+    expect(result.hourlyProfile[9]?.observedS).toBe(0);
+    expect(result.intervalComposition.observedActiveS).toBe(3_600);
+  });
+
+  it.each([
+    ['2026-03-08T06:30:00Z', '2026-03-08T07:30:00Z', 1, 3],
+    ['2026-11-01T05:30:00Z', '2026-11-01T07:30:00Z', 1, 2],
+  ])('preserves SI support across New York DST: %s', (start, end, first, last) => {
+    vi.stubEnv('TZ', 'America/New_York');
+    const result = interval(start, end);
+    const elapsedS = (Date.parse(end) - Date.parse(start)) / 1000;
+    expect(result.hourlyProfile[first]?.observedS).toBe(elapsedS - 1_800);
+    expect(result.hourlyProfile[last]?.observedS).toBe(1_800);
+    expect(result.hourlyProfile.reduce((sum, bucket) => sum + bucket.observedS, 0))
+      .toBe(elapsedS);
+    expect(result.intervalComposition.observedActiveS).toBe(elapsedS);
+  });
+
+  it('splits correctly across a half-hour DST jump', () => {
+    vi.stubEnv('TZ', 'Australia/Lord_Howe');
+    const result = interval('2026-10-03T15:00:00Z', '2026-10-03T16:00:00Z');
+    expect(result.hourlyProfile[1]?.observedS).toBe(1_800);
+    expect(result.hourlyProfile[2]?.observedS).toBe(1_800);
+    expect(result.hourlyProfile[3]?.observedS).toBe(0);
+    expect(result.intervalComposition.observedActiveS).toBe(3_600);
+  });
+
+  it('excludes missing and invalid dates without losing empty hour buckets', () => {
+    const result = summarizeComfortConsistency([
+      row(0, 21, { timestamp: undefined }),
+      row(0, 21, { timestamp: 'invalid' }),
+      row(0, 21, { timestamp: '' }),
+    ]);
+    expect(result.rows.missingTimestampRows).toBe(2);
+    expect(result.rows.invalidTimestampRows).toBe(1);
+    expect(result.hourlyProfile).toHaveLength(24);
+    expect(result.hourlyProfile.every((bucket) =>
+      bucket.observedS === 0 && bucket.withinBandShare === null)).toBe(true);
     expect(Object.values(result.identities).every(Boolean)).toBe(true);
   });
 });
