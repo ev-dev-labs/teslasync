@@ -11,6 +11,7 @@ import type { PreconditioningSummary } from '../../lib/preconditioningEffectiven
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type { PreconditioningQueryState } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface PreconditioningJoinSupportProps {
   summary: PreconditioningSummary;
@@ -23,7 +24,7 @@ export function PreconditioningJoinSupport({
   state,
   formatDuration,
 }: PreconditioningJoinSupportProps) {
-  const { fmtInt } = useNumberFormatting();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const support = summary.windowSupport;
   const items = [
@@ -58,7 +59,11 @@ export function PreconditioningJoinSupport({
               reason: t('preconditioningEffectiveness.join.subtitle', 'Support counts describe the bounded pre-drive join before classification gates are applied.') }}
             metrics={items.map(([label, rawValue, metricId], index) => ({
               occurrenceId: `join-${index}`, label, metricId, rawValue,
-              display: { formatter: (raw: number) => ({ value: metricId === 'duration' ? formatDuration(raw) : fmtInt(raw), unit: '' }) },
+              display: { formatter: (raw: number) => ({
+                value: metricId === 'duration' ? formatDuration(raw)
+                  : metricId === 'count' ? fmtInt(raw) : fmtNumber(raw),
+                unit: '',
+              }) },
             }))}
           />
           <AlertBanner
@@ -71,7 +76,7 @@ export function PreconditioningJoinSupport({
                 ? t(
                     'preconditioningEffectiveness.join.reuseObserved',
                     '{{count}} unique climate rows are referenced by more than one overlapping departure window; departures are therefore not row-independent.',
-                    { count: support.climateRowsReused },
+                    { count: isFiniteNumber(support.climateRowsReused) ? fmtInt(support.climateRowsReused) : '—' },
                   )
                 : t(
                     'preconditioningEffectiveness.join.reuseNone',

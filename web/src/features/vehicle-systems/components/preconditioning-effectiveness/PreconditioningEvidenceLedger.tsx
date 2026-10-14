@@ -19,6 +19,7 @@ import type {
   TemperatureDeltaFormatter,
 } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface PreconditioningEvidenceLedgerProps {
   summary: PreconditioningSummary;
@@ -82,7 +83,7 @@ export function PreconditioningEvidenceLedger({
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><ThermometerSun aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
         ? t('preconditioningEffectiveness.kpis.activeHint', '{{count}} classified departures', {
-            count: summary.conditionedDepartures,
+            count: isFiniteNumber(summary.conditionedDepartures) ? fmtInt(summary.conditionedDepartures) : '—',
           }) : unavailable}</>,
     },
     {

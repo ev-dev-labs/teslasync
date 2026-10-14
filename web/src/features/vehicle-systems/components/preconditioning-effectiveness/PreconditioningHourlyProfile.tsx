@@ -15,6 +15,8 @@ import {
 } from '@/components/charts';
 import { MetricLabel, Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import type { PreconditioningSummary } from '../../lib/preconditioningEffectiveness';
 import { PreconditioningSectionBody } from './PreconditioningSectionBody';
 import type {
@@ -33,13 +35,14 @@ export function PreconditioningHourlyProfile({
   state,
   formatDelta,
 }: PreconditioningHourlyProfileProps) {
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const data = summary.hourlyProfile.map((bucket) => ({
     hour: t('preconditioningEffectiveness.hourly.hourLabel', '{{hour}}:00', {
       hour: String(bucket.hour).padStart(2, '0'),
     }),
-    active: bucket.conditionedDepartures,
-    control: bucket.unconditionedDepartures,
+    active: isFiniteNumber(bucket.conditionedDepartures) ? fmtInt(bucket.conditionedDepartures) : '—',
+    control: isFiniteNumber(bucket.unconditionedDepartures) ? fmtInt(bucket.unconditionedDepartures) : '—',
     classified: bucket.classifiedDepartures,
     meanStart: formatDelta(bucket.meanStartDeltaC),
     meanImprovement: formatDelta(bucket.meanImprovementC, { signed: true }),

@@ -17,6 +17,7 @@ import type {
   TemperatureDeltaFormatter,
 } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 interface PreconditioningThresholdConfidenceProps {
   summary: PreconditioningSummary;
@@ -74,7 +75,7 @@ export function PreconditioningThresholdConfidence({
                   {t(
                     'preconditioningEffectiveness.thresholds.affected',
                     '{{count}} applicable or excluded',
-                    { count: affected },
+                    { count: isFiniteNumber(affected) ? fmtInt(affected) : '—' },
                   )}
                 </Text>
               </div>
