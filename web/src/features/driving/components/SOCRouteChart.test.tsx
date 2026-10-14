@@ -47,6 +47,8 @@ import type { ReactNode } from 'react';
 
 import { SOCRouteChart } from './SOCRouteChart';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { chartTokens } from '@/lib/tokens';
+import { fmtNumber } from '@/lib/numberFormat';
 import type { TripSOCPoint, TripChargeStop, TripLocation } from '@/types/driving';
 
 /* ── Controllable mock state, hoisted above the vi.mock factories ─────────── */
@@ -60,6 +62,8 @@ type RefLine = {
 
 const H = vi.hoisted(() => ({
   distance: 'km' as 'km' | 'mi',
+  precision: 0,
+  locale: 'en-US',
   container: null as null | {
     title: string;
     ariaLabel: string;
@@ -92,7 +96,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Drive the distance unit while the REAL SI converter runs. The component only
-// reads `unitPrefs.distance`.
+// reads the distance, precision and locale preferences.
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
     unitPrefs: {
@@ -103,7 +107,8 @@ vi.mock('@/hooks/useUnits', () => ({
       energy: 'kWh',
       duration: 'h',
       power: 'kW',
-      locale: 'en-US',
+      locale: H.locale,
+      precision: H.precision,
     },
   }),
 }));
@@ -276,7 +281,6 @@ const CURVE: TripSOCPoint[] = [
 ];
 
 /* ── DOM/read helpers ─────────────────────────────────────────────────────── */
-const roundTo1 = (n: number) => Math.round(n * 10) / 10;
 const plottedDistances = () => (H.areaData ?? []).map((d) => d.distance);
 const plottedSoc = () => (H.areaData ?? []).map((d) => d.soc);
 const minLine = () => H.refLines.find((r) => r.x == null && r.y != null) ?? null;
@@ -286,6 +290,8 @@ const distanceCells = (c: HTMLElement) =>
 
 function reset() {
   H.distance = 'km';
+  H.precision = 0;
+  H.locale = 'en-US';
   H.container = null;
   H.areaData = null;
   H.xAxis = null;
@@ -390,11 +396,12 @@ describe('SOCRouteChart — km scale', () => {
 
     expect(minLine()?.y).toBe(25);
     expect(minLine()?.label).toBe('Min 25%');
-    expect(minLine()?.stroke).toBe('#ef4444');
-    // The plotted series carries the SOC gradient fill + green stroke.
+    expect(minLine()?.stroke).toBe(chartTokens.series[3]);
+    // The plotted series uses a restrained theme-aware fill and stroke.
     expect(screen.getByTestId('area')).toHaveAttribute('data-datakey', 'soc');
-    expect(screen.getByTestId('area')).toHaveAttribute('data-fill', 'url(#socGradient)');
-    expect(screen.getByTestId('area')).toHaveAttribute('data-stroke', '#22c55e');
+    expect(screen.getByTestId('area')).toHaveAttribute('data-fill', chartTokens.series[1]);
+    expect(screen.getByTestId('area')).toHaveAttribute('data-stroke', chartTokens.series[1]);
+    expect(H.area?.fillOpacity).toBe(0.08);
   });
 });
 
@@ -402,15 +409,15 @@ describe('SOCRouteChart — km scale', () => {
 describe('SOCRouteChart — mi scale (series, axis, table & tooltip agree)', () => {
   it('converts every distance to miles on one shared scale', () => {
     H.distance = 'mi';
+    H.precision = 1;
     const { container } = render(
       <SOCRouteChart socCurve={CURVE} chargeStops={[]} minArrivalSOC={20} />,
     );
 
-    const expected = CURVE.map((p) => roundTo1(convertDistanceFromSI(p.distance_m, 'mi')));
-    // 50000 m → 31.1 mi, 100000 m → 62.1 mi (via the REAL converter).
-    expect(expected).toEqual([0, 31.1, 62.1]);
+    const expected = CURVE.map((p) => convertDistanceFromSI(p.distance_m, 'mi'));
+    // Geometry retains the converter's full precision; only text is rounded.
     expect(plottedDistances()).toEqual(expected);
-    expect(distanceCells(container)).toEqual(expected.map(String));
+    expect(distanceCells(container)).toEqual(['0.0', '31.1', '62.1']);
     expect(screen.getByTestId('x-axis')).toHaveAttribute('data-label', 'mi');
     expect(screen.getByTestId('col-distance')).toHaveTextContent('Distance (mi)');
 
@@ -449,7 +456,7 @@ describe('SOCRouteChart — charge-stop reference lines', () => {
     expect(lines).toHaveLength(2);
     expect(lines.map((l) => l.x)).toEqual([40, 80]);
     expect(lines.map((l) => l.label)).toEqual(['\u26A1 Stop 1', '\u26A1 Stop 2']);
-    expect(lines.every((l) => l.stroke === '#3b82f6')).toBe(true);
+    expect(lines.every((l) => l.stroke === chartTokens.series[0])).toBe(true);
     // The min-arrival line is distinct (y set, x unset).
     expect(minLine()?.y).toBe(15);
   });
@@ -460,8 +467,7 @@ describe('SOCRouteChart — charge-stop reference lines', () => {
       <SOCRouteChart socCurve={stopCurve} chargeStops={[stop(30), stop(20)]} minArrivalSOC={15} />,
     );
 
-    const expected = [40000, 80000].map((m) => roundTo1(convertDistanceFromSI(m, 'mi')));
-    expect(expected).toEqual([24.9, 49.7]);
+    const expected = [40000, 80000].map((m) => convertDistanceFromSI(m, 'mi'));
     expect(stopLines().map((l) => l.x)).toEqual(expected);
   });
 
@@ -512,6 +518,57 @@ describe('SOCRouteChart — memoised series', () => {
     const mi = H.areaData;
 
     expect(mi).not.toBe(km);
-    expect(mi?.map((d) => d.distance)).toEqual([0, 31.1, 62.1]);
+    expect(mi?.map((d) => d.distance)).toEqual(
+      CURVE.map((p) => convertDistanceFromSI(p.distance_m, 'mi')),
+    );
+  });
+});
+
+describe('SOCRouteChart — saved display preferences without rounded geometry', () => {
+  it.each(['km', 'mi'] as const)('formats %s axes, table and tooltip consistently after preference changes', (unit) => {
+    H.distance = unit;
+    H.precision = 3;
+    H.locale = 'de-DE';
+    const curve: TripSOCPoint[] = [
+      { distance_m: 0, soc: 90.12345 },
+      { distance_m: 1234567.89, soc: 30.12345 },
+      { distance_m: 1234568.89, soc: 30.12445 },
+    ];
+    const stops = [stop(30)];
+    const { container, rerender } = render(
+      <SOCRouteChart socCurve={curve} chargeStops={stops} minArrivalSOC={20.12345} />,
+    );
+    const first = H.areaData;
+    const distance = convertDistanceFromSI(curve[1].distance_m, unit);
+    const checkDisplay = () => {
+      const number = (value: number) => fmtNumber(value, H.precision, H.locale);
+      const xTick = H.xAxis?.tickFormatter as (value: number) => string;
+      const yTick = H.yAxis?.tickFormatter as (value: number) => string;
+      const label = H.tooltip?.labelFormatter as (value: number) => string;
+      const tooltip = H.tooltip?.formatter as (value: number) => [string, string];
+      expect(xTick(distance)).toBe(number(distance));
+      expect(yTick(curve[1].soc)).toBe(number(curve[1].soc));
+      expect(distanceCells(container)[1]).toBe(number(distance));
+      expect(container.querySelectorAll('td[data-col="soc"]')[1]).toHaveTextContent(number(curve[1].soc));
+      expect(label(distance)).toBe(`${number(distance)} ${unit}`);
+      expect(tooltip(curve[1].soc)).toEqual([`${number(curve[1].soc)}%`, 'SOC']);
+      expect(minLine()?.label).toBe(`Min ${number(20.12345)}%`);
+    };
+    expect(plottedDistances()).toEqual(curve.map((p) => convertDistanceFromSI(p.distance_m, unit)));
+    expect(plottedSoc()).toEqual(curve.map((p) => p.soc));
+    expect(stopLines()[0].x).toBe(distance);
+    expect(minLine()?.y).toBe(20.12345);
+    checkDisplay();
+    expect(container.querySelectorAll('td[data-col="soc"]')[1]).toHaveTextContent('30,123');
+    expect(distanceCells(container)[1]).toBe(unit === 'km' ? '1.234,568' : '767,125');
+
+    H.precision = 0;
+    H.locale = 'en-US';
+    H.refLines = [];
+    rerender(<SOCRouteChart socCurve={curve} chargeStops={stops} minArrivalSOC={20.12345} />);
+    expect(H.areaData).toBe(first);
+    expect(stopLines()[0].x).toBe(distance);
+    checkDisplay();
+    expect(container.querySelectorAll('td[data-col="soc"]')[1]).toHaveTextContent('30');
   });
 });
