@@ -7,6 +7,7 @@ import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, FirmwareCanary } from '@/types/advancedIntelligence';
 import { ToastProvider } from '@/components/feedback';
 import { typography } from '@/lib/tokens';
+import { formatDateTime } from '@/lib/dateFormat';
 import { firmware, observation } from './advancedIntelligenceClosure.fixtures';
 import FirmwareCanaryPage from './FirmwareCanaryPage';
 
@@ -15,6 +16,8 @@ const state = vi.hoisted(() => ({
   query: {} as DataStateSource<AdvancedPage<FirmwareCanary>>,
   read: vi.fn(),
   retry: vi.fn(),
+  locale: 'en-US',
+  timezone: 'UTC',
 }));
 
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
@@ -26,6 +29,21 @@ vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: state.vehicleId }),
 }));
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings: { locale: state.locale, tz_display_default: 'vehicle', ui_density: 'comfortable' },
+      locale: state.locale,
+      decimals: 2,
+    }),
+  };
+});
+vi.mock('@/lib/timezone', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
+  return { ...actual, useTimezone: () => state.timezone };
+});
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -54,6 +72,8 @@ function populate(items: FirmwareCanary[] = [firmware], total = items.length) {
 beforeEach(() => {
   vi.clearAllMocks();
   state.vehicleId = 7;
+  state.locale = 'en-US';
+  state.timezone = 'UTC';
   state.query = {
     data: undefined,
     error: null,
@@ -67,6 +87,45 @@ beforeEach(() => {
 });
 
 describe('FirmwareCanaryPage restrained decision presentation', () => {
+  it('reactively formats generated timestamps with the display timezone and locale without mutating UTC data', () => {
+    const generatedAt = '2026-06-01T00:30:00Z';
+    populate([{ ...firmware, generated_at: generatedAt }]);
+    const view = renderPage();
+    const utcLabel = formatDateTime(generatedAt, { locale: 'en-US', tz: 'UTC' });
+    expect(within(decision()).getByText(utcLabel)).toBeInTheDocument();
+
+    state.timezone = 'America/Los_Angeles';
+    view.rerender();
+    const localLabel = formatDateTime(generatedAt, { locale: 'en-US', tz: state.timezone });
+    expect(localLabel).not.toBe(utcLabel);
+    expect(within(decision()).getByText(localLabel)).toBeInTheDocument();
+    expect(within(decision()).queryByText(utcLabel)).not.toBeInTheDocument();
+
+    state.locale = 'de-DE';
+    view.rerender();
+    const localizedLabel = formatDateTime(generatedAt, { locale: state.locale, tz: state.timezone });
+    expect(localizedLabel).not.toBe(localLabel);
+    expect(within(decision()).getByText(localizedLabel)).toBeInTheDocument();
+    expect(within(decision()).queryByText(localLabel)).not.toBeInTheDocument();
+    expect(state.query.data?.items[0].generated_at).toBe(generatedAt);
+    expect(state.read).toHaveBeenLastCalledWith(7, 10, 0);
+  });
+
+  it.each([null, undefined, '', 'invalid-date'])('preserves the generated-date placeholder for %s', generatedAt => {
+    const item = { ...firmware };
+    Reflect.set(item, 'generated_at', generatedAt);
+    populate([item]);
+    const view = renderPage();
+    const placeholders = () => within(decision()).getAllByText('—');
+    expect(placeholders()).toHaveLength(3);
+    state.locale = 'de-DE';
+    state.timezone = 'America/Los_Angeles';
+    view.rerender();
+    expect(placeholders()).toHaveLength(3);
+    expect(within(decision()).queryByText(/Invalid Date/)).not.toBeInTheDocument();
+    expect(state.query.data?.items[0].generated_at).toBe(generatedAt);
+  });
+
   it('uses the shared neutral card without changing article identity or regression values', () => {
     populate();
     renderPage();
@@ -178,6 +237,114 @@ describe('FirmwareCanaryPage restrained decision presentation', () => {
     expect(screen.getByText(/does not install, hold, or roll back firmware/)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Evidence, quality, and limitations' })).toBeInTheDocument();
     expect(screen.queryByRole('article')).not.toBeInTheDocument();
+  });
+});
+
+describe('FirmwareCanaryPage investigate rationale', () => {
+  function rationale() {
+    const panel = within(decision()).getByText('Decision rationale').parentElement;
+    if (!panel) throw new Error('Missing decision rationale');
+    return panel;
+  }
+
+  const sufficientQuality = { ...firmware.window_quality, status: 'sufficient' as const };
+
+  it.each(['peer_regression_pct', 'matched_excess_pct'] as const)(
+    'does not infer matched support from missing or invalid %s',
+    field => {
+      const item: FirmwareCanary = {
+        ...firmware, decision: 'investigate', vehicle_regression_pct: 6.25,
+        peer_regression_pct: 0, matched_excess_pct: 6.25,
+        window_quality: sufficientQuality,
+      };
+      populate([item]);
+      const view = renderPage();
+      for (const value of [null, undefined, NaN, Infinity, -Infinity, '', '0', false]) {
+        Reflect.set(item, field, value);
+        view.rerender();
+        expect(rationale()).toHaveTextContent('This is a target-only investigation');
+        expect(rationale()).toHaveTextContent('matched-peer support is not established');
+        expect(rationale()).toHaveTextContent(
+          field === 'peer_regression_pct' ? 'peer regression: —' : 'matched excess: —',
+        );
+        expect(within(decision()).getAllByText('—')).toHaveLength(1);
+        expect(within(decision()).getByText('investigate')).toBeInTheDocument();
+        expect(rationale()).not.toHaveTextContent('Investigation uses the returned matched-peer comparison');
+      }
+    },
+  );
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, '', '0', false])(
+    'does not turn invalid target regression %s into measured zero',
+    value => {
+      const item: FirmwareCanary = {
+        ...firmware, decision: 'investigate', peer_regression_pct: null, matched_excess_pct: null,
+      };
+      Reflect.set(item, 'vehicle_regression_pct', value);
+      populate([item]);
+      renderPage();
+      expect(rationale()).toHaveTextContent('Target regression: —');
+      expect(rationale()).toHaveTextContent('This is a target-only investigation');
+      expect(within(decision()).getAllByText('—')).toHaveLength(3);
+      expect(within(decision()).queryByText('0.00%')).not.toBeInTheDocument();
+      expect(within(decision()).getByText('investigate')).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    { target: 0, peer: 0, excess: 0 },
+    { target: 6.25, peer: 0, excess: 6.25 },
+    { target: -1.25, peer: -5.5, excess: 4.25 },
+    { target: 4.5, peer: 4.5, excess: 0 },
+    { target: -5.75, peer: -1.5, excess: -4.25 },
+  ])('retains measured signed and fractional evidence $target/$peer/$excess without redeciding', values => {
+    populate([{
+      ...firmware, decision: 'investigate', window_quality: sufficientQuality,
+      vehicle_regression_pct: values.target, peer_regression_pct: values.peer,
+      matched_excess_pct: values.excess,
+    }]);
+    renderPage();
+    expect(rationale()).toHaveTextContent('Investigation uses the returned matched-peer comparison');
+    expect(rationale()).toHaveTextContent(`Target regression: ${values.target.toFixed(2)}%`);
+    expect(rationale()).toHaveTextContent(`peer regression: ${values.peer.toFixed(2)}%`);
+    expect(rationale()).toHaveTextContent(`matched excess: ${values.excess.toFixed(2)}%`);
+    expect(rationale()).toHaveTextContent('Window quality: Sufficient evidence');
+    expect(rationale()).not.toHaveTextContent('target-only investigation');
+    expect(within(decision()).getByText('investigate')).toBeInTheDocument();
+  });
+
+  it.each(['limited', 'insufficient', null, undefined, 'invalid'])(
+    'does not claim sufficient matched support for quality %s',
+    status => {
+      const item: FirmwareCanary = {
+        ...firmware, decision: 'investigate', vehicle_regression_pct: 6.5,
+        peer_regression_pct: 0, matched_excess_pct: 6.5,
+        window_quality: { ...sufficientQuality },
+      };
+      Reflect.set(item.window_quality, 'status', status);
+      populate([item]);
+      renderPage();
+      expect(rationale()).toHaveTextContent('window quality does not establish sufficient matched-peer support');
+      expect(rationale()).not.toHaveTextContent('target-only investigation');
+      expect(rationale()).toHaveTextContent(status === 'limited' ? 'Limited evidence'
+        : status === 'insufficient' ? 'Insufficient evidence' : 'Quality not supplied');
+      expect(within(decision()).getByText('0.00%')).toBeInTheDocument();
+    },
+  );
+
+  it('explains the actual target-only evidence and preserves the backend thresholds', () => {
+    populate([{ ...firmware, decision: 'investigate', vehicle_regression_pct: 5.25 }]);
+    renderPage();
+    expect(rationale()).toHaveTextContent('This is a target-only investigation');
+    expect(rationale()).toHaveTextContent('Target regression: 5.25%; peer regression: —; matched excess: —');
+    expect(rationale()).toHaveTextContent('Window quality: Limited evidence');
+    expect(rationale()).toHaveTextContent('Target-only investigation requires target regression > 5%');
+    expect(rationale()).toHaveTextContent('excess > 10% means hold');
+    expect(rationale()).toHaveTextContent('excess ≤ 3% means rollout');
+    expect(rationale()).toHaveTextContent('excess > 3% through 10% means investigate');
+    expect(state.query.data?.items[0]).toEqual({
+      ...firmware, decision: 'investigate', vehicle_regression_pct: 5.25,
+    });
   });
 });
 

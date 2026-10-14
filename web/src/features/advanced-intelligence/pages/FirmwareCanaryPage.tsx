@@ -10,8 +10,9 @@ import { FadeIn } from '@/components/motion';
 import { Badge, Card, Icon, Pagination, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { typography } from '@/lib/tokens';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import { EvidencePanel, InsightPanel } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -26,6 +27,7 @@ function decisionVariant(decision: string) {
 }
 
 export default function FirmwareCanaryPage() {
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
@@ -33,6 +35,7 @@ export default function FirmwareCanaryPage() {
   const query = useFirmwareCanary(vehicleId, PAGE_SIZE, (page - 1) * PAGE_SIZE);
   const items = query.data?.items ?? [];
   const latest = items[0] ?? null;
+  const formatRegression = (value: unknown) => isFiniteNumber(value) ? `${fmtNumber(value)}%` : null;
   usePageTitle(t('advancedIntelligence.firmware.title', 'Firmware canary'));
 
   return (
@@ -83,18 +86,15 @@ export default function FirmwareCanaryPage() {
                   <Grid cols={{ default: 1, sm: 2, lg: 4 }} gap={3}>
                     <StatCard
                       label={t('advancedIntelligence.firmware.targetDelta', 'Target regression')}
-                      value={item.vehicle_regression_pct != null
-                        ? `${fmtNumber(item.vehicle_regression_pct)}%` : null}
+                      value={formatRegression(item.vehicle_regression_pct)}
                     />
                     <StatCard
                       label={t('advancedIntelligence.firmware.peerDelta', 'Peer regression')}
-                      value={item.peer_regression_pct != null
-                        ? `${fmtNumber(item.peer_regression_pct)}%` : null}
+                      value={formatRegression(item.peer_regression_pct)}
                     />
                     <StatCard
                       label={t('advancedIntelligence.firmware.excessDelta', 'Matched excess')}
-                      value={item.matched_excess_pct != null
-                        ? `${fmtNumber(item.matched_excess_pct)}%` : null}
+                      value={formatRegression(item.matched_excess_pct)}
                     />
                     <StatCard
                       label={t('advancedIntelligence.firmware.generated', 'Decision generated')}
@@ -111,7 +111,47 @@ export default function FirmwareCanaryPage() {
                           'advancedIntelligence.firmware.rationale.insufficient',
                           'The matched windows do not contain enough supported observations for a rollout decision.',
                         )
-                        : t(
+                        : item.decision === 'investigate'
+                          ? [
+                            isFiniteNumber(item.peer_regression_pct) &&
+                            isFiniteNumber(item.matched_excess_pct) &&
+                            item.window_quality?.status === 'sufficient'
+                              ? t(
+                                'advancedIntelligence.firmware.rationale.investigateMatched',
+                                'Investigation uses the returned matched-peer comparison with sufficient window quality.',
+                              )
+                              : !isFiniteNumber(item.peer_regression_pct) ||
+                                !isFiniteNumber(item.matched_excess_pct)
+                                ? t(
+                                  'advancedIntelligence.firmware.rationale.investigateTargetOnly',
+                                  'This is a target-only investigation: peer regression or matched excess is unavailable or invalid, so matched-peer support is not established.',
+                                )
+                                : t(
+                                  'advancedIntelligence.firmware.rationale.investigateQuality',
+                                  'Peer regression and matched excess were returned, but window quality does not establish sufficient matched-peer support.',
+                                ),
+                            t(
+                              'advancedIntelligence.firmware.rationale.investigateEvidence',
+                              'Target regression: {{target}}; peer regression: {{peer}}; matched excess: {{excess}}. Window quality: {{quality}}.',
+                              {
+                                target: formatRegression(item.vehicle_regression_pct) ?? '—',
+                                peer: formatRegression(item.peer_regression_pct) ?? '—',
+                                excess: formatRegression(item.matched_excess_pct) ?? '—',
+                                quality: item.window_quality?.status === 'sufficient'
+                                  ? t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence')
+                                  : item.window_quality?.status === 'limited'
+                                    ? t('advancedIntelligence.brief.quality.limited', 'Limited evidence')
+                                    : item.window_quality?.status === 'insufficient'
+                                      ? t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence')
+                                      : t('advancedIntelligence.brief.quality.unknown', 'Quality not supplied'),
+                              },
+                            ),
+                            t(
+                              'advancedIntelligence.firmware.rationale.investigateThresholds',
+                              'The returned decision is unchanged. Target-only investigation requires target regression > 5%. With sufficient matched peers, excess > 10% means hold, excess ≤ 3% means rollout, and excess > 3% through 10% means investigate.',
+                            ),
+                          ].join(' ')
+                          : t(
                           'advancedIntelligence.firmware.rationale.supported',
                           'The decision reflects target regression relative to the matched peer change and window quality.',
                         )}
