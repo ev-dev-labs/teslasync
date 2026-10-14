@@ -43,6 +43,7 @@ export function ComfortConsistencyWindowDirectory({
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.windowDirectory;
+  const countsAvailable = state.vehicleSelected && state.isResolved && !state.error;
   const boundaryLabel = (boundary: ComfortRunBoundary) => {
     if (boundary === 'hvac_inactive') {
       return t('comfortConsistency.directory.boundary.inactive', 'Observed HVAC inactive');
@@ -73,9 +74,9 @@ export function ComfortConsistencyWindowDirectory({
             'comfortConsistency.directory.cap',
             'Showing {{shown}} of {{total}} windows; {{omitted}} omitted by the {{cap}}-window display cap.',
             {
-              shown: fmtInt(directory.displayed),
-              total: fmtInt(directory.total),
-              omitted: fmtInt(directory.omitted),
+              shown: countsAvailable ? fmtInt(directory.displayed) : '—',
+              total: countsAvailable ? fmtInt(directory.total) : '—',
+              omitted: countsAvailable ? fmtInt(directory.omitted) : '—',
               cap: fmtInt(directory.cap),
             },
           )}
