@@ -39,6 +39,7 @@ import { Button } from '@/components/ui'
 import { containerPolicy } from '@/components/layout/layout-reference'
 import { chartTokens } from '@/lib/tokens'
 import { formatDateTime } from '@/lib/dateFormat'
+import { setGlobalLocale } from '@/lib/numberFormat'
 
 const timezoneFixture = vi.hoisted(() => ({ value: 'UTC' }))
 
@@ -227,6 +228,7 @@ function HeaderVehicleSwitch() {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US')
   onlineManager.setOnline(true)
   timezoneFixture.value = 'UTC'
   mockedRequest.mockReset()
@@ -235,6 +237,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  setGlobalLocale('en-US')
   onlineManager.setOnline(true)
 })
 
@@ -521,6 +524,59 @@ describe('TimelinePage', () => {
     expect(within(kpiBand).queryByText('60m')).toBeNull()
   })
 
+  it('updates populated dwell, transitions and preview durations with the effective numeric locale', async () => {
+    renderPage()
+    await screen.findByText('10', {}, { timeout: 8000 })
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect transition asleep to driving' }))
+    const requestCount = mockedRequest.mock.calls.length
+
+    act(() => setGlobalLocale('ar-EG'))
+
+    const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
+    expect(within(kpiBand).getByText('٢h')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('١h')).toBeInTheDocument()
+    expect(within(kpiBand).getByText('٢٥m')).toBeInTheDocument()
+    const table = screen.getByRole('table', { name: 'State transitions' })
+    expect(within(table).getByText('١h')).toBeInTheDocument()
+    expect(within(table).getByText('٢٢h')).toBeInTheDocument()
+    expect(within(screen.getByRole('dialog', { name: 'asleep → driving' })).getByText('١h')).toBeInTheDocument()
+    expect(screen.getByText(/^٢h ·/)).toBeInTheDocument()
+    expect(screen.getByText(/^١٧m ·/)).toBeInTheDocument()
+    expect(mockedRequest.mock.calls).toHaveLength(requestCount)
+  })
+
+  it.each([
+    { seconds: 0.49, duration: '٠s', dwell: '٠m' },
+    { seconds: 59.49, duration: '٥٩s', dwell: '١m' },
+    { seconds: 59.5, duration: '١m', dwell: '١m' },
+    { seconds: 3599, duration: '١h', dwell: '١h' },
+    { seconds: 7199, duration: '٢h', dwell: '٢h' },
+    { seconds: 3690, duration: '١h ٢m', dwell: '١h ٢m' },
+  ])('preserves seconds thresholds and once-only rounding for $seconds seconds in the effective locale', async ({ seconds, duration, dwell }) => {
+    setGlobalLocale('ar-EG')
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve({
+        total_seconds: seconds,
+        by_state: [{ state: 'driving', total_seconds: seconds, percentage: 100, transition_count: 1 }],
+      })
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({
+        transitions: [
+          transitions[0],
+          { ...transitions[1], ts: new Date(new Date(transitions[0].ts).getTime() + seconds * 1000).toISOString() },
+        ],
+      })
+      return Promise.resolve({})
+    })
+    renderPage()
+    const inspect = await screen.findByRole('button', { name: 'Inspect transition asleep to driving' })
+    expect(within(inspect.closest('tr')!).getAllByRole('cell')[3]).toHaveTextContent(duration)
+    expect(within(screen.getByRole('region', { name: 'Summary metrics' })).getByText(dwell)).toBeInTheDocument()
+    expect(screen.getByText(text => text.startsWith(`${duration} ·`))).toBeInTheDocument()
+    fireEvent.click(inspect)
+    expect(within(screen.getByRole('dialog', { name: 'asleep → driving' })).getByText(duration)).toBeInTheDocument()
+  })
+
   it('degrades every section to an explicit empty state when there is no activity', async () => {
     install({ emptyTimeline: true, emptySummary: true })
     renderPage()
@@ -801,6 +857,44 @@ describe('TimelinePage', () => {
     expect(fill.style.background).not.toContain('gradient')
     expect(driving).toHaveAttribute('aria-valuenow', '7199')
     expect(driving).toHaveTextContent('2h')
+  })
+
+  it('retains daily series grouping and exposes unclassified transitions without claiming measured sleep', async () => {
+    const states = ['driving', 'charging', 'idle', 'online', 'parked', 'sleeping', 'asleep', 'offline', 'service', 'unknown']
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve(summaryFor(1))
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({
+        transitions: states.map((state, index) => ({
+          ts: `2025-03-01T10:${String(index).padStart(2, '0')}:00Z`,
+          from_state: index === 0 ? null : states[index - 1],
+          to_state: state,
+          trigger_field: 'state',
+          trigger_value: state,
+        })),
+      })
+      return Promise.resolve({})
+    })
+    renderPage()
+    await screen.findByRole('button', { name: 'Inspect transition asleep to offline' })
+    const chart = await screen.findByRole('group', { name: 'Daily transition counts by vehicle state' })
+    const figure = chart.closest('figure')!
+    const dailyTable = within(figure).getByRole('table')
+    expect(within(dailyTable).getAllByRole('columnheader').map(cell => cell.textContent))
+      .toEqual(['Day', 'Driving', 'Charging', 'Idle', 'Sleeping', 'Unclassified'])
+    const dataRow = within(dailyTable).getAllByRole('row')[1]
+    expect(within(dataRow).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['2025-03-01', '1', '1', '3', '3', '2'])
+    expect(screen.getByText(/Sleeping groups sleeping, asleep and offline transitions/))
+      .toHaveTextContent('this grouping does not establish measured sleep')
+    const table = screen.getByRole('table', { name: 'State transitions' })
+    for (const state of states) {
+      expect(within(table).getAllByText(state).length).toBeGreaterThan(0)
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect transition asleep to offline' }))
+    const drawer = screen.getByRole('dialog', { name: 'asleep → offline' })
+    expect(within(drawer).getAllByText('offline').length).toBeGreaterThan(0)
+    expect(within(screen.getByTestId('timeline-summary')).getByText('25m')).toBeInTheDocument()
   })
 
   it('uses the vehicle day for preview navigation without changing UTC daily buckets', async () => {

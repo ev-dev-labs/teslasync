@@ -80,7 +80,7 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
   asleep: 'neutral',
 };
 
-function formatHoursFromSeconds(seconds: number): string {
+function formatHoursFromSeconds(seconds: number, fmtInt: (value: number) => string): string {
   if (!Number.isFinite(seconds)) return '—';
   // Round to whole minutes ONCE, then split into h/m. Flooring the hours and
   // rounding the leftover minutes independently used to emit "60m" (e.g.
@@ -90,8 +90,8 @@ function formatHoursFromSeconds(seconds: number): string {
   const sign = seconds < 0 && totalMinutes > 0 ? '-' : '';
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
-  if (h === 0) return `${sign}${m}m`;
-  return m > 0 ? `${sign}${h}h ${m}m` : `${sign}${h}h`;
+  if (h === 0) return `${sign}${fmtInt(m)}m`;
+  return m > 0 ? `${sign}${fmtInt(h)}h ${fmtInt(m)}m` : `${sign}${fmtInt(h)}h`;
 }
 
 function sumDwell(rows: ByStateRow[], states: readonly string[]): number | null {
@@ -103,19 +103,20 @@ function sumDwell(rows: ByStateRow[], states: readonly string[]): number | null 
   return matching.reduce((sum, row) => sum + row.total_seconds, 0);
 }
 
-function formatDurationFromSeconds(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '0s';
+function formatDurationFromSeconds(seconds: number, fmtInt: (value: number) => string): string {
+  if (!Number.isFinite(seconds) || seconds <= 0) return `${fmtInt(0)}s`;
   const rounded = Math.round(seconds);
   // Only sub-minute durations render in seconds; once rounding tips the value
   // to a full minute defer to the h/m formatter so we never emit "60s".
-  if (rounded < 60) return `${rounded}s`;
-  return formatHoursFromSeconds(seconds);
+  if (rounded < 60) return `${fmtInt(rounded)}s`;
+  return formatHoursFromSeconds(seconds, fmtInt);
 }
 
 function transitionDuration(
   row: TransitionRow,
   startInstant: string,
   endInstantExclusive: string,
+  fmtInt: (value: number) => string,
 ): string {
   if (!row.next_ts) return '—';
   const recordedStart = new Date(row.ts).getTime();
@@ -127,13 +128,13 @@ function transitionDuration(
   const start = Math.max(recordedStart, windowStart);
   const end = Math.min(recordedEnd, windowEnd);
   if (end <= start) return '—';
-  return formatDurationFromSeconds((end - start) / 1000);
+  return formatDurationFromSeconds((end - start) / 1000, fmtInt);
 }
 
 /* ─── Component ──────────────────────────────────────────── */
 
 export default function TimelinePage() {
-  const { fmtPercent, locale } = useNumberFormatting();
+  const { fmtPercent, fmtInt, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
 
@@ -239,12 +240,13 @@ export default function TimelinePage() {
    * the *destination* state (to_state) since that is what the original
    * pre-refactor chart visualised. We collapse the 8 raw FSM states
    * into the 4 user-facing buckets shown in the legend (driving /
-   * charging / idle / sleeping) so the chart stays readable. */
+   * charging / idle / sleeping) so the chart stays readable. These are
+   * presentation groups, not measured sleep; other states stay unclassified. */
   const dailyBreakdown = useMemo(() => {
     if (transitions.length === 0) return [];
     const buckets = new Map<
       string,
-      { day: string; driving: number; charging: number; idle: number; sleeping: number }
+      { day: string; driving: number; charging: number; idle: number; sleeping: number; unclassified: number }
     >();
     for (const row of transitions) {
       const date = new Date(row.ts);
@@ -256,12 +258,14 @@ export default function TimelinePage() {
         charging: 0,
         idle: 0,
         sleeping: 0,
+        unclassified: 0,
       };
       const target = row.to_state;
       if (target === 'driving') bucket.driving += 1;
       else if (target === 'charging') bucket.charging += 1;
       else if (target === 'idle' || target === 'online' || target === 'parked') bucket.idle += 1;
       else if (target === 'sleeping' || target === 'asleep' || target === 'offline') bucket.sleeping += 1;
+      else bucket.unclassified += 1;
       buckets.set(day, bucket);
     }
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
@@ -295,17 +299,17 @@ export default function TimelinePage() {
       label: t('timeline.drivingTime', 'Driving time'),
       description: t('timeline.summary.drivingDescription', 'Time in the driving state, rounded to whole minutes'),
       rawValue: summarySource.available ? drivingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
+      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
     { metricId: 'duration', occurrenceId: 'timeline-charging-time',
       label: t('timeline.chargingTime', 'Charging time'),
       description: t('timeline.summary.chargingDescription', 'Time in the charging state, rounded to whole minutes'),
       rawValue: summarySource.available ? chargingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
+      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
     { metricId: 'duration', occurrenceId: 'timeline-idle-sleep-time',
       label: t('timeline.idleSleepTime', 'Idle / sleep time'),
       description: t('timeline.summary.idleSleepDescription', 'Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes'),
       rawValue: summarySource.available ? idleSleepSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
+      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
   ];
   const summaryOperationalMetrics = useOperationalMetrics(summaryMetrics.map(metric => ({
     ...metric, missingReason: t('timeline.summary.missing', 'No state summary is available for this window'),
@@ -357,7 +361,7 @@ export default function TimelinePage() {
         header: t('timeline.duration', 'Duration'),
         sortable: false,
         render: (row) => {
-          const duration = transitionDuration(row, startInstant, endInstantExclusive);
+          const duration = transitionDuration(row, startInstant, endInstantExclusive, fmtInt);
           if (duration === '—') return <Caption>—</Caption>;
           return (
             <Text variant="body" className="tabular-nums">
@@ -399,7 +403,7 @@ export default function TimelinePage() {
         ),
       },
     ],
-    [t, timezone, locale, startInstant, endInstantExclusive],
+    [t, timezone, locale, fmtInt, startInstant, endInstantExclusive],
   );
 
   /* ─── Refresh action ─── */
@@ -486,7 +490,7 @@ export default function TimelinePage() {
                     <Text variant="bodySm" className="block">{row.state}</Text>
                     <Text variant="caption" className="block">
                       {Number.isFinite(row.total_seconds) && row.total_seconds >= 0
-                        ? formatDurationFromSeconds(row.total_seconds)
+                        ? formatDurationFromSeconds(row.total_seconds, fmtInt)
                         : '—'} ({fmtPercent(row.percentage)})
                     </Text>
                   </li>
@@ -507,7 +511,7 @@ export default function TimelinePage() {
                   widthPercent: pct,
                   hideFromTrack: pct < 0.3,
                   color: STATE_COLORS[row.state] ?? STATE_COLORS.offline,
-                  detail: `${formatDurationFromSeconds(row.total_seconds)} (${fmtPercent(row.percentage)})`,
+                  detail: `${formatDurationFromSeconds(row.total_seconds, fmtInt)} (${fmtPercent(row.percentage)})`,
                 };
               })}
             />
@@ -530,8 +534,7 @@ export default function TimelinePage() {
         }]} />
       </FadeIn>
 
-      {/* Daily breakdown — stacked transition counts per day, grouped
-          into the four high-level state buckets shown in the legend. */}
+      {/* Daily breakdown retains existing groups and unclassified evidence. */}
       <FadeIn delay={0.2}>
         <CardGrid label={t('timeline.dailyBreakdown', 'Daily breakdown')} items={[{
           id: 'timeline-daily-breakdown',
@@ -551,11 +554,16 @@ export default function TimelinePage() {
                   : !timelineSource.available && !tlLoading && !timelineError
                     ? t('timeline.source.unknown', '{{section}} is unavailable because the response did not contain the expected records', { section: t('timeline.dailyBreakdown', 'Daily breakdown') })
                     : t('timeline.noDailyData', 'No daily transition activity yet')}
-              footer={timelineSource.available && (timelineSource.error || timelineSource.paused)
+              footer={<>
+                <Text as="p" variant="bodySm">
+                  {t('timeline.daily.groupingNote', 'Idle groups idle, online and parked transitions. Sleeping groups sleeping, asleep and offline transitions; this grouping does not establish measured sleep. Other destination states are unclassified. Raw states remain in State transitions.')}
+                </Text>
+                {timelineSource.available && (timelineSource.error || timelineSource.paused)
                 ? <TimelineSource source={timelineSource} label={t('timeline.dailyBreakdown', 'Daily breakdown')}>{null}</TimelineSource>
                 : timelineError
                   ? <Text as="p" variant="bodySm">{getErrorMessage(timelineError)}</Text>
-                : undefined}
+                : null}
+              </>}
               data={dailyBreakdown}
               dataColumns={[
                 { key: 'day', label: t('timeline.day', 'Day') },
@@ -563,6 +571,7 @@ export default function TimelinePage() {
                 { key: 'charging', label: t('timeline.charging', 'Charging') },
                 { key: 'idle', label: t('timeline.idle', 'Idle') },
                 { key: 'sleeping', label: t('timeline.sleeping', 'Sleeping') },
+                { key: 'unclassified', label: t('timeline.daily.unclassified', 'Unclassified') },
               ]}
               chartKey="timeline-daily-breakdown"
             >
@@ -578,6 +587,7 @@ export default function TimelinePage() {
                     <Bar dataKey="charging" name={t('timeline.charging', 'Charging')} stackId="a" fill={STATE_COLORS.charging} fillOpacity={0.85} hide={hiddenSeries?.isHidden('charging')} />
                     <Bar dataKey="idle" name={t('timeline.idle', 'Idle')} stackId="a" fill={STATE_COLORS.idle} fillOpacity={0.85} hide={hiddenSeries?.isHidden('idle')} />
                     <Bar dataKey="sleeping" name={t('timeline.sleeping', 'Sleeping')} stackId="a" fill={STATE_COLORS.sleeping} fillOpacity={0.85} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('sleeping')} />
+                    <Bar dataKey="unclassified" name={t('timeline.daily.unclassified', 'Unclassified')} stackId="a" fill={STATE_COLORS.offline} fillOpacity={0.85} hide={hiddenSeries?.isHidden('unclassified')} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -608,7 +618,7 @@ export default function TimelinePage() {
                   max={totalSeconds || row.total_seconds}
                   color={row.color}
                   fill="solid"
-                  sublabel={`${formatDurationFromSeconds(row.total_seconds)} · ${fmtPercent(row.percentage)}`}
+                  sublabel={`${formatDurationFromSeconds(row.total_seconds, fmtInt)} · ${fmtPercent(row.percentage)}`}
                 />
               ))}
             </div>
@@ -646,7 +656,7 @@ export default function TimelinePage() {
                 if (key === 'ts') return formatDateTime(row.ts, { tz: timezone, locale });
                 if (key === 'from_state') return row.from_state ?? '—';
                 if (key === 'to_state') return row.to_state;
-                if (key === 'duration') return transitionDuration(row, startInstant, endInstantExclusive);
+                if (key === 'duration') return transitionDuration(row, startInstant, endInstantExclusive, fmtInt);
                 if (key === 'trigger_field') return row.trigger_field ?? '—';
                 return null;
               },
@@ -714,7 +724,7 @@ export default function TimelinePage() {
                 {
                   key: 'duration',
                   label: t('timeline.duration', 'Duration'),
-                  value: transitionDuration(previewTransition, startInstant, endInstantExclusive),
+                  value: transitionDuration(previewTransition, startInstant, endInstantExclusive, fmtInt),
                 },
                 {
                   key: 'trigger-field',
