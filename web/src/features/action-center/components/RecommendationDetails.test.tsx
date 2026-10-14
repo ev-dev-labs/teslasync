@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createInstance } from 'i18next';
 import { I18nextProvider } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -116,7 +117,7 @@ describe('RecommendationDetails bounded history coverage', () => {
     expect(screen.getByText('Alert persisted.')).toBeVisible();
     expect(screen.getByText('Rank 450')).toBeVisible();
     expect(screen.getByText('1.25 kWh')).toBeVisible();
-    expect(screen.getByText('Not a diagnosis.')).toBeVisible();
+    screen.getAllByText('Not a diagnosis.').forEach((element) => expect(element).toBeVisible());
 
     setHistory({ data: page(26, 25) });
     rerender(details());
@@ -189,6 +190,59 @@ describe('RecommendationDetails bounded history coverage', () => {
     rerender(details());
     expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 25 });
     expect(screen.getByText('Showing 26–50 of 71')).toBeVisible();
+  });
+
+  it('retains observed history through a real older-page rejection and retries only that selected page', async () => {
+    const api = await import('@/api/client');
+    const hooks = await vi.importActual<typeof import('@/api/hooks/useActionCenter')>(
+      '@/api/hooks/useActionCenter',
+    );
+    const original = page(26);
+    const older = page(26, 25);
+    let rejectOlder!: (error: Error) => void;
+    const request = vi.spyOn(api, 'request')
+      .mockResolvedValueOnce(original)
+      .mockImplementationOnce(() => new Promise((_, reject) => { rejectOlder = reject; }));
+    historyMock.mockImplementation(hooks.useActionCenterHistory);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 60000 } },
+    });
+    const { unmount } = render(
+      <QueryClientProvider client={client}>{details()}</QueryClientProvider>,
+    );
+    try {
+      const history = screen.getByRole('region', { name: 'Action history' });
+      await waitFor(() => expect(within(history).getByText('Showing 1–25 of 26')).toBeVisible());
+      fireEvent.click(within(history).getByRole('button', { name: 'Next page' }));
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+      expect(within(history).getByText('Showing 1–25 of 26')).toBeVisible();
+      expect(within(history).queryByText('Showing 26–26 of 26')).not.toBeInTheDocument();
+      expect(within(history).getByRole('button', { name: 'Next page' })).toBeDisabled();
+      await act(async () => { rejectOlder(new Error('Older history unavailable')); });
+      await waitFor(() => expect(within(history).getByTestId('stale-refresh-warning')).toBeVisible());
+      expect(within(history).queryByRole('alert')).not.toBeInTheDocument();
+      expect(within(history).getAllByText('Acknowledge · Open → Acknowledged · Applied')).toHaveLength(25);
+      expect(screen.getByText('Alert persisted.')).toBeVisible();
+      expect(screen.getByText('Rank 450')).toBeVisible();
+      expect(screen.getByText('1.25 kWh')).toBeVisible();
+      request.mockResolvedValueOnce(older);
+      fireEvent.click(within(history).getByRole('button', { name: 'Refresh' }));
+      await waitFor(() => expect(within(history).getByText('Showing 26–26 of 26')).toBeVisible());
+      expect(within(history).getByText('Restore · Acknowledged → Open · Applied')).toBeVisible();
+      expect(within(history).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(request.mock.calls.map(([url]) => url)).toEqual([
+        `/action-center/${recommendation.id}/history?limit=25&offset=0`,
+        `/action-center/${recommendation.id}/history?limit=25&offset=25`,
+        `/action-center/${recommendation.id}/history?limit=25&offset=25`,
+      ]);
+      expect(client.getQueryData(hooks.actionCenterKeys.historyPage(recommendation.id))).toEqual(original);
+      expect(client.getQueryData(hooks.actionCenterKeys.historyPage(recommendation.id, { offset: 25 }))).toEqual(older);
+      expect(onOpenChange).not.toHaveBeenCalled();
+    } finally {
+      unmount();
+      client.clear();
+      request.mockRestore();
+    }
   });
 });
 vi.mock('@/lib/timezone', () => ({
@@ -353,7 +407,7 @@ describe('RecommendationDetails retained history trust', () => {
     expect(within(history).queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.getByText('Priority contributes 300')).toBeVisible();
     expect(screen.getByText('Alert persisted.')).toBeVisible();
-    expect(screen.getByText('Not a diagnosis.')).toBeVisible();
+    screen.getAllByText('Not a diagnosis.').forEach((element) => expect(element).toBeVisible());
     fireEvent.click(within(history).getByRole('button', { name: 'Refresh' }));
     expect(historyRetry).toHaveBeenCalledTimes(1);
     expect(onOpenChange).not.toHaveBeenCalled();
@@ -363,7 +417,7 @@ describe('RecommendationDetails retained history trust', () => {
     });
     rerender(details());
     expect(within(history).getByText(eventText)).toBeVisible();
-    expect(within(history).getByRole('button', { name: 'Updating…' })).toBeDisabled();
+    expect(within(history).getByRole('button', { name: english.freshness.updating })).toBeDisabled();
 
     setHistory({
       data: {
@@ -414,14 +468,14 @@ describe('RecommendationDetails retained history trust', () => {
     expect(within(history).queryByText(/offline/i)).not.toBeInTheDocument();
   });
 
-  it('preserves query identity enablement and the public accordion callback', () => {
+  it('preserves query identity enablement and the public accordion callback', async () => {
     const { rerender } = render(details(recommendation, false));
     expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, false, { limit: 25, offset: 0 });
     fireEvent.click(screen.getByRole('button', { name: /Evidence, scoring, and outcomes/ }));
     expect(onOpenChange).toHaveBeenCalledWith(true);
     rerender(details(recommendation, true));
     expect(historyMock).toHaveBeenLastCalledWith(recommendation.id, true, { limit: 25, offset: 0 });
-    expect(screen.getByRole('region', { name: 'Action history' })).toBeVisible();
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Action history' })).toBeVisible());
   });
 });
 

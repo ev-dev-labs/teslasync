@@ -18,7 +18,7 @@ const firstPage: ActionCenterHistoryPage = {
 };
 
 function harness() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 60000 } } });
   const wrapper = ({ children }: { children: ReactNode }) =>
     createElement(QueryClientProvider, { client }, children);
   return { client, wrapper };
@@ -171,11 +171,15 @@ describe('Action Center bounded history paging', () => {
   });
 
   it('retains same page data on refresh failure and recovers through the independent refetch', async () => {
-    requestMock.mockResolvedValueOnce(firstPage).mockRejectedValueOnce(new Error('Refresh failed'));
+    requestMock.mockResolvedValue(firstPage);
     const { wrapper, client } = harness();
+    client.setQueryDefaults(actionCenterKeys.history('ac_history'), { staleTime: Infinity });
     const { result, unmount } = renderHook(() => useActionCenterHistory('ac_history'), { wrapper });
     await waitFor(() => expect(result.current.data).toEqual(firstPage));
+    await waitFor(() => expect(result.current.fetchStatus).toBe('idle'));
+    requestMock.mockRejectedValueOnce(new Error('Refresh failed'));
     await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.isError).toBe(true);
     expect(result.current.error?.message).toBe('Refresh failed');
     expect(result.current.data).toEqual(firstPage);
