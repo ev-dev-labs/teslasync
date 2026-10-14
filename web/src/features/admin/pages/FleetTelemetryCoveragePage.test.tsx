@@ -128,6 +128,53 @@ beforeEach(() => {
 })
 
 describe('FleetTelemetryCoveragePage', () => {
+  it('describes absent columns without inferring signal_log and preserves unit_history routing', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse({
+      categories: [{
+        category: 'User Preferences',
+        total_fields: 1,
+        destinations: { unit_history: 1 },
+        fields: [{
+          field: 'SettingDistanceUnit',
+          destination: 'unit_history',
+          column: '',
+          also_signal_log: false,
+          subscribed: true,
+        }],
+      }],
+      destination_totals: { unit_history: 1 },
+    }))
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    const legend = screen.getByTestId('coverage-legend-column')
+    expect(legend).toHaveTextContent('A dash means no per-field column is declared')
+    expect(legend).toHaveTextContent('read the Destination cell')
+    expect(legend).toHaveTextContent('Setting*Unit fields retain their explicit unit_history destination')
+    expect(legend).not.toHaveTextContent('the field is stored in signal_log')
+    const table = within(screen.getByTestId('coverage-category-User Preferences')).getByRole('table')
+    const row = within(table).getByText('SettingDistanceUnit').closest('tr')!
+    expect(within(row).getByText('unit_history')).toBeInTheDocument()
+    expect(within(row).getAllByText('—')).toHaveLength(2)
+    expect(within(row).queryByText('signal_log')).not.toBeInTheDocument()
+  })
+
+  it('describes subscription membership as desired configuration rather than observed ingestion', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    const legend = screen.getByTestId('coverage-legend-subscribed')
+    expect(within(legend).getByText('Configured subscription')).toBeInTheDocument()
+    expect(legend).toHaveTextContent('whether the field belongs to the configured desired subscription')
+    expect(legend).toHaveTextContent('"Yes" does not confirm observed vehicle ingestion.')
+    expect(legend).toHaveTextContent('"No" means the field is routed but omitted from the desired subscription request.')
+    expect(screen.getByText(/Package-derived snapshot of routed Tesla proto fields/)).toHaveTextContent('not confirmation of observed vehicle ingestion')
+    expect(screen.queryByText(/currently pushing this field to us/)).not.toBeInTheDocument()
+    expect(within(screen.getByTestId('coverage-category-driving')).getAllByText('yes')).toHaveLength(2)
+    expect(within(screen.getByTestId('coverage-category-climate')).getByText('no')).toBeInTheDocument()
+  })
+
   it('renders the spinner while the query is loading', () => {
     let resolver: (value: FleetTelemetryCoverageResponse) => void = () => {}
     mockedRequest.mockReturnValueOnce(

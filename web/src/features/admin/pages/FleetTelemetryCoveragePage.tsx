@@ -133,7 +133,7 @@ export default function FleetTelemetryCoveragePage({
       title={t('coverage.pageTitle', 'Fleet Telemetry coverage')}
       subtitle={t(
         'coverage.subtitle',
-        'Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.',
+        'Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion.',
       )}
       query={query}
       dataSources={[{ id: 'fleet-telemetry-coverage', label: t('coverage.pageTitle', 'Fleet Telemetry coverage'), query }]}
@@ -258,8 +258,8 @@ export default function FleetTelemetryCoveragePage({
                 </Text>{' '}
                 <Text as="span" size="sm" color="secondary">
                   {t(
-                    'coverage.legend.columnHelp',
-                    '— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.',
+                    'coverage.legend.columnDestinationHelp',
+                    '— the typed destination column. A dash means no per-field column is declared; read the Destination cell to see where the field is routed. Setting*Unit fields retain their explicit unit_history destination.',
                   )}
                 </Text>
               </li>
@@ -276,12 +276,12 @@ export default function FleetTelemetryCoveragePage({
               </li>
               <li data-testid="coverage-legend-subscribed">
                 <Text as="span" size="sm" weight="semibold" color="primary">
-                  {t('coverage.legend.subscribedLabel', 'Subscribed')}
+                  {t('coverage.legend.subscribedLabel', 'Configured subscription')}
                 </Text>{' '}
                 <Text as="span" size="sm" color="secondary">
                   {t(
                     'coverage.legend.subscribedHelp',
-                    '— whether Tesla Fleet Telemetry is currently pushing this field to us. "No" means the writer is wired but the subscription request omits the field.',
+                    '— whether the field belongs to the configured desired subscription. "Yes" does not confirm observed vehicle ingestion. "No" means the field is routed but omitted from the desired subscription request.',
                   )}
                 </Text>
               </li>
