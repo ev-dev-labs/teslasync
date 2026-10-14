@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "latest_execution_status": "PARTIAL_NATIVE_NOTRUN_SAFE_FIXTURE_EMPTY",
   "item": "phase6-native-drives-preview-mobile-target",
   "continuation": 2,
   "status": "NARROW_REMAINING_NATIVE_TARGETS_CONFIRMED",
@@ -318,5 +319,192 @@
     "web\\src\\components\\data-display\\HistoryListRow.tsx",
     ".github\\instructions\\react-frontend.instructions.md",
     ".github\\instructions\\frontend-si-cutover.instructions.md"
-  ]
+  ],
+  "recovery_continuation_20261014": {
+    "item": "phase6-native-drives-preview-mobile-target",
+    "status": "PARTIAL_NATIVE_NOTRUN_SAFE_FIXTURE_EMPTY",
+    "native_acceptance": "NOTRUN for missing cases; retained genuine native results above remain unchanged historical evidence.",
+    "whole_pilot_status": "PARTIAL_NOT_ACCEPTED",
+    "owned_files": [
+      "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json",
+      "web\\logs\\phase6-native-drives-preview-mobile-target.log"
+    ],
+    "assessment_before_browser": {
+      "existing_report_sha256_before_append": "2587a0b22dce4a9a0c6bfa7a5ed5bd3b5e3bb55c3e566d71837e879dcc8cf126",
+      "source_sha256_before_and_after": "13cac27362a7f9fdae35effd3751c10dbbae066d4968e7d8052b070b7293378c",
+      "test_sha256_before_and_after": "e49539a3f1b863d22a5e818b62827ee33b9586ce9089929d8697c26c6ab636a9",
+      "matches_retained_continuation2_source_and_test": true,
+      "source_change_needed": false,
+      "native_no_change_completion_justified": false,
+      "reason": "Matching source/test inputs preserve the genuine coarse-pointer375/767/768 original proof and320/390/430/1023 continuation proof. Fine-pointer375/320/390/430/767 and fine-pointer desktop restoration are explicitly NOTRUN in the retained receipt, so the complete requested native objective is not already satisfied.",
+      "already_completed_cases_repeated": 0,
+      "historical_original_native_duration_seconds": 1193.544,
+      "original_ignored_receipt_present_on_recovered_checkout": false,
+      "original_ignored_receipt_hash": "Historical becc17d00f418210e0b74c95c757d324ebb64ca2be452637e6272bf678ccb5d2 from retained report; not freshly reverified because web\\logs\\phase6-native-drives-preview-mobile-target-native.json is absent.",
+      "original_receipt_regenerated": false
+    },
+    "clock": {
+      "actual_assignment_launch_utc": "2026-10-14T05:17:51.136Z",
+      "first_terminal_clock_utc": "2026-10-14T05:18:10.8103505Z",
+      "return_deadline_utc": "2026-10-14T05:37:51.136Z",
+      "unchanged_hard_deadline_utc": "2026-10-14T05:42:51.136Z",
+      "native_command_watchdogs_ms": [180000, 60000],
+      "no_clock_reset": true,
+      "last_owned_browser_release_utc": "2026-10-14T05:22:29.869Z",
+      "browser_release_elapsed_from_assignment_seconds": 278.733
+    },
+    "source_scope_and_safety": {
+      "sole_preview_origin": "http://localhost:5173",
+      "intended_unchanged_route": "/drives?vehicle_id=4&from=2026-10-08&to=2026-10-13",
+      "browser_channel": "msedge",
+      "installed_runner": "@playwright/test",
+      "actual_node_version": "v26.8.1",
+      "browser_downloads": 0,
+      "guard_reference": "Existing frontend-qa.mjs:717-722 read-method guard, applied before navigation through installed native Playwright; origin/fixture API restrictions strengthened, never loosened.",
+      "only_read_methods": ["GET", "HEAD", "OPTIONS"],
+      "service_workers": "block",
+      "websockets": "blocked before navigation",
+      "unscoped_roster_fleet_and_nonfixture_api_reads": "Blocked; no roster was fetched to recover fixture availability.",
+      "allowed_api_requests_actually_executed": [
+        "/api/v1/vehicles/4",
+        "/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000"
+      ],
+      "fixture_identity_verified_in_this_execution": false,
+      "raw_response_bodies_retained": false,
+      "nonfixture_identities_or_locations_fetched_or_captured": false,
+      "application_navigation": false,
+      "business_mutations_sent": 0,
+      "response_mocks_or_fulfillment": 0,
+      "page_content_hidden_or_injected": false,
+      "servers_builds_deployment_installs_or_nested_agents": 0,
+      "independent_docker_worker": "Exact5590146 build/seed worker left undisturbed. Its progress, success, containers and seed result were not inspected or assumed.",
+      "source_support_tests_catalog_config_queue_and_git": "READONLY; no Git command run."
+    },
+    "actual_named_observations": [
+      {
+        "name": "fixture4_identity_presence_only",
+        "command_handle": "drives-native-edge-missing",
+        "command": "node --input-type=module (stdin), chromium.launch({channel:'msedge',headless:true}); fresh guarded native context; page.goto('http://localhost:5173/api/v1/vehicles/4'); conditional missing fine-pointer matrix never reached.",
+        "command_started_utc": "2026-10-14T05:21:28.525Z",
+        "browser_launched_utc": "2026-10-14T05:21:28.799Z",
+        "guard_installed_utc": "2026-10-14T05:21:28.819Z",
+        "response_utc": "2026-10-14T05:21:29.061Z",
+        "http_status": 404,
+        "numeric_exit": 2,
+        "native_measurements": 0,
+        "guard_allowed": 1,
+        "guard_blocked": 0,
+        "guard_mutations": 0,
+        "context_closed_utc": "2026-10-14T05:21:29.081Z",
+        "browser_closed_utc": "2026-10-14T05:21:29.691Z",
+        "blocker": "SAFE_FIXTURE_UNAVAILABLE: GET /api/v1/vehicles/4 HTTP404",
+        "raw_receipt": "web\\logs\\phase6-native-drives-preview-mobile-target.log NATIVE_RESULT_BEGIN..NATIVE_RESULT_END"
+      },
+      {
+        "name": "existing-fixture4-drive-list-availability",
+        "command_handle": "drives-native-edge-availability",
+        "command": "node --input-type=module (stdin), installed Edge; fresh guarded native context; page.goto('http://localhost:5173/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000'); availability only.",
+        "command_started_utc": "2026-10-14T05:22:29.060Z",
+        "guard_installed_utc": "2026-10-14T05:22:29.355Z",
+        "response_utc": "2026-10-14T05:22:29.581Z",
+        "http_status": 200,
+        "actual_array": true,
+        "actual_row_count": 0,
+        "original190_191_fixture_rows_present": false,
+        "fixture_only_array_predicate": "Vacuously true on []; not evidence that a safe DRILL vehicle or drive exists.",
+        "numeric_exit": 2,
+        "native_measurements": 0,
+        "guard_allowed": 1,
+        "guard_blocked": 0,
+        "guard_mutations": 0,
+        "context_closed_utc": "2026-10-14T05:22:29.598Z",
+        "browser_closed_utc": "2026-10-14T05:22:29.869Z",
+        "blocker": "SAFE_FIXTURE_EMPTY: HTTP200, no DRILL4 drives in the unchanged original fixture window.",
+        "raw_receipt": "web\\logs\\phase6-native-drives-preview-mobile-target.log AVAILABILITY_RESULT_BEGIN..AVAILABILITY_RESULT_END"
+      }
+    ],
+    "http_availability_limits": {
+      "actual_observed_statuses": {"404": 1, "200": 1},
+      "actual_observed_http500": 0,
+      "http500_absence_scope": "Only these two guarded availability GETs; application/resource500 status NOTRUN, not a cleared prior warning.",
+      "route_source_read": [
+        "internal\\api\\router.go:3362-3373 registers vehicle list and GET /vehicles/{vehicleID}/",
+        "internal\\api\\router.go:3506-3508 registers GET /drives/"
+      ],
+      "404_cause": "UNKNOWN; no backend/deployment diagnosis or new hook/source defect inferred.",
+      "range_changed_to_find_rows": false,
+      "empty_replaced_with_fabricated_data": false
+    },
+    "missing_native_cases": [
+      {"name": "fine375-drive190_191-44px-native-click-accessibility", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"},
+      {"name": "fine320-drive190_191-44px-native-click-accessibility", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"},
+      {"name": "fine390-drive190_191-44px-native-click-accessibility", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"},
+      {"name": "fine430-drive190_191-44px-native-click-accessibility", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"},
+      {"name": "fine767-drive190_191-44px-native-click-accessibility", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"},
+      {"name": "fine768-drive190_191-36px-desktop-restoration", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"},
+      {"name": "fine1023-wider-mounted-DriveCard-desktop-restoration", "status": "NOTRUN_SAFE_FIXTURE_EMPTY"}
+    ],
+    "retained_cases_not_repeated": {
+      "original375_767_coarse": "44x44; five-point hits and10 genuine touch activations; original1193.544s result above remains retained.",
+      "original768": "Mounted36x36; original native result retained, not fine-pointer acceptance.",
+      "continuation320_390_430_coarse": "Two fixture targets per width44x44;30 genuine touch-preview/Escape/restoration flows retained above.",
+      "continuation1023_coarse": "Mounted36x36/minima0, original card applicability retained.",
+      "original_keyboard_and_independent_details": "Original Enter/Space/exact190/191/Escape/2px focus and independent detail/checkbox proof retained; no rerun.",
+      "1024_1440_table": "Distinct32px table controls are not DriveCard. Prior non-applicability is preserved; no new desktop/table claim."
+    },
+    "captures": {
+      "new_images": 0,
+      "new_paths_and_hashes": [],
+      "existing_default_capture_policy_and_budget": "Unchanged; no custom capture helper, screenshot retry or budget reset.",
+      "original_four_default_images": "Preserved by the historical1193.544s receipt references above; original ignored receipt/image metadata absent on this recovered checkout, so their paths/hashes are not newly claimed.",
+      "visual_screenshot_acceptance": false
+    },
+    "dependencies_and_fix_owners": [
+      {
+        "owner": "Existing independent exact5590146 Docker build/DRILL seed worker and parent runtime owner",
+        "dependency": "Authorized fixture4 plus original190/191 completed/ongoing rows must actually be available through the sole5173 preview backend before missing native cases can execute.",
+        "evidence": "Vehicle4 GET404 and unchanged scoped drives GET200/[]; no seed/deployment success assumed.",
+        "worker_action": "No fixture/backend/source repair, new container, reseed, server restart, polling loop or new page campaign."
+      },
+      {
+        "owner": "Parent orchestration of the existing pending phase6-native-drives-preview-mobile-target row",
+        "dependency": "Preserve attempts/history and wait for genuinely verified safe fixture availability, then continue only the missing fine-pointer cases with a real browser grant.",
+        "source_fix_owner": "None inferred: DriveCard.tsx/source and test pins still match the accepted correction."
+      }
+    ],
+    "validation": {
+      "source_and_test_before_after_hashes_match": true,
+      "existing_receipt_results_preserved": true,
+      "typescript_lint_tests_full_suites_build_or_phase_gates": "NOTRUN by explicit report-only assignment; no changed source/tests.",
+      "scoped_report_json_and_numeric_validation": "Final exact command/result appended to owned log; no implementation acceptance implied.",
+      "first_document_validation_exit": 1,
+      "first_document_validation_error": "TypeError: Cannot read properties of undefined (reading 'split'); validator assumed LF markers, but PowerShell redirected native stdout with CRLF.",
+      "correction": "Normalize CRLF to LF when parsing the existing raw log. No native rerun, evidence change, source change or assertion relaxation.",
+      "premature_release_line": "COMMAND05 incorrectly printed report/log release after exit1. This is not accepted as final release; final corrected validation records the real release. Browser closure UTC remains unaffected."
+    },
+    "release": {
+      "browser_lock": "1/4 explicitly granted; both exact own browser instances and contexts closed.",
+      "browser_release_utc": "2026-10-14T05:22:29.869Z",
+      "owned_open_pages": 0,
+      "running_browser_commands": 0,
+      "native_shell_handles": [
+        {"handle": "drives-native-edge-missing", "terminal_numeric_exit": 2},
+        {"handle": "drives-native-edge-availability", "terminal_numeric_exit": 2}
+      ],
+      "report_log_command_release": "Released at final document-validation UTC recorded in owned log; no post-return writes.",
+      "source_claim": "READONLY throughout; unchanged source scope."
+    },
+    "additional_files_read": [
+      "docs\\frontend-mission.md:520-560",
+      "docs\\session-handoff.md:1-115,480-530,2180-2240",
+      "docs\\frontend-worker-conventions.md",
+      ".github\\instructions\\observability.instructions.md",
+      "web\\scripts\\frontend-qa.mjs:1-110,640-810",
+      "web\\playwright.config.ts",
+      "web\\e2e\\README.md:1-100",
+      "web\\src\\hooks\\useSelectedVehicle.ts:1-140",
+      "web\\src\\api\\hooks\\useVehicles.ts:1-115",
+      "internal\\api\\router.go:3362-3389,3506-3528"
+    ]
+  }
 }
