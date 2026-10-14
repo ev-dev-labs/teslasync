@@ -183,6 +183,33 @@ describe('selectConfig options', () => {
 
 // ── Multi-field inputs ───────────────────────────────────────────────────────
 describe('multi-field inputConfig', () => {
+  it.each(['trigger_homelink', 'navigation_gps_request'])(
+    'numeric regression configures authoritative geographic bounds for %s',
+    (id) => {
+      expect(getInputConfig(id).fields).toMatchObject([
+        { name: 'lat', validation: 'decimal', min: -90, max: 90 },
+        { name: 'lon', validation: 'decimal', min: -180, max: 180 },
+      ]);
+    },
+  );
+
+  it('numeric regression configures charge percent, volume, amps and removable schedule IDs without guessed amp capacity', () => {
+    expect(getInputConfig('set_charge_limit')).toMatchObject({
+      paramName: 'percent', validation: 'number', min: 50, max: 100, defaultValue: '80',
+    });
+    expect(getInputConfig('adjust_volume')).toMatchObject({
+      paramName: 'volume', validation: 'decimal', min: 0, max: 11, defaultValue: '5',
+    });
+    expect(getInputConfig('set_charging_amps')).toMatchObject({
+      paramName: 'charging_amps', validation: 'number', min: 0,
+    });
+    expect(getInputConfig('set_charging_amps').max).toBeUndefined();
+    for (const id of ['remove_charge_schedule', 'remove_precondition_schedule']) {
+      expect(getInputConfig(id)).toMatchObject({ paramName: 'id', validation: 'number', min: 0 });
+      expect(getInputConfig(id).max).toBeUndefined();
+    }
+  });
+
   it('gives lat/lon field groups unique, non-empty names', () => {
     const multiField = COMMANDS.filter((c) => c.inputConfig?.fields);
     // trigger_homelink + navigation_gps_request both take a lat/lon pair.

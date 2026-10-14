@@ -2,7 +2,7 @@ import { render, screen, fireEvent, cleanup } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { CommandInputDialog, validateField } from './CommandInputDialog';
-import type { CommandDef } from '../commands';
+import { COMMANDS, type CommandDef } from '../commands';
 import type { LucideIcon } from '@/lib/icons';
 
 // Mock react-i18next so the dialog + shared <Label> get fallback strings and
@@ -132,6 +132,29 @@ afterEach(() => cleanup());
 
 // ── Pure validation helper ──────────────────────────────────────────────────
 describe('validateField', () => {
+  it.each(['21junk', '21,5', '1,234.5', '1.234,5', 'Infinity', '-Infinity', 'NaN', '0x15', '2e1', '21 5'])(
+    'numeric regression rejects the whole invalid dot-decimal input %s',
+    (value) => {
+      expect(validateField(value, 'decimal')).toMatchObject({ key: 'commands.input.decimal' });
+    },
+  );
+
+  it('numeric regression rejects overflowing decimals and unsafe or fractional integers', () => {
+    expect(validateField('9'.repeat(400), 'decimal')).toMatchObject({ key: 'commands.input.decimal' });
+    for (const value of ['9'.repeat(400), '9007199254740993', '2.0', '1e2', 'Infinity', '88x']) {
+      expect(validateField(value, 'number')).toMatchObject({ key: 'commands.input.wholeNumber' });
+    }
+  });
+
+  it('numeric regression preserves zero, signed decimal coordinates and whole numbers', () => {
+    for (const value of ['0', '-0', '+0', '000', ' 42 ']) {
+      expect(validateField(value, 'number')).toBeNull();
+    }
+    for (const value of ['0', '-122.4194', '-90', '+90', '.5', '21.', ' 21.50 ']) {
+      expect(validateField(value, 'decimal')).toBeNull();
+    }
+  });
+
   it('flags empty and whitespace-only values as required', () => {
     expect(validateField('')).toEqual({ key: 'commands.input.required', fallback: 'Required' });
     expect(validateField('   ')).toEqual({ key: 'commands.input.required', fallback: 'Required' });
@@ -175,6 +198,113 @@ describe('validateField', () => {
 
 // ── Component behaviour ─────────────────────────────────────────────────────
 describe('CommandInputDialog', () => {
+  it.each(['valet_mode', 'adjust_volume'])(
+    'numeric regression labels the actual configured %s field visibly without a sublabel',
+    (id) => {
+      const def = COMMANDS.find(command => command.id === id);
+      if (!def?.inputConfig) throw new Error(`Missing ${id} input config`);
+      setup({ def });
+      const input = screen.getByLabelText(def.inputConfig.promptFallback);
+      expect(input).toHaveAccessibleName(def.inputConfig.promptFallback);
+      expect(input.closest('form')?.querySelector('label')).toBeVisible();
+      if (id === 'valet_mode') expect(input).toHaveAttribute('type', 'password');
+    },
+  );
+
+  it('numeric regression normalizes a valid decimal before the temperature payload builder', () => {
+    const def = COMMANDS.find(command => command.id === 'set_temps');
+    if (!def?.inputConfig?.buildParams) throw new Error('Missing temperature config');
+    const { onSubmit } = setup({ def });
+    fireEvent.change(screen.getByLabelText('Driver/passenger'), { target: { value: ' +021.500 ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(onSubmit).toHaveBeenCalledWith({ driver_temp: '21.5' });
+    expect(def.inputConfig.buildParams(onSubmit.mock.calls[0][0])).toEqual({
+      driver_temp: '21.5', passenger_temp: '21.5',
+    });
+  });
+
+  it.each(['21junk', '21,5', 'Infinity', '1e1', '31'])(
+    'numeric regression blocks the configured temperature payload for %s on direct form submit',
+    (value) => {
+      const def = COMMANDS.find(command => command.id === 'set_temps');
+      if (!def) throw new Error('Missing temperature config');
+      const { onSubmit } = setup({ def });
+      fireEvent.change(screen.getByLabelText('Driver/passenger'), { target: { value } });
+      const send = screen.getByRole('button', { name: 'Send' });
+      expect(send).toBeDisabled();
+      fireEvent.submit(send.closest('form') as HTMLFormElement);
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(screen.getByLabelText('Driver/passenger')).toHaveAttribute('aria-invalid', 'true');
+    },
+  );
+
+  it.each(['navigation_gps_request', 'trigger_homelink'])(
+    'numeric regression validates and normalizes configured %s coordinates without losing negative or zero',
+    (id) => {
+      const def = COMMANDS.find(command => command.id === id);
+      if (!def?.inputConfig?.buildParams) throw new Error(`Missing ${id} input config`);
+      const { onSubmit } = setup({ def });
+      const lat = screen.getByLabelText('Latitude');
+      const lon = screen.getByLabelText('Longitude');
+      fireEvent.change(lat, { target: { value: '90.01' } });
+      fireEvent.change(lon, { target: { value: '-180.01' } });
+      fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+      expect(onSubmit).not.toHaveBeenCalled();
+      expect(screen.getByText('Maximum: 90')).toBeInTheDocument();
+      expect(screen.getByText('Minimum: -180')).toBeInTheDocument();
+      fireEvent.change(lat, { target: { value: ' -0.000 ' } });
+      fireEvent.change(lon, { target: { value: ' -122.419400 ' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      expect(onSubmit).toHaveBeenCalledWith({ lat: '0', lon: '-122.4194' });
+      const params = def.inputConfig.buildParams(onSubmit.mock.calls[0][0]);
+      expect(params).toEqual(id === 'trigger_homelink'
+        ? { lat: '0', lon: '-122.4194' }
+        : { lat: 0, lon: -122.4194, order: 0 });
+      expect(JSON.stringify(params)).not.toContain('null');
+    },
+  );
+
+  it.each([
+    ['set_charge_limit', 'Charge %', '101', '050', 'percent', '50'],
+    ['set_charging_amps', 'Amperage', '-1', '0', 'charging_amps', '0'],
+    ['adjust_volume', 'Enter volume level (0.0 – 11.0):', '11.01', '0.00', 'volume', '0'],
+    ['remove_charge_schedule', 'By ID', '-1', '000', 'id', '0'],
+    ['remove_precondition_schedule', 'By ID', '1.5', '000', 'id', '0'],
+  ])('numeric regression validates the actual %s config and preserves normalized zero/boundary values',
+    (id, label, invalid, valid, param, normalized) => {
+      const def = COMMANDS.find(command => command.id === id);
+      if (!def) throw new Error(`Missing ${id} config`);
+      const { onSubmit } = setup({ def });
+      const input = screen.getByLabelText(label);
+      fireEvent.change(input, { target: { value: invalid } });
+      fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+      expect(onSubmit).not.toHaveBeenCalled();
+      fireEvent.change(input, { target: { value: valid } });
+      fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+      expect(onSubmit).toHaveBeenCalledWith({ [param]: normalized });
+    },
+  );
+
+  it('numeric regression retains PIN leading zeros and text drafts without numeric coercion', () => {
+    const { onSubmit, unmount } = setup({ def: pinDef });
+    fireEvent.change(screen.getByLabelText('PIN'), { target: { value: ' 0012 ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(onSubmit).toHaveBeenCalledWith({ password: '0012' });
+    expect(screen.getByLabelText('PIN')).toHaveAttribute('type', 'password');
+    expect(screen.getByLabelText('PIN')).toHaveValue(' 0012 ');
+    unmount();
+    const name = setup({ def: nameDef });
+    fireEvent.change(screen.getByLabelText('Name'), { target: { value: '  0012 Model 3  ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Send' }));
+    expect(name.onSubmit).toHaveBeenCalledWith({ vehicle_name: '  0012 Model 3  ' });
+  });
+
+  it('numeric regression cannot bypass the loading state by directly submitting the form', () => {
+    const { onSubmit } = setup({ def: speedDef, loading: true });
+    fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
   it('renders nothing while closed', () => {
     setup({ open: false });
     expect(screen.queryByRole('dialog')).toBeNull();

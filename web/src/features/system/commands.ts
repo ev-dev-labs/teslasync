@@ -456,7 +456,8 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.charging.enterAmps',
       promptFallback: 'Enter charging amps (e.g., 16, 32, 48):',
-      paramName: 'charging_amps',
+      // Vehicle/charger-dependent limits are not supplied to this dialog.
+      paramName: 'charging_amps', validation: 'number', min: 0,
     },
   },
   {
@@ -467,7 +468,7 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.charging.enterLimit',
       promptFallback: 'Enter charge limit % (50–100):',
-      paramName: 'percent', defaultValue: '80',
+      paramName: 'percent', defaultValue: '80', validation: 'number', min: 50, max: 100,
     },
   },
 
@@ -559,7 +560,7 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.schedules.enterScheduleId',
       promptFallback: 'Enter schedule ID to remove:',
-      paramName: 'id',
+      paramName: 'id', validation: 'number', min: 0,
     },
   },
   {
@@ -580,7 +581,7 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.schedules.enterScheduleId',
       promptFallback: 'Enter schedule ID to remove:',
-      paramName: 'id',
+      paramName: 'id', validation: 'number', min: 0,
     },
   },
 
@@ -620,8 +621,8 @@ export const COMMANDS: CommandDef[] = [
       promptFallback: 'Enter vehicle coordinates',
       paramName: '',
       fields: [
-        { name: 'lat', labelKey: 'commands.homelink.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const },
-        { name: 'lon', labelKey: 'commands.homelink.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const },
+        { name: 'lat', labelKey: 'commands.homelink.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const, min: -90, max: 90 },
+        { name: 'lon', labelKey: 'commands.homelink.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const, min: -180, max: 180 },
       ],
       buildParams: (values) => ({ lat: values.lat, lon: values.lon }),
     },
@@ -656,10 +657,10 @@ export const COMMANDS: CommandDef[] = [
       promptFallback: 'Enter GPS coordinates',
       paramName: '',
       fields: [
-        { name: 'lat', labelKey: 'commands.nav.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const },
-        { name: 'lon', labelKey: 'commands.nav.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const },
+        { name: 'lat', labelKey: 'commands.nav.latitude', labelFallback: 'Latitude', placeholder: '37.7749', type: 'text', validation: 'decimal' as const, min: -90, max: 90 },
+        { name: 'lon', labelKey: 'commands.nav.longitude', labelFallback: 'Longitude', placeholder: '-122.4194', type: 'text', validation: 'decimal' as const, min: -180, max: 180 },
       ],
-      buildParams: (values) => ({ lat: parseFloat(values.lat), lon: parseFloat(values.lon), order: 0 }),
+      buildParams: (values) => ({ lat: Number(values.lat), lon: Number(values.lon), order: 0 }),
     },
   },
   {
@@ -757,7 +758,7 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.media.enterVolume',
       promptFallback: 'Enter volume level (0.0 – 11.0):',
-      paramName: 'volume', defaultValue: '5',
+      paramName: 'volume', defaultValue: '5', validation: 'decimal', min: 0, max: 11,
     },
   },
   {

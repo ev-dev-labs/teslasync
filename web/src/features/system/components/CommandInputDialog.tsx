@@ -38,8 +38,8 @@ export function validateField(
         ? null
         : { key: 'commands.input.pin', fallback: 'Enter a 4-digit PIN' };
     case 'number': {
-      const num = parseInt(trimmed, 10);
-      if (isNaN(num) || String(num) !== trimmed)
+      const num = Number(trimmed);
+      if (!/^[+-]?\d+$/.test(trimmed) || !Number.isSafeInteger(num))
         return { key: 'commands.input.wholeNumber', fallback: 'Enter a whole number' };
       if (min != null && num < min)
         return { key: 'commands.input.min', fallback: 'Minimum: {{min}}', values: { min } };
@@ -48,8 +48,10 @@ export function validateField(
       return null;
     }
     case 'decimal': {
-      const num = parseFloat(trimmed);
-      if (isNaN(num))
+      // Command inputs use ungrouped ASCII digits and a dot decimal separator
+      // in every locale; never interpret a comma or a numeric prefix as a value.
+      const num = Number(trimmed);
+      if (!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)$/.test(trimmed) || !Number.isFinite(num))
         return { key: 'commands.input.decimal', fallback: 'Enter a valid number' };
       if (min != null && num < min)
         return { key: 'commands.input.min', fallback: 'Minimum: {{min}}', values: { min } };
@@ -129,6 +131,7 @@ export function CommandInputDialog({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (loading) return;
     const newErrors: Record<string, FieldValidationError | null> = {};
     const newTouched: Record<string, boolean> = {};
     let valid = true;
@@ -149,7 +152,18 @@ export function CommandInputDialog({
 
     setErrors(newErrors);
     setTouched(newTouched);
-    if (valid) onSubmit(values);
+    if (valid) {
+      const submittedValues = { ...values };
+      for (const [name, value] of Object.entries(values)) {
+        const validation = fields ? fields.find(f => f.name === name)?.validation : ic.validation;
+        if (validation === 'number' || validation === 'decimal') {
+          submittedValues[name] = String(Number(value.trim()));
+        } else if (validation === 'pin') {
+          submittedValues[name] = value.trim();
+        }
+      }
+      onSubmit(submittedValues);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -216,7 +230,9 @@ export function CommandInputDialog({
           ) : (
             <Input
               ref={firstInputRef}
-              label={def.sublabelFallback ? t(def.sublabelKey ?? '', def.sublabelFallback) : undefined}
+              label={def.sublabelFallback
+                ? t(def.sublabelKey ?? '', def.sublabelFallback)
+                : t(ic.promptKey, ic.promptFallback)}
               placeholder={ic.defaultValue ?? ''}
               type={resolveInputType(ic.validation)}
               inputMode={resolveInputMode(ic.validation)}
