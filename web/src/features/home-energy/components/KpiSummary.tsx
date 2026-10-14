@@ -4,6 +4,7 @@ import type { DataState } from '@/api/dataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import type { OrchestrationResult } from '../lib/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -24,12 +25,13 @@ export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavai
   const { t } = useTranslation();
   const { formatEnergy, formatPower } = useUnits();
   const { formatCurrency } = useFormatting();
+  const { formatDateTime } = useDateFormat('utc');
 
   const readyCount = result.vehicles.filter((v) => v.readinessAchieved).length;
   const totalUnmetWh = result.vehicles.reduce((sum, v) => sum + v.unmetWh, 0);
   const endInstantExclusive = new Date(Date.parse(startTimeIso) + horizonHours * 3_600_000).toISOString();
   const periodLabel = t('homeEnergy.kpi.period', 'Planning horizon: {{start}} — {{end}} (end exclusive)', {
-    start: startTimeIso, end: endInstantExclusive,
+    start: formatDateTime(startTimeIso), end: formatDateTime(endInstantExclusive),
   });
 
   const available = !loading && !unavailable;
