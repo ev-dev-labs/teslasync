@@ -1,0 +1,1771 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-diagnostics-anomaly-dashboard",
+  "attempt": 1,
+  "status": "DONE_SOURCE_REVIEW_ONLY",
+  "page": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+  "route": "/anomaly-detection",
+  "aliases": [
+    "/analytics/anomalies"
+  ],
+  "reservation": {
+    "actor": "926185fa-5576-4c30-a706-0e0e83dc0388",
+    "reservedUtc": "2026-10-14T01:00:00.625Z",
+    "firstObservedUtc": "2026-10-14T01:01:56.6330671Z",
+    "returnDeadlineUtc": "2026-10-14T01:20:00.625Z",
+    "hardDeadlineUtc": "2026-10-14T01:25:00.625Z",
+    "commandBoundSeconds": 900,
+    "assembledUtc": "2026-10-14T01:13:15.812241+00:00",
+    "returnedSourceWorkAtUtc": "2026-10-14T01:15:39.889633+00:00"
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "qaRow": {
+      "line": 380,
+      "exact": "| [~] | 6 | phase6-qa-diagnostics-anomaly-dashboard | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-anomaly-dashboard.json | phase5-page-diagnostics-anomaly-dashboard | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=926185fa-5576-4c30-a706-0e0e83dc0388; LastConsumed=-1 | - |CurrentacceptedAnomalyDashboardPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveevidence-vs-diagnosis/scopes/SI/preferences/trust/unknownzero/chartalternatives/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 926185fa-5576-4c30-a706-0e0e83dc0388, no browser lock. |",
+      "utf8RowSha256": "87c1e1a3481d6f5615a1140659a6940842e77d46e4066b4ae190ad41722c36c3"
+    },
+    "dependencyRow": {
+      "line": 1844,
+      "exact": "| [x] | 5 | phase5-page-diagnostics-anomaly-dashboard | original-page-migration | web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx; web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.test.tsx | - | 2 | actualterminal1/release/individualreceipt | 6caeab0330ac62387aa5882c7e7ef37b2cd89f29 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/anomaly-detection; /analytics/anomalies; audit=docs\\frontend-audits\\audit-page-099.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require parent claim. Read session phase5-page-worker-instructions.txt. Actual worker=e789e5e6-0074-4cd3-90b9-d5086b3e2c52; lifecycle=terminalexternalmodel408/connecttimeout,0turns;noSourceWork/noattemptcharged,claimreleased. Existing independent original-page firstsourceattempt1 reserved after FSD current27case delivery, prior0turnmodel408uncharged; only exactpage/test, no otherclaims. Actualactor=4a52e9d2-aff8-4a97-ac8f-7d76430b36c8; realelapsed20minbox/25mincap; LastConsumed=-1. Actual parentliteralproductioncompiler uncovered Own TS2769 XAxis tickFormatter passes fmtInt optional locale as numeric index. Source/test ownWIP retained; cannotaccept as external-only source. Existingguard0exec isNOTpass. Explicit ownerrelease/no furtherwrites; firstattempt1 preserved/pendingeligible2 aftercatalogclosure. Separate SINGLE currentmeasuredpublicAPIcallercompat root handles surgical2props, not fullpage remigration. ActualWIP=1eacc6367f6d76accedb397ec751b571b22c2b43 pushed=true. AfterROOT91650fc9d actualgen/check/strict0/79keys baselineunchanged/allcontributorspushed, continue exactretainedfirstwork asbudgetedattempt2. NOremodernization/[x]dispatch/failed2reuse. Ownboundedcoveringproof andsurgicalcorrectiononly; missingbeforelogmustnowexist. ActualfreshID/start follows;20minbox/25mincap, guardsON/480scommands/no customtools. All32claims pairwiseexclusive. Actualfreshactor=ffd927e6-614b-4d56-aae1-1ec4d870f18e; LastConsumed=-1, immutable20/25minbox basedrealruntime, launchobservationNOTexactstart, no clockreset.  Parentactualnative/log/ownscope verified: Actual guarded Vitest0/lint0/scans0/JSON-retention0;18cases unchanged andparentunaryformatterfix preserved/4majorsections3panels. No newkeys/nativeacceptance. Bothleasesreleased/no commands/LastConsumed=1; attempt2preserved.  Actualreceiptcommit=6caeab0330ac62387aa5882c7e7ef37b2cd89f29. |",
+      "utf8RowSha256": "e0eedf9a62fbed2e4570359b908ac04e6d3fc231654bac5f2f69927a3219b32d",
+      "status": "[x]",
+      "commit": "6caeab0330ac62387aa5882c7e7ef37b2cd89f29"
+    },
+    "phasePreservation": "Phases0-5 closed/accepted; no remigration or historical check rerun."
+  },
+  "noChangeFirstCheck": {
+    "existingReport": "ABSENT",
+    "existingLog": "ABSENT",
+    "existingReportPreserved": true,
+    "result": "No previous report to redo. Accepted page untouched; only source QA report needed, not application acceptance."
+  },
+  "readCoverage": {
+    "fullRequiredDocuments": [
+      "docs/orchestrator-loop.md",
+      "docs/frontend-design-contract.md",
+      ".github/copilot-instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/observability.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "handoff": "Newest current/recovery section1-66 read. Full hash does not imply semantic review of historical remainder.",
+    "mission": "Relevant source/trust/mobile and mission43-45 at1416-1516 read.",
+    "fullPageAndDirectParts": [
+      "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+      "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+      "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+      "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts",
+      "web/src/features/diagnostics/components/anomaly-dashboard/index.ts",
+      "web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts",
+      "web/src/api/hooks/useAnomalies.ts",
+      "web/src/components/ai/AIAnomalyExplanations.tsx",
+      "web/src/components/ai/AILearnedAnomalyBaselines.tsx"
+    ],
+    "sharedGraph": "Necessary typed trust/formatter/selection/AI hooks, router, layout, chart and summary supports; large shared sources reviewed relevant ranges only. Reused historical audit-page-099 preservation inventory, not old findings as fresh evidence.",
+    "precedence": "Current SI/design decisions override obsolete legacy converter/neon examples. All gates and implementation prohibited by user."
+  },
+  "sourceTime": {
+    "meaning": "Pins hash actual bytes; ReadAllLines counts; lastWriteUtc is filesystem source time not measurement or acceptance time.",
+    "initialCaptureUtc": "2026-10-14T01:04:35Z",
+    "additionalCaptureUtc": "2026-10-14T01:07:25Z",
+    "routeCaptureUtc": "2026-10-14T01:08:01Z"
+  },
+  "sourcePins": [
+    {
+      "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+      "sha256": "82e1a6c2143784312505bfafcf89d09e455f3208acb8eae061a5e8c36040474b",
+      "bytes": 11405,
+      "lineCount": 239,
+      "lastWriteUtc": "2026-10-14T00:29:41.4651647Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2285930Z"
+    },
+    {
+      "path": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+      "sha256": "996d8d3277cc2d635af1609d587b579e8c01f66870a9a5f8c26201c4d6450698",
+      "bytes": 3230,
+      "lineCount": 85,
+      "lastWriteUtc": "2026-10-14T00:29:41.4631564Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2332731Z"
+    },
+    {
+      "path": "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+      "sha256": "e16b66b2274b539a901ec653617a512d332a61760217816809e4972a5a9a32b8",
+      "bytes": 2047,
+      "lineCount": 58,
+      "lastWriteUtc": "2026-10-14T00:29:41.4631564Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2337281Z"
+    },
+    {
+      "path": "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts",
+      "sha256": "71d1ced1c06449771b7060b4950f3a00827ecf0a499c68db84fbca8f3f452bf5",
+      "bytes": 2197,
+      "lineCount": 61,
+      "lastWriteUtc": "2026-10-13T06:09:18.2101536Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2341415Z"
+    },
+    {
+      "path": "web/src/features/diagnostics/components/anomaly-dashboard/index.ts",
+      "sha256": "085c1bedfa12c49dc76d37c914a73d9dc10a4e5eb87db56938fe3fbebb64e07b",
+      "bytes": 230,
+      "lineCount": 8,
+      "lastWriteUtc": "2026-10-13T06:09:18.2101536Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2345664Z"
+    },
+    {
+      "path": "web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts",
+      "sha256": "61a14006dbb3b2f2b9dd3a3ab06d762c635ef65d76bff46451e51615c018f3ad",
+      "bytes": 1914,
+      "lineCount": 43,
+      "lastWriteUtc": "2026-10-14T00:29:41.4651647Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2349867Z"
+    },
+    {
+      "path": "web/src/api/hooks/useAnomalies.ts",
+      "sha256": "4734d21fba9f5ed81ae169c41b3bfe80b05fb390f438029c242b13a9608e036d",
+      "bytes": 2634,
+      "lineCount": 68,
+      "lastWriteUtc": "2026-10-13T06:09:17.7723888Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2353235Z"
+    },
+    {
+      "path": "web/src/components/ai/AIAnomalyExplanations.tsx",
+      "sha256": "674d96627709a199e9e517a6801fe36acbab03a42a7da7ac56e493f71457d5b9",
+      "bytes": 2477,
+      "lineCount": 66,
+      "lastWriteUtc": "2026-10-14T00:29:40.8597018Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2356575Z"
+    },
+    {
+      "path": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+      "sha256": "fabff92bdd20ad5cef42596ead7752f90844c3abdcf7446bd6ee494973196fa3",
+      "bytes": 3644,
+      "lineCount": 84,
+      "lastWriteUtc": "2026-10-13T06:09:17.8097174Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2360397Z"
+    },
+    {
+      "path": "web/src/components/ai/AIFeatureCard.tsx",
+      "sha256": "f1e5d2db44dcb81540068c17891f74399694740a22b90080c064002bebc52016",
+      "bytes": 13277,
+      "lineCount": 352,
+      "lastWriteUtc": "2026-10-14T00:29:40.8680588Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2364272Z"
+    },
+    {
+      "path": "web/src/components/ai/withAiFeature.tsx",
+      "sha256": "b97831bcf65326fcf17f77fa6501bda8c42c40a23575edbf35da222e9882fa57",
+      "bytes": 2255,
+      "lineCount": 60,
+      "lastWriteUtc": "2026-10-13T06:09:17.8187778Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2368008Z"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658,
+      "lineCount": 17,
+      "lastWriteUtc": "2026-10-14T00:29:40.9682184Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2372283Z"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "lineCount": 259,
+      "lastWriteUtc": "2026-10-14T00:29:40.9542141Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2377381Z"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes": 4093,
+      "lineCount": 115,
+      "lastWriteUtc": "2026-10-14T00:29:40.9392577Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2382437Z"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482,
+      "lineCount": 434,
+      "lastWriteUtc": "2026-10-13T06:09:17.7649888Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2387978Z"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "bytes": 6593,
+      "lineCount": 174,
+      "lastWriteUtc": "2026-10-13T06:09:18.5715117Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2391763Z"
+    },
+    {
+      "path": "web/src/hooks/useAiStream.ts",
+      "sha256": "acf5503728b53701c63785edc45d987e3a86a70f03f22c429c485f3672143de0",
+      "bytes": 23120,
+      "lineCount": 617,
+      "lastWriteUtc": "2026-10-14T00:29:41.8646135Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2397410Z"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411,
+      "lineCount": 168,
+      "lastWriteUtc": "2026-10-14T00:29:41.9890728Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2401216Z"
+    },
+    {
+      "path": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "bytes": 11392,
+      "lineCount": 127,
+      "lastWriteUtc": "2026-10-14T00:29:41.9860120Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2406935Z"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes": 68125,
+      "lineCount": 919,
+      "lastWriteUtc": "2026-10-14T00:29:40.8444677Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2413389Z"
+    },
+    {
+      "path": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "bytes": 260353,
+      "lineCount": 5363,
+      "lastWriteUtc": "2026-10-14T00:29:40.7565408Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2427604Z"
+    },
+    {
+      "path": "internal/api/anomaly/handler.go",
+      "sha256": "dc969bf133c0bd84e7f4687d64fb42cc6a8fccc3ad9c7d5d07052be3def0009f",
+      "bytes": 19312,
+      "lineCount": 558,
+      "lastWriteUtc": "2026-10-13T06:09:17.2647653Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2433950Z"
+    },
+    {
+      "path": "docs/orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "bytes": 16978,
+      "lineCount": 296,
+      "lastWriteUtc": "2026-10-14T00:29:40.7179123Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2439497Z"
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "bytes": 182554,
+      "lineCount": 2539,
+      "lastWriteUtc": "2026-10-14T00:29:40.7095452Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2450396Z"
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "bytes": 163930,
+      "lineCount": 2460,
+      "lastWriteUtc": "2026-10-14T00:49:12.6472024Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2464529Z"
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "bytes": 31079,
+      "lineCount": 1593,
+      "lastWriteUtc": "2026-10-14T00:29:40.7179123Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2473466Z"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "bytes": 37483,
+      "lineCount": 707,
+      "lastWriteUtc": "2026-10-13T06:09:16.8548532Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2481032Z"
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "bytes": 3585,
+      "lineCount": 94,
+      "lastWriteUtc": "2026-10-13T06:09:16.8548532Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2486842Z"
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "bytes": 22645,
+      "lineCount": 629,
+      "lastWriteUtc": "2026-10-13T06:09:16.8548532Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2495329Z"
+    },
+    {
+      "path": ".github/instructions/observability.instructions.md",
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "bytes": 4267,
+      "lineCount": 45,
+      "lastWriteUtc": "2026-10-13T06:09:16.8548532Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2503149Z"
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "bytes": 6501,
+      "lineCount": 221,
+      "lastWriteUtc": "2026-10-13T06:09:16.8548532Z",
+      "capturedAtUtc": "2026-10-14T01:04:35.2510988Z"
+    },
+    {
+      "path": "internal/tesla/units/units.go",
+      "sha256": "8413aa7998bdf9eb318769e6b248ffc282cb5ebf5113a658a2bc885d9527dc28",
+      "bytes": 4013,
+      "lineCount": 107,
+      "lastWriteUtc": "2026-10-13T06:09:17.5979045Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0917376Z"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "bytes": 6545,
+      "lineCount": 194,
+      "lastWriteUtc": "2026-10-13T06:09:18.5715117Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0960687Z"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095,
+      "lineCount": 47,
+      "lastWriteUtc": "2026-10-14T00:29:41.8646135Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0964150Z"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes": 2035,
+      "lineCount": 65,
+      "lastWriteUtc": "2026-10-13T06:09:18.5649346Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0967143Z"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes": 1161,
+      "lineCount": 24,
+      "lastWriteUtc": "2026-10-14T00:29:41.8646135Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0969949Z"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "bytes": 6443,
+      "lineCount": 172,
+      "lastWriteUtc": "2026-10-14T00:29:41.9860120Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0972798Z"
+    },
+    {
+      "path": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "bytes": 20093,
+      "lineCount": 439,
+      "lastWriteUtc": "2026-10-14T00:29:41.9890728Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0976195Z"
+    },
+    {
+      "path": "web/src/components/data-display/TimeStamp.tsx",
+      "sha256": "3d4fb838ca18b7d4fa1254c9cc328a30c8e26c3d5bc06eb4d2fec49282de23fb",
+      "bytes": 2520,
+      "lineCount": 64,
+      "lastWriteUtc": "2026-10-13T06:09:17.8529088Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0979070Z"
+    },
+    {
+      "path": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "bytes": 11545,
+      "lineCount": 342,
+      "lastWriteUtc": "2026-10-14T00:29:40.8945434Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0982065Z"
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "bytes": 11591,
+      "lineCount": 321,
+      "lastWriteUtc": "2026-10-14T00:29:40.9014093Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0985039Z"
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "bytes": 1225,
+      "lineCount": 42,
+      "lastWriteUtc": "2026-10-14T00:29:40.8879681Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0987723Z"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "bytes": 41517,
+      "lineCount": 1006,
+      "lastWriteUtc": "2026-10-14T00:29:40.8764844Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0991491Z"
+    },
+    {
+      "path": "web/src/components/ai/AiOutputPanel.tsx",
+      "sha256": "c3bb5766576f4e80b16762122d2ee35038a9aa7cf6fe96df426269fe07e3c8a4",
+      "bytes": 4830,
+      "lineCount": 120,
+      "lastWriteUtc": "2026-10-14T00:29:40.8764844Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0994410Z"
+    },
+    {
+      "path": "web/src/components/ai/HelixEvidenceTrail.tsx",
+      "sha256": "953592d2d52d941b7fcde3f30fded6decb432c7cd7e0bd5a16a6d495dec61076",
+      "bytes": 4538,
+      "lineCount": 141,
+      "lastWriteUtc": "2026-10-14T00:29:40.8764844Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.0997247Z"
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "bytes": 1842282,
+      "lineCount": 38994,
+      "lastWriteUtc": "2026-10-14T00:29:41.8787917Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.1047735Z"
+    },
+    {
+      "path": "web/src/i18n/en/locale-diagnostics.json",
+      "sha256": "4c6362b41bd826472e53b0f4b78763627de1b6fb3707f511112351a20093fbae",
+      "bytes": 83842,
+      "lineCount": 1954,
+      "lastWriteUtc": "2026-10-14T00:29:41.9275001Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.1160622Z"
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-099.json",
+      "sha256": "fd7a1bbdd1167164d90a580dbd2a5e3f1e9a88f213da8a0688cf8d6189b50f0e",
+      "bytes": 32619,
+      "lineCount": 242,
+      "lastWriteUtc": "2026-10-14T00:29:40.6261296Z",
+      "capturedAtUtc": "2026-10-14T01:07:25.1166206Z"
+    },
+    {
+      "path": "internal/api/ai_routes.go",
+      "sha256": "f0bcbd1b33717f76efa91855587a239b03e8111956862f4906842251baac54b3",
+      "bytes": 95554,
+      "lineCount": 1831,
+      "lastWriteUtc": "2026-10-13T06:09:17.2329336Z",
+      "capturedAtUtc": "2026-10-14T01:08:01.7476160Z"
+    }
+  ],
+  "lineCounts": {
+    "page": 239,
+    "localParts": 255,
+    "pagePlusLocalParts": 494,
+    "files": [
+      {
+        "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+        "lines": 239
+      },
+      {
+        "path": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+        "lines": 85
+      },
+      {
+        "path": "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+        "lines": 58
+      },
+      {
+        "path": "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts",
+        "lines": 61
+      },
+      {
+        "path": "web/src/features/diagnostics/components/anomaly-dashboard/index.ts",
+        "lines": 8
+      },
+      {
+        "path": "web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts",
+        "lines": 43
+      }
+    ],
+    "optionalDirectAiParts": 150,
+    "pagePlusLocalPlusOptionalAi": 644,
+    "sourceChange": 0,
+    "preservationLimit": "Accepted current494 local total retained byte-for-byte; no original-baseline regeneration or CLI authorized."
+  },
+  "routeScope": {
+    "registrations": [
+      "web/src/App.tsx:743",
+      "web/src/App.tsx:752",
+      "web/src/lib/routeLoaders.ts:94"
+    ],
+    "bothRoutes": {
+      "vehicle": true,
+      "range": false
+    },
+    "workspaceEvidence": "workspaceScope RANGE_ENABLED_PATHS23-76 omits both; disabled vehicle lists92-135 contain neither; getWorkspaceRouteScope155-168.",
+    "selectedVehicle": "Page37-41 uses shared useSelectedVehicle positive URL/store identity, resolved-fleet reconciliation and fallback; hook accepts String ID or null, null disables read. No local picker.",
+    "rangeBounds": "No header arbitrary from/to range advertised. Independent detector7/narration30/training14-day windows preserved. Absence of useRangeState is NOT confirmed missing-bounds bug for this snapshot contract; no backend scope invented.",
+    "endpoints": [
+      {
+        "hook": "useAnomalies",
+        "file": "web/src/api/hooks/useAnomalies.ts:51-68",
+        "url": "/analytics/anomalies?vehicle_id=${encodeURIComponent(id)}&days=${windowDays}",
+        "router": "internal/api/router.go:3940",
+        "policy": "Typed raw SI; AbortSignal; enabled ID; anomalies/vehicleId/windowDays key;7default,1..30clamp; STALE_TIMES.SLOW; retry defaults unchanged."
+      },
+      {
+        "url": "/ai/anomalies/explain",
+        "method": "POST",
+        "body": "selected vehicle_id,days30",
+        "router": "internal/api/ai_routes.go:187"
+      },
+      {
+        "url": "/ai/ml/anomaly-baselines/train",
+        "method": "POST",
+        "body": "selected vehicle_id,days14",
+        "router": "internal/api/ai_routes.go:1110"
+      }
+    ]
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "pageLines": [
+        89,
+        109
+      ],
+      "alwaysMounted": true,
+      "content": "OperationalBrief four typed count metrics, independent source windows/context and Review details drawer."
+    },
+    {
+      "id": "ai-explanation",
+      "pageLines": [
+        111,
+        124
+      ],
+      "alwaysMounted": "Section slot; inner card intentionally opt-in withAiFeature gate",
+      "content": "Independent inferred30-day selected-vehicle narration, not detector7/training14."
+    },
+    {
+      "id": "ai-baseline",
+      "pageLines": [
+        111,
+        124
+      ],
+      "alwaysMounted": "Independent opt-in inner card",
+      "content": "days14 baseline training/narration action; no persistence assumption or execution."
+    },
+    {
+      "id": "frequency",
+      "pageLines": [
+        126,
+        173
+      ],
+      "alwaysMounted": true,
+      "content": "Top10 returned-entry counts; actual EmbeddedChart children/data/two columns; inherited accessible and forced-colors table; export/fullscreen opt-in defaultsfalse."
+    },
+    {
+      "id": "health",
+      "pageLines": [
+        174,
+        201
+      ],
+      "alwaysMounted": true,
+      "content": "Returned categories/status text/icons; helper unknown/info neutral, normal success subject to F01 source assurance."
+    },
+    {
+      "id": "timeline",
+      "pageLines": [
+        204,
+        236
+      ],
+      "alwaysMounted": true,
+      "content": "All returned entries/source order; signal/type/severity/message/value/baseline/zscore/time preserved."
+    }
+  ],
+  "sectionCounts": {
+    "majorBands": 4,
+    "semanticSections": 6,
+    "directSectionWrappers": 3,
+    "directGlassPanels": 3,
+    "composedSummaryPanel": 1,
+    "optionalAiPanels": 2,
+    "chartFrames": 1
+  },
+  "actions": [
+    {
+      "action": "Workspace vehicle",
+      "owner": "shell/useSelectedVehicle",
+      "source": "page:37-41; useSelectedVehicle:60-80,132-139"
+    },
+    {
+      "action": "Header help open/close",
+      "owner": "PageContainer/Tooltip",
+      "source": "PageContainer:202-216"
+    },
+    {
+      "action": "Header refresh",
+      "owner": "DataFreshnessAuto",
+      "source": "PageContainer query metadata; DataFreshness:324-340"
+    },
+    {
+      "action": "Review details/open/close",
+      "owner": "OperationalBrief/Drawer",
+      "source": "OperationalBrief:161-174,246-267",
+      "preserved": "Metric details/context and loading suppression."
+    },
+    {
+      "action": "Three fatal panel retries",
+      "owner": "QueryError + handleRetry",
+      "source": "page:49-51,145,187,222",
+      "preserved": "Actual refetch shared; no fatal replacement of retained data."
+    },
+    {
+      "action": "Retained refresh",
+      "owner": "StaleRefreshWarning",
+      "source": "page:88; StaleRefreshWarning:92-110",
+      "preserved": "Nonblocking retry, busy/disabled while refreshing."
+    },
+    {
+      "action": "Generate explanation/retry",
+      "owner": "AIAnomalyExplanations/AIFeatureCard/useAiStream",
+      "source": "AIAnomalyExplanations:20-26,37,45; AIFeatureCard:275-309",
+      "preserved": "Explicit POSTdays30; positive-ID guard, streaming disable, retained error delta; scope generation abort/reset."
+    },
+    {
+      "action": "Train baseline/retry",
+      "owner": "AILearnedAnomalyBaselines/AIFeatureCard/useAiStream",
+      "source": "AILearnedAnomalyBaselines:43-55,64,75; AIFeatureCard:275-309",
+      "preserved": "Explicit POSTdays14; guard/stream semantics; not executed."
+    }
+  ],
+  "stateReview": {
+    "initialLoading": "queryLoading&&!hasData suppresses summary readings; frequency300/health220/four timeline148 skeletons, shells retained.",
+    "initialPaused": "Confirmed F02; timeline chooses noData here, not all-clear.",
+    "noVehicle": "No detector read; panel prompts; AI disabled. Fleet pending/error not exposed by useSelectedVehicle; genuinely empty fleet not established.",
+    "fatal": "fatalError replaces only detector panel bodies with retries; summary error/unknown remains; independent AI remains.",
+    "retainedErrorOrPaused": "Usable data remains; stale warning/retry and retained label, no fatal replacement. Paused is deferred, not proved offline.",
+    "successfulEmpty": "F01 unsupported all-clear/normal assurance; not malformed-data conjecture.",
+    "unknownVsZero": "Summary missing/null raw metrics remain distinct from0 through typed adapter. Required anomaly numerics assumed conforming. Generic safeNumber could turn malformed required missing/nonfinite into0, but no such producer established: NOT a confirmed bug.",
+    "signedValues": "Negative physical values retain sign through fmtNumber; backend z_score is absolute nonnegative magnitude. z_score>0 omission is not signed physical-value loss.",
+    "ageAndProvenance": "No DataState maxAge/partial/unavailable options; header query freshness is fetch time, not physical reading freshness. Deterministic state inferred; AI tool success not physical diagnosis. Trend detected_at is analysis time."
+  },
+  "presentationReview": {
+    "imports": "Page category barrels; local feature modules allowed. Shared concrete imports/raw building-block HTML acceptable exceptions.",
+    "chart": "EmbeddedChart composes canonical ChartContainer with actual children/dataColumns/table; no missing-frame/alternative claim.",
+    "color": "Chart tokens restrained series0/grid/brush; semantic severities. F06 fixed white overlays remain; no composed contrast or neon-noise acceptance.",
+    "localization": "C10 59 literal/known-dynamic keys:58present/1missing. Technical identities/fallbacks not blanket English violations; generated detector prose F05. TimeStamp honors date/time/timezone preferences.",
+    "mobileDeclarations": "AI1/xl2; overview1/xl3 withfrequency2; timeline1/md2/2xl3/3xl4; min-w-0/p4/sm5; chart h72/sm80; not measured overflow/touch/visibility proof.",
+    "accessibility": "Named headings/regions, ul/li, severity text/icon, chart table and shared Buttons/Drawer preserved. Brief aria-busy exists; keyboard/focus/screen reader/contrast/targets NOTRUN."
+  },
+  "boundedScan": {
+    "command": "C08 with C09 case/code corrections",
+    "fileCount": 9,
+    "rawCounts": [
+      {
+        "rule": "static-inline-style",
+        "pattern": "style\\s*=\\s*\\{\\{[^\\r\\n]*var\\(--",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "raw-html",
+        "pattern": "<(?:button|input|textarea|select|table)\\b",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "direct-library-import",
+        "pattern": "(?:from\\s*|import\\s*)['\\\"](?:recharts|react-leaflet|framer-motion)['\\\"]",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "old-api-import",
+        "pattern": "from\\s*['\\\"](?:\\.\\./)+api['\\\"]",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "double-prefix",
+        "pattern": "/api/v1/",
+        "matchedLines": 3,
+        "hits": [
+          {
+            "path": "web/src/components/ai/AIAnomalyExplanations.tsx",
+            "line": 2,
+            "text": "// The Generate button streams from POST /api/v1/ai/anomalies/explain."
+          },
+          {
+            "path": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+            "line": 3,
+            "text": "// POST /api/v1/ai/ml/anomaly-baselines/train. The narration walks"
+          },
+          {
+            "path": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+            "line": 10,
+            "text": "// detector at GET /api/v1/analytics/anomalies, unchanged"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "All3 are comments; actual URL props/hooks omit prefix.",
+        "confirmedCodeViolations": 0
+      },
+      {
+        "rule": "camelcase-param",
+        "pattern": "[?&][a-z_]*[A-Z][a-zA-Z]*=",
+        "matchedLines": 1,
+        "hits": [
+          {
+            "path": "web/src/api/hooks/useAnomalies.ts",
+            "line": 62,
+            "text": "`/analytics/anomalies?vehicle_id=${encodeURIComponent(id)}&days=${windowDays}`,"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "C08 -match was case-insensitive; corrected C09 -cmatch yields0. Original days match was false positive.",
+        "correctedMatchedLines": 0
+      },
+      {
+        "rule": "hidden-section-candidate",
+        "pattern": "\\{[^{}\\r\\n]*\\b(?:data|anomalies|healthEntries)\\b[^{}\\r\\n]*&&\\s*<",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "hardcoded-jsx-text-candidate",
+        "pattern": ">\\s*[A-Za-z][^<>{}\\r\\n]*<",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Literal text regex0 does not cover server-generated English or missing dynamic catalog key."
+      },
+      {
+        "rule": "fetch-useeffect-candidate",
+        "pattern": "\\b(?:fetch|useEffect)\\s*\\(",
+        "matchedLines": 0,
+        "hits": [],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "unsafe-any",
+        "pattern": "\\bany\\b",
+        "matchedLines": 5,
+        "hits": [
+          {
+            "path": "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts",
+            "line": 9,
+            "text": "* any future category the API may add before the frontend knows about it."
+          },
+          {
+            "path": "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts",
+            "line": 31,
+            "text": "* and any status the frontend does not yet recognize, plus a missing/null"
+          },
+          {
+            "path": "web/src/components/ai/AIAnomalyExplanations.tsx",
+            "line": 28,
+            "text": "// active vehicle aborts any in-flight explanation and clears the"
+          },
+          {
+            "path": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+            "line": 6,
+            "text": "// fallback for any signal with too few samples), then summarises"
+          },
+          {
+            "path": "web/src/components/ai/AILearnedAnomalyBaselines.tsx",
+            "line": 50,
+            "text": "// active vehicle aborts any in-flight training run and clears the"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "All5 broad hits are comments; C09 code-specific pattern yields0.",
+        "codeSpecificMatchedLines": 0
+      },
+      {
+        "rule": "fixed-white-overlay",
+        "pattern": "(?:bg|ring|border)-white/",
+        "matchedLines": 2,
+        "hits": [
+          {
+            "path": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+            "line": 47,
+            "text": "className=\"inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5\""
+          },
+          {
+            "path": "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+            "line": 41,
+            "text": "<span className=\"flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/10\">"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "page-wrapper",
+        "pattern": "<Page(?:Container|Layout)\\b",
+        "matchedLines": 1,
+        "hits": [
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 83,
+            "text": "<PageLayout"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "PageLayout composes PageContainer; no missing-container issue."
+      },
+      {
+        "rule": "sections",
+        "pattern": "<section\\b",
+        "matchedLines": 3,
+        "hits": [
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 91,
+            "text": "<section aria-label={t('anomaly.kpis', 'Summary metrics')}>"
+          },
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 117,
+            "text": "<section"
+          },
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 128,
+            "text": "<section"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "panel-shells",
+        "pattern": "<GlassPanel\\b",
+        "matchedLines": 3,
+        "hits": [
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 133,
+            "text": "<GlassPanel"
+          },
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 175,
+            "text": "<GlassPanel"
+          },
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 206,
+            "text": "<GlassPanel"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      },
+      {
+        "rule": "chart-frames",
+        "pattern": "<EmbeddedChart\\b",
+        "matchedLines": 1,
+        "hits": [
+          {
+            "path": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+            "line": 153,
+            "text": "<EmbeddedChart"
+          }
+        ],
+        "scopeFileCount": 9,
+        "interpretation": "Raw lexical matched lines, not comprehensive acceptance."
+      }
+    ],
+    "backendCounts": {
+      "sqlInterpolationPattern": 0,
+      "fmtOrLogPrintln": 0,
+      "panic": 0,
+      "httpNewRequest": 0,
+      "poolQueryOrQueryRow": 4,
+      "contextBearingCalls": 4
+    },
+    "limits": "Lexical candidates not AST/full application acceptance; exact dynamic/semantic review separate."
+  },
+  "commands": [
+    {
+      "id": "C03",
+      "command": "$root='D:\\repos\\teslasync'; $q=Get-Content \"$root\\migration-queue.md\"; 'QUEUE_TOTAL_LINES='+$q.Count; for($i=0;$i -lt $q.Count;$i++){if($q[$i] -match 'phase6-qa-diagnostics-anomaly-dashboard|AnomalyDashboardPage|anomaly-dashboard|anomalies.*(trust|range|source)|anomaly.*(trust|range|source)'){('{0}:{1}' -f ($i+1),$q[$i])}}; Get-ChildItem \"$root\\web\\src\\features\\diagnostics\\components\\anomaly-dashboard\",\"$root\\web\\src\\features\\diagnostics\\components\\statstrip-anomaly\" | ForEach-Object {$_.FullName}; Get-Content \"$root\\docs\\frontend-mission.md\" | Select-Object -Last 180",
+      "exitCode": 0,
+      "rawOutput": "QUEUE_TOTAL_LINES=2041\n380:| [~] | 6 | phase6-qa-diagnostics-anomaly-dashboard | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-anomaly-dashboard.json | phase5-page-diagnostics-anomaly-dashboard | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=926185fa-5576-4c30-a706-0e0e83dc0388; LastConsumed=-1 | - |CurrentacceptedAnomalyDashboardPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveevidence-vs-diagnosis/scopes/SI/preferences/trust/unknownzero/chartalternatives/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 926185fa-5576-4c30-a706-0e0e83dc0388, no browser lock. |\n485:| [x] | 6 | phase6-formatter-icon-callsite-types | measured-public-api-callsite-compatibility | web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx; web\\src\\features\\system\\pages\\HelpPage.tsx | - | 1 | parenttwo-caller fixes actually verified | - | Actual post-Icon-repair literal production compiler has ONLY Anomaly163 TS2769 (XAxis index forwarded into optional formatter locale) and Help205 TS2322 (Icon aria-hidden string instead of boolean). Both source producers now explicitly released and exact WIPs individually pushed1eacc6367/0da150741; original page rows pending1, no overlap with live source writers. ONE fix item for this failed compiler check; preserve typed shared public APIs, data/locale/sections/original assertions. Use existing unary formatter-callsite pattern and true boolean prop, no casts/config widening/new helper/components. Run actual compiler/exact lint/scoped counts; behavioral/native proof remains independently required after catalog closure. Actualtwo-linefix only: XAxis unary fmtInt wrapper ig",
+      "rawOutputCharacters": 59653,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C03",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "C04",
+      "command": "$root='D:\\repos\\teslasync'; $q=Get-Content \"$root\\migration-queue.md\"; for($i=0;$i -lt $q.Count;$i++){if($q[$i] -match '^\\|[^|]*\\|[^|]*\\|\\s*(phase6-qa-diagnostics-anomaly-dashboard|phase5-page-diagnostics-anomaly-dashboard|[^|]*(anomaly|anomalies)[^|]*)\\s*\\|'){('{0}:{1}' -f ($i+1),$q[$i])}}; 'BACKEND_LOCATIONS'; Get-ChildItem \"$root\\internal\" -Recurse -File -Filter '*anomal*' | ForEach-Object {$_.FullName}; Select-String -Path \"$root\\internal\\api\\router.go\",\"$root\\web\\src\\lib\\routeLoaders.ts\" -Pattern 'anomal','AnomalyDashboard' -Context 2,2",
+      "exitCode": 0,
+      "rawOutput": "380:| [~] | 6 | phase6-qa-diagnostics-anomaly-dashboard | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-anomaly-dashboard.json | phase5-page-diagnostics-anomaly-dashboard | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=926185fa-5576-4c30-a706-0e0e83dc0388; LastConsumed=-1 | - |CurrentacceptedAnomalyDashboardPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveevidence-vs-diagnosis/scopes/SI/preferences/trust/unknownzero/chartalternatives/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 926185fa-5576-4c30-a706-0e0e83dc0388, no browser lock. |\n864:| [x] | 3 | phase3-aianomaly-explanations | shared | web\\src\\components\\ai\\AIAnomalyExplanations.tsx; web\\src\\components\\ai\\AIAnomalyExplanations.test.tsx | phase3-aifeature-card | 2 | 2026-10-08T17:49:32.644Z | 1a90cec318 | phase3-aifeature-card / 2 / 2026-10-08T17:49:32.644Z / Verified real-owner plan=phase3-aianomaly-explanations in session frontend-phase3-owner-plan.json; category=domain-ai; sources=web\\src\\components\\ai\\AIAnomalyExplanations.tsx; tests=web\\src\\components\\ai\\AIAnomalyExplanations.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; actor context idle verified 2026-10-08T15:33:06.520Z: Actual task backend failed400 internal server error,0 turns; terminal failed context released, no execution/test pass claimed; failure=Tool backend400 before turn0; original fingerprints must be verified unchanged before retry; temporary dispatch cap16/backoff applies, no source completion claim; frozen preserved-delta retry baseline=phase3-aianomaly-explana",
+      "rawOutputCharacters": 29548,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C04",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "C05",
+      "command": "Get-Date -AsUTC -Format o; $root='D:\\repos\\teslasync'; $q=Get-Content \"$root\\migration-queue.md\"; for($i=0;$i -lt $q.Count;$i++){if($q[$i] -match '^\\|[^|]*\\|[^|]*\\|\\s*([^|]*(anomaly|anomalies)[^|]*)\\s*\\|'){$cells=$q[$i].Split('|'); ('QUEUE {0} status={1} phase={2} item={3} files={4} dependency={5} attempt={6} note={7}' -f ($i+1),$cells[1].Trim(),$cells[2].Trim(),$cells[3].Trim(),$cells[5].Trim(),$cells[6].Trim(),$cells[7].Trim(),$cells[10].Trim().Substring(0,[Math]::Min(800,$cells[10].Trim().Length)))}}; 'API/ROUTE_LINES'; Select-String -Path \"$root\\internal\\api\\router.go\",\"$root\\web\\src\\lib\\routeLoaders.ts\" -Pattern 'anomal','AnomalyDashboard' -Context 1,1; 'HANDOFF_READ=latest current 1-66; historical remainder not acceptance'; 'MISSION43-45'; $m=Get-Content \"$root\\docs\\frontend-mission.md\"; for($i=0;$i -lt $m.Count;$i++){if($m[$i] -match '^(43|44|45)\\.'){('{0}:{1}' -f ($i+1),$m[$i])}}",
+      "exitCode": 0,
+      "rawOutput": "2026-10-14T01:03:31.1488025Z\nQUEUE 380 status=[~] phase=6 item=phase6-qa-diagnostics-anomaly-dashboard files=docs\\frontend-audits\\phase6-qa-diagnostics-anomaly-dashboard.json dependency=phase5-page-diagnostics-anomaly-dashboard attempt=1 note=CurrentacceptedAnomalyDashboardPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveevidence-vs-diagnosis/scopes/SI/preferences/trust/unknownzero/chartalternatives/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 926185fa-5576-4c30-a706-0e0e83dc0388, no browser lock.\nQUEUE 864 status=[x] phase=3 item=phase3-aianomaly-explanations files=web\\src\\components\\ai\\AIAnomalyExplanations.tsx; web\\src\\components\\ai\\AIAnomalyExplanations.test.tsx dependency=phase3-aifeature-card attempt=2 note=phase3-aifeature-card / 2 / 2026-10-08T17:49:32.644Z / Verified real-owner plan=phase3-aianomaly-explanations in session frontend-phase3-owner-plan.json; category=domain-ai; sources=web\\src\\components\\ai\\AIAnomalyExplanations.tsx; tests=web\\src\\components\\ai\\AIAnomalyExplanations.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; actor context idle verified 2026-10-08T15:33:06.520Z: Actual task backend failed400 internal server error,0 turns; terminal failed context released, no execution/test pass claimed; failure=Tool backend400 before turn0; original fingerprints must be verified unchanged before retry; temporary dispatch cap16/backoff applies, no source completion claim; frozen preserved-delta re\nQUEUE 869 status=[x] phase=3 item=phase3-ailearned-anomaly-baselines files=web\\src\\components\\ai\\AILearnedAnomalyBaselines.tsx; web\\src\\components\\ai\\AILearnedAnomalyBaselines.test.tsx de",
+      "rawOutputCharacters": 16913,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C05",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "C06",
+      "command": "$root='D:\\repos\\teslasync'; 'CANONICAL_OWNER_CANDIDATES'; $q=Get-Content \"$root\\migration-queue.md\"; for($i=0;$i -lt $q.Count;$i++){if($q[$i] -match '^\\|[^|]*\\|\\s*6\\s*\\|' -and $q[$i] -match 'anomal|initial.?paused|source.*(trust|empty)|date.preference|signal.*(unit|metadata)|retained.*trust'){$c=$q[$i].Split('|'); ('{0}: status={1} item={2} files={3} note={4}' -f ($i+1),$c[1].Trim(),$c[3].Trim(),$c[5].Trim(),$c[10].Trim().Substring(0,[Math]::Min(700,$c[10].Trim().Length)))}}; 'PRESSURE_CANONICAL_LOCATIONS'; Get-ChildItem \"$root\\internal\\tesla\\units\",\"$root\\internal\\signal\",\"$root\\web\\src\\lib\" -Recurse -File -Include *.go,*.ts | Select-String -Pattern 'TpmsPressureFl','UnitKindPressure','pressureFrom' | Select-Object -First 28; 'ANOMALY_REGISTRATIONS'; Get-ChildItem \"$root\\internal\\api\\airoutes\" -File | ForEach-Object {$_.FullName}; 'LOCAL_SUPPORT_INDEX'; Get-Content \"$root\\web\\src\\features\\diagnostics\\components\\anomaly-dashboard\\index.ts\"",
+      "exitCode": 0,
+      "rawOutput": "CANONICAL_OWNER_CANDIDATES\n290: status=[x] item=phase6-fix-action-center-scope-links files=web\\src\\features\\action-center\\pages\\ActionCenterPage.tsx; web\\src\\features\\action-center\\pages\\ActionCenterPage.test.tsx note=WIPexactpairpushed; actualfresh37/37/0failed/0skipped/lint-typing-scans0, sixsections/20originaltestbodies retained. Parent sourcecheck found remaining coreboundary: useSelectedVehicle.ts47-80 rejects malformed/deleted URL IDs, newpageeffect76-85 materializesONLYfalsy rawURLvehicle; CopyLinkButton43-51 copiesrawURL. Effective8 cancopyinvalid/deleted param and reopenasrecipient9. Preserveallpassingproof; retryremainingattempt2 samepair with realhook/copy/remount invalid/deleted-ID regression, no shared/globalpreference mutation or manufacturedAPI params. SOURCEpartial/notnative/globalacceptance. Original08089ff8 source release17:55:03Z/STOPack19:03 preserved; actualnewattempt2 launch, notacce\n292: status=[x] item=phase6-fix-action-center-generation-format files=web\\src\\features\\action-center\\components\\ActionCenterSummary.tsx; web\\src\\features\\action-center\\components\\ActionCenterSummary.dateFormat.test.tsx note=Prior609a released17:54:56Z/SDKidle; existingreactiveuseDateFormat substitution/6metrics/onebrief retained. SixauthoredcasesNOTRUN/externalguard1/oldownedlint-types-scans0; changedDLQguardinputs/pushedfb3c permitnormalfirstproof. Onlyretainedpair/coveringtestscorrectedifownfailure; dateutils/UI/hooks/catalogreadonly, outsideEnglishwriterdriftnotownfailure/no source-remigration. New-machine recovery 2026-10-14T00:44:04.100Z: actual built-in agent inventory empty; previous session ended, source leases released; reset pending with attempts unchanged, retained WIP/reports and historical clocks preserved. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new ze\n293: status=[~] item=phase6-fix-action-center-history-pagination files=web\\src\\features\\action-center\\components\\RecommendationDetails.tsx; web\\src\\features",
+      "rawOutputCharacters": 113549,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C06",
+      "nonterminatingErrors": [
+        "Get-ChildItem: Cannot find path 'D:\\repos\\teslasync\\internal\\api\\airoutes' because it does not exist."
+      ]
+    },
+    {
+      "id": "C07",
+      "command": "$root='D:\\repos\\teslasync'; 'INITIAL_PINS_JSON'; $paths=@('web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx','web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts','web/src/features/diagnostics/components/anomaly-dashboard/index.ts','web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts','web/src/api/hooks/useAnomalies.ts','web/src/components/ai/AIAnomalyExplanations.tsx','web/src/components/ai/AILearnedAnomalyBaselines.tsx','web/src/components/ai/AIFeatureCard.tsx','web/src/components/ai/withAiFeature.tsx','web/src/components/layout/layout-reference/PageLayout.tsx','web/src/components/layout/PageContainer.tsx','web/src/components/feedback/StaleRefreshWarning.tsx','web/src/api/dataState.ts','web/src/hooks/useSelectedVehicle.ts','web/src/hooks/useAiStream.ts','web/src/lib/workspaceScope.ts','web/src/lib/routeLoaders.ts','web/src/App.tsx','internal/api/router.go','internal/api/anomaly/handler.go','docs/orchestrator-loop.md','docs/frontend-design-contract.md','docs/session-handoff.md','docs/frontend-mission.md','.github/copilot-instructions.md','.github/instructions/frontend-si-cutover.instructions.md','.github/instructions/react-frontend.instructions.md','.github/instructions/observability.instructions.md','.github/instructions/unit-conversion.instructions.md'); $pins=foreach($p in $paths){$f=Join-Path $root $p; $b=[IO.File]::ReadAllBytes($f); [pscustomobject]@{path=$p;sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($b)).ToLowerInvariant();bytes=$b.Length;lineCount=[IO.File]::ReadAllLines($f).Count;lastWriteUtc=(Get-Item $f).LastWriteTimeUtc.ToString('o');capturedAtUtc=[DateTime]::UtcNow.ToString('o')}}; $pins | ConvertTo-Json -Depth 4 -Compress; 'END_INITIAL_PINS_JSON'; 'EXACT_QUEUE_DEDUP'; $q=Get-Content \"$root\\migration-queue.md\"; for($i=0;$i -lt $q.Count;$i++){if($q[$i].StartsWith('|')){$c=$q[$i].Split('|'); if($c.Length -gt 10 -and ($c[3] -match 'anomal|data.freshness|source.*state|source.*trust|initial.?paused|signal.*unit|signal.*metadata|date.preference')){('{0} status={1} item={2} files={3} dependencies={4}' -f ($i+1),$c[1].Trim(),$c[3].Trim(),$c[5].Trim(),$c[6].Trim())}}}; 'CANONICAL_PRESSURE'; Select-String -Path \"$root\\internal\\tesla\\units\\units.go\" -Pattern 'Pressure','Pa','kPa' | ForEach-Object {('{0}:{1}' -f $_.LineNumber,$_.Line.Substring(0,[Math]::Min(220,$_.Line.Length)))}",
+      "exitCode": 0,
+      "rawOutput": "INITIAL_PINS_JSON\n[{\"path\":\"web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx\",\"sha256\":\"82e1a6c2143784312505bfafcf89d09e455f3208acb8eae061a5e8c36040474b\",\"bytes\":11405,\"lineCount\":239,\"lastWriteUtc\":\"2026-10-14T00:29:41.4651647Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2285930Z\"},{\"path\":\"web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx\",\"sha256\":\"996d8d3277cc2d635af1609d587b579e8c01f66870a9a5f8c26201c4d6450698\",\"bytes\":3230,\"lineCount\":85,\"lastWriteUtc\":\"2026-10-14T00:29:41.4631564Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2332731Z\"},{\"path\":\"web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx\",\"sha256\":\"e16b66b2274b539a901ec653617a512d332a61760217816809e4972a5a9a32b8\",\"bytes\":2047,\"lineCount\":58,\"lastWriteUtc\":\"2026-10-14T00:29:41.4631564Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2337281Z\"},{\"path\":\"web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts\",\"sha256\":\"71d1ced1c06449771b7060b4950f3a00827ecf0a499c68db84fbca8f3f452bf5\",\"bytes\":2197,\"lineCount\":61,\"lastWriteUtc\":\"2026-10-13T06:09:18.2101536Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2341415Z\"},{\"path\":\"web/src/features/diagnostics/components/anomaly-dashboard/index.ts\",\"sha256\":\"085c1bedfa12c49dc76d37c914a73d9dc10a4e5eb87db56938fe3fbebb64e07b\",\"bytes\":230,\"lineCount\":8,\"lastWriteUtc\":\"2026-10-13T06:09:18.2101536Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2345664Z\"},{\"path\":\"web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts\",\"sha256\":\"61a14006dbb3b2f2b9dd3a3ab06d762c635ef65d76bff46451e51615c018f3ad\",\"bytes\":1914,\"lineCount\":43,\"lastWriteUtc\":\"2026-10-14T00:29:41.4651647Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2349867Z\"},{\"path\":\"web/src/api/hooks/useAnomalies.ts\",\"sha256\":\"4734d21fba9f5ed81ae169c41b3bfe80b05fb390f438029c242b13a9608e036d\",\"bytes\":2634,\"lineCount\":68,\"lastWriteUtc\":\"2026-10-13T06:09:17.7723888Z\",\"capturedAtUtc\":\"2026-10-14T01:04:35.2353235Z\"},{\"path\":\"web/src/components/ai/AIAnomalyExplanation",
+      "rawOutputCharacters": 11916,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C07",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "C08",
+      "command": "$root='D:\\repos\\teslasync'; $paths=@('web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx','web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts','web/src/features/diagnostics/components/anomaly-dashboard/index.ts','web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts','web/src/api/hooks/useAnomalies.ts','web/src/components/ai/AIAnomalyExplanations.tsx','web/src/components/ai/AILearnedAnomalyBaselines.tsx'); $patterns=[ordered]@{'static-inline-style'='style\\s*=\\s*\\{\\{[^\\r\\n]*var\\(--';'raw-html'='<(?:button|input|textarea|select|table)\\b';'direct-library-import'='(?:from\\s*|import\\s*)[''\\\"](?:recharts|react-leaflet|framer-motion)[''\\\"]';'old-api-import'='from\\s*[''\\\"](?:\\.\\./)+api[''\\\"]';'double-prefix'='/api/v1/';'camelcase-param'='[?&][a-z_]*[A-Z][a-zA-Z]*=';'hidden-section-candidate'='\\{[^{}\\r\\n]*\\b(?:data|anomalies|healthEntries)\\b[^{}\\r\\n]*&&\\s*<';'hardcoded-jsx-text-candidate'='>\\s*[A-Za-z][^<>{}\\r\\n]*<';'fetch-useeffect-candidate'='\\b(?:fetch|useEffect)\\s*\\(';'unsafe-any'='\\bany\\b';'fixed-white-overlay'='(?:bg|ring|border)-white/';'page-wrapper'='<Page(?:Container|Layout)\\b';'sections'='<section\\b';'panel-shells'='<GlassPanel\\b';'chart-frames'='<EmbeddedChart\\b'}; $result=@(); foreach($rule in $patterns.Keys){$hits=@();foreach($p in $paths){$ls=[IO.File]::ReadAllLines((Join-Path $root $p));for($i=0;$i -lt $ls.Count;$i++){if($ls[$i] -match $patterns[$rule]){$hits += [pscustomobject]@{path=$p;line=$i+1;text=$ls[$i].Trim()}}}}; $result += [pscustomobject]@{rule=$rule;pattern=$patterns[$rule];matchedLines=$hits.Count;hits=$hits}; ('SCAN {0} matchedLines={1}' -f $rule,$hits.Count);foreach($h in $hits){('{0}:{1}: {2}' -f $h.path,$h.line,$h.text)}}; 'SCAN_JSON'; $result | ConvertTo-Json -Depth 6 -Compress; 'END_SCAN_JSON'; 'SUPPORT_SITES'; $sites=@{'web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx'=@(37,41,43,45,54,57,62,94,102,104,105,108,109,143,160,182,225);'web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx'=@(39,47,51,52,58,65,72);'internal/api/anomaly/handler.go'=@(83,87,90,153,163,269,313,327,354,368,396,431,477,490,509,537)}; foreach($p in $sites.Keys){$ls=[IO.File]::ReadAllLines((Join-Path $root $p));foreach($n in $sites[$p]){if($n -le $ls.Count){('{0}:{1}: {2}' -f $p,$n,$ls[$n-1])}}}",
+      "exitCode": 0,
+      "rawOutput": "SCAN static-inline-style matchedLines=0\nSCAN raw-html matchedLines=0\nSCAN direct-library-import matchedLines=0\nSCAN old-api-import matchedLines=0\nSCAN double-prefix matchedLines=3\nweb/src/components/ai/AIAnomalyExplanations.tsx:2: // The Generate button streams from POST /api/v1/ai/anomalies/explain.\nweb/src/components/ai/AILearnedAnomalyBaselines.tsx:3: // POST /api/v1/ai/ml/anomaly-baselines/train. The narration walks\nweb/src/components/ai/AILearnedAnomalyBaselines.tsx:10: // detector at GET /api/v1/analytics/anomalies, unchanged\nSCAN camelcase-param matchedLines=1\nweb/src/api/hooks/useAnomalies.ts:62: `/analytics/anomalies?vehicle_id=${encodeURIComponent(id)}&days=${windowDays}`,\nSCAN hidden-section-candidate matchedLines=0\nSCAN hardcoded-jsx-text-candidate matchedLines=0\nSCAN fetch-useeffect-candidate matchedLines=0\nSCAN unsafe-any matchedLines=5\nweb/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts:9: * any future category the API may add before the frontend knows about it.\nweb/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts:31: * and any status the frontend does not yet recognize, plus a missing/null\nweb/src/components/ai/AIAnomalyExplanations.tsx:28: // active vehicle aborts any in-flight explanation and clears the\nweb/src/components/ai/AILearnedAnomalyBaselines.tsx:6: // fallback for any signal with too few samples), then summarises\nweb/src/components/ai/AILearnedAnomalyBaselines.tsx:50: // active vehicle aborts any in-flight training run and clears the\nSCAN fixed-white-overlay matchedLines=2\nweb/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx:47: className=\"inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5\"\nweb/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx:41: <span className=\"flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/10\">\nSCAN page-wrapper matchedLines=1\nweb/src/features/diagnostics/pa",
+      "rawOutputCharacters": 11109,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C08",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "C09",
+      "command": "$root='D:\\repos\\teslasync'; 'EXACT_SOURCE_RANGES'; $ranges=@{'web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx'=@(@(37,78),@(83,107),@(218,239));'web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx'=@(@(23,75));'web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts'=@(@(36,47));'internal/api/anomaly/handler.go'=@(@(54,85),@(240,318),@(350,396),@(414,450),@(465,509),@(541,557));'internal/tesla/units/units.go'=@(@(9,23),@(63,68));'web/src/components/feedback/StaleRefreshWarning.tsx'=@(@(58,68));'web/src/components/layout/PageContainer.tsx'=@(@(132,142),@(165,173));'web/src/hooks/useNumberFormatting.ts'=@(@(17,42))}; foreach($p in $ranges.Keys){$ls=[IO.File]::ReadAllLines((Join-Path $root $p));foreach($r in $ranges[$p]){for($n=$r[0];$n -le $r[1];$n++){('{0}:{1}: {2}' -f $p,$n,$ls[$n-1])}}}; 'CORRECTED_CASE_SENSITIVE_SCAN'; $paths=@('web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx','web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts','web/src/features/diagnostics/components/anomaly-dashboard/index.ts','web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts','web/src/api/hooks/useAnomalies.ts','web/src/components/ai/AIAnomalyExplanations.tsx','web/src/components/ai/AILearnedAnomalyBaselines.tsx'); $camel=@(); $unsafe=@();foreach($p in $paths){$ls=[IO.File]::ReadAllLines((Join-Path $root $p));for($i=0;$i -lt $ls.Count;$i++){if($ls[$i] -cmatch '[?&][a-z_]*[A-Z][a-zA-Z]*='){$camel+=('{0}:{1}:{2}' -f $p,($i+1),$ls[$i])};if($ls[$i] -cmatch '(?::\\s*any\\b|\\bas\\s+any\\b|<any>)'){$unsafe+=('{0}:{1}:{2}' -f $p,($i+1),$ls[$i])}}}; 'camelcase-param corrected matchedLines='+$camel.Count; $camel; 'unsafe-any code-specific matchedLines='+$unsafe.Count;$unsafe; 'BACKEND_PATTERN_SCAN'; $f=\"$root\\internal\\api\\anomaly\\handler.go\"; foreach($pat in @('fmt\\.Sprintf\\(\"(?:SELECT|INSERT|UPDATE|DELETE)','(?:fmt|log)\\.Println\\s*\\(','\\bpanic\\s*\\(','http\\.NewRequest\\s*\\(','Pool\\.(?:Query|QueryRow)\\(')){$hits=@(Select-String -Path $f -CaseSensitive -Pattern $pat); 'pattern='+$pat+' matchedLines='+$hits.Count; $hits | ForEach-Object {('{0}:{1}' -f $_.LineNumber,$_.Line.Trim())}}; 'EXACT_QUEUE_FILE_OVERLAPS'; $q=Get-Content \"$root\\migration-queue.md\";for($i=0;$i -lt $q.Count;$i++){if($q[$i].StartsWith('|')){$c=$q[$i].Split('|');if($c.Length -gt 10 -and $c[2].Trim() -eq '6' -and $c[3].Trim() -ne 'phase6-qa-diagnostics-anomaly-dashboard' -and $c[5] -match 'anomaly-dashboard|AnomalyDashboard|useAnomalies|api.anomaly.handler|SystemHealthCard|AnomalyTimelineCard'){('{0} item={1} status={2} files={3}' -f ($i+1),$c[3].Trim(),$c[1].Trim(),$c[5].Trim())}}}",
+      "exitCode": 0,
+      "rawOutput": "EXACT_SOURCE_RANGES\nweb/src/components/layout/PageContainer.tsx:132:   // loading\" / \"the refresh failed\" announcements can be centralised\nweb/src/components/layout/PageContainer.tsx:133:   // instead of asking 140 pages to remember a hook. Fires only on the\nweb/src/components/layout/PageContainer.tsx:134:   // loading → settled edge, so background refetches stay silent, and it\nweb/src/components/layout/PageContainer.tsx:135:   // is governed (deduped + rate-limited) by `useStatusAnnouncer`.\nweb/src/components/layout/PageContainer.tsx:136:   useLoadAnnouncement({\nweb/src/components/layout/PageContainer.tsx:137:     label: title,\nweb/src/components/layout/PageContainer.tsx:138:     isLoading: Boolean(loading),\nweb/src/components/layout/PageContainer.tsx:139:     isError: Boolean(error),\nweb/src/components/layout/PageContainer.tsx:140:     count: empty ? 0 : undefined,\nweb/src/components/layout/PageContainer.tsx:141:     enabled: announce,\nweb/src/components/layout/PageContainer.tsx:142:   });\nweb/src/components/layout/PageContainer.tsx:165:       <header\nweb/src/components/layout/PageContainer.tsx:166:         className={cn(\nweb/src/components/layout/PageContainer.tsx:167:           'relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between',\nweb/src/components/layout/PageContainer.tsx:168:           actionLayout === 'scope-first' && 'gap-3 px-4 py-4 sm:px-6 sm:py-5',\nweb/src/components/layout/PageContainer.tsx:169:           compactHeader && 'gap-2 overflow-visible rounded-none border-0 bg-transparent px-0 py-1 shadow-none sm:px-0 xl:gap-3',\nweb/src/components/layout/PageContainer.tsx:170:         )}\nweb/src/components/layout/PageContainer.tsx:171:         data-role=\"page-header\"\nweb/src/components/layout/PageContainer.tsx:172:       >\nweb/src/components/layout/PageContainer.tsx:173:         <div className={cn('flex min-w-0 max-w-4x",
+      "rawOutputCharacters": 31636,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C09",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "C10",
+      "command": "$root='D:\\repos\\teslasync'; 'EXACT_QA_AND_DEPENDENCY'; $q=Get-Content \"$root\\migration-queue.md\"; for($i=0;$i -lt $q.Count;$i++){if($q[$i] -match '^\\|[^|]*\\|[^|]*\\|\\s*(phase6-qa-diagnostics-anomaly-dashboard|phase5-page-diagnostics-anomaly-dashboard)\\s*\\|'){('{0}:{1}' -f ($i+1),$q[$i])}}; 'AIRROUTES_FILES'; Get-ChildItem \"$root\\internal\\api\\airoutes\" -File | ForEach-Object {$_.FullName}; 'AIRROUTES_ENDPOINTS'; Get-ChildItem \"$root\\internal\\api\\airoutes\" -File -Filter '*.go' | Select-String -Pattern 'anomalies/explain','ml/anomaly-baselines/train' | ForEach-Object {('{0}:{1}:{2}' -f $_.Path,$_.LineNumber,$_.Line.Trim())}; 'CASE_CORRECTION_AND_BACKEND_RAW'; $raw=[IO.File]::ReadAllText(\"$root\\web\\logs\\phase6-qa-diagnostics-anomaly-dashboard.log\"); $pos=$raw.LastIndexOf('CORRECTED_CASE_SENSITIVE_SCAN'); $raw.Substring($pos,[Math]::Min(6000,$raw.Length-$pos)); 'CANONICAL_SHARED_OWNER_DEDUP'; for($i=0;$i -lt $q.Count;$i++){if($q[$i].StartsWith('|')){$c=$q[$i].Split('|');if($c.Length -gt 10 -and $c[3] -match 'helix.*evidence|shared.*(plural|localiz)|signal.*(metadata|unit)|anomal.*(trust|SI|pressure|scope)' -and $c[3] -notmatch 'qa-diagnostics-anomaly'){('{0}:status={1} item={2} files={3}' -f ($i+1),$c[1].Trim(),$c[3].Trim(),$c[5].Trim())}}}; 'READ_FAILURE_DISCLOSURE=functions.view internal/api/airoutes/routes.go was absent; no command executed; discover actual file now, not endpoint failure.'; 'CANONICAL_LOCALIZATION_CHECK'; $catalog=Get-Content \"$root\\web\\src\\i18n\\en.json\" -Raw | ConvertFrom-Json -AsHashtable; $scope=@('web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx','web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx','web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts','web/src/features/diagnostics/components/statstrip-anomaly/anomalySummary.ts','web/src/components/ai/AIAnomalyExplanations.tsx','web/src/components/ai/AILearnedAnomalyBaselines.tsx'); $keys=@();foreach($p in $scope){$txt=[IO.File]::ReadAllText((Join-Path $root $p));foreach($m in [regex]::Matches($txt,'\\bt\\(\\s*[''\\\"]([^''\\\"`]+)[''\\\"]')){$keys+=$m.Groups[1].Value}}; $keys+=@('anomaly.category.battery','anomaly.category.tires','anomaly.category.motors','anomaly.category.hvac','anomaly.category.charging','anomaly.status.normal','anomaly.status.info','anomaly.status.warning','anomaly.status.critical','anomaly.severity.critical','anomaly.severity.warning','anomaly.severity.info');$keys=@($keys|Sort-Object -Unique); $missing=@(); foreach($k in $keys){$v=$catalog;foreach($seg in $k.Split('.')){if($v -is [System.Collections.IDictionary] -and $v.Contains($seg)){$v=$v[$seg]}else{$v=$null;break}}; if($v -isnot [string]){$missing+=$k; 'MISSING='+$k}else{'KEY '+$k+' = '+$v}}; 'literal-and-known-dynamic-keys='+$keys.Count; 'missing='+$missing.Count; 'DEADLINES'; Get-Date -AsUTC -Format o",
+      "exitCode": 0,
+      "rawOutput": "EXACT_QA_AND_DEPENDENCY\n380:| [~] | 6 | phase6-qa-diagnostics-anomaly-dashboard | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-diagnostics-anomaly-dashboard.json | phase5-page-diagnostics-anomaly-dashboard | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=926185fa-5576-4c30-a706-0e0e83dc0388; LastConsumed=-1 | - |CurrentacceptedAnomalyDashboardPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveevidence-vs-diagnosis/scopes/SI/preferences/trust/unknownzero/chartalternatives/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 926185fa-5576-4c30-a706-0e0e83dc0388, no browser lock. |\n1844:| [x] | 5 | phase5-page-diagnostics-anomaly-dashboard | original-page-migration | web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx; web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.test.tsx | - | 2 | actualterminal1/release/individualreceipt | 6caeab0330ac62387aa5882c7e7ef37b2cd89f29 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/anomaly-detection; /analytics/anomalies; audit=docs\\frontend-audits\\audit-page-099.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require pa",
+      "rawOutputCharacters": 4846,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C10",
+      "nonterminatingErrors": [
+        "Get-ChildItem: Cannot find path 'D:\\repos\\teslasync\\internal\\api\\airoutes' because it does not exist.",
+        "Get-ChildItem: Cannot find path 'D:\\repos\\teslasync\\internal\\api\\airoutes' because it does not exist."
+      ]
+    },
+    {
+      "id": "C11",
+      "command": "$root='D:\\repos\\teslasync'; 'CORRECT_AI_ROUTE_LOCATION'; Get-ChildItem \"$root\\internal\\api\" -File -Filter '*.go' | Select-String -CaseSensitive -Pattern 'anomalies/explain','ml/anomaly-baselines/train' | ForEach-Object {('{0}:{1}: {2}' -f $_.Path,$_.LineNumber,$_.Line.Trim())}; 'LOOKUP_FAILURE_COUNTS'; $l=Get-Content \"$root\\web\\logs\\phase6-qa-diagnostics-anomaly-dashboard.log\"; $errs=@($l|Where-Object {$_ -match '^Get-ChildItem: Cannot find path|^Select-String: Cannot find path'}); 'logged-nonterminating-errors='+$errs.Count; $errs | Sort-Object -Unique; 'EXTRA_PINS_JSON'; $paths=@('internal/tesla/units/units.go','web/src/hooks/useUnits.ts','web/src/hooks/useNumberFormatting.ts','web/src/hooks/useDataState.ts','web/src/hooks/useOperationalMetrics.tsx','web/src/lib/numberFormat.ts','web/src/lib/tokens.ts','web/src/components/data-display/TimeStamp.tsx','web/src/components/data-display/DataFreshness.tsx','web/src/components/data-display/OperationalBrief.tsx','web/src/components/charts/EmbeddedChart.tsx','web/src/components/charts/ChartContainer.tsx','web/src/components/ai/AiOutputPanel.tsx','web/src/components/ai/HelixEvidenceTrail.tsx','web/src/i18n/en.json','web/src/i18n/en/locale-diagnostics.json','docs/frontend-audits/audit-page-099.json'); $pins=foreach($p in $paths){$f=Join-Path $root $p;$b=[IO.File]::ReadAllBytes($f);[pscustomobject]@{path=$p;sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($b)).ToLowerInvariant();bytes=$b.Length;lineCount=[IO.File]::ReadAllLines($f).Count;lastWriteUtc=(Get-Item $f).LastWriteTimeUtc.ToString('o');capturedAtUtc=[DateTime]::UtcNow.ToString('o')}}; $pins|ConvertTo-Json -Depth 4 -Compress; 'END_EXTRA_PINS_JSON'; 'NUMERIC_SOURCE_EXAMPLE=normalizing fixed-wire 3 bar in ToSI gives 300000 Pa; safeRanges max3.5 incorrectly compares Pa against bar'; 'Arithmetic preserved source mechanism only: 3 * 100000 = '+(3*100000)+'; 300000 > 3.5 = '+(300000 -gt 3.5); 'NO_VEHICLE_DATA_USED=true'; 'NONEXECUTED=tests/lint/build/global-tsc/native/browser/screenshots/network/servers/Docker/installs/subagents/mutations'; 'INITIAL_NO_CHANGE=target report absent at first check; no application changes requested or made; report required, accepted Phase5 untouched.'",
+      "exitCode": 0,
+      "rawOutput": "CORRECT_AI_ROUTE_LOCATION\nD:\\repos\\teslasync\\internal\\api\\ai_routes.go:187: r.Post(\"/anomalies/explain\", g.Wrap(\"anomaly-explanations\", anomalyHandler))\nD:\\repos\\teslasync\\internal\\api\\ai_routes.go:1110: r.Post(\"/ml/anomaly-baselines/train\", g.Wrap(\"learned-per-vehicle-anomaly-baselines\", learnedAnomalyBaselinesHandler))\nLOOKUP_FAILURE_COUNTS\nlogged-nonterminating-errors=3\nGet-ChildItem: Cannot find path 'D:\\repos\\teslasync\\internal\\api\\airoutes' because it does not exist.\nEXTRA_PINS_JSON\n[{\"path\":\"internal/tesla/units/units.go\",\"sha256\":\"8413aa7998bdf9eb318769e6b248ffc282cb5ebf5113a658a2bc885d9527dc28\",\"bytes\":4013,\"lineCount\":107,\"lastWriteUtc\":\"2026-10-13T06:09:17.5979045Z\",\"capturedAtUtc\":\"2026-10-14T01:07:25.0917376Z\"},{\"path\":\"web/src/hooks/useUnits.ts\",\"sha256\":\"b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14\",\"bytes\":6545,\"lineCount\":194,\"lastWriteUtc\":\"2026-10-13T06:09:18.5715117Z\",\"capturedAtUtc\":\"2026-10-14T01:07:25.0960687Z\"},{\"path\":\"web/src/hooks/useNumberFormatting.ts\",\"sha256\":\"e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7\",\"bytes\":2095,\"lineCount\":47,\"lastWriteUtc\":\"2026-10-14T00:29:41.8646135Z\",\"capturedAtUtc\":\"2026-10-14T01:07:25.0964150Z\"},{\"path\":\"web/src/hooks/useDataState.ts\",\"sha256\":\"785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b\",\"bytes\":2035,\"lineCount\":65,\"lastWriteUtc\":\"2026-10-13T06:09:18.5649346Z\",\"capturedAtUtc\":\"2026-10-14T01:07:25.0967143Z\"},{\"path\":\"web/src/hooks/useOperationalMetrics.tsx\",\"sha256\":\"b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554\",\"bytes\":1161,\"lineCount\":24,\"lastWriteUtc\":\"2026-10-14T00:29:41.8646135Z\",\"capturedAtUtc\":\"2026-10-14T01:07:25.0969949Z\"},{\"path\":\"web/src/lib/numberFormat.ts\",\"sha256\":\"513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3\",\"bytes\":6443,\"lineCount\":172,\"lastWriteUtc\":\"2026-10-14T00:29:41.9860120Z\",\"capturedAtUtc\":\"2026-10-14T01:07:25.0972798Z\"},{\"path\":\"web/src/lib/tokens.ts\",\"sha256\":\"04bdaa937938f96af3b2d",
+      "rawOutputCharacters": 5217,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C11",
+      "nonterminatingErrors": [
+        "Get-ChildItem: Cannot find path 'D:\\repos\\teslasync\\internal\\api\\airoutes' because it does not exist."
+      ]
+    },
+    {
+      "id": "C12",
+      "command": "$root='D:\\repos\\teslasync'; 'CATALOG_STATUS_LINES'; foreach($p in @('web/src/i18n/en.json','web/src/i18n/en/locale-diagnostics.json')){$cat=Get-Content (Join-Path $root $p) -Raw|ConvertFrom-Json -AsHashtable; 'FILE='+$p; 'anomaly.status keys='+($cat.anomaly.status.Keys -join ','); $ls=[IO.File]::ReadAllLines((Join-Path $root $p)); $start=-1; for($i=0;$i -lt $ls.Count;$i++){if($ls[$i] -cmatch '^  \"anomaly\": \\{'){$start=$i;break}}; if($start -ge 0){for($i=$start;$i -lt [Math]::Min($start+210,$ls.Count);$i++){if($ls[$i] -cmatch '\"status\"\\s*:') {for($n=[Math]::Max($start,$i-1);$n -lt [Math]::Min($i+8,$ls.Count);$n++){('{0}:{1}:{2}' -f $p,($n+1),$ls[$n])};break}}}}; 'ROUTE_SOURCE_PINS_JSON'; $p='internal/api/ai_routes.go';$f=Join-Path $root $p;$b=[IO.File]::ReadAllBytes($f);[pscustomobject]@{path=$p;sha256=[Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($b)).ToLowerInvariant();bytes=$b.Length;lineCount=[IO.File]::ReadAllLines($f).Count;lastWriteUtc=(Get-Item $f).LastWriteTimeUtc.ToString('o');capturedAtUtc=[DateTime]::UtcNow.ToString('o')}|ConvertTo-Json -Compress; 'END_ROUTE_SOURCE_PINS_JSON'; 'LATEST_QUEUE_EXACT_DEDUP';$q=Get-Content \"$root\\migration-queue.md\"; $matched=0;foreach($line in $q){if($line.StartsWith('|')){$c=$line.Split('|');if($c.Length -gt 10 -and $c[2].Trim() -eq '6' -and $c[3].Trim() -ne 'phase6-qa-diagnostics-anomaly-dashboard' -and ($c[3] -match 'anomal' -or $c[5] -match 'anomaly-dashboard|AnomalyDashboard|useAnomalies|api.anomaly.handler')){$matched++;'status='+$c[1].Trim()+' item='+$c[3].Trim()+' files='+$c[5].Trim()}}}; 'overlapping-historical-type-only-row-count='+$matched; 'UNRESOLVED_EXACT_ANOMALY_FIX_ROWS=none identified; no queue writes';'INITIAL_UNLOGGED_TOOL_CHECKS=392 status/nochange 0;399 instruction discovery/select-string 0 (no select-string matches; subsequent Get-Content corrected discovery);416 full page/readscope 0;435 App/workspace route search 0. All raw outputs returned in tool receipts, not reconstructed as runtime acceptance.'; Get-Date -AsUTC -Format o",
+      "exitCode": 0,
+      "rawOutput": "CATALOG_STATUS_LINES\nFILE=web/src/i18n/en.json\nanomaly.status keys=normal,warning,critical,unknown\nweb/src/i18n/en.json:19161:    },\nweb/src/i18n/en.json:19162:    \"status\": {\nweb/src/i18n/en.json:19163:      \"normal\": \"Normal\",\nweb/src/i18n/en.json:19164:      \"warning\": \"Warning\",\nweb/src/i18n/en.json:19165:      \"critical\": \"Critical\",\nweb/src/i18n/en.json:19166:      \"unknown\": \"Unknown\"\nweb/src/i18n/en.json:19167:    },\nweb/src/i18n/en.json:19168:    \"severity\": {\nweb/src/i18n/en.json:19169:      \"critical\": \"Critical\",\nFILE=web/src/i18n/en/locale-diagnostics.json\nanomaly.status keys=normal,warning,critical,unknown\nweb/src/i18n/en/locale-diagnostics.json:40:    },\nweb/src/i18n/en/locale-diagnostics.json:41:    \"status\": {\nweb/src/i18n/en/locale-diagnostics.json:42:      \"normal\": \"Normal\",\nweb/src/i18n/en/locale-diagnostics.json:43:      \"warning\": \"Warning\",\nweb/src/i18n/en/locale-diagnostics.json:44:      \"critical\": \"Critical\",\nweb/src/i18n/en/locale-diagnostics.json:45:      \"unknown\": \"Unknown\"\nweb/src/i18n/en/locale-diagnostics.json:46:    },\nweb/src/i18n/en/locale-diagnostics.json:47:    \"severity\": {\nweb/src/i18n/en/locale-diagnostics.json:48:      \"critical\": \"Critical\",\nROUTE_SOURCE_PINS_JSON\n{\"path\":\"internal/api/ai_routes.go\",\"sha256\":\"f0bcbd1b33717f76efa91855587a239b03e8111956862f4906842251baac54b3\",\"bytes\":95554,\"lineCount\":1831,\"lastWriteUtc\":\"2026-10-13T06:09:17.2329336Z\",\"capturedAtUtc\":\"2026-10-14T01:08:01.7476160Z\"}\nEND_ROUTE_SOURCE_PINS_JSON\nLATEST_QUEUE_EXACT_DEDUP\nstatus=[x] item=phase6-formatter-icon-callsite-types files=web\\src\\features\\diagnostics\\pages\\AnomalyDashboardPage.tsx; web\\src\\features\\system\\pages\\HelpPage.tsx\noverlapping-historical-type-only-row-count=1\nUNRESOLVED_EXACT_ANOMALY_FIX_ROWS=none identified; no queue writes\nINITIAL_UNLOGGED_TOOL_CHECKS=392 status/nochange 0;399 instruction discovery/select-string 0 (no select-string matches; subsequent Get-Content corrected discovery);416 full page/readscope 0;435 App/workspace r",
+      "rawOutputCharacters": 2128,
+      "excerptBound": 2000,
+      "fullRawOutput": "ignored log COMMAND C12",
+      "nonterminatingErrors": []
+    },
+    {
+      "id": "P392",
+      "exitCode": 0,
+      "command": "UTC/status/docs/existing-report-log read-only inspect",
+      "rawOutput": "2026-10-14T01:01:56.6330671Z\nEXISTING_REPORT=ABSENT\nEXISTING_LOG=ABSENT",
+      "rawEvidence": "Tool392 includes unrelated inherited dirty files; not modified."
+    },
+    {
+      "id": "P399",
+      "exitCode": 0,
+      "command": "instruction/page/handoff file discovery and initial queue Select-String",
+      "rawEvidence": "Tool399; initial queue Select-String produced no matches; corrected by Get-Content exact row C03/C10. No absent-row inference."
+    },
+    {
+      "id": "P416",
+      "exitCode": 0,
+      "command": "queue head/mission coordinates/full page",
+      "rawEvidence": "Tool416 full source; queue bytes2541576; mission bytes31079."
+    },
+    {
+      "id": "P435",
+      "exitCode": 0,
+      "command": "AI supports and App/workspace route search",
+      "rawOutput": "App.tsx:743 anomaly-detection; App.tsx:752 analytics/anomalies."
+    },
+    {
+      "id": "C13",
+      "exitCode": 1,
+      "command": "oversized inline Python report assembly",
+      "rawOutput": "The filename or extension is too long. (os error 206)",
+      "status": "TOOL_REJECTED_BEFORE_EXECUTION"
+    },
+    {
+      "id": "C14",
+      "command": "Bounded inline stdlib authorized report base assembly",
+      "exitCode": 0,
+      "rawOutput": "REPORT_BASE_WRITTEN\nsourcePins=49\npagePlusLocalLines=494\nCOMMAND_LENGTH_FAILURE_RECORDED=C13 exit1"
+    },
+    {
+      "id": "C15",
+      "command": "Attach exact file-line findings, candidate mechanisms and narrow existing owners",
+      "exitCode": 0,
+      "rawOutput": "confirmedFindings=7\ncandidates=4\nrequiredNarrowOwners=4\nAll site ranges resolved against existing files."
+    },
+    {
+      "id": "C16",
+      "command": "Reparse JSON, check49 exact hashes/linecounts, exact snippets and current reservation",
+      "exitCode": 0,
+      "rawOutput": "REPORT_REPARSE=OK\nfindings=7\ncandidates=4\nneeds=4\nSOURCE_PIN_DRIFTS=0",
+      "fullRawOutput": "ignored log COMMAND C16 with all49 PIN_MATCH entries"
+    },
+    {
+      "id": "C17",
+      "command": "Final source-pin recheck, update explicit release, final JSON reparse/source recheck/artifact hashes",
+      "exitCode": 0,
+      "rawOutput": "FINAL_JSON_REPARSE=OK\nSOURCE_PINS=49 MATCHED\nFINDINGS=7\nCANDIDATES=4\nREQUIRED_OWNERS=4\nREPORT_LOG_COMMAND_RELEASE=EXPLICIT",
+      "fullRawOutput": "ignored log COMMAND C17"
+    }
+  ],
+  "queueDeduplication": {
+    "checks": [
+      "C07",
+      "C09",
+      "C12"
+    ],
+    "exactUnresolvedAnomalyFixMatches": 0,
+    "relatedCompleted": [
+      "phase5-page-diagnostics-anomaly-dashboard",
+      "phase6-formatter-icon-callsite-types",
+      "phase3-anomaly-copy-adoption",
+      "phase3-observation-and-anomaly-copy-catalog",
+      "phase3-ai-action-native-button"
+    ],
+    "overlapNotDuplicate": "Completed formatter/Icon item unary XAxis repair already present, not any new mechanism. Completed30-day copy/native button preserved, not redispatched.",
+    "disposition": "Report needs narrow existing owners; parent alone reserves queue leases. No queue/handoff edits."
+  },
+  "readFailures": [
+    {
+      "tool": "functions.view",
+      "path": "internal/api/airoutes/routes.go",
+      "outcome": "Absent path; no process exitCode",
+      "correctedTo": "internal/api/ai_routes.go"
+    },
+    {
+      "commands": [
+        "C06",
+        "C10"
+      ],
+      "processExitCode": 0,
+      "nonterminatingLookupErrors": 3,
+      "outcome": "Wrong airoutes directory; raw failures preserved, C11 corrected. Process0 is not lookup success."
+    },
+    {
+      "command": "C13",
+      "exitCode": 1,
+      "outcome": "Tool command-length rejection; no execution; retained and split authorized assembly."
+    }
+  ],
+  "notRun": {
+    "tests": "NOTRUN explicitly prohibited source-only QA",
+    "lint": "NOTRUN explicitly prohibited source-only QA",
+    "build": "NOTRUN explicitly prohibited source-only QA",
+    "globalTypeScript": "NOTRUN explicitly prohibited source-only QA",
+    "preservationCLI": "NOTRUN explicitly prohibited source-only QA",
+    "catalogGenerator": "NOTRUN explicitly prohibited source-only QA",
+    "browser": "NOTRUN explicitly prohibited source-only QA",
+    "native": "NOTRUN explicitly prohibited source-only QA",
+    "screenshots": "NOTRUN explicitly prohibited source-only QA",
+    "requests": "NOTRUN explicitly prohibited source-only QA",
+    "vehicleData": "NOTRUN explicitly prohibited source-only QA",
+    "mutations": "NOTRUN explicitly prohibited source-only QA",
+    "servers": "NOTRUN explicitly prohibited source-only QA",
+    "Docker": "NOTRUN explicitly prohibited source-only QA",
+    "installs": "NOTRUN explicitly prohibited source-only QA",
+    "subagents": "NOTRUN explicitly prohibited source-only QA",
+    "heartbeats": "NOTRUN explicitly prohibited source-only QA",
+    "customHelpersOrExtensions": "NOTRUN explicitly prohibited source-only QA"
+  },
+  "limits": [
+    "Source review is NOT native/page/application acceptance; mission43-45 gates remain open.",
+    "No browser grant/lock; parent shared preview5173 neither contacted nor altered. Later browser needs installed Edge msedge/no download.",
+    "No route mount, real response/vehicle/range query, inference correctness, diagnosis or action executed.",
+    "No npx tsc --noEmit/tests/lint/build run; historical receipts not current passes.",
+    "Composed mobile/focus/contrast/themes/forced colors/RTL/200%text/reducedmotion NOTRUN; candidates unpromoted.",
+    "Required malformed data not presumed; source comments not native acceptance.",
+    "Unrelated inherited dirty files and live parent queue/handoff preserved. Initial unlogged tools have raw tool receipts; bounded check evidence in ignored log."
+  ],
+  "writeScope": {
+    "report": "docs\\frontend-audits\\phase6-qa-diagnostics-anomaly-dashboard.json",
+    "ignoredLog": "web\\logs\\phase6-qa-diagnostics-anomaly-dashboard.log",
+    "applicationTestsCatalogConfigBackendQueueHandoffChanges": false,
+    "gitEdits": false
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "rule": "unsupported-health-assurance",
+      "priority": "high",
+      "title": "Missing evidence or swallowed stage failure can yield an all-clear diagnosis",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            223,
+            227
+          ],
+          "exactSource": "223:           ) : anomalies.length === 0 ? (\n224:             <EmptyState /* no-action: healthy state — no anomalies detected, nothing to recover */\n225:               icon={<Icon icon={ShieldCheck} size=\"xl\" />}\n226:               message={noVehicle || !state.hasData ? emptyMessage : t('anomaly.noAnomalies', 'No anomalies detected — all systems normal.')}\n227:             />"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts",
+          "lines": [
+            36,
+            45
+          ],
+          "exactSource": "36: export function healthSeverity(status: string | null | undefined): Severity {\n37:   switch (status) {\n38:     case 'critical':\n39:       return 'critical';\n40:     case 'warning':\n41:       return 'warn';\n42:     case 'normal':\n43:       return 'success';\n44:     default:\n45:       return 'info';"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            273,
+            295
+          ],
+          "exactSource": "273: \thealthSummary := map[string]string{\n274: \t\t\"battery\":  \"normal\",\n275: \t\t\"tires\":    \"normal\",\n276: \t\t\"motors\":   \"normal\",\n277: \t\t\"hvac\":     \"normal\",\n278: \t\t\"charging\": \"normal\",\n279: \t}\n280: \tfor _, a := range allAnomalies {\n281: \t\tcat := signalCategory[a.Signal]\n282: \t\tif cat == \"\" {\n283: \t\t\tcontinue\n284: \t\t}\n285: \t\tcurrent := healthSummary[cat]\n286: \t\tif severityOrder(a.Severity) < severityOrder(current) {\n287: \t\t\thealthSummary[cat] = a.Severity\n288: \t\t}\n289: \t}\n290: \n291: \t// Count last 24h\n292: \tnow := time.Now()\n293: \tlast24h := 0\n294: \tfor _, a := range allAnomalies {\n295: \t\tt, _ := time.Parse(time.RFC3339, a.DetectedAt)"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            357,
+            360
+          ],
+          "exactSource": "357: \tif err != nil {\n358: \t\tlog.Warn().Err(err).Int64(\"vehicle_id\", vehicleID).Msg(\"anomaly: z-score query failed\")\n359: \t\treturn nil, 0\n360: \t}"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            417,
+            419
+          ],
+          "exactSource": "417: \t\t}\n418: \n419: \t\tname := signalDisplayName[signal]"
+        }
+      ],
+      "mechanism": "Handler seeds five categories normal before establishing category coverage and returns nil error after stage query failure. A legitimate vehicle with no numeric history, or failed detector queries, can produce HTTP200 anomalies=[]/zero counts/normal categories. Page then renders success Normal badges and No anomalies detected — all systems normal. Inferred detector silence is not measured physical health; no malformed required DTO assumed.",
+      "sourceReproduction": "Follow empty valid history or detector query failure -> no entries -> seeded normal -> successful payload -> UI success badges/all-clear. No HTTP/DB execution.",
+      "fix": "Narrow page/copy owner removes unsupported blanket all-clear while preserving empty shells; separately existing anomaly handler/hook owner exposes established coverage/stage outcomes, not fabricated normal/zero. Do not infer per-category coverage from monitored total.",
+      "requiredOwners": [
+        "N01",
+        "N03",
+        "N04"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    },
+    {
+      "id": "F02",
+      "rule": "initial-paused-trust",
+      "priority": "high",
+      "title": "Initial paused source claims retained measurements with no payload",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            43,
+            45
+          ],
+          "exactSource": "43:   const state = useDataState(anomaliesQuery, { provenance: 'inferred' });\n44:   const error = state.fatalError;\n45:   const isLoading = queryLoading && !state.hasData;"
+        },
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            100,
+            105
+          ],
+          "exactSource": "100:             statusLabel={isLoading ? t('common.loading', 'Loading')\n101:               : error ? t('error.loadFailed', 'Failed to load data')\n102:                 : state.refreshError || state.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')\n103:                   : data ? t('anomaly.summary.available', 'Detector snapshot available')\n104:                     : t('anomaly.summary.unavailable', 'Detector snapshot unavailable')}\n105:             statusTone={error ? 'danger' : state.refreshError || state.isRefreshBlocked ? 'warning' : 'neutral'}"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "lines": [
+            220,
+            239
+          ],
+          "exactSource": "220:     }\n221:   }\n222: \n223:   const base = {\n224:     data,\n225:     hasData: true as const,\n226:     isRefreshing,\n227:     isRefreshBlocked: isPaused,\n228:     fatalError: null,\n229:     updatedAt,\n230:     ageMs,\n231:     retry,\n232:   }\n233: \n234:   if (error != null || (source.isError ?? false)) {\n235:     return {\n236:       ...base,\n237:       status: 'stale',\n238:       // The bytes on screen are, by definition, no longer live.\n239:       provenance: provenance === 'live' ? 'cached' : provenance,"
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "lines": [
+            62,
+            65
+          ],
+          "exactSource": "62:   const noticeState = state.status === 'partial'\n63:     ? 'partial'\n64:     : state.status === 'unavailable'\n65:       ? 'unavailable'"
+        }
+      ],
+      "mechanism": "Initial paused query with selected vehicle has no data, isLoading=false, fetchStatus=paused. DataState initial/hasData=false/isRefreshBlocked=true; page loading false; summary selects Showing retained measurements from isRefreshBlocked alone. Shared warning returns null without retained data and panels fall into waiting/no-data. Timeline uses noData here, NOT all-clear, distinct from F01.",
+      "sourceReproduction": "Branch evaluation with data=undefined,error=null,isLoading=false,fetchStatus=paused selects retained despite hasData=false.",
+      "fix": "Existing page owner distinguishes initial refresh-blocked from retained refresh-blocked using hasData/status and existing localized feedback. Never assert offline cause, fake zero or destructive all-page loading.",
+      "requiredOwners": [
+        "N01",
+        "N04"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    },
+    {
+      "id": "F03",
+      "rule": "si-display-preferences",
+      "priority": "high",
+      "title": "Physical timeline readings/baselines bypass display unit preferences",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+          "lines": [
+            24,
+            25
+          ],
+          "exactSource": "24: function AnomalyTimelineCardImpl({ anomaly }: AnomalyTimelineCardProps) {\n25:   const { fmtNumber } = useNumberFormatting();"
+        },
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+          "lines": [
+            61,
+            71
+          ],
+          "exactSource": "61:         <span>\n62:           {t('anomaly.value', 'Value')}:{' '}\n63:           <Text as=\"span\" size=\"2xs\" color=\"secondary\" className=\"tabular-nums\">\n64:             {fmtNumber(anomaly.value)}\n65:           </Text>\n66:         </span>\n67:         <span>\n68:           {t('anomaly.baseline', 'Baseline')}:{' '}\n69:           <Text as=\"span\" size=\"2xs\" color=\"secondary\" className=\"tabular-nums\">\n70:             {fmtNumber(anomaly.baseline)}\n71:           </Text>"
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "lines": [
+            27,
+            29
+          ],
+          "exactSource": "27:   return useMemo(() => {\n28:     const fmtNumber = (value: unknown, decimals?: number, locale?: string) =>\n29:       formatNumber(value, decimals ?? preferences.precision, locale ?? preferences.locale)"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            377,
+            386
+          ],
+          "exactSource": "377: \t\t\tSignal:     signal,\n378: \t\t\tType:       \"z_score\",\n379: \t\t\tSeverity:   sev,\n380: \t\t\tValue:      round2(value),\n381: \t\t\tBaseline:   round2(mean),\n382: \t\t\tZScore:     round2(zScore),\n383: \t\t\tDetectedAt: ts.Format(time.RFC3339),\n384: \t\t\tMessage:    fmt.Sprintf(\"%s value %.2f is %.1fσ from mean (%.2f)\", name, value, zScore, mean),\n385: \t\t})\n386: \t}"
+        },
+        {
+          "file": "internal/tesla/units/units.go",
+          "lines": [
+            9,
+            23
+          ],
+          "exactSource": "9: // ToSI converts raw to canonical SI for field, given the active unit\n10: // that the vehicle was emitting at sample time. It is the one and only\n11: // place in the codebase that performs this conversion; downstream\n12: // callers (signal.Store writers, signal_log inserts, analytics) consume\n13: // SI values exclusively.\n14: //\n15: // Canonical SI forms by UnitKind (and the fixed-wire override lists):\n16: //\n17: //\tUnitKindDistance       -> meters\n18: //\tUnitKindTemperature    -> Celsius\n19: //\tUnitKindPressure       -> Pascals\n20: //\t{VehicleSpeed,CruiseSetSpeed} -> meters per second\n21: //\t{AC,DC}ChargingEnergyIn       -> Watt-hours\n22: //\t{AC,DC}ChargingPower          -> Watts\n23: //"
+        },
+        {
+          "file": "internal/tesla/units/units.go",
+          "lines": [
+            63,
+            68
+          ],
+          "exactSource": "63: \t// TpmsPressure fields are always emitted in bar over the wire,\n64: \t// independent of SettingTirePressureUnit. Apply the bar conversion\n65: \t// directly so a Psi user-setting does not produce a 6.9× error.\n66: \tif isFixedBarPressureField(field) {\n67: \t\treturn raw * 100000.0, nil\n68: \t}"
+        }
+      ],
+      "mechanism": "Detector value/baseline derive from canonical signal_log numeric data. ToSI declares temperature Celsius and pressure Pa. Timeline always uses fmtNumber without units/useUnits; formatter applies locale/precision only. Changing physical display preferences cannot convert or label these numbers. Required valid readings, not malformed values, trigger this path; absence of unit field does not make physical signals dimensionless.",
+      "sourceReproduction": "Valid TpmsPressureFl numeric Pa -> anomaly value -> unitless fmtNumber independent of pressure preference; valid signed OutsideTemp -> sign retained but Fahrenheit preference ignored. No vehicle values queried.",
+      "fix": "Existing domain/timeline owner uses authoritative signal units and existing useUnits/unitConversion only at display. Raw SI cache/hooks and signed readings stay unchanged; z_score remains dimensionless. Unknown unit mapping must stay explicitly unspecified/raw, no guessed converter or compatibility root.",
+      "requiredOwners": [
+        "N02"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    },
+    {
+      "id": "F04",
+      "rule": "si-threshold-mismatch",
+      "priority": "high",
+      "title": "Tire pressure bar-sized thresholds compare against canonical Pa",
+      "sites": [
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            77,
+            80
+          ],
+          "exactSource": "77: \t\"TpmsPressureFl\":      {2.0, 3.5},\n78: \t\"TpmsPressureFr\":      {2.0, 3.5},\n79: \t\"TpmsPressureRl\":      {2.0, 3.5},\n80: \t\"TpmsPressureRr\":      {2.0, 3.5},"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            408,
+            416
+          ],
+          "exactSource": "408: \t\terr := h.db.Pool.QueryRow(ctx, `\n409: \t\t\tSELECT COALESCE(float_value, int_value::float8), ts FROM signal_log\n410: \t\t\tWHERE vehicle_id = $1 AND field = $2 AND ts > $3\n411: \t\t\t  AND (float_value IS NOT NULL OR int_value IS NOT NULL)\n412: \t\t\t  AND (COALESCE(float_value, int_value::float8) < $4 OR COALESCE(float_value, int_value::float8) > $5)\n413: \t\t\tORDER BY ts DESC LIMIT 1`,\n414: \t\t\tvehicleID, signal, since, bounds[0], bounds[1]).Scan(&value, &ts)\n415: \t\tif err != nil {\n416: \t\t\tcontinue"
+        },
+        {
+          "file": "internal/tesla/units/units.go",
+          "lines": [
+            63,
+            68
+          ],
+          "exactSource": "63: \t// TpmsPressure fields are always emitted in bar over the wire,\n64: \t// independent of SettingTirePressureUnit. Apply the bar conversion\n65: \t// directly so a Psi user-setting does not produce a 6.9× error.\n66: \tif isFixedBarPressureField(field) {\n67: \t\treturn raw * 100000.0, nil\n68: \t}"
+        }
+      ],
+      "mechanism": "Fixed-wire Tpms ToSI multiplies bar by100000. Handler safeRanges four pressures [2.0,3.5] directly binds those magnitudes to signal_log numeric predicates. A normal Pa magnitude exceeds3.5Pa, becoming critical range violation with midpoint2.75 instead of275000Pa. Independent of F03 presentation.",
+      "sourceReproduction": "Pure symbolic arithmetic in C11:3bar*100000=300000Pa;300000>3.5 true. No actual vehicle data, requests or DB calls.",
+      "fix": "Separately lease existing backend anomaly threshold owner to express four bounds in canonical Pa, preserving physical meaning and narrow matching tests. No frontend conversion/legacy source-unit workaround.",
+      "requiredOwners": [
+        "N03"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    },
+    {
+      "id": "F05",
+      "rule": "hardcoded-string",
+      "priority": "medium",
+      "title": "Generated English detector prose renders without i18n",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+          "lines": [
+            58,
+            58
+          ],
+          "exactSource": "58:       <Text as=\"p\" variant=\"bodySm\">{anomaly.message}</Text>"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            384,
+            386
+          ],
+          "exactSource": "384: \t\t\tMessage:    fmt.Sprintf(\"%s value %.2f is %.1fσ from mean (%.2f)\", name, value, zScore, mean),\n385: \t\t})\n386: \t}"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            429,
+            435
+          ],
+          "exactSource": "429: \t\tvar msg string\n430: \t\tif value < bounds[0] {\n431: \t\t\tmsg = fmt.Sprintf(\"%s value %.2f is below safe minimum (%.1f)\", name, value, bounds[0])\n432: \t\t} else {\n433: \t\t\tmsg = fmt.Sprintf(\"%s value %.2f exceeds safe maximum (%.1f)\", name, value, bounds[1])\n434: \t\t}\n435: "
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            500,
+            505
+          ],
+          "exactSource": "500: \t\t\tValue:      round2(*avg24h),\n501: \t\t\tBaseline:   round2(*avg7d),\n502: \t\t\tZScore:     round2(deviation),\n503: \t\t\tDetectedAt: time.Now().Format(time.RFC3339),\n504: \t\t\tMessage:    fmt.Sprintf(\"%s %s %.0f%% in last 24h vs 7-day average (%.2f → %.2f)\", name, direction, pctChange, *avg7d, *avg24h),\n505: \t\t})"
+        }
+      ],
+      "mechanism": "Server creates English statistical/range/trend sentences with fmt.Sprintf; timeline directly renders anomaly.message. This is application-generated explanation, not user prose or technical identity. Localized labels/numeric formatting do not translate body sentences.",
+      "sourceReproduction": "Any valid generated detector message -> raw Text anomaly.message in every locale.",
+      "fix": "Existing explanation/timeline contract and serialized catalog owner provide truthful localized templates from established facts. Preserve source evidence prose as needed; do not parse/guess missing bounds from English. Necessary DTO expansion requires a separate hook/backend lease, never speculative here.",
+      "requiredOwners": [
+        "N02",
+        "N03",
+        "N04"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    },
+    {
+      "id": "F06",
+      "rule": "semantic-surface-tokens",
+      "priority": "medium",
+      "title": "Two domain card sites retain fixed-white neutral chrome",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+          "lines": [
+            47,
+            47
+          ],
+          "exactSource": "47:           className=\"inline-flex items-center rounded-full bg-white/[0.06] px-2 py-0.5\""
+        },
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+          "lines": [
+            41,
+            41
+          ],
+          "exactSource": "41:       <span className=\"flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/[0.04] ring-1 ring-white/10\">"
+        }
+      ],
+      "mechanism": "Type chip bg-white/[0.06]; health-icon bg-white/[0.04] and ring-white/10 are three static white-alpha classes across two lines instead of theme-aware neutral surface/border roles. Confirmed token-adoption issue, not observed contrast failure, pure-white text or neon.",
+      "sourceReproduction": "C08 fixed-white-overlay matchedLines2; exact three class literals inspected.",
+      "fix": "Existing two domain card owners adopt established neutral surface/border roles without geometry/status/data changes. Actual contrast/forced-colors remains separate composed QA.",
+      "requiredOwners": [
+        "N02"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    },
+    {
+      "id": "F07",
+      "rule": "missing-canonical-i18n",
+      "priority": "medium",
+      "title": "Valid info health status has no anomaly.status.info canonical label",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+          "lines": [
+            35,
+            37
+          ],
+          "exactSource": "35:   const statusLabel = statusKey\n36:     ? t(`anomaly.status.${statusKey}`, statusKey)\n37:     : t('anomaly.status.unknown', 'Unknown');"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "lines": [
+            19162,
+            19167
+          ],
+          "exactSource": "19162:     \"status\": {\n19163:       \"normal\": \"Normal\",\n19164:       \"warning\": \"Warning\",\n19165:       \"critical\": \"Critical\",\n19166:       \"unknown\": \"Unknown\"\n19167:     },"
+        },
+        {
+          "file": "web/src/i18n/en/locale-diagnostics.json",
+          "lines": [
+            41,
+            46
+          ],
+          "exactSource": "41:     \"status\": {\n42:       \"normal\": \"Normal\",\n43:       \"warning\": \"Warning\",\n44:       \"critical\": \"Critical\",\n45:       \"unknown\": \"Unknown\"\n46:     },"
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            283,
+            290
+          ],
+          "exactSource": "283: \t\t\tcontinue\n284: \t\t}\n285: \t\tcurrent := healthSummary[cat]\n286: \t\tif severityOrder(a.Severity) < severityOrder(current) {\n287: \t\t\thealthSummary[cat] = a.Severity\n288: \t\t}\n289: \t}\n290: "
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            512,
+            524
+          ],
+          "exactSource": "512: \n513: func classifySeverity(signal string, zScore float64) string {\n514: \tif criticalSignals[signal] && zScore > 4 {\n515: \t\treturn \"critical\"\n516: \t}\n517: \tif zScore > 5 {\n518: \t\treturn \"critical\"\n519: \t}\n520: \tif zScore > 4 || criticalSignals[signal] {\n521: \t\treturn \"warning\"\n522: \t}\n523: \treturn \"info\"\n524: }"
+        }
+      ],
+      "mechanism": "Backend valid info anomaly outranks seeded normal. SystemHealthCard requests dynamic anomaly.status.info with raw status fallback. Canonical and generated diagnostics status object contains normal/warning/critical/unknown only, so literal info leaks instead of established localized label. C10 inspected59 literal/known-dynamic keys and found exactly1missing.",
+      "sourceReproduction": "Valid noncritical zscore3..4 -> severity info -> category info -> missing key -> raw info fallback.",
+      "fix": "Serialized canonical owner separately leases exact anomaly.status.info and normal generated outputs, preserving all other leaves/guards. Reuse established info meaning only through canonical integration; no catalogs touched here.",
+      "requiredOwners": [
+        "N04"
+      ],
+      "confirmed": true,
+      "evidenceKind": "Confirmed reproducible SOURCE mechanism; not executed native/page bug acceptance",
+      "queueDedup": "No exact unresolved anomaly fix identified C07/C09/C12. Completed formatter/Icon unary type repair is unrelated and preserved."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "title": "Frequency label may overstate occurrence coverage",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            54,
+            63
+          ]
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            255,
+            258
+          ]
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            355,
+            356
+          ]
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            541,
+            555
+          ]
+        }
+      ],
+      "evidence": "Chart counts returned detector signatures. Handler deduplicates signal/type, limits z-score100 and range stage latest1. Intended frequency metric is not specified; no claimed occurrence total proved.",
+      "promotionRequirement": "Existing product/domain owner clarifies detector-entry versus occurrence counts; any complete aggregate separately authorized, no guessed total/client-only range.",
+      "confirmed": false,
+      "status": "UNPROMOTED_SOURCE_CANDIDATE"
+    },
+    {
+      "id": "C02",
+      "title": "Long identities/narrow chart allocation need mounted mobile proof",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            165,
+            165
+          ]
+        },
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+          "lines": [
+            39,
+            40
+          ]
+        },
+        {
+          "file": "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+          "lines": [
+            43,
+            50
+          ]
+        }
+      ],
+      "evidence": "Fixed140 axis and truncated timeline identity without title; health retains title, chart table full text. No observed overflow or lost access measured.",
+      "promotionRequirement": "Authorized Edge msedge mission-width/narrow-container/RTL/200%text/long identity checks. No browser grant here.",
+      "confirmed": false,
+      "status": "UNPROMOTED_SOURCE_CANDIDATE"
+    },
+    {
+      "id": "C03",
+      "title": "Whole-page loading announcement/busy coverage not established",
+      "sites": [
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            83,
+            87
+          ]
+        },
+        {
+          "file": "web/src/components/layout/PageContainer.tsx",
+          "lines": [
+            136,
+            142
+          ]
+        }
+      ],
+      "evidence": "Page passes query not loading/busy. Brief own aria-busy, skeletons and DataFreshness live region exist; claiming no loading accessibility would be wrong.",
+      "promotionRequirement": "Mounted assistive-technology/keyboard source-state check; narrow non-destructive busy adoption only if concrete failure.",
+      "confirmed": false,
+      "status": "UNPROMOTED_SOURCE_CANDIDATE"
+    },
+    {
+      "id": "C04",
+      "title": "Count/event time and AI evidence need provenance qualification",
+      "sites": [
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            294,
+            309
+          ]
+        },
+        {
+          "file": "internal/api/anomaly/handler.go",
+          "lines": [
+            498,
+            505
+          ]
+        },
+        {
+          "file": "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+          "lines": [
+            43,
+            43
+          ]
+        },
+        {
+          "file": "web/src/components/data-display/OperationalBrief.tsx",
+          "lines": [
+            109,
+            121
+          ]
+        },
+        {
+          "file": "web/src/components/ai/HelixEvidenceTrail.tsx",
+          "lines": [
+            49,
+            58
+          ]
+        }
+      ],
+      "evidence": "Trend detected_at is processing time; counters deduplicated signatures. Inferred state not passed to Brief provenance/narrative. Helix trail is successful tool execution, not physical diagnosis. No actual misleading model output supplied.",
+      "promotionRequirement": "Existing domain/AI owner establishes event versus observation time/inference limits and authorized mounted output proof. Do not call processing time malformed or invent timestamps.",
+      "confirmed": false,
+      "status": "UNPROMOTED_SOURCE_CANDIDATE"
+    }
+  ],
+  "requiredOwners": [
+    {
+      "id": "N01",
+      "owner": "Existing accepted AnomalyDashboardPage owner, separate narrow corrective lease",
+      "files": [
+        "web/src/features/diagnostics/pages/AnomalyDashboardPage.tsx",
+        "web/src/features/diagnostics/pages/AnomalyDashboardPage.test.tsx"
+      ],
+      "findings": [
+        "F01",
+        "F02"
+      ],
+      "scope": "Truthful empty/initial-paused feedback preserving all sections/actions; no remigration."
+    },
+    {
+      "id": "N02",
+      "owner": "Existing anomaly-dashboard card/domain adapter owners, exclusive narrow leases",
+      "files": [
+        "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+        "web/src/features/diagnostics/components/anomaly-dashboard/SystemHealthCard.tsx",
+        "web/src/features/diagnostics/components/anomaly-dashboard/anomalyHelpers.ts"
+      ],
+      "findings": [
+        "F03",
+        "F05",
+        "F06"
+      ],
+      "scope": "Authoritative units + existing display formatters, localized explanation boundary, neutral tokens. Matching tests must be confirmed/reserved by parent; no new metadata/converter framework."
+    },
+    {
+      "id": "N03",
+      "owner": "Existing internal/api/anomaly handler owner; separately leased typed hook integration only if needed",
+      "files": [
+        "internal/api/anomaly/handler.go",
+        "web/src/api/hooks/useAnomalies.ts"
+      ],
+      "findings": [
+        "F01",
+        "F04",
+        "F05"
+      ],
+      "scope": "Pa thresholds, honest stage/coverage outcomes/structured facts; all backend/hooks READONLY in QA; narrow matching tests separately reserved."
+    },
+    {
+      "id": "N04",
+      "owner": "Existing serialized canonical English/generated catalog owner",
+      "files": [
+        "web/src/i18n/en.json"
+      ],
+      "findings": [
+        "F01",
+        "F02",
+        "F05",
+        "F07"
+      ],
+      "scope": "Only exact required approved anomaly empty/paused/message copy and missing status.info. Normal generated diagnostics/other outputs established by generator in authorized lease, no guard/known-missing/translation campaign."
+    }
+  ],
+  "validation": {
+    "jsonReparse": "PASS report parses as JSON before and after final update",
+    "sourcePins": "PASS all49 SHA256 and linecounts matched original captures",
+    "sourcePinCount": 49,
+    "sourcePinDriftCount": 0,
+    "exactFindingSnippetCheck": "PASS all reported source ranges match actual source bytes",
+    "checkedAtUtc": "2026-10-14T01:15:39.889633+00:00",
+    "nativePageApplicationAcceptance": false,
+    "scope": "Documentation artifact/source integrity only; no tests/lint/build/browser/native gate run"
+  },
+  "release": {
+    "releasedAtUtc": "2026-10-14T01:15:39.889633+00:00",
+    "report": "RELEASED docs/frontend-audits/phase6-qa-diagnostics-anomaly-dashboard.json",
+    "log": "RELEASED web/logs/phase6-qa-diagnostics-anomaly-dashboard.log after final C17 receipt",
+    "commands": "RELEASED all bounded commands completed; no running command, service, helper or server created",
+    "applicationSource": "NEVER CLAIMED; application/test/catalog/config/backend/queue/handoff remained READONLY",
+    "browserLock": "NONE granted/held; parent preview5173 untouched",
+    "postReturnWrites": false,
+    "parentLoop": "NOT_ENTERED"
+  },
+  "summary": {
+    "confirmedFindingCount": 7,
+    "candidateCount": 4,
+    "requiredNarrowOwnerCount": 4,
+    "countsByRule": {
+      "unsupported-health-assurance": 1,
+      "initial-paused-trust": 1,
+      "si-display-preferences": 1,
+      "si-threshold-mismatch": 1,
+      "hardcoded-string": 1,
+      "semantic-surface-tokens": 1,
+      "missing-canonical-i18n": 1
+    },
+    "countBasis": "Unique source mechanisms. F06 groups2sites/3class literals; raw scanner matches separately preserved.",
+    "priorityOrder": [
+      "F04",
+      "F01",
+      "F02",
+      "F03",
+      "F05",
+      "F07",
+      "F06"
+    ],
+    "mostIssues": [
+      {
+        "file": "web/src/features/diagnostics/components/anomaly-dashboard/AnomalyTimelineCard.tsx",
+        "findings": [
+          "F03",
+          "F05",
+          "F06"
+        ]
+      },
+      {
+        "file": "internal/api/anomaly/handler.go",
+        "findings": [
+          "F01",
+          "F04",
+          "F05",
+          "F07"
+        ]
+      }
+    ]
+  }
+}
