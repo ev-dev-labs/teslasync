@@ -141,6 +141,52 @@ beforeEach(() => {
 });
 
 describe('ModelTrustPage financial history preservation', () => {
+  it('retains row references, signed SI source errors and distinct absolute percentage errors in source order', () => {
+    const rows = [
+      prediction({ id: 11, model_name: 'Negative error', reference: 'Negative source reference', error_value: -1.125, abs_error_pct: 12.5 }),
+      prediction({ id: 12, model_name: 'Positive fractional error', reference: 'Fractional source reference', error_value: 0.125, abs_error_pct: 3.5 }),
+      prediction({ id: 13, model_name: 'Measured zero', reference: '', error_value: 0, abs_error_pct: 0, observed_value: 0 }),
+      prediction({ id: 14, model_name: 'Missing error', error_value: null, abs_error_pct: null }),
+    ];
+    mockTrust.mockReturnValue(query({ ...report(), recent_predictions: rows }));
+    renderPage();
+    const ledger = card('Prediction ledger');
+    const headings = within(ledger).getAllByRole('columnheader').map(header => header.textContent);
+    const cell = (row: HTMLElement, heading: string) =>
+      within(row).getAllByRole('cell')[headings.findIndex(text => text?.includes(heading))];
+    const renderedRows = within(ledger).getAllByRole('row').slice(1);
+    expect(renderedRows).toHaveLength(rows.length);
+    rows.forEach((source, index) => expect(renderedRows[index]).toHaveTextContent(source.model_name));
+    expect(cell(renderedRows[0], 'Reference')).toHaveTextContent('Negative source reference');
+    expect(cell(renderedRows[0], 'Signed source error')).toHaveTextContent('-1.125 minor');
+    expect(cell(renderedRows[1], 'Reference')).toHaveTextContent('Fractional source reference');
+    expect(cell(renderedRows[1], 'Signed source error')).toHaveTextContent('+0.125 minor');
+    expect(cell(renderedRows[0], 'Error')).toHaveTextContent(/12\.5(?:0+)?%/);
+    expect(cell(renderedRows[1], 'Error')).toHaveTextContent(/3\.5(?:0+)?%/);
+    expect(cell(renderedRows[2], 'Reference')).toHaveTextContent('—');
+    expect(cell(renderedRows[2], 'Signed source error')).toHaveTextContent(/^0(?:\.0+)? minor$/);
+    expect(cell(renderedRows[2], 'Error')).toHaveTextContent(/^0(?:\.0+)?%$/);
+    expect(cell(renderedRows[3], 'Signed source error')).toHaveTextContent('—');
+    expect(cell(renderedRows[3], 'Error')).toHaveTextContent('—');
+    expect(within(renderedRows[2]).queryByRole('button', { name: 'Score it' })).not.toBeInTheDocument();
+    expect(within(renderedRows[3]).getByRole('button', { name: 'Score it' })).toBeEnabled();
+  });
+
+  it.each([undefined, NaN, Infinity, -Infinity, '', '0', 'invalid', false])(
+    'does not present invalid source or percentage errors (%s) as measured zero',
+    (value) => {
+      mockTrust.mockReturnValue(query({
+        ...report(),
+        recent_predictions: [{ ...prediction(), error_value: value, abs_error_pct: value }],
+      }));
+      renderPage();
+      const row = within(card('Prediction ledger')).getByText('Unobserved cost forecast').closest('tr')!;
+      expect(within(row).getAllByRole('cell').filter(cell => cell.textContent === '—')).toHaveLength(3);
+      expect(within(row).getByRole('button', { name: 'Score it' })).toBeEnabled();
+      expect(row).not.toHaveTextContent(/NaN|Infinity|invalid|0(?:\.0+)? minor|0(?:\.0+)?%/);
+    },
+  );
+
   it('uses the actual trust brief with unknown score, zero model counts and a retained scoring denominator', () => {
     renderPage();
     expectOperationalBand('Portfolio trust', ['portfolio', 'trusted', 'watch', 'unreliable', 'scored']);
@@ -211,6 +257,66 @@ describe('ModelTrustPage financial history preservation', () => {
 });
 
 describe('ModelTrustPage scoped modernization', () => {
+  it.each([
+    { target: 'cost_minor', si_unit: 'minor', predicted_value: 12345, observed_value: 12346 },
+    { target: 'range_m', si_unit: 'm', predicted_value: 1609.344, observed_value: 1800.125 },
+  ])('keeps immutable $target scoring context and submits the raw observation after history changes', (values) => {
+    const mutate = vi.fn();
+    mockOutcome.mockReturnValue({ mutate, isPending: false });
+    const original = prediction({
+      target: values.target, si_unit: values.si_unit, predicted_value: values.predicted_value,
+    });
+    const data = { ...report(), recent_predictions: [original] };
+    mockTrust.mockReturnValue(query(data));
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Score it' }));
+    const input = screen.getByRole('spinbutton', { name: 'Observed value required' });
+    const form = input.closest('form')!;
+    expect(form).toHaveTextContent('Model: Unobserved cost forecast');
+    expect(form).toHaveTextContent(`Target quantity: ${values.target}`);
+    expect(form).toHaveTextContent(`SI unit: ${values.si_unit}`);
+    expect(form).toHaveTextContent(`Predicted #1: ${values.predicted_value} ${values.si_unit}`);
+    expect(form).toHaveTextContent('Reference: Recorded before the outcome');
+    expect(input).toHaveAccessibleDescription(/Recorded before the outcome/);
+    expect(input).toHaveValue(values.predicted_value);
+    expect(form.textContent).not.toMatch(/USD|EUR|GBP|\$/);
+    fireEvent.change(input, { target: { value: String(values.observed_value) } });
+
+    // Even an in-place cache update must not rewrite the context of an open form.
+    Object.assign(original, {
+      id: 99, vehicle_id: 8, model_name: 'Replacement model', target: 'energy_wh',
+      si_unit: 'Wh', reference: 'Replacement reference', predicted_value: 999,
+    });
+    mockTrust.mockReturnValue(query(data));
+    view.rerenderPage();
+    expect(form).toHaveTextContent('Model: Unobserved cost forecast');
+    expect(form).toHaveTextContent(`Target quantity: ${values.target}`);
+    expect(form).toHaveTextContent(`SI unit: ${values.si_unit}`);
+    expect(form).toHaveTextContent(`Predicted #1: ${values.predicted_value} ${values.si_unit}`);
+    expect(form).toHaveTextContent('Reference: Recorded before the outcome');
+    expect(form).not.toHaveTextContent('Replacement');
+    mockTrust.mockReturnValue(query({ ...data, recent_predictions: [] }));
+    view.rerenderPage();
+    expect(input).toHaveValue(values.observed_value);
+    expect(within(form).getByRole('button', { name: 'Score prediction' })).toBeEnabled();
+    fireEvent.submit(form);
+    expect(mutate).toHaveBeenCalledWith({
+      prediction_id: 1, observed_value: values.observed_value, observed_at: expect.any(String),
+    }, expect.objectContaining({ onSuccess: expect.any(Function) }));
+  });
+
+  it('shows a missing reference explicitly without inventing scoring metadata', () => {
+    mockTrust.mockReturnValue(query({
+      ...report(), recent_predictions: [prediction({ reference: '' })],
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Score it' }));
+    const form = screen.getByRole('spinbutton', { name: 'Observed value required' }).closest('form')!;
+    expect(form).toHaveTextContent('Reference: —');
+    expect(form).toHaveTextContent('SI unit: minor');
+    expect(mockOutcome().mutate).not.toHaveBeenCalled();
+  });
+
   it('preserves raw tiny signed calibration values and source units with the saved palette boundary', () => {
     const preferences = getFormatterPreferences();
     // The supported formatter uses saved fixed-decimal precision, not exponent notation.
@@ -337,7 +443,14 @@ describe('ModelTrustPage scoped modernization', () => {
           ...scorecard().calibration[0], mean_abs_error: 0.5, mean_bias: 0.25,
         }],
       };
-      mockTrust.mockReturnValue(query({ ...report(), scorecards: [defaultCard, scorecard()] }));
+      mockTrust.mockReturnValue(query({
+        ...report(),
+        scorecards: [defaultCard, scorecard()],
+        recent_predictions: [
+          prediction({ error_value: -0.125, abs_error_pct: 3.5 }),
+          report().recent_predictions[1],
+        ],
+      }));
       await act(async () => { renderPage(); });
       await act(async () => {
         for (const observer of observers) {
@@ -364,13 +477,16 @@ describe('ModelTrustPage scoped modernization', () => {
       expect(within(ledger).getByRole('button', { name: 'Score it' })).toBeEnabled();
       fireEvent.click(within(ledger).getAllByRole('button', { name: 'Quick view' })[0]);
       const predictionDetails = screen.getByRole('dialog');
-      for (const label of ['Model', 'Predicted', 'Observed', 'Error', 'In interval', 'Horizon', 'Predicted at', 'Actions']) {
+      for (const label of ['Model', 'Predicted', 'Observed', 'Reference', 'Signed source error', 'Error', 'In interval', 'Horizon', 'Predicted at', 'Actions']) {
         expect(within(predictionDetails).getByText(label)).toBeInTheDocument();
       }
       expect(predictionDetails).toHaveTextContent(/12,345(?:\.0+)?/);
       expect(predictionDetails).toHaveTextContent(/10,000(?:\.0+)?/);
       expect(predictionDetails).toHaveTextContent(/15,000(?:\.0+)?/);
       expect(predictionDetails).toHaveTextContent('pending');
+      expect(predictionDetails).toHaveTextContent('Recorded before the outcome');
+      expect(predictionDetails).toHaveTextContent('-0.125 minor');
+      expect(predictionDetails).toHaveTextContent(/3\.5(?:0+)?%/);
       expect(within(predictionDetails).getByRole('button', { name: 'Score it' })).toBeEnabled();
       fireEvent.click(within(predictionDetails).getByRole('button', { name: 'Score it' }));
       fireEvent.click(within(predictionDetails).getByRole('button', { name: 'Close' }));

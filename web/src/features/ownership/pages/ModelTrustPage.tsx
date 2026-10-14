@@ -31,6 +31,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateTime } from '@/lib/dateFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import type { ModelScorecard, Prediction } from '@/types/ownership';
 import {
@@ -79,6 +80,11 @@ const PREDICTION_TARGET_UNITS = {
 
 type PredictionTarget = keyof typeof PREDICTION_TARGET_UNITS;
 
+type ScoringContext = Readonly<Pick<Prediction,
+  'id' | 'vehicle_id' | 'model_name' | 'target' | 'si_unit' | 'reference' |
+  'predicted_value' | 'predicted_at'
+>>;
+
 const PREDICTION_TARGETS = Object.keys(PREDICTION_TARGET_UNITS) as PredictionTarget[];
 
 export default function ModelTrustPage() {
@@ -89,8 +95,7 @@ export default function ModelTrustPage() {
   const [activeModel, setActiveModel] = useState<string | null>(null);
   const [predictOpen, setPredictOpen] = useState(false);
   const [predictVehicleId, setPredictVehicleId] = useState<number | null>(null);
-  const [outcomeFor, setOutcomeFor] = useState<number | null>(null);
-  const [outcomeVehicleId, setOutcomeVehicleId] = useState<number | null>(null);
+  const [outcomeContext, setOutcomeContext] = useState<ScoringContext | null>(null);
   const predictInstance = useRef(0);
   const outcomeInstance = useRef(0);
   const [predictDraft, setPredictDraft] = useState({
@@ -110,7 +115,7 @@ export default function ModelTrustPage() {
   const calibrationHidden = useHiddenSeries('model-trust-calibration');
   const chartPalette = useChartPalette();
   const predictScopeMatches = predictVehicleId != null && predictVehicleId === vehicleId;
-  const outcomeScopeMatches = outcomeVehicleId != null && outcomeVehicleId === vehicleId;
+  const outcomeScopeMatches = outcomeContext != null && outcomeContext.vehicle_id === vehicleId;
 
   const trustQuery = useModelTrust(vehicleId, windowDays);
   const recordPrediction = useRecordPrediction();
@@ -167,16 +172,16 @@ export default function ModelTrustPage() {
 
   const submitOutcome = (event: FormEvent) => {
     event.preventDefault();
-    if (outcomeFor == null || !outcomeScopeMatches || recordOutcome.isPending) return;
+    if (outcomeContext == null || !outcomeScopeMatches || recordOutcome.isPending) return;
     const instance = outcomeInstance.current;
     recordOutcome.mutate(
       {
-        prediction_id: outcomeFor,
+        prediction_id: outcomeContext.id,
         observed_value: outcomeDraft.observed_value,
         observed_at: new Date().toISOString(),
       },
       { onSuccess: () => {
-        if (outcomeInstance.current === instance) setOutcomeFor(null);
+        if (outcomeInstance.current === instance) setOutcomeContext(null);
       } },
     );
   };
@@ -223,11 +228,33 @@ export default function ModelTrustPage() {
         ),
     },
     {
+      key: 'reference',
+      header: t('ownership.trust.pred.reference', 'Reference'),
+      render: (row) => (
+        <Text as="span" variant="bodySm" className="break-words">
+          {row.reference?.trim() ? row.reference : '—'}
+        </Text>
+      ),
+    },
+    {
+      key: 'sourceError',
+      align: 'right',
+      header: t('ownership.trust.pred.sourceError', 'Signed source error'),
+      render: (row) =>
+        isFiniteNumber(row.error_value) ? (
+          <span className="tabular-nums">
+            {row.error_value > 0 ? '+' : ''}{fmtScientificNumber(row.error_value, 3)} {row.si_unit}
+          </span>
+        ) : (
+          '—'
+        ),
+    },
+    {
       key: 'error',
       align: 'right',
       header: t('ownership.trust.pred.error', 'Error'),
       render: (row) =>
-        row.abs_error_pct != null ? (
+        isFiniteNumber(row.abs_error_pct) ? (
           <span
             className={cn('tabular-nums', row.abs_error_pct > 25 ? neonColorMap.red.text : row.abs_error_pct > 10 ? neonColorMap.amber.text : neonColorMap.green.text)}
           >
@@ -280,9 +307,17 @@ export default function ModelTrustPage() {
             disabled={recordOutcome.isPending}
             onClick={() => {
               outcomeInstance.current += 1;
-              setOutcomeVehicleId(row.vehicle_id);
+              setOutcomeContext(Object.freeze({
+                id: row.id,
+                vehicle_id: row.vehicle_id,
+                model_name: row.model_name,
+                target: row.target,
+                si_unit: row.si_unit,
+                reference: row.reference,
+                predicted_value: row.predicted_value,
+                predicted_at: row.predicted_at,
+              }));
               setOutcomeDraft({ observed_value: row.predicted_value });
-              setOutcomeFor(row.id);
             }}
           >
             {t('ownership.trust.pred.score', 'Score it')}
@@ -661,12 +696,12 @@ export default function ModelTrustPage() {
           title={t('ownership.trust.predictions.title', 'Prediction ledger')}
           source={trustQuery}
           sourceEnabled={vehicleId != null}
-          editing={predictOpen || outcomeFor != null}
+          editing={predictOpen || outcomeContext != null}
           description={t(
             'ownership.trust.predictions.subtitle',
             'Record a forecast before the fact, then score it once the outcome is known. Nothing here can be edited after the fact.',
           )}
-          empty={predictions.length === 0 && !predictOpen && outcomeFor == null}
+          empty={predictions.length === 0 && !predictOpen && outcomeContext == null}
           emptyMessage={t(
             'ownership.trust.predictions.empty',
             'No predictions recorded for this vehicle yet.',
@@ -800,24 +835,44 @@ export default function ModelTrustPage() {
             </form>
           ) : null}
 
-          {outcomeFor != null ? (
+          {outcomeContext != null ? (
             <form
               className={cn('mb-6 grid gap-4 md:grid-cols-3', glassCardClasses.md)}
               onSubmit={submitOutcome}
             >
-              <Text as="p" variant="caption" className="md:col-span-3">
-                {t('common.vehicle', 'Vehicle')}: {outcomeVehicleId ?? '—'}
-              </Text>
-              {!outcomeScopeMatches && outcomeVehicleId != null ? (
+              <div id="model-trust-scoring-context" className="min-w-0 space-y-1 break-words md:col-span-3">
+                <Text as="p" variant="caption">
+                  {t('common.vehicle', 'Vehicle')}: {outcomeContext.vehicle_id}
+                </Text>
+                <Text as="p" variant="label">
+                  {t('ownership.trust.pred.model', 'Model')}: {outcomeContext.model_name}
+                </Text>
+                <Text as="p" variant="bodySm">
+                  {t('ownership.trust.form.target', 'Target quantity')}: {outcomeContext.target}
+                  {' · '}{t('ownership.trust.form.unit', 'SI unit')}: {outcomeContext.si_unit}
+                </Text>
+                <Text as="p" variant="bodySm">
+                  {t('ownership.trust.pred.predicted', 'Predicted')} #{outcomeContext.id}: {String(outcomeContext.predicted_value)} {outcomeContext.si_unit}
+                </Text>
+                <Text as="p" variant="caption">
+                  {t('ownership.trust.pred.when', 'Predicted at')}: {formatDateTime(outcomeContext.predicted_at)}
+                </Text>
+                <Text as="p" variant="caption">
+                  {t('ownership.trust.form.reference', 'Reference')}: {outcomeContext.reference || '—'}
+                </Text>
+              </div>
+              {!outcomeScopeMatches ? (
                 <div className="md:col-span-3">
                   <AlertBanner variant="warning">
-                    {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: String(outcomeVehicleId) })}
+                    {t('annotation.contextChanged', 'This form belongs to {{target}}. Return to that context to save, or cancel and open a new form.', { target: String(outcomeContext.vehicle_id) })}
                   </AlertBanner>
                 </div>
               ) : null}
               <Input
                 type="number"
                 label={t('ownership.trust.outcome.value', 'Observed value')}
+                aria-describedby="model-trust-scoring-context"
+                suffix={outcomeContext.si_unit}
                 value={outcomeDraft.observed_value}
                 step="any"
                 required
@@ -831,7 +886,7 @@ export default function ModelTrustPage() {
                 </Button>
                 <Button type="button" variant="ghost" className="min-h-11 md:min-h-10" wrapLabel disabled={recordOutcome.isPending} onClick={() => {
                   outcomeInstance.current += 1;
-                  setOutcomeFor(null);
+                  setOutcomeContext(null);
                 }}>
                   {t('ownership.action.cancel', 'Cancel')}
                 </Button>
@@ -851,6 +906,11 @@ export default function ModelTrustPage() {
                 : key === 'observed' ? row.observed_value == null ? t('ownership.trust.pred.pending', 'pending') : `${fmtScientificNumber(row.observed_value, 3)} ${row.si_unit}`
                 : key === 'when' ? formatDateTime(row.predicted_at) : null,
               inlineActions: (row) => predictionColumns.find(column => column.key === 'actions')?.render(row),
+              allDetails: (row) => predictionColumns.map(column => ({
+                key: column.key,
+                label: column.header,
+                value: column.render(row),
+              })),
             }}
             data={predictions}
             keyExtractor={(row) => row.id}
