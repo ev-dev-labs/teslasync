@@ -8,7 +8,7 @@
  */
 import type { UserActivityEntry } from '@/types/admin';
 import { getActivityVisual } from '@/lib/activityIcons';
-import { ymdInTz, formatDayKey } from '@/lib/dateFormat';
+import { ymdInTz, formatDayKey, formatTime, type FormatOptions } from '@/lib/dateFormat';
 import { chartTokens } from '@/lib/tokens';
 
 /** Sentinel key for entries whose `entity_type` is null. */
@@ -114,11 +114,13 @@ function humaniseCategory(raw: string): string {
 /**
  * Derive every metric the My Activity page renders from the raw entries plus
  * the active date range (used to draw a gap-filled daily trend so the chart
- * spans the whole selected window even on quiet days).
+ * spans the whole selected window even on quiet days). Pass useDateFormat().opts
+ * to align day/hour buckets and labels with the KPI and feed display timezone.
  */
 export function deriveMyActivityAnalytics(
   entries: readonly UserActivityEntry[] | null | undefined,
   range: { start: string; end: string } | null | undefined,
+  opts?: FormatOptions,
 ): MyActivityAnalytics {
   const safe = Array.isArray(entries) ? entries : [];
   const total = safe.length;
@@ -142,9 +144,15 @@ export function deriveMyActivityAnalytics(
     const valid = date != null && !Number.isNaN(date.getTime());
 
     if (valid) {
-      const dayKey = ymdInTz(date);
+      const dayKey = ymdInTz(date, opts?.tz);
       if (dayKey) dayCounts.set(dayKey, (dayCounts.get(dayKey) ?? 0) + 1);
-      const hour = date.getHours();
+      const hour = opts?.tz
+        ? Number(formatTime(date, {
+          tz: opts.tz,
+          locale: 'en-US',
+          clock: { hour: '2-digit', minute: undefined, hourCycle: 'h23' },
+        }))
+        : date.getHours();
       if (hour >= 0 && hour < 24) byHour[hour].count += 1;
       const ms = date.getTime();
       if (ms > lastMs) {
@@ -179,7 +187,7 @@ export function deriveMyActivityAnalytics(
 
   const dailyTrend: TrendPoint[] = enumerateDays(range?.start ?? '', range?.end ?? '').map((day) => ({
     day,
-    label: formatDayKey(day, { style: 'short' }),
+    label: formatDayKey(day, { ...opts, style: 'short' }),
     count: dayCounts.get(day) ?? 0,
   }));
 
