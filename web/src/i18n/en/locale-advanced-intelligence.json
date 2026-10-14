@@ -2,6 +2,11 @@
   "advancedIntelligence": {
     "causal": {
       "baseline": "Baseline",
+      "state": {
+        "estimated": "Estimated",
+        "insufficient": "Insufficient evidence",
+        "nonCausal": "Non-causal"
+      },
       "confirm": {
         "action": "Create estimate",
         "body": "This creates an observational estimate from the selected windows. It does not execute the intervention or prove causality.",

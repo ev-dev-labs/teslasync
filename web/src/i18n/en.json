@@ -1,4 +1,13 @@
 {
+  "executionHistoryAvailability": {
+    "failed": "This history section could not be loaded.",
+    "notApplicable": "No vehicle is associated with this execution.",
+    "unavailable": "History availability is unknown.",
+    "truncated": "Only part of this history is shown.",
+    "incomplete": "This execution window is still open; history may be incomplete.",
+    "noActionResults": "No action results are recorded for this execution.",
+    "noTransitions": "No vehicle state transitions were recorded during this execution window."
+  },
   "demoData": {
     "title": "Sample data present",
     "detail": "DRILL vehicles and their drive and charging history are synthetic, not live activity.",
@@ -13239,7 +13248,9 @@
         "generating": "Generating…",
         "error": "Could not generate narration. Please try again.",
         "badge": "Helix",
-        "noVehicleHint": "Pick a vehicle to enable Helix narration."
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       },
       "noAlerts": "No alerts this week — everything looks great!",
       "noDailyEnergy": "No charging energy data is available for this week.",
@@ -33971,6 +33982,11 @@
   "advancedIntelligence": {
     "causal": {
       "baseline": "Baseline",
+      "state": {
+        "estimated": "Estimated",
+        "insufficient": "Insufficient evidence",
+        "nonCausal": "Non-causal"
+      },
       "confirm": {
         "action": "Create estimate",
         "body": "This creates an observational estimate from the selected windows. It does not execute the intervention or prove causality.",
@@ -36169,7 +36185,7 @@
       "destination": "Destination",
       "column": "Column",
       "dualWrite": "Dual write",
-      "subscribed": "Subscribed"
+      "subscribed": "Configured subscription"
     },
     "subscribed": {
       "no": "no",
@@ -36189,7 +36205,7 @@
       "subscriptionCoverage": "Subscription coverage"
     },
     "kpis": "Coverage summary",
-    "subtitle": "Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.",
+    "subtitle": "Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion.",
     "routing": "Destination routing",
     "legend": {
       "title": "Reading this page",
@@ -36198,8 +36214,8 @@
       "columnHelp": "— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.",
       "dualWriteLabel": "Dual write",
       "dualWriteHelp": "— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.",
-      "subscribedLabel": "Subscribed",
-      "subscribedHelp": "— whether Tesla Fleet Telemetry is currently pushing this field to us. \"No\" means the writer is wired but the subscription request omits the field."
+      "subscribedLabel": "Configured subscription",
+      "subscribedHelp": "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request."
     },
     "orphans": {
       "title": "Orphan fields detected",

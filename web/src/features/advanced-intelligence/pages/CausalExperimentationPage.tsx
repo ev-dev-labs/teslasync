@@ -92,6 +92,14 @@ export default function CausalExperimentationPage() {
     { value: 'average_speed_mps', label: t('advancedIntelligence.causal.metric.speed', 'Average speed') },
   ];
   const labelFor = (options: typeof interventions, value: string) => options.find((option) => option.value === value)?.label ?? value;
+  const stateLabel = (state: string) => {
+    switch (state) {
+      case 'estimated': return t('advancedIntelligence.causal.state.estimated', 'Estimated');
+      case 'insufficient': return t('advancedIntelligence.causal.state.insufficient', 'Insufficient evidence');
+      case 'non_causal': return t('advancedIntelligence.causal.state.nonCausal', 'Non-causal');
+      default: return state;
+    }
+  };
   const historyMetrics = (item: CausalExperiment): StatMetric[] => {
     const metricId = item.metric === 'drive_energy_wh_per_m' ? 'efficiency' : item.metric === 'average_speed_mps' ? 'speed' : 'percent';
     return [
@@ -218,7 +226,7 @@ export default function CausalExperimentationPage() {
                       <Text as="p" variant="caption">{labelFor(metrics, item.metric)} · {formatDateTime(item.updated_at)}</Text>
                     </div>
                   </div>
-                  <Badge variant={item.state === 'estimated' ? 'info' : item.state === 'insufficient' || item.state === 'non_causal' ? 'warning' : 'neutral'}>{item.state}</Badge>
+                  <Badge variant={item.state === 'estimated' ? 'info' : item.state === 'insufficient' || item.state === 'non_causal' ? 'warning' : 'neutral'}>{stateLabel(item.state)}</Badge>
                 </div>
                 <StatGroup metrics={historyMetrics(item)} className="mt-4"
                   period={{ kind: 'unknown', label: formatDateTime(item.updated_at) }}

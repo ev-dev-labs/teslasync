@@ -9,6 +9,7 @@ import { formatSpeed, type UnitPref } from '@/lib/unitConversion';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import { formatTime } from '@/lib/dateFormat';
 import CausalExperimentationPage from './CausalExperimentationPage';
+import english from '@/i18n/en.json';
 
 const mocks = vi.hoisted(() => ({
   vehicleId: 4 as number | null,
@@ -17,6 +18,8 @@ const mocks = vi.hoisted(() => ({
   mutate: vi.fn(),
   reset: vi.fn(),
   mutation: { data: undefined as CausalExperiment | undefined, error: null as Error | null, isPending: false },
+  translations: {} as Record<string, string>,
+  translate: vi.fn(),
 }));
 const preferences: UnitPref = {
   distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
@@ -47,6 +50,8 @@ vi.mock('@/hooks/useDateFormat', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, fallbackOrOptions?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      mocks.translate(key);
+      if (Object.hasOwn(mocks.translations, key)) return mocks.translations[key];
       const values = typeof fallbackOrOptions === 'string' ? options : fallbackOrOptions;
       const template = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : String(values?.defaultValue ?? key);
       return template.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''));
@@ -109,6 +114,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 9, 10, 10).getTime());
   mocks.vehicleId = 4;
+  mocks.translations = {};
   mocks.mutation = { data: undefined, error: null, isPending: false };
   mocks.query.mockReturnValue(query(payload()));
 });
@@ -119,7 +125,7 @@ describe('CausalExperimentationPage', () => {
     renderPage();
     const article = within(screen.getByRole('article'));
     expect(article.getByRole('heading', { name: 'Charging schedule' })).toBeInTheDocument();
-    expect(article.getByText('estimated')).toBeInTheDocument();
+    expect(article.getByText('Estimated')).toBeInTheDocument();
     expect(article.getByLabelText('Baseline: 75.00%')).toHaveTextContent('12 samples');
     expect(article.getByLabelText('Treatment: 50.00%')).toHaveTextContent('8 samples');
     expect(article.getByLabelText('Estimated effect: -25.00 percentage points')).toBeInTheDocument();
@@ -134,6 +140,40 @@ describe('CausalExperimentationPage', () => {
     expect(screen.getByText(/Execution of the selected intervention/)).toBeInTheDocument();
     expect(mocks.query).toHaveBeenCalledWith(4, 10, 0);
   });
+
+  it.each([
+    ['estimated', 'estimated', 'Estimated'],
+    ['insufficient', 'insufficient', 'Insufficient evidence'],
+    ['non_causal', 'nonCausal', 'Non-causal'],
+  ] as const)('localizes %s using canonical copy without rewriting returned tokens or narrative', (state, labelKey, fallback) => {
+    const key = `advancedIntelligence.causal.state.${labelKey}`;
+    expect(english.advancedIntelligence.causal.state[labelKey]).toBe(fallback);
+    mocks.translations[key] = `Localized ${fallback}`;
+    const item = experiment({ state });
+    const original = structuredClone(item);
+    mocks.query.mockReturnValue(query(payload([item])));
+    renderPage();
+    expect(within(screen.getByRole('article')).getByText(`Localized ${fallback}`)).toBeInTheDocument();
+    expect(screen.getByText(item.evidence[0].summary)).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Limitations' })).toHaveTextContent(item.limitations[0]);
+    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent(item.data_quality.reasons[0]);
+    expect(mocks.translate).toHaveBeenCalledWith(key);
+    expect(mocks.translate).not.toHaveBeenCalledWith(item.evidence[0].summary);
+    expect(mocks.translate).not.toHaveBeenCalledWith(item.limitations[0]);
+    expect(mocks.translate).not.toHaveBeenCalledWith(item.data_quality.reasons[0]);
+    expect(item).toEqual(original);
+  });
+
+  it.each(['future_state_v2', 'estimated.future', 'toString', '<future-state>'])(
+    'preserves the raw unknown state %s without speculative translation', (state) => {
+      const item = experiment({ state });
+      mocks.query.mockReturnValue(query(payload([item])));
+      renderPage();
+      expect(within(screen.getByRole('article')).getByText(state)).toHaveClass('text-[var(--text-secondary)]');
+      expect(mocks.translate).not.toHaveBeenCalledWith(state);
+      expect(item.state).toBe(state);
+    },
+  );
 
   it.each([
     { case: 'energy intensity', item: experiment({ metric: 'drive_energy_wh_per_m',
