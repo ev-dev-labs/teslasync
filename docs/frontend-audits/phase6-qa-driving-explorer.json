@@ -1,0 +1,1086 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-driving-explorer",
+  "attempt": 1,
+  "actor": "84465f34-cf88-402a-ae2f-69f551e15f93",
+  "status": "DONE_REPORT_ONLY",
+  "repo": "D:\\repos\\teslasync",
+  "cwd": "D:\\repos\\teslasync\\web",
+  "page": "web/src/features/driving/pages/ExplorerPage.tsx",
+  "routes": [
+    {
+      "path": "/explorer",
+      "lazy_import": "web/src/App.tsx:144",
+      "mount": "web/src/App.tsx:846",
+      "workspace_vehicle": true,
+      "workspace_range": false,
+      "actual_bounds": "vehicle_id plus limit1000; no start/end"
+    }
+  ],
+  "first_check": "Retain accepted current source; no source change authorized/needed for report-only lease. Findings are future narrow corrections, not remigration or page acceptance.",
+  "source_evidence_utc": "2026-10-14T01:25:38.0996111Z",
+  "source_pins": [
+    {
+      "path": "web/src/features/driving/pages/ExplorerPage.tsx",
+      "lines": 144,
+      "bytes": 4391,
+      "sha256": "89ec079c050388e8e6142adc990af87706d822db91267d2f0e346259ca55a817",
+      "source_mtime_utc": "2026-10-14T00:29:41.5744372Z"
+    },
+    {
+      "path": "web/src/features/driving/lib/explorer.ts",
+      "lines": 728,
+      "bytes": 20793,
+      "sha256": "d52d0ffb502598161d3458d66d2af486409a77950dc157901751bdda1e46db1b",
+      "source_mtime_utc": "2026-10-13T06:09:18.2823621Z"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-a-m/DrivingSummaryBrief.tsx",
+      "lines": 53,
+      "bytes": 1893,
+      "sha256": "29b6c288c2dae77b345b0985764480ab7cf99f828d42beb4ba5db63cca422e93",
+      "source_mtime_utc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-a-m/NestedDrivingBrief.tsx",
+      "lines": 63,
+      "bytes": 2974,
+      "sha256": "682a5d14bb65ba04739960e8c9e08ad15a8c39d32b9d6e5941a7946c226891ba",
+      "source_mtime_utc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "path": "web/src/api/hooks/useDriving.ts",
+      "lines": 454,
+      "bytes": 17391,
+      "sha256": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "source_mtime_utc": "2026-10-14T00:29:40.8549213Z"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "lines": 434,
+      "bytes": 15482,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "source_mtime_utc": "2026-10-13T06:09:17.7649888Z"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "lines": 65,
+      "bytes": 2035,
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "source_mtime_utc": "2026-10-13T06:09:18.5649346Z"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": 174,
+      "bytes": 6593,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "source_mtime_utc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "lines": 194,
+      "bytes": 6545,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "source_mtime_utc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "lines": 168,
+      "bytes": 4411,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "source_mtime_utc": "2026-10-14T00:29:41.9890728Z"
+    },
+    {
+      "path": "web/src/App.tsx",
+      "lines": 919,
+      "bytes": 68125,
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "source_mtime_utc": "2026-10-14T00:29:40.8444677Z"
+    },
+    {
+      "path": "docs/orchestrator-loop.md",
+      "lines": 296,
+      "bytes": 16978,
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "source_mtime_utc": "2026-10-14T00:29:40.7179123Z"
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "lines": 2539,
+      "bytes": 182554,
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "source_mtime_utc": "2026-10-14T00:29:40.7095452Z"
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "lines": 2460,
+      "bytes": 163930,
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "source_mtime_utc": "2026-10-14T00:49:12.6472024Z"
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "lines": 1593,
+      "bytes": 31079,
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "source_mtime_utc": "2026-10-14T00:29:40.7179123Z"
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "lines": 94,
+      "bytes": 3585,
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "source_mtime_utc": "2026-10-13T06:09:16.8548532Z"
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "lines": 629,
+      "bytes": 22645,
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "source_mtime_utc": "2026-10-13T06:09:16.8548532Z"
+    },
+    {
+      "path": ".github/instructions/observability.instructions.md",
+      "lines": 45,
+      "bytes": 4267,
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "source_mtime_utc": "2026-10-13T06:09:16.8548532Z"
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "lines": 221,
+      "bytes": 6501,
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "source_mtime_utc": "2026-10-13T06:09:16.8548532Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/CoverageMetrics.tsx",
+      "lines": 69,
+      "bytes": 2818,
+      "sha256": "84f3587d913254ecdfd8bd69b03e761308b3121fd8c8bb83a22e029033f449cf",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/DestinationDirectory.tsx",
+      "lines": 200,
+      "bytes": 6555,
+      "sha256": "52433a3e31a1c7820970a10483aff7171bb1e66fabb7a0b2c3d9c90103dd07c6",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/DestinationRankings.tsx",
+      "lines": 191,
+      "bytes": 7618,
+      "sha256": "9d4434689158a348fef5727b883c3dc4aa94e17bf5023d96be2eaecfb8d4fb2a",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/DiscoveryCadenceSummary.tsx",
+      "lines": 73,
+      "bytes": 3354,
+      "sha256": "f0b388fb0e5553c36913e657bf553b0db4e9182bb6425a43317d32723a6fd7d1",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/DistanceBandsChart.tsx",
+      "lines": 195,
+      "bytes": 6214,
+      "sha256": "c559f221a7b77ee9662f1e5ccf168c2a91a528f1a97f49218d64f6dcf1b7f574",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/EvidenceCoverage.tsx",
+      "lines": 110,
+      "bytes": 4184,
+      "sha256": "b88d4c27d29eed804a6929bb5e7d036a839986d489397c60f101b59e8d761622",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/ExclusionAccounting.tsx",
+      "lines": 77,
+      "bytes": 1938,
+      "sha256": "c21a0588ad6b818f0f45864a77b3f8921d10bf30f1ffb2ce4b84d207bbe9c89d",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/ExplorerKpis.tsx",
+      "lines": 101,
+      "bytes": 4321,
+      "sha256": "f1ef94e9d8dc0cf4e3de26727517468eecdd1c7300f6178ef79516ebaa36f5bf",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/ExplorerMethodology.tsx",
+      "lines": 198,
+      "bytes": 7091,
+      "sha256": "bfa151af2d8504fa707b19a5c4ce6dc9c968ac39eefecb21b0f77411374e2f1c",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/ExplorerSectionBody.tsx",
+      "lines": 47,
+      "bytes": 1109,
+      "sha256": "5d60e2e66f614aa3490c127b03c4b60b12642c0994d28dc0e5422b528433c5ec",
+      "source_mtime_utc": "2026-10-13T06:09:18.2594728Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/index.ts",
+      "lines": 12,
+      "bytes": 555,
+      "sha256": "b458408fa8f627b1a7303f9f343554d8aaeb0c84e617d774b2e0e1d3002ef383",
+      "source_mtime_utc": "2026-10-13T06:09:18.2594728Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/MonthlyExplorationChart.tsx",
+      "lines": 164,
+      "bytes": 5092,
+      "sha256": "9bfbd9751a9247ded8353bbb7c09874bc6ddadb6b397acd9e879debe9b8cc216",
+      "source_mtime_utc": "2026-10-13T06:09:18.2594728Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/NewRepeatBehavior.tsx",
+      "lines": 149,
+      "bytes": 5989,
+      "sha256": "8600684bb66c09b541b2026fb3537aea5391126ea3a1ed611dc3a510fc00f12f",
+      "source_mtime_utc": "2026-10-14T00:29:41.528506Z"
+    },
+    {
+      "path": "web/src/features/driving/components/explorer/types.ts",
+      "lines": 11,
+      "bytes": 240,
+      "sha256": "b660463d65aab3d34186066591060881e694a3e6aee5fcd732e7fee85ff9159c",
+      "source_mtime_utc": "2026-10-13T06:09:18.2594728Z"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "lines": 17,
+      "bytes": 658,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "source_mtime_utc": "2026-10-14T00:29:40.9682184Z"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "lines": 259,
+      "bytes": 10783,
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "source_mtime_utc": "2026-10-14T00:29:40.9542141Z"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "lines": 115,
+      "bytes": 4093,
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "source_mtime_utc": "2026-10-14T00:29:40.9392577Z"
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "lines": 1707,
+      "bytes": 77157,
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "source_mtime_utc": "2026-10-14T00:29:40.9960797Z"
+    },
+    {
+      "path": "web/src/components/ui/HelpTooltip.tsx",
+      "lines": 112,
+      "bytes": 4388,
+      "sha256": "fb8d5d08643e810939608e5255f5f967084ec7c7af3c49eb130e38a682a27c86",
+      "source_mtime_utc": "2026-10-14T00:29:41.0015712Z"
+    },
+    {
+      "path": "web/src/components/charts/chartUtils.tsx",
+      "lines": 28,
+      "bytes": 1471,
+      "sha256": "a9ec06aa5e321797194b9fb278aad015272b5d7809a01f01c655508f114303d2",
+      "source_mtime_utc": "2026-10-14T00:29:40.8930705Z"
+    },
+    {
+      "path": "web/src/components/charts/index.ts",
+      "lines": 88,
+      "bytes": 3611,
+      "sha256": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "source_mtime_utc": "2026-10-14T00:29:40.8930705Z"
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "lines": 1006,
+      "bytes": 41517,
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "source_mtime_utc": "2026-10-14T00:29:40.8764844Z"
+    },
+    {
+      "path": "web/src/components/data-display/MetricBar.tsx",
+      "lines": 93,
+      "bytes": 4359,
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "source_mtime_utc": "2026-10-14T00:29:40.9014093Z"
+    },
+    {
+      "path": "web/src/lib/colors.ts",
+      "lines": 388,
+      "bytes": 13999,
+      "sha256": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "source_mtime_utc": "2026-10-14T00:29:41.9809331Z"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "lines": 462,
+      "bytes": 18863,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "source_mtime_utc": "2026-10-14T00:29:41.9809331Z"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "lines": 148,
+      "bytes": 5230,
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "source_mtime_utc": "2026-10-13T06:09:18.5649346Z"
+    },
+    {
+      "path": "web/src/hooks/useChartPalette.ts",
+      "lines": 49,
+      "bytes": 2108,
+      "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "source_mtime_utc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "lines": 24,
+      "bytes": 1161,
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "source_mtime_utc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "path": "web/src/i18n/en.json",
+      "lines": 38994,
+      "bytes": 1842282,
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "source_mtime_utc": "2026-10-14T00:29:41.8787917Z"
+    },
+    {
+      "path": "docs/frontend-inventory.md",
+      "lines": 1460,
+      "bytes": 1743758,
+      "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "source_mtime_utc": "2026-10-14T00:29:40.7179123Z"
+    },
+    {
+      "path": ".gitignore",
+      "lines": 130,
+      "bytes": 2122,
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "source_mtime_utc": "2026-10-14T00:29:40.4732069Z"
+    }
+  ],
+  "authority": {
+    "queue": "Exact reserved attempt1 row read initially399; queue concurrently parent-owned/line numbers shift. Accepted Phase5 Explorer [x] attempt2 preserved.",
+    "orchestrator": "FULL lines1-296",
+    "design_contract": "FULL lines1-2539 read with bounded overlapping ranges after output truncation",
+    "handoff": "Current new-machine recovery section1-47 read; Phases0-5 closed,6 unfinished,7 NOTRUN",
+    "mission": "43-45 read fully",
+    "instructions": "FULL frontend SI/React/observability/unit instructions; newer SI/design overrides stale neon/legacy-unit examples",
+    "inventory": "Existing inventory authority/preservation definitions read, no replacement inventory",
+    "reservation_utc": "2026-10-14T01:10:24.802Z",
+    "first_observed_execution_utc": "2026-10-14T01:12:17.5772359Z",
+    "return_utc": "2026-10-14T01:30:24.802Z",
+    "hard_utc": "2026-10-14T01:35:24.802Z",
+    "earlier_actual_20_25_clock_wins": true,
+    "command_cap_seconds": 900,
+    "closed_phases_preserved": true
+  },
+  "counts": {
+    "page_files": 1,
+    "page_lines": 144,
+    "direct_explorer_tsx_files": 12,
+    "direct_explorer_tsx_lines": 1574,
+    "page_plus_direct_presentation_lines": 1718,
+    "adjacent_brief_files": 2,
+    "adjacent_brief_lines": 116,
+    "all_presentation_files_including_page": 15,
+    "all_presentation_lines_including_page": 1834,
+    "model_lines": 728,
+    "barrel_lines": 12,
+    "state_types_lines": 11,
+    "bounded_rule_scan_files": 18,
+    "sections": 8,
+    "section_error_boundaries": 8,
+    "charts": 2,
+    "chart_series": 5,
+    "directory_columns": 5,
+    "action_groups": 8,
+    "confirmed_mechanisms": 9,
+    "candidates": 4,
+    "literal_t_references": 168,
+    "unique_literal_t_keys": 146,
+    "missing_literal_t_keys": 0,
+    "missing_other_canonical_keys": 1,
+    "fallback_differences": 3
+  },
+  "sections": [
+    {
+      "id": "summary",
+      "mount_lines": [
+        81,
+        88
+      ],
+      "owner": "ExplorerKpis.tsx",
+      "contents": "Four metrics; inferred base/P90/farthest/observed counts; loaded/cap/unknown-completeness disclosure; empty Browse drives."
+    },
+    {
+      "id": "directory",
+      "mount_lines": [
+        91,
+        98
+      ],
+      "owner": "DestinationDirectory.tsx",
+      "contents": "Five fields; local filters/search/sort/pagination/column controls/matching-loaded exports; mobile gap EXP03."
+    },
+    {
+      "id": "new-repeat",
+      "mount_lines": [
+        99,
+        105
+      ],
+      "owner": "NewRepeatBehavior.tsx",
+      "contents": "Three counts/two share bars/full chronology definition."
+    },
+    {
+      "id": "monthly",
+      "mount_lines": [
+        108,
+        113
+      ],
+      "owner": "MonthlyExplorationChart.tsx",
+      "contents": "Three series/four-column accessible table/hidden-series IDs/image and CSV export."
+    },
+    {
+      "id": "distance-bands",
+      "mount_lines": [
+        116,
+        122
+      ],
+      "owner": "DistanceBandsChart.tsx",
+      "contents": "Four meter-defined bands/two count series/three-column accessible table/formatted labels/P90/gated exports."
+    },
+    {
+      "id": "rankings",
+      "mount_lines": [
+        123,
+        129
+      ],
+      "owner": "DestinationRankings.tsx",
+      "contents": "Top-five farthest/rare lists, distance/visits/first date and threshold/empty explanations."
+    },
+    {
+      "id": "coverage",
+      "mount_lines": [
+        132,
+        134
+      ],
+      "owner": "EvidenceCoverage.tsx",
+      "contents": "Three counts/two shares/five exclusive exclusion reasons/three cadence intervals or thresholds/cap disclosure."
+    },
+    {
+      "id": "methodology",
+      "mount_lines": [
+        136,
+        141
+      ],
+      "owner": "ExplorerMethodology.tsx",
+      "contents": "Six full methodological statements/three minimum counters/ranking threshold/badge."
+    }
+  ],
+  "actions": [
+    {
+      "id": "retry",
+      "source": "ExplorerPage65-67/ExplorerSectionBody26/StaleRefreshWarning101",
+      "claim": "Refetch same bounded selected-vehicle history; fatal and retained retry, no mutation."
+    },
+    {
+      "id": "browse-drives",
+      "source": "ExplorerKpis95-96/DestinationDirectory166-169",
+      "claim": "EmptyState navigation to /drives."
+    },
+    {
+      "id": "directory-controls",
+      "source": "DestinationDirectory184-193/DataTable525-545,873-881",
+      "claim": "Local loaded-cluster search/filter/sort/pagination/columns, not full drive rows/range."
+    },
+    {
+      "id": "directory-exports",
+      "source": "DataTable890-935",
+      "claim": "Matching loaded CSV/JSON; visibleColumns; CSV rendered values/JSON raw values; no exportAll and no fullResult claim."
+    },
+    {
+      "id": "monthly-exports",
+      "source": "MonthlyExplorationChart64-67",
+      "claim": "Gated image/data export; all supplied aggregate rows/properties from bounded history, not complete travel."
+    },
+    {
+      "id": "bands-exports",
+      "source": "DistanceBandsChart102-105",
+      "claim": "Gated image/data export; three aggregate properties and display band, no exact coordinates."
+    },
+    {
+      "id": "series-visibility",
+      "source": "MonthlyExplorationChart132,143,156/DistanceBandsChart176,186",
+      "claim": "Five stable series IDs/shared legend; exportData independent of hidden plotted series."
+    },
+    {
+      "id": "help",
+      "source": "DestinationDirectory150-158/PageContainer193-205",
+      "claim": "Shared help preference/heading tooltip; missing canonical directory body EXP08."
+    }
+  ],
+  "source_qa": {
+    "loaded_vs_full": "Up to1000 returned drives only; below-cap does not prove complete travel. Kpis/coverage/methodology disclose observed or capped history. No full travel/range totals inferred; row count is not server total.",
+    "filters": "All five fields have raw filter operands; distance unknown when base insufficient. Directory filtering population is loaded destination clusters only and does not rewrite independent summaries/charts/rankings. Current shared DataTable557-569/1618-1623 distinguishes filtered no-match and reset from source empty; existing FILTER01 queue root not duplicated.",
+    "denominators": "Timestamp/coordinate/eligible shares each divide by all returned rows; eligibilities independently counted. Exclusive reasons prioritize timestamp before coordinates. Base arrival share divides by eligible rows. New/repeat and band shares divide by non-base destination arrivals when base supported. P90 visit-weighted; monthly new share uses monthly destination arrivals.",
+    "si_preferences_signs": "Haversine/bands/raw distances stay meters; useUnits converts only display with user units/locale/precision. Cadence days feed raw seconds to duration metrics and custom days presentation. No signed power/energy reading occurs; negative-energy sign check N/A, not silently clamped. Preference bypasses EXP04/05/07.",
+    "unknown_zero": "[] is model-safety fallback but initial/fatal bodies suppress readings. Resolved empty gives real zero returned counts, null radius/farthest/base and empty explanations. Insufficient-base distance hidden. Percentage ??0 sites guarded by positive populations; unknown full-history totals not coerced to zero.",
+    "provenance": "Historical drive history/derived clustering/P90, inferred base explicitly not verified home/work/geofence. Query success/fetch time not arrival observation. Vehicle URL/store/fleet precedence and keyed history enabled/cancellation preserved.",
+    "source_states": "Initial skeletons; fatalError replaces only unavailable source body; all eight selected-vehicle shells stay. Retained error/paused payload stays with shared warning/retry and retained KPI label. Initial-paused gap EXP02. Section boundaries isolate render failures but there is one history source, not eight independent queries.",
+    "map_identity": "No map is mounted; no real coordinates read. Source clustering keeps coordinates internal and exposes opaque IDs only; population identity C01 is candidate, not observed location incident.",
+    "a11y_mobile": "Localized names/heading, decorative icon aria-hidden, chart ariaLabel and complete table alternatives, skeleton status and shared legend. Directory reachability gap EXP03; actual keyboard/focus/contrast/target/safe-area/RTL/reduced-motion acceptance NOTRUN.",
+    "export": "No actual export/download performed. Directory matching-loaded scope and chart bounded aggregates not whole-range exports. ExportData may include aggregate columns beyond fallback-table columns. Shared fullscreen capability exists but these callers do not enable fullscreen; no absent action invented."
+  },
+  "rule_checks": [
+    {
+      "rule": "static-inline-style",
+      "broad_match_lines": 8,
+      "direct_style_match_lines": 0,
+      "confirmed": 0,
+      "exception": "Eight var references are className token utilities, not styles."
+    },
+    {
+      "rule": "raw-html",
+      "match_lines": 0,
+      "confirmed": 0
+    },
+    {
+      "rule": "direct-library-import",
+      "match_lines": 0,
+      "confirmed": 0
+    },
+    {
+      "rule": "old-api-import",
+      "match_lines": 0,
+      "confirmed": 0
+    },
+    {
+      "rule": "double-prefix",
+      "match_lines": 0,
+      "history_hook_matches": 0,
+      "confirmed": 0
+    },
+    {
+      "rule": "camelcase-param",
+      "match_lines": 0,
+      "corrected_history_hook_matches": 0,
+      "confirmed": 0,
+      "limitation": "C05 default case-insensitive hook regex false-matched snake_case once; C06 corrected case-sensitive0."
+    },
+    {
+      "rule": "hidden-section",
+      "match_lines": 0,
+      "confirmed": 0,
+      "exception": "All8 section shells; no-vehicle gate is selection path, not null drives."
+    },
+    {
+      "rule": "hardcoded-string",
+      "literal_jsx_match_lines": 0,
+      "confirmed_raw_jsx": 0,
+      "limitation": "Regex is not comprehensive i18n certification; EXP08/09 separately confirmed."
+    },
+    {
+      "rule": "missing-page-container",
+      "confirmed": 0,
+      "exception": "PageLayout11 forwards to canonical PageContainer; not a violation despite absent literal on page."
+    },
+    {
+      "rule": "fetch-useeffect",
+      "match_lines": 0,
+      "confirmed": 0
+    },
+    {
+      "rule": "category-import",
+      "match_lines": 6,
+      "confirmed_runtime": 0,
+      "exception": "Six erased type imports from existing stat-reference sub-barrel, not vendor/runtime deep imports."
+    },
+    {
+      "rule": "backend11-14",
+      "status": "NOT_APPLICABLE",
+      "limit": "No internal Go files in scope"
+    }
+  ],
+  "findings": [
+    {
+      "id": "EXP01",
+      "rule": "workspace-range-contract",
+      "priority": "P1",
+      "file": "web/src/features/driving/pages/ExplorerPage.tsx",
+      "lines": [
+        41,
+        42,
+        43,
+        44
+      ],
+      "mechanism": "Dated Explorer consumes selected vehicle and capped history only; no workspace bounds. Actual route vehicle=true/range=false: workspaceScope omits /explorer. useDriveHistory accepts only vehicle/limit and query key excludes bounds.",
+      "evidence": [
+        "web/src/lib/workspaceScope.ts:23-76,151-167",
+        "web/src/api/hooks/useDriving.ts:47-48,143-155"
+      ],
+      "fix": "Separately reserve existing typed history-hook bounds/key extension, then page consumption and parent route registration; pass startInstant/endInstantExclusive and preserve observed-window cap disclosure.",
+      "needs": "Backend complete-range coverage/order/totals remain unknown, not invented.",
+      "not_claimed": "No misleading visible date-control incident: actual range control is disabled.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP02",
+      "rule": "initial-paused-state-loss",
+      "priority": "P1",
+      "file": "web/src/features/driving/pages/ExplorerPage.tsx",
+      "lines": [
+        63,
+        64,
+        80
+      ],
+      "mechanism": "No-data paused query is status=initial/isRefreshBlocked=true; local state forwards loading/error/retry only. Section body shows loading skeleton; StaleRefreshWarning returns null without retained data. No source-local explanation or paused recovery action distinguishes deferred initial load from active fetch.",
+      "evidence": [
+        "web/src/api/dataState.ts:187-220",
+        "web/src/features/driving/components/explorer/types.ts:3-7",
+        "web/src/features/driving/components/explorer/ExplorerSectionBody.tsx:31-43",
+        "web/src/components/feedback/StaleRefreshWarning.tsx:59-60"
+      ],
+      "fix": "Thread real initial refresh-blocked state through local source presentation; use existing feedback without device-offline/error claims; preserve every shell and source retry.",
+      "not_claimed": "No actual paused request/offline device/timeout observed.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP03",
+      "rule": "mobile-field-reachability",
+      "priority": "P1",
+      "file": "web/src/features/driving/components/explorer/DestinationDirectory.tsx",
+      "lines": [
+        184,
+        191
+      ],
+      "mechanism": "mobileColumns allows label/visits only. Existing shared DataTable hides repeatVisits/distanceFromBaseM/firstVisitedAt below md. Caller supplies no mobilePresentation/renderExpanded/alternate row detail; these three row fields lack a mobile detail path in the inspected composition.",
+      "evidence": [
+        "web/src/components/ui/DataTable.tsx:506-523,733-744,1180,1535",
+        "web/src/features/driving/components/explorer/DestinationDirectory.tsx:87-134,184-193"
+      ],
+      "fix": "Adopt existing mobile detail/presentation or contained-scroll capability, retaining all five fields and table/filter/sort/pagination/export IDs.",
+      "not_claimed": "No measured clipping/overflow/touch rectangle or runtime keyboard failure.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP04",
+      "rule": "date-display-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/explorer/DestinationDirectory.tsx",
+      "lines": [
+        123,
+        129
+      ],
+      "mechanism": "Directory first-visit cell/filter label and ranking date call bare lib formatDate without locale/tz options; shared function defaults to browser locale/zone instead of saved useDateFormat settings.",
+      "evidence": [
+        "web/src/features/driving/components/explorer/DestinationRankings.tsx:7,175",
+        "web/src/lib/dateFormat.ts:44-51,66-73",
+        "web/src/hooks/useDateFormat.ts:73-89"
+      ],
+      "fix": "Use existing useDateFormat in both presentation owners; raw ISO timestamps remain unchanged.",
+      "not_claimed": "No actual timezone/date mismatch observed.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP05",
+      "rule": "number-display-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/explorer/DestinationDirectory.tsx",
+      "lines": [
+        83,
+        98
+      ],
+      "mechanism": "Visits/repeat-arrival cells render raw numeric JSX, bypassing shared locale-bound integer display used elsewhere in Explorer.",
+      "fix": "Use existing useNumberFormatting().fmtInt for visible cells while retaining raw numeric sort/filter/JSON operands.",
+      "not_claimed": "No runtime number-grouping incident.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP06",
+      "rule": "localized-dom-identity",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/explorer/ExplorerMethodology.tsx",
+      "lines": [
+        133
+      ],
+      "mechanism": "Methodology keys rows by translated method.text; exclusion rows use translated row.label. Locale changes alter React list identities.",
+      "evidence": [
+        "web/src/features/driving/components/explorer/ExclusionAccounting.tsx:67"
+      ],
+      "fix": "Use stable local semantic IDs alongside unchanged translated text/order.",
+      "not_claimed": "No lost focus or interaction incident asserted.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP07",
+      "rule": "chart-palette-preference-bypass",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/explorer/MonthlyExplorationChart.tsx",
+      "lines": [
+        130,
+        141,
+        152
+      ],
+      "mechanism": "Nine paint sites in two charts and two bar owners use static CHART_COLORS. chartUtils re-exports static dark CB-safe array; no local useChartPalette subscription and inspected ChartContainer does not remap explicit paints. Saved palette/light-mode derivation do not reach these sites.",
+      "evidence": [
+        "web/src/features/driving/components/explorer/DistanceBandsChart.tsx:174,184",
+        "web/src/features/driving/components/explorer/NewRepeatBehavior.tsx:104,118",
+        "web/src/features/driving/components/explorer/CoverageMetrics.tsx:49,59",
+        "web/src/components/charts/chartUtils.tsx:5",
+        "web/src/lib/colors.ts:112-121",
+        "web/src/hooks/useChartPalette.ts:21-28,45-48"
+      ],
+      "fix": "Adopt existing preference-aware palette at four exact local owners; preserve series identity/order/data. If new palette supplies CSS-function colors to MetricBar, use its existing solid fill, not hex-alpha concatenation.",
+      "not_claimed": "No composed contrast or invalid current gradient claimed; current palette is hex.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP08",
+      "rule": "missing-canonical-i18n-key",
+      "priority": "P2",
+      "file": "web/src/features/driving/components/explorer/DestinationDirectory.tsx",
+      "lines": [
+        152,
+        153
+      ],
+      "mechanism": "HelpTooltip uses help.explorerWorkspace.body but canonical en.json help.explorerWorkspace contains iconLabel only. t() fallback works; canonical key is missing.",
+      "evidence": [
+        "web/src/components/ui/HelpTooltip.tsx:58-60",
+        "C07 native canonical JSON lookup: help.explorerWorkspace.body exists=False"
+      ],
+      "exact_default": "Drive-end coordinates are grouped into coarse 0.01° cells. The most-observed cell is an inferred base for distance comparisons, not a verified home or saved location.",
+      "fix": "Request serialized canonical catalog owner for this exact existing default/key and established generated outputs; no catalog writes by QA worker.",
+      "not_claimed": "No actual tooltip/locale runtime exercised.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    },
+    {
+      "id": "EXP09",
+      "rule": "canonical-fallback-parity",
+      "priority": "P3",
+      "file": "web/src/features/driving/components/explorer/MonthlyExplorationChart.tsx",
+      "lines": [
+        51
+      ],
+      "mechanism": "Three of168 exact literal t() fallback comparisons disagree with canonical values.",
+      "sites": [
+        {
+          "file": "MonthlyExplorationChart.tsx",
+          "line": 51,
+          "key": "explorer.discoveries",
+          "fallback": "New Places per Month",
+          "canonical": "New places per month"
+        },
+        {
+          "file": "DrivingSummaryBrief.tsx",
+          "line": 43,
+          "key": "driving.brief.loading",
+          "fallback": "Loading evidence",
+          "canonical": "Loading source"
+        },
+        {
+          "file": "DrivingSummaryBrief.tsx",
+          "line": 45,
+          "key": "driving.brief.retained",
+          "fallback": "Retained evidence",
+          "canonical": "Retained source"
+        }
+      ],
+      "fix": "Align three existing fallback literals to canonical values under separate source ownership, no new keys or closed-phase/catalog rework.",
+      "not_claimed": "No generator/namespace/locale-load failure asserted.",
+      "queue_dedup": "No exact scoped correction found in bounded queue mechanism/copy searches C04-C09; Phase5 Explorer remains closed. Parent alone decides/reserves followups."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/driving/lib/explorer.ts",
+      "lines": [
+        542,
+        547,
+        550,
+        555
+      ],
+      "kind": "population-positional-identity",
+      "source_fact": "Opaque destination IDs are assigned by current sorted-cell index; directory/rankings use them as React keys.",
+      "precise_need": "Confirm required identity lifetime across populations before domain-ID change; never expose cell keys/coordinates.",
+      "limit": "No selected-row/map/export rebinding incident: selection is not enabled and no map is mounted."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/driving/components/explorer/ExplorerMethodology.tsx",
+      "lines": [
+        129,
+        146
+      ],
+      "kind": "composed-presentation-review",
+      "source_fact": "Viewport lg asymmetric grid has18rem minimum; evidence counters use three columns. Directory66 has16rem truncation; rankings96/161 truncate names. Fixed300-level decorative colors remain.",
+      "precise_need": "Authorized composed width/container/long-label/RTL/200%text/theme/forced-colors review; named geometry only after exact shared mapping/need.",
+      "limit": "No measured contrast/overflow/clipping/target failure inferred from classes."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/driving/lib/explorer.ts",
+      "lines": [
+        286,
+        288,
+        289,
+        501
+      ],
+      "kind": "utc-month-export-provenance",
+      "source_fact": "Monthly grouping is UTC and only destination-arrival months are present; chart shows YYYY-MM keys and exports all supplied properties, more than its four accessible columns.",
+      "precise_need": "Decide/disclose UTC buckets and loaded-history scope at existing metadata/export owner; preserve sparse gaps/raw keys, no synthesized complete months.",
+      "limit": "No real DST/full-range export/privacy/missing-record incident."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "lines": [
+        51,
+        68,
+        74,
+        75
+      ],
+      "kind": "vehicle-source-boundary",
+      "source_fact": "Hook exposes data-derived IDs without fleet-query trust; Explorer54 returns NoVehicleSelected for null effective ID, including unresolved fleet without stored/URL ID.",
+      "precise_need": "Separate selection-source UX review, preserving real empty-fleet path/global vehicle ownership.",
+      "limit": "No authenticated fleet data or API response inspected."
+    }
+  ],
+  "summary": {
+    "confirmed_mechanisms": 9,
+    "by_rule": {
+      "workspace-range-contract": 1,
+      "initial-paused-state-loss": 1,
+      "mobile-field-reachability": 1,
+      "date-display-preference-bypass": 1,
+      "number-display-preference-bypass": 1,
+      "localized-dom-identity": 1,
+      "chart-palette-preference-bypass": 1,
+      "missing-canonical-i18n-key": 1,
+      "canonical-fallback-parity": 1
+    },
+    "files_with_most_issues": [
+      {
+        "file": "DestinationDirectory.tsx",
+        "mechanisms": 4,
+        "ids": [
+          "EXP03",
+          "EXP04",
+          "EXP05",
+          "EXP08"
+        ]
+      }
+    ],
+    "priority": "Initial-paused/mobile fields and explicit bounded workspace integration first; then preference/canonical-copy/local identity fixes. No wholepage remigration."
+  },
+  "queue_dedup": {
+    "existing": "phase6-fix-table-filtered-empty-copy [~], initial302/current source includes local no-match branch; no new filtered-empty finding.",
+    "preserved": "phase5-page-driving-explorer [x] accepted source-only; prior catalog closure [x] stays closed.",
+    "scope": "Exact local owner/key and broad mechanism queue searches C04-C09, no identical EXP01-EXP09 correction identified. Other features are not duplicates; parent adjudicates."
+  },
+  "precise_needs": [
+    "Parent exclusively reserves narrow scopes for EXP01-EXP09; no queue/handoff edits by worker.",
+    "Existing useDriving key/hook bounds root then page and workspaceScope registration, backend full-range coverage unresolved.",
+    "Local Explorer paused state/body owners, no trust-framework rewrite.",
+    "Exact DestinationDirectory mobile adoption, not DataTable rewrite.",
+    "Directory/Rankings date and integer display owners, raw operands retained.",
+    "Methodology/ExclusionAccounting stable semantic IDs.",
+    "Four chart/bar owners use existing useChartPalette; stable hues/series and existing MetricBar fill API.",
+    "Serialized canonical catalog owner: exact help.explorerWorkspace.body default; existing outputs only.",
+    "Three existing fallback literals align with canonical, no new keys.",
+    "Later mounted mission widths320/375/390/430/768/1024/1280/1440/1920/2560/narrow allocated containers/themes/RTL/200%text/forced colors/keyboard/motion/retained states. Parent5173/no current browser grant; msedge if later authorized, no downloads."
+  ],
+  "commands": [
+    {
+      "id": "C01-C04",
+      "command": "Native bounded Get-ChildItem/Get-Content/Select-String/Get-FileHash/Get-Item; exact raw paths/counts/hashes in log",
+      "numeric_exit": 0,
+      "diagnostic": "C03 had14 false MISSING results from audit path extraction; C04 corrected all14. No missing source inferred."
+    },
+    {
+      "id": "C05",
+      "command": "Select-String exact18sourcepaths with ordered rule regex matrix; raw file:line:source matches in log",
+      "numeric_exit": 0,
+      "counts": "var8/rawHTML0/vendor0/oldAPI0/prefix0/camel0/hidden0/rawEnglish0/fetch0; category6/identity17/presentation36; hook false-match1 corrected."
+    },
+    {
+      "id": "C06",
+      "command": "Native literal t-key regex/canonical JSON lookups; history hook143-156 case-sensitive /api/v1/|[?&][a-zA-Z_]*[A-Z][a-zA-Z_]*=",
+      "numeric_exit": 0,
+      "counts": "168refs146keys0missing; hook0badURL"
+    },
+    {
+      "id": "C07",
+      "command": "Native exact168fallback comparisons and help.explorerWorkspace.Contains(body); Select-String exact scoped queue mechanisms",
+      "numeric_exit": 0,
+      "counts": "3differences/body absent/6broad queue rows"
+    },
+    {
+      "id": "C08",
+      "command": "Case-sensitive exact finding lines;17 supplemental SHA256/line/mtime pins; shared filtered-empty source",
+      "numeric_exit": 0
+    },
+    {
+      "id": "C09",
+      "command": "Case-sensitive style/fetch/useEffect on18files; page range hook/instant patterns; workspace literal /explorer; integer/copy source probes",
+      "numeric_exit": 0,
+      "counts": "directstyle0/fetch0/pageRange0/routeRange0/integerCells2"
+    },
+    {
+      "id": "C10a",
+      "command": "Native ordered report construction from pin regex; failed before serialization/write",
+      "numeric_exit": 1,
+      "error": "PowerShell $Matches overwritten; null pin-map index"
+    },
+    {
+      "id": "C10b",
+      "command": "Capture pin regex fields before map assignment; native ordered report/ConvertTo-Json/Set-Content only permitted report",
+      "numeric_exit": 0
+    },
+    {
+      "id": "C11",
+      "command": "Final ConvertFrom-Json parse and SHA256/line/byte pin equality; final release update and reparse",
+      "numeric_exit": 0,
+      "status": "COMPLETE"
+    }
+  ],
+  "tests": {
+    "status": "NOTRUN",
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "meaning": "No test command; not a passing zero-discovery run."
+  },
+  "not_run": [
+    "Native/runtime/page/application acceptance",
+    "Browser/screenshots/device/actual contrast/targets/safe areas",
+    "Actual API/data/device/drive/location/coordinates reads or mutations",
+    "Actual exports/downloads",
+    "Tests/lint/build/global npx tsc --noEmit",
+    "Git/installs/servers/Docker/subagents/custom helpers/extensions/heartbeats"
+  ],
+  "limits": [
+    "Only current source mechanisms/declarations confirmed, no hypothetical incidents.",
+    "Current physical line counts, not fresh historical1741vs1737 baseline preservation proof.",
+    "Only report/log writes. Source/tests/catalog/backend/config/queue/handoff readonly; no source changes.",
+    "Queue concurrently changed, original line399 is timestamped reservation evidence not stable final row coordinate.",
+    "No full shared-component audit: only necessary dependency ranges; page/direct local presentation read fully.",
+    "Raw command outputs in ignored log; regex candidate counts not violation counts. C03/C05 and failedC10a disclosed, corrected rather than hidden."
+  ],
+  "validation": {
+    "final_json_parse": "PASS",
+    "pin_equality": "PASS",
+    "pin_files_checked": 50,
+    "pin_mismatches": 0,
+    "numeric_exit": 0,
+    "checked_utc": "2026-10-14T01:25:38.0996111Z"
+  },
+  "release": {
+    "report_claim": "RELEASED after this final validation command",
+    "log_claim": "RELEASED after this final validation command",
+    "command_claim": "RELEASED; no background commands; all commands synchronous",
+    "source_claim": "NONE_REQUESTED_OR_USED",
+    "no_post_return_writes": true,
+    "explicit_report_log_command_release": true
+  },
+  "acceptance": {
+    "report": "DONE source-only report; final JSON parse and50 exact pins verified, subject to explicitly recorded drift count",
+    "source_changes": 0,
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "page": "NOTRUN",
+    "application": "NOTRUN",
+    "phases": "0-5 preserved closed;6 unfinished;7 NOTRUN"
+  },
+  "raw_bounded_scan_commands": [
+    {
+      "rule": "static-inline-style",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern 'style\\s*=\\s*\\{\\{' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "raw-html",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern '<(button|input|textarea|select|table)\\b' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "direct-library-import",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern 'from\\s+['\\\"](recharts|react-leaflet|framer-motion)['\\\"]' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "old-api-import",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern 'from\\s+['\\\"](\\.\\./api|\\.\\./\\.\\./api)['\\\"]' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "double-prefix",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern '/api/v1/' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "camelcase-param",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern '[?&][a-zA-Z_]*[A-Z][a-zA-Z_]*=' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "hidden-section",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern '\\bdata\\s*&&\\s*<|summary\\s*&&\\s*<' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "hardcoded-string-literal-jsx",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern '>\\s*[A-Za-z][A-Za-z ]+\\s*<' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    },
+    {
+      "rule": "fetch-useeffect",
+      "command": "Select-String -LiteralPath $sourcePaths -Pattern '\\bfetch\\s*\\(|\\buseEffect\\s*\\(' -CaseSensitive",
+      "match_lines": 0,
+      "numeric_exit": 0
+    }
+  ],
+  "raw_bounded_scan_scope": [
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\ExplorerPage.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\lib\\explorer.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\CoverageMetrics.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\DestinationDirectory.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\DestinationRankings.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\DiscoveryCadenceSummary.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\DistanceBandsChart.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\EvidenceCoverage.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\ExclusionAccounting.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\ExplorerKpis.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\ExplorerMethodology.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\ExplorerSectionBody.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\index.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\MonthlyExplorationChart.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\NewRepeatBehavior.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\explorer\\types.ts"
+  ],
+  "completed_utc": "2026-10-14T01:25:38.1059577Z"
+}
