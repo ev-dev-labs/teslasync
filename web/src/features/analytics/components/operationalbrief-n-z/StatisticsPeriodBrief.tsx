@@ -5,8 +5,13 @@ import { EmptyState } from '@/components/feedback';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useFormatting } from '@/hooks/useFormatting';
+import { asFiniteNumber } from '@/lib/typeGuards';
 import { StatisticsSource } from '../statistics-modernization/StatisticsSource';
 import type { PeriodStatistics } from '../statistics-modernization/PeriodStatistics';
+
+function scaleMeasurement(value: unknown, factor: number): number | null {
+  return value == null ? null : typeof value === 'number' ? value * factor : NaN;
+}
 
 export function StatisticsPeriodBrief({
   stats, loading, error, onRetry, fromKm, whPerKmToDisplay, distanceUnit, efficiencyUnit,
@@ -14,34 +19,38 @@ export function StatisticsPeriodBrief({
   const { t } = useTranslation();
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { formatCurrency } = useFormatting();
-  const avgDriveDistance = stats && stats.total_drives > 0
-    ? (stats.total_distance ?? 0) / stats.total_drives : 0;
+  const distance = asFiniteNumber(stats?.total_distance);
+  const drives = asFiniteNumber(stats?.total_drives);
+  const cost = asFiniteNumber(stats?.total_cost);
+  const avgDriveDistance = distance != null && drives != null && Number.isSafeInteger(drives) && drives > 0
+    ? distance / drives : null;
+  const costPerKm = distance != null && distance > 0 && cost != null ? cost / distance : null;
   const totals: StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'statistics-total-distance', label: t('statistics.totalDistance', 'Total distance'),
-      rawValue: stats ? (stats.total_distance ?? 0) * 1000 : null,
+      rawValue: scaleMeasurement(stats?.total_distance, 1000),
       display: { formatter: raw => ({ value: fmtInt(fromKm(raw / 1000)), unit: distanceUnit }) } },
     { metricId: 'count', occurrenceId: 'statistics-total-drives', label: t('statistics.totalDrives', 'Total drives'),
-      rawValue: stats ? stats.total_drives ?? 0 : null,
+      rawValue: stats?.total_drives ?? null,
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
     { metricId: 'energy', occurrenceId: 'statistics-total-energy', label: t('statistics.totalEnergy', 'Total energy'),
-      rawValue: stats ? (stats.energy_used ?? 0) * 1000 : null,
+      rawValue: scaleMeasurement(stats?.energy_used, 1000),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) } },
     { metricId: 'currency', occurrenceId: 'statistics-total-cost', label: t('statistics.totalCost', 'Total cost'),
-      rawValue: stats ? stats.total_cost ?? 0 : null,
+      rawValue: stats?.total_cost ?? null,
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
     { metricId: 'mass', occurrenceId: 'statistics-co2', label: t('statistics.co2Saved', 'CO₂ saved'),
-      rawValue: stats ? stats.co2_saved ?? 0 : null,
+      rawValue: stats?.co2_saved ?? null,
       display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) } },
   ];
   const averages: StatMetric[] = [
     { metricId: 'distance', occurrenceId: 'statistics-average-distance', label: t('statistics.avgDriveDistance', 'Avg drive distance'),
-      rawValue: stats ? avgDriveDistance * 1000 : null,
+      rawValue: scaleMeasurement(avgDriveDistance, 1000),
       display: { formatter: raw => ({ value: fmtNumber(fromKm(raw / 1000)), unit: distanceUnit }) } },
     { metricId: 'efficiency', occurrenceId: 'statistics-average-efficiency', label: t('statistics.avgEfficiency', 'Avg efficiency'),
-      rawValue: stats ? (stats.avg_efficiency ?? 0) / 1000 : null,
+      rawValue: scaleMeasurement(stats?.avg_efficiency, 1 / 1000),
       display: { formatter: raw => ({ value: fmtNumber(whPerKmToDisplay(raw * 1000)), unit: efficiencyUnit }) } },
     { metricId: 'rate', occurrenceId: 'statistics-cost-per-km', label: t('statistics.costPerKm', 'Cost per km'),
-      rawValue: stats && (stats.total_distance ?? 0) > 0 ? (stats.total_cost ?? 0) / stats.total_distance : null,
+      rawValue: costPerKm,
       context: t('statistics.brief.costDenominator', 'Recorded cost divided by source kilometres; not display-distance units.'),
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
   ];

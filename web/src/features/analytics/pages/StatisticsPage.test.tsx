@@ -288,7 +288,7 @@ function renderPage(initialEntries: string[] = ['/statistics']) {
           </ToastProvider>
         </ThemeProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   const result = render(page());
   return { ...result, client, rerenderPage: () => result.rerender(page()) };
@@ -622,6 +622,108 @@ describe('StatisticsPage', () => {
     expect(screen.getByTestId('statistics-totals-brief').querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(screen.queryByText('No statistics yet')).not.toBeInTheDocument();
   });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '12', false])(
+    'does not turn absent or invalid period measurements (%s) into zero',
+    async value => {
+      periodStatsHandler = () => Promise.resolve(makeStats({
+        total_distance: value, total_drives: value, energy_used: value,
+        total_cost: value, co2_saved: value, avg_efficiency: value,
+      }));
+      renderPage();
+      const totals = screen.getByTestId('statistics-totals-brief');
+      const state = value == null ? 'missing' : 'invalid';
+      await waitFor(() => expect(totals.querySelectorAll(`[data-value-state="${state}"]`)).toHaveLength(5));
+      const averages = screen.getByTestId('statistics-averages-brief');
+      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(state === 'missing' ? 3 : 2);
+      expect(averages.querySelectorAll(`[data-value-state="${state}"]`)).toHaveLength(state === 'missing' ? 3 : 1);
+      expect(within(averages).getAllByText('No measurement supplied')).toHaveLength(state === 'missing' ? 3 : 2);
+    },
+  );
+
+  it.each([undefined, null, NaN, Infinity, -1, 0, 1.5, '2'])(
+    'requires a known positive integer drive count (%s) for average distance',
+    async total_drives => {
+      periodStatsHandler = () => Promise.resolve(makeStats({ total_drives }));
+      renderPage();
+      const averages = screen.getByTestId('statistics-averages-brief');
+      await waitFor(() => expect(within(averages).getByText('$0.50')).toBeInTheDocument());
+      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+      expect(within(averages).getByText('No measurement supplied')).toBeInTheDocument();
+    },
+  );
+
+  it('preserves measured zero totals but withholds averages without denominators', async () => {
+    periodStatsHandler = () => Promise.resolve(makeStats({
+      total_distance: 0, total_drives: 0, energy_used: 0,
+      total_cost: 0, co2_saved: 0, avg_efficiency: 0,
+    }));
+    renderPage();
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await waitFor(() => expect(totals.querySelectorAll('[data-value-state="value"]')).toHaveLength(5));
+    expect(within(totals).getByText('0 km')).toBeInTheDocument();
+    expect(within(totals).getByText('$0.00')).toBeInTheDocument();
+    const averages = screen.getByTestId('statistics-averages-brief');
+    expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    expect(within(averages).getByText('0.00 Wh/km')).toBeInTheDocument();
+  });
+
+  it('preserves zero average distance with positive count and zero cost/km with positive distance', async () => {
+    periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: 0, total_drives: 2 }));
+    const { unmount } = renderPage();
+    await screen.findByText('0.00 km');
+    unmount();
+    periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: 0.5, total_cost: 0 }));
+    renderPage();
+    await waitFor(() => expect(within(screen.getByTestId('statistics-averages-brief')).getByText('$0.00')).toBeInTheDocument());
+  });
+
+  it('preserves signed fractional measurements and source-kilometre cost under imperial display', async () => {
+    unitState.length = 'mi';
+    periodStatsHandler = () => Promise.resolve(makeStats({
+      total_distance: 0.5, total_drives: 2, energy_used: -0.25,
+      total_cost: -0.125, co2_saved: -0.5, avg_efficiency: -10.5,
+    }));
+    renderPage();
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('-0.25 kWh');
+    expect(within(totals).getByText('-0.50 kg')).toBeInTheDocument();
+    const averages = screen.getByTestId('statistics-averages-brief');
+    expect(within(averages).getByText('0.16 mi')).toBeInTheDocument();
+    expect(within(averages).getByText('-16.90 Wh/mi')).toBeInTheDocument();
+    expect(within(averages).getByText('$-0.25')).toBeInTheDocument();
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '500'])(
+    'requires known distance (%s) for both distance and cost averages',
+    async total_distance => {
+      periodStatsHandler = () => Promise.resolve(makeStats({ total_distance }));
+      renderPage();
+      const averages = screen.getByTestId('statistics-averages-brief');
+      await within(averages).findByText('160.00 Wh/km');
+      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2);
+    },
+  );
+
+  it('retains signed distance but requires positive distance for cost/km', async () => {
+    periodStatsHandler = () => Promise.resolve(makeStats({ total_distance: -0.5, total_drives: 2 }));
+    renderPage();
+    const averages = screen.getByTestId('statistics-averages-brief');
+    await within(averages).findByText('-0.25 km');
+    expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+  });
+
+  it.each([undefined, null, NaN, Infinity, '0', false])(
+    'withholds cost/km when cost is not a known measurement (%s)',
+    async total_cost => {
+      periodStatsHandler = () => Promise.resolve(makeStats({ total_cost }));
+      renderPage();
+      const averages = screen.getByTestId('statistics-averages-brief');
+      await within(averages).findByText('11.90 km');
+      expect(averages.querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+      expect(within(averages).getByText('No measurement supplied')).toBeInTheDocument();
+    },
+  );
 
   it('surfaces a retry-able error when the period-stats request fails', async () => {
     periodStatsHandler = () => Promise.reject(new Error('period stats down'));
