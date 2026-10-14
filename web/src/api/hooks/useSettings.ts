@@ -4,6 +4,7 @@ import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { fleetSetupKeys } from './useFleetSetup';
 import type {
   AppSettings,
   GasPriceStatus,
@@ -66,6 +67,9 @@ export function useAuthStatus() {
 export function useAuthURL() {
   const { success, error } = useMutationToast();
   return useMutation({
+    // Recovery remains available in historical views, but must never queue or retry.
+    networkMode: 'always',
+    retry: false,
     mutationFn: () => request<{ auth_url: string }>('/auth/url', { method: 'POST' }),
     onSuccess: () => {
       success('toast.settings.auth.url.success', 'Auth URL generated');
@@ -78,9 +82,12 @@ export function useRefreshAuth() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: () => request<void>('/auth/refresh', { method: 'POST' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
+      invalidateAndBroadcast(qc, { queryKey: fleetSetupKeys.apiInfo });
       success('toast.settings.auth.refresh.success', 'Auth refreshed');
     },
     onError: (e) => error(e, 'toast.settings.auth.refresh.error', 'Failed to refresh auth'),
@@ -91,9 +98,12 @@ export function useDisconnectAuth() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
+    networkMode: 'always',
+    retry: false,
     mutationFn: () => request<void>('/auth/disconnect', { method: 'POST' }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.authStatus });
+      invalidateAndBroadcast(qc, { queryKey: fleetSetupKeys.apiInfo });
       success('toast.settings.auth.disconnect.success', 'Tesla account disconnected');
     },
     onError: (e) => error(e, 'toast.settings.auth.disconnect.error', 'Failed to disconnect'),
