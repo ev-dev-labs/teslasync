@@ -43,6 +43,31 @@ afterEach(() => {
 });
 
 describe('QueryReferencePanel', () => {
+  it('keeps reference guidance neutral with secondary text and muted metadata', () => {
+    render(<QueryReferencePanel />);
+
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveClass(
+      'bg-[var(--surface-2)]',
+      'ring-[var(--border-subtle)]',
+    );
+    expect(notice).not.toHaveClass(
+      'bg-[var(--semantic-info-bg)]',
+      'ring-[var(--semantic-info-border)]',
+    );
+    expect(notice.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]');
+    expect(notice.querySelector('span.flex-1')).toHaveClass('text-[var(--text-secondary)]');
+
+    const tips = screen.getAllByRole('listitem');
+    expect(tips).toHaveLength(4);
+    for (const tip of tips) {
+      expect(tip.querySelector('p')).toHaveClass('text-[var(--text-secondary)]');
+      expect(tip.querySelector('[aria-hidden="true"]')).toHaveClass('bg-[var(--text-muted)]');
+    }
+    expect(screen.getByText('Example')).toHaveClass('text-[var(--text-muted)]');
+    expect(screen.getByRole('group')).toHaveClass('bg-[var(--surface-2)]');
+  });
+
   it('renders the titled read-only surface with every guidance tip', () => {
     render(<QueryReferencePanel />);
 

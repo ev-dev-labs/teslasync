@@ -62,7 +62,11 @@ export function QueryReferencePanel() {
         <FileCode className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('powerSql.info.title', 'Working with queries')}
       </PanelTitle>
-      <InlineCallout variant="info" icon={<Info className="h-4 w-4" />}>
+      <InlineCallout
+        variant="info"
+        className="bg-[var(--surface-2)] ring-[var(--border-subtle)]"
+        icon={<Info className="h-4 w-4 text-[var(--text-secondary)]" />}
+      >
         {t(
           'powerSql.info.readonly',
           'This is a read-only composing surface. Nothing runs in the browser.',
