@@ -17,9 +17,9 @@ import {
   Drawer,
   GlassPanel,
   Input,
+  Text,
   Textarea,
 } from '@/components/ui';
-import { Text } from '@/components/ui/Typography';
 import type {
   FeatureFlagEntry,
   FeatureFlagValue,

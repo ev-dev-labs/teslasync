@@ -548,4 +548,18 @@ describe('FeatureFlagsPage', () => {
     expect(metricValue('Contributors')).toBe('—');
     expect(screen.getAllByRole('button', { name: /Edit flag/ })).toHaveLength(5);
   });
+
+  it('retains the immutable-key helper and write-free cancellation with the shared UI barrel', () => {
+    renderPage();
+    fireEvent.click(within(registryRow('ui.new_dashboard')).getByRole('button', { name: /Edit flag/ }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Edit flag "ui.new_dashboard"' });
+    expect(within(dialog).getByText('Flag keys are immutable once created. Delete + re-create to rename.')).toBeInTheDocument();
+    expect(within(dialog).getByRole('textbox', { name: /^Flag key\b/i })).toBeDisabled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(hoisted.setFlagMutateAsync).not.toHaveBeenCalled();
+    expect(hoisted.deleteFlagMutateAsync).not.toHaveBeenCalled();
+  });
 });
