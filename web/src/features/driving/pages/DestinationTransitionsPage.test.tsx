@@ -1,11 +1,14 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
+import type { StatMetric } from '@/components/data-display';
 import type { Drive } from '@/types/driving';
+import { severityTokens } from '@/lib/tokens';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -14,8 +17,35 @@ const h = vi.hoisted(() => ({
   historyHook: vi.fn(),
   timezoneHook: vi.fn(),
   timeZone: 'UTC',
+  distanceUnit: 'km' as 'km' | 'mi',
+  metricCapture: vi.fn<(metrics: readonly StatMetric[]) => void>(),
 }));
 const historyRefetch = vi.fn();
+
+vi.mock('@/hooks/useUnits', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useUnits')>();
+  return {
+    ...actual,
+    useUnits: () => {
+      const units = actual.useUnits();
+      return {
+        ...units,
+        unitPrefs: { ...units.unitPrefs, distance: h.distanceUnit, precision: 2, locale: 'en-US' },
+      };
+    },
+  };
+});
+
+vi.mock('@/hooks/useOperationalMetrics', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
+  return {
+    ...actual,
+    useOperationalMetrics: (...args: Parameters<typeof actual.useOperationalMetrics>) => {
+      h.metricCapture(args[0]);
+      return actual.useOperationalMetrics(...args);
+    },
+  };
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>(
@@ -113,6 +143,9 @@ vi.mock('recharts', async (importOriginal) => {
 import DestinationTransitionsPage from './DestinationTransitionsPage';
 import { DestinationTransitionProfilePlot } from '../components/destination-transitions/DestinationTransitionProfilePlot';
 import { OriginConcentrationPlot } from '../components/destination-transitions/OriginConcentrationPlot';
+import { TopTransitionMatrix } from '../components/destination-transitions/TopTransitionMatrix';
+import { buildDestinationTransitions } from '../lib/destinationTransitions';
+import { getGlobalPrecision } from '@/lib/numberFormat';
 
 let nextId = 1;
 
@@ -178,6 +211,8 @@ interface QueryStub {
   isError: boolean;
   error: unknown;
   refetch: () => void;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
+  isFetching?: boolean;
 }
 
 function query(overrides: Partial<QueryStub> = {}): QueryStub {
@@ -240,6 +275,13 @@ const sectionIds = [
   'destination-methodology',
 ] as const;
 
+const qualityBriefIds = [
+  'destination-row-accounting-brief',
+  'destination-continuity-accounting-brief',
+  'destination-coverage-recency-brief',
+  'destination-descriptive-support-brief',
+] as const;
+
 function expectEverySection(): void {
   for (const testId of sectionIds) {
     expect(screen.getByTestId(testId)).toBeInTheDocument();
@@ -251,11 +293,269 @@ beforeEach(() => {
   nextId = 1;
   h.vehicleId = 7;
   h.timeZone = 'UTC';
+  h.distanceUnit = 'km';
   h.history = query({ data: readyHistory() });
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
 });
 
 describe('DestinationTransitionsPage', () => {
+  it('uses neutral methodology roles and retains all nine explanations and the warning', () => {
+    renderPage();
+
+    const section = screen.getByTestId('destination-methodology');
+    const methodology = within(section);
+    expect(methodology.getByRole('heading', { name: 'Methodology and limitations' }))
+      .toHaveClass('text-[var(--text-primary)]');
+    expect(methodology.getByText(
+      'Definitions, continuity rules, descriptive formulas, evidence gates, calendar scope, and omitted inputs.',
+    )).toHaveClass('text-[var(--text-secondary)]');
+    const titles = [
+      'First-order description',
+      'Endpoint continuity',
+      'Sequence boundaries',
+      'Observed shares and information',
+      'Entropy and concentration',
+      'Support gate and ingredients',
+      'Vehicle-local calendar and cap',
+      'Location normalization risk',
+      'Inputs and interpretation limits',
+    ];
+    const articles = section.querySelectorAll('article');
+    expect(articles).toHaveLength(9);
+    titles.forEach((title, index) => {
+      expect(within(articles[index]).getByRole('heading', { name: title }))
+        .toHaveClass('text-[var(--text-primary)]');
+      expect(articles[index].querySelector('svg')?.parentElement)
+        .toHaveClass('text-[var(--text-muted)]');
+      expect(articles[index].querySelector('p'))
+        .toHaveClass('text-[var(--text-secondary)]');
+    });
+    expect(Array.from(articles, (article) => article.querySelector('p')?.textContent))
+      .toEqual([
+        'Each accepted edge uses only the previous included drive’s end destination and the current included drive’s end destination. Higher-order history is not modeled.',
+        `Adjacent rows connect only when normalized addresses match or valid coordinates are within ${Number(250).toLocaleString('en-US', { minimumFractionDigits: getGlobalPrecision(), maximumFractionDigits: getGlobalPrecision() })} m, and the current start does not overlap the previous end. No elapsed-time maximum is configured; endpoint continuity and non-overlap define adjacency.`,
+        'Incomplete, invalid, future, nonpositive-duration, and unknown-end rows remain chronological boundaries whenever their start can be placed. An unplaceable start creates a source-order boundary while unrelated placed segments remain analyzable. The model never bridges over a known unusable row.',
+        'An edge share is its accepted count divided by all accepted outgoing transitions from that origin. Empirical information content is −log₂(share), an in-sample rarity description.',
+        'For each origin, concentration = 1 − entropy ÷ log₂(distinct observed successors); a one-successor row equals 1. The global 0–100 index weights row concentration by outgoing count, while support remains separate.',
+        'An origin needs at least 3 outgoing transitions. Volume, day, and week ingredients reach 1 at 12, 8, and 6; recurrence = max(0, outgoing − distinct successors) ÷ max(1, outgoing − 1). Thin is below the gate or below index 35; developing is 35–69; strong is 70–100.',
+        'Hour, weekday, date, week, and month use UTC. Multiple drives on one local day remain separate visits. Only the latest 1,000 returned rows are requested.',
+        'Addresses are normalized before rounded GPS fallback. Address edits, missing coordinates, and GPS tolerance can split one real place or merge nearby places.',
+        'No driver identity, calendar, traffic, intent, or current live location is used. The latest insight requires the actual latest row to qualify. Results are not a calibrated future likelihood, personal forecast, recommendation, or guarantee.',
+      ]);
+    expect(section.querySelector('h3 svg')).toHaveClass('text-[var(--text-muted)]');
+    const warning = methodology.getByText(
+      'Use this workspace only as returned historical evidence; no future destination is promised.',
+    );
+    expect(warning).toHaveClass('text-[var(--text-secondary)]');
+    expect(warning.closest('.border')).toHaveClass(...severityTokens.warn.border.split(' '));
+    expect(section.innerHTML).not.toMatch(/text-cyan|neon|glow/);
+  });
+
+  it('uses neutral matrix roles while retaining observed, zero and unsupported evidence', () => {
+    renderPage();
+
+    const matrix = within(screen.getByTestId('destination-transition-matrix'));
+    const observed = matrix.getByRole('cell', { name: /A to B: 3 observed,/ });
+    const zero = matrix.getByRole('cell', { name: /A to A: 0 observed,/ });
+    const unsupported = matrix.getByRole('cell', { name: /C to A: 0 observed; origin is below/ });
+    expect(observed).toHaveClass('border-[var(--border-default)]', 'bg-[var(--surface-2)]');
+    expect(zero).toHaveClass('border-[var(--border-subtle)]', 'bg-[var(--surface-1)]');
+    expect(unsupported).toHaveClass('border-dashed', 'border-[var(--border-strong)]');
+    expect(within(unsupported).getByText('Below gate')).toBeInTheDocument();
+    expect(within(unsupported).getByText('—')).toBeInTheDocument();
+    expect(within(zero).getByText('0')).toBeInTheDocument();
+    expect(matrix.getByRole('rowheader', { name: 'A 4 outgoing' })).toBeInTheDocument();
+    expect(observed).not.toHaveClass('border-dashed');
+    expect(screen.getByTestId('destination-transition-matrix').innerHTML).not.toMatch(/neon|text-cyan/);
+  });
+
+  it('retains the full outgoing denominator when the matrix omits a destination', () => {
+    const model = buildDestinationTransitions(readyHistory(), FROZEN_NOW, 'UTC', {
+      topMatrixStateLimit: 2,
+    });
+    render(
+      <TopTransitionMatrix model={model} locale="en-US" state={{
+        vehicleSelected: true, isLoading: false, isResolved: true,
+        error: null, refreshError: null, onRetry: historyRefetch,
+      }} />,
+    );
+    const matrix = within(screen.getByTestId('destination-transition-matrix'));
+    expect(matrix.getAllByRole('columnheader')).toHaveLength(3);
+    expect(matrix.getByRole('rowheader', { name: 'A 4 outgoing' })).toBeInTheDocument();
+    expect(matrix.getByRole('cell', { name: /A to B: 3 observed, 75/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    { label: 'missing', value: undefined, expected: '—' },
+    { label: 'null', value: null, expected: '—' },
+    { label: 'NaN', value: Number.NaN, expected: '—' },
+    { label: 'positive infinity', value: Number.POSITIVE_INFINITY, expected: '—' },
+    { label: 'negative infinity', value: Number.NEGATIVE_INFINITY, expected: '—' },
+    { label: 'measured zero', value: 0, expected: '0' },
+    { label: 'positive fraction', value: 0.125, expected: '12.5' },
+    { label: 'signed fraction', value: -0.125, expected: '-12.5' },
+  ])('keeps $label matrix shares distinct from missing or measured zero', ({ value, expected }) => {
+    const model = buildDestinationTransitions(readyHistory(), FROZEN_NOW, 'UTC');
+    const row = model.topMatrix[0];
+    const cell = row.cells[0];
+    if (value === undefined) {
+      Reflect.deleteProperty(cell, 'observedConditionalShare');
+    } else {
+      cell.observedConditionalShare = value;
+    }
+    const formatted = expected === '—' ? expected : `${Number(expected).toLocaleString('en-US', {
+      minimumFractionDigits: getGlobalPrecision(),
+      maximumFractionDigits: getGlobalPrecision(),
+    })}%`;
+    render(
+      <TopTransitionMatrix model={model} locale="en-US" state={{
+        vehicleSelected: true, isLoading: false, isResolved: true,
+        error: null, refreshError: null, onRetry: historyRefetch,
+      }} />,
+    );
+    const rendered = screen.getByRole('cell', {
+      name: `${row.fromLabel} to ${cell.toLabel}: ${cell.count} observed, ${formatted} of accepted outgoing transitions`,
+    });
+    expect(within(rendered).getByText(formatted)).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY])(
+    'does not render unavailable matrix counts as measured zero (%s)',
+    (value) => {
+      const model = buildDestinationTransitions(readyHistory(), FROZEN_NOW, 'UTC');
+      const row = model.topMatrix[0];
+      const cell = row.cells[0];
+      Reflect.set(cell, 'count', value);
+      Reflect.set(row, 'outgoingTransitions', value);
+      render(
+        <TopTransitionMatrix model={model} locale="en-US" state={{
+          vehicleSelected: true, isLoading: false, isResolved: true,
+          error: null, refreshError: null, onRetry: historyRefetch,
+        }} />,
+      );
+      expect(screen.getByRole('rowheader', { name: `${row.fromLabel} — outgoing` })).toBeInTheDocument();
+      const rendered = screen.getByRole('cell', {
+        name: new RegExp(`${row.fromLabel} to ${cell.toLabel}: — observed,`),
+      });
+      expect(within(rendered).getByText('—')).toBeInTheDocument();
+      expect(within(rendered).queryByText('0')).not.toBeInTheDocument();
+    },
+  );
+
+  it('keeps quality labels mounted without invented operands during active loading', () => {
+    h.history = query({ isLoading: true, isSuccess: false, fetchStatus: 'fetching' });
+    renderPage();
+
+    for (const id of qualityBriefIds) {
+      const brief = screen.getByTestId(id);
+      expect(brief).toHaveAttribute('aria-busy', 'true');
+      expect(within(brief).getByText('Loading source')).toBeInTheDocument();
+      expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
+      expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
+    }
+    expect(screen.getAllByRole('status', { name: 'Loading destination transition history' })).toHaveLength(1);
+    expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
+    expectEverySection();
+  });
+
+  it('does not claim active loading or returned zeros for paused history without data', () => {
+    h.history = query({ isSuccess: false, fetchStatus: 'paused' });
+    const view = renderPage();
+
+    for (const id of qualityBriefIds) {
+      const brief = screen.getByTestId(id);
+      expect(brief).not.toHaveAttribute('aria-busy');
+      expect(within(brief).getByText('Source unavailable')).toBeInTheDocument();
+      expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
+      expect(within(brief).queryByText('Not reached')).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    const notice = screen.getByTestId('destination-transitions-initial-pause');
+    expect(notice).toHaveAttribute('role', 'status');
+    expect(within(notice).getByText('Refresh paused')).toBeInTheDocument();
+    expect(within(notice).getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    expect(notice).not.toHaveTextContent(/offline|vehicle unavailable|service unavailable/i);
+    expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
+    fireEvent.click(within(notice).getByRole('button', { name: 'Retry' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    view.rerenderPage();
+    expect(screen.getByTestId('destination-transitions-initial-pause')).toBeInTheDocument();
+    expect(screen.queryByText('Loading source')).not.toBeInTheDocument();
+    expectEverySection();
+
+    h.history = query({ isLoading: true, isSuccess: false, isFetching: true, fetchStatus: 'fetching' });
+    view.rerenderPage();
+    expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('status', { name: 'Loading destination transition history' })).toHaveLength(1);
+    expectEverySection();
+
+    h.history = query({ data: [], fetchStatus: 'idle' });
+    view.rerenderPage();
+    expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading destination transition history' })).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('destination-row-accounting-brief'))
+      .getAllByText('0', { selector: '[data-operational-value]' })).toHaveLength(10);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expectEverySection();
+  });
+
+  it('preserves successful empty accounting zeros rather than marking them unavailable', () => {
+    h.history = query({ data: [] });
+    renderPage();
+
+    expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
+    for (const id of qualityBriefIds) {
+      expect(within(screen.getByTestId(id)).getByText('Returned evidence')).toBeInTheDocument();
+    }
+    const accounting = screen.getByTestId('destination-row-accounting-brief');
+    expect(accounting.querySelectorAll('[data-value-state="value"]')).toHaveLength(11);
+    expect(within(accounting).getAllByText('0', { selector: '[data-operational-value]' })).toHaveLength(10);
+    expect(h.metricCapture.mock.calls.flatMap(([metrics]) => metrics)
+      .find(metric => metric.label === 'Rows returned')?.rawValue).toBe(0);
+    expectEverySection();
+  });
+
+  it('retains raw quality evidence through failed and paused refresh then recovers with one retry', () => {
+    const data = readyHistory();
+    h.history = query({ data });
+    const view = renderPage();
+    const before = qualityBriefIds.map(id =>
+      Array.from(screen.getByTestId(id).querySelectorAll('[data-operational-value]'), node => node.textContent));
+    h.metricCapture.mockClear();
+    h.history = query({ data, isError: true, error: new Error('refresh unavailable'), fetchStatus: 'paused' });
+    view.rerenderPage();
+
+    expect(screen.queryByTestId('destination-transitions-initial-pause')).not.toBeInTheDocument();
+    qualityBriefIds.forEach((id, index) => {
+      const brief = screen.getByTestId(id);
+      expect(within(brief).getByText('Retained source')).toBeInTheDocument();
+      expect(brief).not.toHaveAttribute('aria-busy');
+      expect(Array.from(brief.querySelectorAll('[data-operational-value]'), node => node.textContent)).toEqual(before[index]);
+    });
+    expect(h.metricCapture.mock.calls.flatMap(([metrics]) => metrics)
+      .find(metric => metric.label === 'Rows returned')?.rawValue).toBe(8);
+    expect(screen.getAllByRole('button', { name: /Retry|Refresh/ })).toHaveLength(1);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+
+    h.history = query({ data, isFetching: true, fetchStatus: 'fetching' });
+    view.rerenderPage();
+    for (const id of qualityBriefIds) {
+      expect(within(screen.getByTestId(id)).getByText('Retained source')).toBeInTheDocument();
+    }
+    h.history = query({ data });
+    view.rerenderPage();
+    qualityBriefIds.forEach((id, index) => {
+      const brief = screen.getByTestId(id);
+      expect(within(brief).getByText('Returned evidence')).toBeInTheDocument();
+      expect(Array.from(brief.querySelectorAll('[data-operational-value]'), node => node.textContent)).toEqual(before[index]);
+    });
+    expect(screen.queryByText('Retained source')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Retry|Refresh/ })).not.toBeInTheDocument();
+    expectEverySection();
+  });
+
   it('uses the origin host legend identity while retaining full evidence and exports', () => {
     renderPage('?hidden_destination-origin-concentration=concentration&hidden_origin-concentration=leadingShare&hidden_destination-weekday-profile=concentration&keep=1');
     const section = screen.getByTestId('destination-origin-concentration');
@@ -349,6 +649,29 @@ describe('DestinationTransitionsPage', () => {
     expectEverySection();
   });
 
+  it('renders the canonical standalone profile title with populated evidence', () => {
+    const rows = [
+      { label: 'Morning', samples: 8, origins: 3, destinations: 4, concentration: 50, leadingShare: 25, support: 'Supported evidence' },
+    ];
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter>
+          <DestinationTransitionProfilePlot
+            rows={rows}
+            locale="en-US" countSeriesName="Samples" concentrationSeriesName="Concentration"
+          />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getByRole('heading', { name: 'Destination transition profile', exact: true })).toBeInTheDocument();
+    expect(screen.queryByText('Destination Transition Profile', { exact: true })).not.toBeInTheDocument();
+    expect(screen.getByTestId('profile-plot')).toHaveAttribute('data-rows', JSON.stringify(rows));
+    expect(screen.getAllByRole('columnheader')).toHaveLength(7);
+    expect(screen.getByRole('cell', { name: 'Morning' })).toBeInTheDocument();
+    expect(screen.getByTestId('plot-series-samples')).toHaveAttribute('data-hidden', 'false');
+    expect(screen.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'false');
+  });
+
   it('retains the legacy standalone URL key and complete accessible evidence', () => {
     render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
@@ -384,6 +707,29 @@ describe('DestinationTransitionsPage', () => {
     expect(screen.getByTestId('destination-continuity-accounting-brief')).toHaveTextContent('GPS continuity tolerance');
     expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('Effective successor count');
     expect(screen.getByTestId('destination-descriptive-support-brief')).toHaveTextContent('not a counted event population');
+    expectEverySection();
+  });
+
+  it('renders the GPS tolerance in preferred distance units while retaining its SI operand', () => {
+    const view = renderPage();
+    const toleranceValue = () => {
+      const brief = screen.getByTestId('destination-continuity-accounting-brief');
+      return brief.querySelectorAll('[data-operational-value]')[8];
+    };
+    const toleranceMetric = () => h.metricCapture.mock.calls.flatMap(([metrics]) => metrics)
+      .find(metric => metric.label === 'GPS continuity tolerance');
+
+    expect(toleranceValue()).toHaveTextContent('0.25 km');
+    expect(toleranceMetric()).toMatchObject({ metricId: 'distance', rawValue: 250 });
+    expect(toleranceMetric()?.display?.formatter).toBeUndefined();
+
+    h.distanceUnit = 'mi';
+    h.metricCapture.mockClear();
+    view.rerenderPage();
+
+    expect(toleranceValue()).toHaveTextContent('0.16 mi');
+    expect(toleranceMetric()).toMatchObject({ metricId: 'distance', rawValue: 250 });
+    expect(toleranceMetric()?.display?.formatter).toBeUndefined();
     expectEverySection();
   });
 
@@ -477,7 +823,12 @@ describe('DestinationTransitionsPage', () => {
         'Drive history is unavailable; use the status below to retry.',
       ),
     ).toHaveLength(6);
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    const initialRetry = screen.getByRole('button', { name: 'Retry' });
+    expect(initialRetry).toHaveClass('h-auto', 'whitespace-normal');
+    expect(initialRetry.closest('[class*="[&_button]:min-h-11"]')).toHaveClass(
+      '[&_button]:min-w-11', 'md:[&_button]:min-h-9', 'md:[&_button]:min-w-0',
+    );
+    fireEvent.click(initialRetry);
     expect(historyRefetch).toHaveBeenCalledTimes(1);
   });
 
@@ -499,6 +850,52 @@ describe('DestinationTransitionsPage', () => {
     expect(screen.getAllByRole('alert')).toHaveLength(1);
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(historyRefetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('wraps the refresh retry with a growing mobile target and explicit desktop restoration', () => {
+    h.history = query({
+      data: readyHistory(),
+      isError: true,
+      error: new Error('refresh unavailable'),
+    });
+    renderPage();
+
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    expect(retry).toHaveClass(
+      'h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0',
+      'max-w-full', 'whitespace-normal',
+    );
+    expect(retry).not.toHaveClass('h-9');
+    expect(retry).toBeEnabled();
+  });
+
+  it('keeps the refresh retry keyboard-operable and disables it only while the source is fetching', async () => {
+    const user = userEvent.setup();
+    const data = readyHistory();
+    const error = new Error('refresh unavailable');
+    h.history = query({ data, isError: true, error });
+    const view = renderPage();
+
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    retry.focus();
+    await user.keyboard('{Enter}');
+    expect(historyRefetch).toHaveBeenCalledTimes(1);
+    await user.keyboard(' ');
+    expect(historyRefetch).toHaveBeenCalledTimes(2);
+
+    h.history = query({ data, isError: true, error, isFetching: true, fetchStatus: 'fetching' });
+    view.rerenderPage();
+    expectEverySection();
+    const fetchingRetry = screen.getByRole('button', { name: 'Retry' });
+    expect(fetchingRetry).toBeDisabled();
+    expect(fetchingRetry).toHaveAttribute('aria-busy', 'true');
+    await user.click(fetchingRetry);
+    expect(historyRefetch).toHaveBeenCalledTimes(2);
+
+    h.history = query({ data, isError: true, error, isFetching: false, fetchStatus: 'paused' });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Retry' })).not.toHaveAttribute('aria-busy');
   });
 
   it('keeps all shells visible when no vehicle is selected', () => {
