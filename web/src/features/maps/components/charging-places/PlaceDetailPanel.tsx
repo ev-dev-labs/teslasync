@@ -56,12 +56,28 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
 
   const ratesQuery = useGeofenceRates(place?.id);
   const summaryQuery = useGeofenceChargingSummary(place?.id);
+  const firstSessionRequired = place?.is_charging_location === true;
   const firstSessionQuery = useGeofenceFirstChargingSession(
     place?.id,
-    place?.is_charging_location === true,
+    firstSessionRequired,
   );
   const ratesState = deriveDataState(ratesQuery);
   const firstSessionState = deriveDataState(firstSessionQuery);
+  const pricingPrerequisites = firstSessionRequired
+    ? [ratesState, firstSessionState]
+    : [ratesState];
+  const pricingFatalError = pricingPrerequisites.find((state) => state.fatalError)?.fatalError;
+  const pricingUnresolved = pricingPrerequisites.some((state) => state.status === 'initial');
+  const pricingRefreshBlocked = pricingPrerequisites.some((state) => state.isRefreshBlocked);
+  const pricingState = pricingFatalError ? 'error'
+    : pricingUnresolved ? 'loading'
+    : pricingPrerequisites.some((state) => state.status === 'stale') ? 'retained'
+    : 'ready';
+  const retryPricingPrerequisites = () => {
+    pricingPrerequisites.forEach((state) => {
+      if (state.status !== 'ok') state.retry?.();
+    });
+  };
   const deleteRate = useDeleteGeofenceRate();
   const archive = useArchiveGeofence();
   const unarchive = useUnarchiveGeofence();
@@ -275,15 +291,34 @@ export function PlaceDetailPanel({ place, onClose }: PlaceDetailPanelProps) {
             )}
           </Text>
           <SourceContent
-            state={ratesState.fatalError || firstSessionState.fatalError ? 'error'
-              : ratesState.refreshError || firstSessionState.refreshError ? 'retained'
-              : (ratesQuery.isLoading && !ratesState.hasData) || (firstSessionQuery.isLoading && firstSessionQuery.fetchStatus !== 'idle' && !firstSessionState.hasData) ? 'loading' : 'ready'}
+            state={pricingState}
             label={t('chargingPlaces.rateForm.title', 'Add a rate')}
-            error={ratesState.fatalError ?? firstSessionState.fatalError}
+            error={pricingFatalError}
             errorMessage={t('chargingPlaces.detail.pricingLoadFailed', 'Rate setup data could not be loaded.')}
             emptyMessage={t('chargingPlaces.rateHistory.empty', 'No rate configured yet — use the form above to start pricing sessions at this place.')}
-            loadingContent={<Skeleton className="h-40" />}
-            errorRecovery={{ onRetry: () => { void ratesQuery.refetch(); void firstSessionQuery.refetch(); } }}
+            loadingContent={
+              <>
+                <Skeleton className="h-40" />
+                {pricingRefreshBlocked && (
+                  <>
+                    <Text size="sm" color="secondary">
+                      {t('dataSources.status.paused', 'Refresh paused')}
+                    </Text>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      wrapLabel
+                      className="max-w-full min-h-11 md:min-h-9"
+                      onClick={retryPricingPrerequisites}
+                    >
+                      {t('error.retry', 'Retry')}
+                    </Button>
+                  </>
+                )}
+              </>
+            }
+            errorRecovery={{ onRetry: retryPricingPrerequisites }}
           >
             <RateForm
               key={place.id}

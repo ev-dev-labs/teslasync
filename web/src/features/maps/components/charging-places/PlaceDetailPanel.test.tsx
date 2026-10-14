@@ -5,7 +5,8 @@
  *
  * The five content panels (RateForm, RateHistoryPanel, PreviewApplyPanel,
  * ChargingSummaryPanel, ChargingActivityList) each carry their own
- * dedicated test suite — here they are replaced with prop-echoing stubs so
+ * dedicated test suite — here they are replaced with prop-echoing stubs
+ * (including a stateful rate draft) so
  * these tests stay focused on PlaceDetailPanel's OWN contract: which panel
  * renders under which tab, the auto-select-open-rate behaviour, delete
  * wiring, and the archive/unarchive/mark-reviewed lifecycle buttons.
@@ -29,6 +30,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -75,11 +77,25 @@ vi.mock('@/components/feedback/Toast', () => {
   };
 });
 
-vi.mock('./RateForm', () => ({
-  RateForm: ({ geofenceId, currentRate }: { geofenceId: number; currentRate?: { id: number } | null }) => (
-    <div data-testid="stub-rate-form">{`RateForm geofenceId=${geofenceId} currentRate=${currentRate?.id ?? 'none'}`}</div>
-  ),
-}));
+vi.mock('./RateForm', async () => {
+  const { useState } = await import('react');
+  const { Input } = await import('@/components/ui');
+  return {
+    RateForm: ({ geofenceId, currentRate, firstSessionAt }: {
+      geofenceId: number;
+      currentRate?: { id: number; rate_per_wh?: number } | null;
+      firstSessionAt?: string | null;
+    }) => {
+      const [draft, setDraft] = useState('');
+      return (
+        <div data-testid="stub-rate-form">
+          {`RateForm geofenceId=${geofenceId} currentRate=${currentRate?.id ?? 'none'} ratePerWh=${currentRate?.rate_per_wh ?? 'unknown'} firstSessionAt=${firstSessionAt === null ? 'null' : firstSessionAt ?? 'unresolved'}`}
+          <Input label="Draft rate" value={draft} onChange={(event) => setDraft(event.target.value)} />
+        </div>
+      );
+    },
+  };
+});
 
 vi.mock('./RateHistoryPanel', () => ({
   RateHistoryPanel: ({
@@ -227,6 +243,167 @@ describe('PlaceDetailPanel — independent retained setup sources', () => {
     expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
     expect(deleteMutate).not.toHaveBeenCalled();
     expect(archiveMutate).not.toHaveBeenCalled();
+  });
+});
+
+describe('PlaceDetailPanel — pricing prerequisite trust', () => {
+  it.each(['idle', 'fetching', 'paused'] as const)(
+    'does not treat unresolved rates as ready when fetchStatus is %s and isLoading is false',
+    (fetchStatus) => {
+      mockedRates.mockReturnValue({
+        data: undefined, isPending: true, isLoading: false, error: null, fetchStatus, refetch: vi.fn(),
+      });
+      render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
+
+      expect(screen.getByRole('status', { name: 'Loading Add a rate' })).toBeInTheDocument();
+      expect(screen.queryByTestId('stub-rate-form')).not.toBeInTheDocument();
+      expect(screen.getByTestId('stub-rate-history')).toBeInTheDocument();
+      expect(screen.getByTestId('stub-preview-apply')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Archive' })).toBeInTheDocument();
+      expect(screen.queryByText(/No rate configured yet/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+      expect(deleteMutate).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['idle', 'fetching', 'paused'] as const)(
+    'waits for an enabled first-session prerequisite with fetchStatus %s',
+    (fetchStatus) => {
+      mockedRates.mockReturnValue({ data: [makeRate()], isLoading: false, error: null, refetch: vi.fn() });
+      mockedFirstSession.mockReturnValue({
+        data: undefined, isPending: true, isLoading: false, error: null, fetchStatus, refetch: vi.fn(),
+      });
+      render(<PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />);
+
+      expect(screen.queryByTestId('stub-rate-form')).not.toBeInTheDocument();
+      expect(screen.getByTestId('stub-rate-history')).toHaveTextContent('rates=1');
+      expect(screen.getByTestId('stub-preview-apply')).toHaveTextContent('rate=1');
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    },
+  );
+
+  it('does not block pricing on the deliberately disabled first-session query', () => {
+    mockedFirstSession.mockReturnValue({
+      data: undefined, isPending: true, isLoading: false, error: null, fetchStatus: 'idle', refetch: vi.fn(),
+    });
+    render(<PlaceDetailPanel place={makePlace({ is_charging_location: false })} onClose={vi.fn()} />);
+
+    expect(mockedFirstSession).toHaveBeenCalledWith(7, false);
+    expect(screen.getByTestId('stub-rate-form')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Add a rate' })).not.toBeInTheDocument();
+  });
+
+  it.each([null, '2020-01-01T00:00:00Z'])(
+    'distinguishes a resolved first session %s from an unresolved one on recovery',
+    (startedAt) => {
+      const retrySession = vi.fn();
+      mockedFirstSession.mockReturnValue({
+        data: undefined, isPending: true, isLoading: false, error: null, fetchStatus: 'paused', refetch: retrySession,
+      });
+      const { rerender } = render(
+        <PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />,
+      );
+      expect(screen.queryByTestId('stub-rate-form')).not.toBeInTheDocument();
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(retrySession).toHaveBeenCalledTimes(1);
+      expect(mockedRates().refetch).not.toHaveBeenCalled();
+
+      mockedFirstSession.mockReturnValue({
+        data: { started_at: startedAt }, isLoading: false, error: null, fetchStatus: 'idle', refetch: retrySession,
+      });
+      rerender(<PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />);
+      expect(screen.getByTestId('stub-rate-form')).toHaveTextContent(`firstSessionAt=${startedAt ?? 'null'}`);
+      expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    },
+  );
+
+  it('retries both unresolved paused prerequisites without invoking mutations', () => {
+    const retryRates = vi.fn();
+    const retrySession = vi.fn();
+    mockedRates.mockReturnValue({
+      data: undefined, isPending: true, isLoading: false, error: null, fetchStatus: 'paused', refetch: retryRates,
+    });
+    mockedFirstSession.mockReturnValue({
+      data: undefined, isPending: true, isLoading: false, error: null, fetchStatus: 'paused', refetch: retrySession,
+    });
+    render(<PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+
+    expect(retryRates).toHaveBeenCalledTimes(1);
+    expect(retrySession).toHaveBeenCalledTimes(1);
+    expect(deleteMutate).not.toHaveBeenCalled();
+    expect(archiveMutate).not.toHaveBeenCalled();
+    expect(markReviewedMutate).not.toHaveBeenCalled();
+  });
+
+  it.each(['rates', 'first session'] as const)(
+    'keeps the draft and selected rate while the retained %s prerequisite is paused, failed and recovered',
+    (source) => {
+      const retry = vi.fn();
+      const rate = makeRate({ id: 88, rate_per_wh: 0 });
+      const session = { started_at: '2020-01-01T00:00:00Z' };
+      mockedRates.mockReturnValue({ data: [rate], isLoading: false, error: null, refetch: vi.fn() });
+      mockedFirstSession.mockReturnValue({ data: session, isLoading: false, error: null, refetch: vi.fn() });
+      const { rerender } = render(
+        <PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />,
+      );
+      fireEvent.change(screen.getByRole('textbox', { name: 'Draft rate' }), { target: { value: '0.125' } });
+
+      const affected = source === 'rates' ? mockedRates : mockedFirstSession;
+      const data = source === 'rates' ? [rate] : session;
+      for (const state of [
+        { fetchStatus: 'paused', error: null, isLoading: false },
+        { fetchStatus: 'idle', error: new Error('refresh failed'), isLoading: false },
+        { fetchStatus: 'fetching', error: null, isLoading: true, isFetching: true },
+        { fetchStatus: 'idle', error: null, isLoading: false },
+      ]) {
+        affected.mockReturnValue({ data, refetch: retry, ...state });
+        rerender(<PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />);
+
+        expect(screen.getByRole('textbox', { name: 'Draft rate' })).toHaveValue('0.125');
+        expect(screen.getByTestId('stub-rate-form')).toHaveTextContent('currentRate=88');
+        expect(screen.getByTestId('stub-rate-form')).toHaveTextContent('ratePerWh=0');
+        expect(screen.getByTestId('stub-preview-apply')).toHaveTextContent('rate=88');
+        expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+        if (state.error || state.fetchStatus === 'paused') {
+          expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+          fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+        }
+      }
+      expect(retry).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it('keeps a retained empty rates response usable during a paused refresh', () => {
+    mockedRates.mockReturnValue({ data: [], isLoading: false, error: null, fetchStatus: 'paused', refetch: vi.fn() });
+    render(<PlaceDetailPanel place={makePlace()} onClose={vi.fn()} />);
+    expect(screen.getByTestId('stub-rate-form')).toHaveTextContent('currentRate=none');
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  });
+
+  it('isolates a fatal first-session failure from rate history, preview and activity', () => {
+    const retrySession = vi.fn();
+    mockedRates.mockReturnValue({ data: [makeRate({ id: 88 })], isLoading: false, error: null, refetch: vi.fn() });
+    mockedFirstSession.mockReturnValue({
+      data: undefined, isLoading: false, error: new Error('first session failed'), refetch: retrySession,
+    });
+    render(
+      <MemoryRouter>
+        <PlaceDetailPanel place={makePlace({ is_charging_location: true })} onClose={vi.fn()} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Rate setup data could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByTestId('stub-rate-form')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stub-rate-history')).toHaveTextContent('rates=1');
+    expect(screen.getByTestId('stub-preview-apply')).toHaveTextContent('rate=88');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retrySession).toHaveBeenCalledTimes(1);
+    expect(mockedRates().refetch).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Charging activity' }));
+    expect(screen.getByTestId('stub-summary')).toBeInTheDocument();
+    expect(screen.getByTestId('stub-activity')).toBeInTheDocument();
   });
 });
 
