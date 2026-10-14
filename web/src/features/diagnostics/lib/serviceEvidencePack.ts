@@ -37,6 +37,7 @@ import type {
   SignalDomain,
 } from './rootCauseIntelligence';
 import { NO_CAUSAL_PROOF_DISCLAIMER } from './rootCauseIntelligence';
+import { isSensitiveFieldName, redactSensitiveText } from '@/lib/privacy';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Schema
@@ -201,10 +202,20 @@ function buildPrivacyManifest(): ServiceEvidencePackPrivacyManifest {
     notes:
       "This pack references the vehicle by its numeric id and user-facing display name only. " +
       'VIN, GPS coordinates, street address, geofence names, authentication tokens, and raw ' +
-      'location history are never included. Signal evidence is limited to statistical ' +
+      'location history are never included. Signal evidence is limited to non-sensitive ' +
+      'signals; sensitive focal signals, candidate signals, ' +
+      'and their hypotheses are excluded, including coordinate statistics. ' +
+      'Narrative references to excluded signals are redacted. Statistical ' +
       'summaries (medians, MAD, effect sizes, sample counts, signal names) — raw telemetry ' +
       'payloads are not embedded.',
   };
+}
+
+function isSensitiveSignal(signal: string): boolean {
+  const compact = signal.replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const normalized = signal.replace(/([A-Z]+)([A-Z][a-z])/g, '$1_$2');
+  return isSensitiveFieldName(normalized) ||
+    /coordinates|latitude|longitude|address|geofence|rawlocationhistory|gps/.test(compact);
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -234,6 +245,20 @@ export interface BuildServiceEvidencePackInput {
 export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInput): ServiceEvidencePackCore {
   const nowFn = typeof input.now === 'function' ? input.now : () => new Date().toISOString();
   const analysis = input.analysis;
+  const focalExcluded = isSensitiveSignal(analysis?.focalSignal ?? '');
+  const excludedSignals = [
+    analysis?.focalSignal ?? '',
+    ...(analysis?.graph?.nodes ?? []).map((n) => n.id),
+    ...(analysis?.hypotheses ?? []).map((h) => h.signal),
+    ...(analysis?.relatedCandidates ?? []).map((c) => c.signal),
+  ].filter(isSensitiveSignal);
+  const scrubNarrative = (text: string): string => {
+    let scrubbed = text;
+    for (const signal of excludedSignals) {
+      scrubbed = scrubbed.split(signal).join('[REDACTED]');
+    }
+    return redactSensitiveText(scrubbed);
+  };
 
   const vehicle = normalizeVehicleReference(input.vehicle);
   const window: ServiceEvidencePackWindow = {
@@ -242,7 +267,8 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     latestMs: analysis?.dataWindow?.latestMs ?? null,
   };
 
-  const signalEvidence: ServiceEvidencePackSignalEvidence[] = (analysis?.graph?.nodes ?? []).map((n) => ({
+  const signalEvidence: ServiceEvidencePackSignalEvidence[] = (analysis?.graph?.nodes ?? [])
+    .filter((n) => !isSensitiveSignal(n.id)).map((n) => ({
     signal: n.id,
     role: n.kind,
     domains: n.domains,
@@ -250,7 +276,8 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     hasEvidence: n.hasEvidence,
   }));
 
-  const hypotheses: ServiceEvidencePackHypothesis[] = (analysis?.hypotheses ?? []).map((h) => ({
+  const hypotheses: ServiceEvidencePackHypothesis[] = (analysis?.hypotheses ?? [])
+    .filter((h) => !focalExcluded && !isSensitiveSignal(h.signal)).map((h) => ({
     signal: h.signal,
     domains: h.domains,
     relation: h.relation,
@@ -258,29 +285,48 @@ export function buildServiceEvidencePackCore(input: BuildServiceEvidencePackInpu
     shift: h.shift,
     score: h.score,
     sampleCount: h.sampleCount,
-    rationale: h.rationale,
+    rationale: scrubNarrative(h.rationale),
   }));
+
+  const quality = analysis?.quality ?? {
+    band: 'insufficient',
+    overallScore: 0,
+    focalSampleCount: 0,
+    candidatesWithEvidence: 0,
+    candidatesConsidered: 0,
+    windowMs: 0,
+  };
+  const privacyFiltered = excludedSignals.length > 0;
 
   return {
     schemaVersion: SERVICE_EVIDENCE_PACK_SCHEMA_VERSION,
     generatedAt: nowFn(),
     vehicle,
     window,
-    focalSignal: analysis?.focalSignal ?? '',
-    focalDomains: analysis?.focalDomains ?? [],
-    focalShift: analysis?.focalShift ?? null,
+    focalSignal: focalExcluded ? '' : analysis?.focalSignal ?? '',
+    focalDomains: focalExcluded ? [] : analysis?.focalDomains ?? [],
+    focalShift: focalExcluded ? null : analysis?.focalShift ?? null,
     signalEvidence,
     hypotheses,
-    quality: analysis?.quality ?? {
-      band: 'insufficient',
+    quality: privacyFiltered ? {
+      ...quality,
+      band: focalExcluded || quality.band === 'insufficient' ? 'insufficient' : 'weak',
       overallScore: 0,
-      focalSampleCount: 0,
-      candidatesWithEvidence: 0,
-      candidatesConsidered: 0,
-      windowMs: 0,
-    },
-    limitations: analysis?.limitations ?? [],
-    summary: analysis?.summary ?? '',
+      focalSampleCount: focalExcluded ? 0 : quality.focalSampleCount,
+      candidatesWithEvidence: hypotheses.length,
+      candidatesConsidered: signalEvidence.filter((n) => n.role === 'candidate').length,
+    } : quality,
+    limitations: [
+      ...(analysis?.limitations ?? []).map(scrubNarrative),
+      ...(privacyFiltered ? [
+        'Sensitive signal evidence was excluded for privacy. Original analysis quality is not applicable to this filtered export.',
+      ] : []),
+    ],
+    summary: focalExcluded
+      ? `The sensitive focal signal and its associated hypotheses were excluded for privacy. ${NO_CAUSAL_PROOF_DISCLAIMER}`
+      : privacyFiltered
+        ? `${scrubNarrative(analysis?.focalSignal ?? '')}: ${hypotheses.length} ranked hypotheses retained after sensitive signal exclusion. ${NO_CAUSAL_PROOF_DISCLAIMER}`
+        : scrubNarrative(analysis?.summary ?? ''),
     softwareUpdates: normalizeSoftwareUpdates(input.softwareUpdates),
     privacy: buildPrivacyManifest(),
     disclaimer: NO_CAUSAL_PROOF_DISCLAIMER,
