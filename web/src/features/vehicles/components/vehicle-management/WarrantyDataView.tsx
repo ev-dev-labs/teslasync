@@ -5,6 +5,7 @@ import { formatDate } from '@/lib/dateFormat'
 import { Icons } from '@/lib/icons'
 
 import {
+  asManagementRecord,
   parseWarrantyDetails,
   type WarrantyCoverageData,
   type WarrantyCoverageState,
@@ -22,12 +23,32 @@ const stateVariant = {
   active: 'success',
   upcoming: 'info',
   expired: 'neutral',
+  unknown: 'neutral',
 } as const
 
 function coverageIcon(state: WarrantyCoverageState) {
   if (state === 'active') return Icons.securityCheck
   if (state === 'upcoming') return Icons.calendarClock
+  if (state === 'unknown') return Icons.helpCircle
   return Icons.history
+}
+
+function warrantyGroupCount(
+  data: unknown,
+  state: 'active' | 'upcoming' | 'expired',
+  coverages: readonly WarrantyCoverageData[],
+): number | null {
+  const record = asManagementRecord(data)
+  const keys = [`${state}Warranty`, `${state}_warranty`, `${state}Warranties`, `${state}_warranties`]
+  const key = record && keys.find((candidate) => candidate in record)
+  const group = record && key ? record[key] : undefined
+  if (coverages.length === 0) {
+    return Array.isArray(group) && group.length === 0 ? 0 : null
+  }
+  const recognized = coverages.every((coverage) =>
+    Object.entries(coverage).some(([field, value]) => field !== 'state' && value != null),
+  )
+  return recognized ? coverages.length : null
 }
 
 function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
@@ -38,6 +59,7 @@ function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
     active: t('vehicleManagement.warranty.active', 'Active'),
     upcoming: t('vehicleManagement.warranty.upcoming', 'Upcoming'),
     expired: t('vehicleManagement.warranty.expired', 'Expired'),
+    unknown: t('common.unknown', 'Unknown'),
   }[coverage.state]
   const coverageTerm =
     coverage.coverageAgeYears != null
@@ -54,16 +76,13 @@ function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
     <div className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="rounded-lg bg-violet-500/10 p-2 text-violet-300">
+          <div className="rounded-lg bg-[var(--surface-2)] p-2 text-[var(--text-secondary)]">
             <CoverageIcon className="h-4 w-4" aria-hidden="true" />
           </div>
           <div className="min-w-0 space-y-1">
             <Heading level="sub" as="h4">
               {coverage.displayName ??
-                t(
-                  'vehicleManagement.warranty.unnamedCoverage',
-                  'Warranty coverage',
-                )}
+                t('vehicleManagement.warranty.unnamedCoverage', 'Warranty coverage')}
             </Heading>
             {coverage.code && <Code>{coverage.code}</Code>}
           </div>
@@ -89,10 +108,7 @@ function CoverageCard({ coverage }: { coverage: WarrantyCoverageData }) {
         <div className="rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] p-2">
           <dt>
             <Text variant="label">
-              {t(
-                'vehicleManagement.warranty.odometerLimit',
-                'Odometer limit',
-              )}
+              {t('vehicleManagement.warranty.odometerLimit', 'Odometer limit')}
             </Text>
           </dt>
           <dd>
@@ -129,35 +145,25 @@ export function WarrantyDataView({ data }: WarrantyDataViewProps) {
     ...warranty.active,
     ...warranty.upcoming,
     ...warranty.expired,
+    ...(warranty.unknown ?? []),
   ]
-  const sourceMetrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'active', label: t('vehicleManagement.warranty.active', 'Active'), rawValue: data == null ? null : warranty.active.length,
-      context: t('vehicleManagement.warranty.activeCount', '{{count}} active', { count: warranty.active.length }) },
-    { metricId: 'count', occurrenceId: 'upcoming', label: t('vehicleManagement.warranty.upcoming', 'Upcoming'), rawValue: data == null ? null : warranty.upcoming.length,
-      context: t('vehicleManagement.warranty.upcomingCount', '{{count}} upcoming', { count: warranty.upcoming.length }) },
-    { metricId: 'count', occurrenceId: 'expired', label: t('vehicleManagement.warranty.expired', 'Expired'), rawValue: data == null ? null : warranty.expired.length,
-      context: t('vehicleManagement.warranty.expiredCount', '{{count}} expired', { count: warranty.expired.length }) },
-  ]
+  const sourceMetrics: readonly StatMetric[] = ([
+    ['active', 'Active', '{{count}} active'],
+    ['upcoming', 'Upcoming', '{{count}} upcoming'],
+    ['expired', 'Expired', '{{count}} expired'],
+  ] as const).map(([state, label, context]) => {
+    const count = warrantyGroupCount(data, state, warranty[state])
+    return {
+      metricId: 'count',
+      occurrenceId: state,
+      label: t(`vehicleManagement.warranty.${state}`, label),
+      rawValue: count,
+      context: count == null
+        ? t('common.unknown', 'Unknown')
+        : t(`vehicleManagement.warranty.${state}Count`, context, { count }),
+    }
+  })
   const metrics = useOperationalMetrics(sourceMetrics)
-
-  if (coverages.length === 0) {
-    return (
-      <div>
-        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
-          title={t(
-            'vehicleManagement.warranty.emptyTitle',
-            'No warranty coverage returned',
-          )}
-          message={t(
-            'vehicleManagement.warranty.emptyDetail',
-            'Tesla returned a response, but it did not include active, upcoming, or expired coverage records.',
-          )}
-          className="py-5"
-        />
-        <ManagementRawDetails value={data} />
-      </div>
-    )
-  }
 
   return (
     <div className="space-y-3">
@@ -170,20 +176,23 @@ export function WarrantyDataView({ data }: WarrantyDataViewProps) {
         provenance={t('vehicleManagement.warranty.summarySource', 'Tesla warranty response')}
         metrics={metrics} />
 
-      <div className="space-y-2">
+      {coverages.length === 0 ? (
+        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
+          title={t('vehicleManagement.warranty.emptyTitle', 'No warranty coverage returned')}
+          message={t('vehicleManagement.warranty.emptyDetail', 'Tesla returned a response, but it did not include active, upcoming, or expired coverage records.')}
+          className="py-5"
+        />
+      ) : <div className="space-y-2">
         {coverages.map((coverage, index) => (
           <CoverageCard
             key={`${coverage.state}-${coverage.code ?? coverage.displayName ?? index}`}
             coverage={coverage}
           />
         ))}
-      </div>
+      </div>}
 
       <Text variant="helper" as="p">
-        {t(
-          'vehicleManagement.warranty.odometerNote',
-          'Odometer limits are shown exactly as Tesla reports them because this response does not identify a unit.',
-        )}
+        {t('vehicleManagement.warranty.odometerNote', 'Odometer limits are shown exactly as Tesla reports them because this response does not identify a unit.')}
       </Text>
       <ManagementRawDetails value={data} />
     </div>

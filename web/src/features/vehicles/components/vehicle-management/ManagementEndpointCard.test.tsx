@@ -1,12 +1,29 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, renderHook, screen, within } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '@/api/client'
 import { ManagementEndpointCard } from './ManagementEndpointCard'
+import * as apiClient from '@/api/client'
+import { useRefreshVehicleSpecs, useVehiclePricing } from '@/api/hooks/useVehicles'
+import { parseWarrantyDetails } from './managementData'
+import { WarrantyDataView } from './WarrantyDataView'
 
 const preferences = vi.hoisted(() => ({
   locale: 'en-US',
   timezone: 'UTC',
+}))
+const operationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}))
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}))
+vi.mock('@/api/hooks/_toastHelpers', () => ({
+  useMutationToast: () => ({ success: vi.fn(), error: vi.fn() }),
 }))
 
 vi.mock('@/hooks/useSettings', () => ({
@@ -45,6 +62,141 @@ describe('ManagementEndpointCard preservation', () => {
   beforeEach(() => {
     preferences.locale = 'en-US'
     preferences.timezone = 'UTC'
+    operationalMode.canWrite = true
+    operationalMode.writeBlockReason = null
+  })
+
+  it.each([undefined, 'unknown', 'unrecognized'])(
+    'retains a bare warranty without inventing active status: %s',
+    (status) => {
+      const data = Object.freeze({
+        warrantyDisplayName: 'Bare warranty',
+        warrantyCode: 'BARE',
+        coverageAgeInYears: 4,
+        expirationOdometer: 80000,
+        endDate: '2030-06-15',
+        status,
+      })
+      const parsed = parseWarrantyDetails(data)
+      expect(parsed.active).toEqual([])
+      expect(parsed.upcoming).toEqual([])
+      expect(parsed.expired).toEqual([])
+      expect(parsed.unknown).toEqual([{
+        state: 'unknown', displayName: 'Bare warranty', code: 'BARE',
+        coverageAgeYears: 4, coverageAgeMonths: null,
+        expirationOdometer: 80000, expirationDate: '2030-06-15',
+      }])
+
+      render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+        endpointId="warranty-details" kind="warranty" data={data}
+      /></MemoryRouter>)
+      expect(screen.getByText('Bare warranty')).toBeInTheDocument()
+      const coverageCard = screen.getByText('Bare warranty').closest('div.rounded-xl')
+      if (!(coverageCard instanceof HTMLElement)) throw new Error('Coverage card missing')
+      expect(within(coverageCard).getByText('Unknown')).toBeInTheDocument()
+      expect(screen.getByText('4 years')).toBeInTheDocument()
+      expect(screen.getByText('80,000')).toBeInTheDocument()
+      expect(screen.getByText(/2030/)).toBeInTheDocument()
+      expect(screen.getByTestId('vehicle-warranty-counts')).not.toHaveTextContent(/0 (active|upcoming|expired)/)
+      fireEvent.click(screen.getByRole('button', { name: 'Technical response details' }))
+      expect(screen.getByText('2030-06-15')).toBeInTheDocument()
+      expect(data.status).toBe(status)
+    },
+  )
+
+  it.each([
+    { activeWarranty: [{ displayName: 'Reported coverage' }] },
+    { active_warranties: [{ display_name: 'Reported coverage' }] },
+  ])('keeps missing warranty groups unknown alongside populated coverage: %j', (data) => {
+    render(<WarrantyDataView data={data} />)
+    const brief = screen.getByTestId('vehicle-warranty-counts')
+    expect(brief).toHaveTextContent('1 active')
+    expect(brief).not.toHaveTextContent(/0 (upcoming|expired)/)
+    expect(within(brief).getAllByText('Unknown').length).toBeGreaterThanOrEqual(2)
+    expect(screen.getByText('Reported coverage')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Technical response details' }))
+    expect(screen.getAllByText('Reported coverage')).toHaveLength(2)
+  })
+
+  it('distinguishes an explicit empty group from an omitted group in a partial response', () => {
+    render(<WarrantyDataView data={{
+      activeWarranty: [{ displayName: 'Reported coverage' }],
+      upcomingWarranty: [],
+    }} />)
+    const brief = screen.getByTestId('vehicle-warranty-counts')
+    expect(brief).toHaveTextContent('1 active')
+    expect(brief).toHaveTextContent('0 upcoming')
+    expect(brief).not.toHaveTextContent('0 expired')
+    expect(brief.querySelector('[data-operational-metric="active"]')).toHaveAttribute('data-value-state', 'value')
+    expect(brief.querySelector('[data-operational-metric="upcoming"]')).toHaveAttribute('data-value-state', 'value')
+    expect(brief.querySelector('[data-operational-metric="expired"]')).toHaveAttribute('data-value-state', 'missing')
+  })
+
+  it.each([null, {}, { activeWarranty: null }, { activeWarranty: 'unsupported' }, { activeWarranty: [{}] }])(
+    'does not fabricate zero counts for absent or unrecognized groups: %j',
+    (data) => {
+      render(<WarrantyDataView data={data} />)
+      const brief = screen.getByTestId('vehicle-warranty-counts')
+      expect(brief).not.toHaveTextContent(/0 (active|upcoming|expired)/)
+      expect(within(brief).getAllByText('Unknown').length).toBeGreaterThanOrEqual(3)
+    },
+  )
+
+  it.each([
+    { activeWarranty: [], upcomingWarranty: [], expiredWarranty: [] },
+    { active_warranties: [], upcoming_warranties: [], expired_warranties: [] },
+  ])('shows genuine zero counts for explicit successful empty groups: %j', (data) => {
+    render(<WarrantyDataView data={data} />)
+    const brief = screen.getByTestId('vehicle-warranty-counts')
+    expect(brief).toHaveTextContent('0 active')
+    expect(brief).toHaveTextContent('0 upcoming')
+    expect(brief).toHaveTextContent('0 expired')
+    expect(screen.getByText('No warranty coverage returned')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Technical response details' })).toBeInTheDocument()
+  })
+
+  it('preserves populated counts and cards for every reported group', () => {
+    render(<WarrantyDataView data={{
+      activeWarranty: [{ displayName: 'Active coverage' }],
+      upcomingWarranty: [{ displayName: 'Upcoming coverage' }],
+      expiredWarranty: [{ displayName: 'Expired coverage' }],
+    }} />)
+    const brief = screen.getByTestId('vehicle-warranty-counts')
+    for (const state of ['active', 'upcoming', 'expired']) {
+      expect(brief).toHaveTextContent(`1 ${state}`)
+    }
+    for (const name of ['Active coverage', 'Upcoming coverage', 'Expired coverage']) {
+      expect(screen.getByText(name)).toBeInTheDocument()
+    }
+  })
+
+  it.each(['active', 'upcoming', 'expired'] as const)(
+    'classifies bare warranty only when the source reports %s',
+    (state) => {
+      const parsed = parseWarrantyDetails({
+        display_name: 'Source-classified warranty',
+        warranty_status: state,
+        expiration_date: '2030-06-15',
+      })
+      expect(parsed[state]).toHaveLength(1)
+      expect(parsed[state][0]).toMatchObject({
+        state, displayName: 'Source-classified warranty',
+        expirationDate: '2030-06-15',
+      })
+      expect(parsed.unknown).toBeUndefined()
+    },
+  )
+
+  it('preserves every source-reported warranty group without reclassifying by date', () => {
+    const parsed = parseWarrantyDetails({
+      activeWarranty: [{ displayName: 'Active coverage', endDate: '2000-01-01' }],
+      upcoming_warranty: [{ display_name: 'Upcoming coverage' }],
+      expiredWarranties: [{ displayName: 'Expired coverage', endDate: '2099-01-01' }],
+    })
+    expect(parsed.active[0]).toMatchObject({ state: 'active', displayName: 'Active coverage' })
+    expect(parsed.upcoming[0]).toMatchObject({ state: 'upcoming', displayName: 'Upcoming coverage' })
+    expect(parsed.expired[0]).toMatchObject({ state: 'expired', displayName: 'Expired coverage' })
+    expect(parsed.unknown).toBeUndefined()
   })
 
   it('formats the raw cached instant with current locale and timezone preferences', () => {
@@ -114,5 +266,103 @@ describe('ManagementEndpointCard preservation', () => {
     expect(screen.getByText('Model 3')).toBeInTheDocument()
     expect(screen.getByText('Prerequisite required')).toBeInTheDocument()
     expect(screen.getByText('Partner scope required')).toBeInTheDocument()
+  })
+
+  it.each([
+    'Return to live mode before making operational changes.',
+    'Reconnect before making operational changes.',
+  ])('explains paid-spec readiness without hiding populated data: %s', (reason) => {
+    operationalMode.canWrite = false
+    operationalMode.writeBlockReason = reason
+    const onRefresh = vi.fn()
+    render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+      data={{ model: 'Model 3' }} onRefresh={onRefresh}
+    /></MemoryRouter>)
+    expect(screen.getByRole('status')).toHaveTextContent(reason)
+    expect(screen.getByText('Model 3')).toBeInTheDocument()
+    const button = screen.getByRole('button', { name: 'Refresh from Tesla' })
+    expect(button).toBeDisabled()
+    fireEvent.click(button)
+    expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it('does not classify the read-only pricing POST as a live-only physical action', () => {
+    operationalMode.canWrite = false
+    operationalMode.writeBlockReason = 'Return to live mode before making operational changes.'
+    const onRefresh = vi.fn()
+    render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+      kind="pricing" endpoint="POST /api/1/dx/vehicles/pricing"
+      data={{ price: 42000 }} onRefresh={onRefresh}
+    /></MemoryRouter>)
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh from Tesla' }))
+    expect(onRefresh).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+})
+
+describe('paid specifications transport', () => {
+  it.each(['historical', 'offline'] as const)('rejects paid requests before the network when %s', async (mode) => {
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    const fetch = vi.spyOn(globalThis, 'fetch')
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(mode !== 'offline')
+    const originalURL = window.location.href
+    window.history.replaceState(null, '', mode === 'historical' ? '/?as_of=2026-08-08T12:00:00Z' : '/')
+    onlineManager.setOnline(mode !== 'offline')
+    try {
+      const hook = renderHook(() => useRefreshVehicleSpecs('7'), { wrapper })
+      await expect(hook.result.current.mutateAsync()).rejects.toMatchObject({
+        code: 'OPERATIONAL_MODE_READ_ONLY',
+        mode: mode === 'historical' ? 'as_of' : 'cached',
+      })
+      expect(fetch).not.toHaveBeenCalled()
+      hook.unmount()
+    } finally {
+      window.history.replaceState(null, '', originalURL)
+      onlineManager.setOnline(true)
+      client.clear()
+      online.mockRestore()
+      fetch.mockRestore()
+    }
+  })
+
+  it('opts into live-only requests without queuing offline and preserves paid confirmation', async () => {
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValue({ data: {} })
+    const client = new QueryClient({ defaultOptions: { mutations: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    onlineManager.setOnline(false)
+    try {
+      const hook = renderHook(() => useRefreshVehicleSpecs('7'), { wrapper })
+      await hook.result.current.mutateAsync()
+      expect(request).toHaveBeenCalledWith('/vehicles/7/specs/refresh', {
+        method: 'POST', requiresLiveMode: true,
+        body: JSON.stringify({ confirmed: true }),
+      })
+      hook.unmount()
+    } finally {
+      onlineManager.setOnline(true)
+      client.clear()
+      request.mockRestore()
+    }
+  })
+
+  it('keeps account pricing read-only at the request boundary', async () => {
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValue({ data: {} })
+    const client = new QueryClient()
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    try {
+      const hook = renderHook(() => useVehiclePricing(), { wrapper })
+      await hook.result.current.mutateAsync({ payload: { market: 'US' } })
+      expect(request).toHaveBeenCalledWith('/tesla/vehicle-pricing', {
+        method: 'POST', body: JSON.stringify({ payload: { market: 'US' } }),
+      })
+      hook.unmount()
+    } finally {
+      client.clear()
+      request.mockRestore()
+    }
   })
 })
