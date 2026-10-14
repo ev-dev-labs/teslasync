@@ -9,6 +9,7 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
 import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
@@ -23,6 +24,7 @@ import {
 } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
+import { presentRootCause } from '../lib/rootCauseIntelligence';
 
 /**
  * Root-Cause Intelligence Graph.
@@ -43,7 +45,8 @@ export default function RootCauseIntelligencePage() {
   usePageTitle(t('rootCauseIntelligence.title', 'Root-cause intelligence'));
 
   const { vehicleId } = useSelectedVehicle();
-  const workspace = useRootCauseWorkspace(vehicleId);
+  const range = useRangeState();
+  const workspace = useRootCauseWorkspace(vehicleId, range);
   const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
   const evidenceState = useDataState({
     ...workspace.evidenceBundle,
@@ -56,6 +59,9 @@ export default function RootCauseIntelligencePage() {
   }, [workspace.signalsQuery, workspace.evidenceBundle]);
 
   const { analysis } = workspace;
+  const presentation = workspace.presentation ?? presentRootCause(analysis, workspace.evidenceBundle.data.map(
+    ({ signal, response }) => ({ signal, points: response.data ?? [] }),
+  ));
   const isLoading = !evidenceState.hasData && (
     (workspace.signalsQuery.isLoading && !signalsState.hasData) ||
     (workspace.hasChosenSignal && workspace.evidenceBundle.isLoading)
@@ -85,20 +91,20 @@ export default function RootCauseIntelligencePage() {
   const available = workspace.hasChosenSignal && evidenceState.hasData;
   const focalHistoryAvailable = available && hasSignalHistory(workspace.evidenceBundle.sources, workspace.focalSignal);
   // Recorded strings/booleans remain source evidence, but cannot support a numeric shift conclusion.
-  const focalAvailable = focalHistoryAvailable && analysis.quality.focalSampleCount > 0;
-  const interpretationSummary = focalAvailable ? analysis.summary
-    : focalHistoryAvailable
-      ? t('rootCauseIntelligence.timeline.notEnough', 'Not enough history yet for this signal and window.')
-      : t('diagnostics.brief.focalUnavailable', 'Focal history unavailable; no shift conclusion can be drawn.');
+  const focalAvailable = focalHistoryAvailable && presentation.focalNumericEligible;
+  const numericSamplesAvailable = focalHistoryAvailable && Number.isFinite(analysis.quality.focalSampleCount)
+    && analysis.quality.focalSampleCount > 0;
+  const scoreAvailable = focalAvailable && presentation.scoreComputed;
+  const interpretationSummary = presentation.summary;
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'status', occurrenceId: 'root-cause-quality',
-      rawValue: available ? qualityLabel : null,
+      rawValue: scoreAvailable ? qualityLabel : null,
       label: t('rootCauseIntelligence.kpis.quality', 'Evidence quality'),
       description: t('help.rootCauseIntelligence.quality', 'Combines focal sample coverage, corroborating-candidate ratio, and analysis window length into a single 0–1 score.'),
       context: <>
         {t('rootCauseIntelligence.kpis.qualitySubtitle', 'Overall score {{n}} of 1.00', {
-          n: available && Number.isFinite(analysis.quality.overallScore)
+          n: scoreAvailable
             ? fmtNumber(analysis.quality.overallScore) : '—',
         })}
         <HelpTooltip
@@ -109,7 +115,7 @@ export default function RootCauseIntelligencePage() {
     },
     {
       metricId: 'ratio', occurrenceId: 'root-cause-overall-score',
-      rawValue: available ? analysis.quality.overallScore : null,
+      rawValue: scoreAvailable ? analysis.quality.overallScore : null,
       label: t('diagnostics.brief.evidenceScore', 'Overall evidence score'),
       description: t('diagnostics.brief.scoreBasis', 'Existing evidence-quality score on a 0–1 scale, not a probability or causal confidence.'),
     },
@@ -128,7 +134,8 @@ export default function RootCauseIntelligencePage() {
     },
     {
       metricId: 'count', occurrenceId: 'root-cause-hypotheses',
-      rawValue: focalAvailable ? analysis.hypotheses.length : null,
+      rawValue: focalAvailable && (analysis.hypotheses.length > 0 || presentation.candidateCoverageComplete)
+        ? analysis.hypotheses.length : null,
       label: t('rootCauseIntelligence.kpis.hypotheses', 'Ranked hypotheses'),
       context: t('rootCauseIntelligence.kpis.hypothesesSubtitle', '{{n}} candidates considered', {
         n: analysis.relatedCandidates.length,
@@ -137,7 +144,7 @@ export default function RootCauseIntelligencePage() {
     },
     {
       metricId: 'count', occurrenceId: 'root-cause-focal-samples',
-      rawValue: focalAvailable
+      rawValue: numericSamplesAvailable
         ? analysis.quality.focalSampleCount : null,
       label: t('rootCauseIntelligence.kpis.samples', 'Focal samples'),
       context: t('rootCauseIntelligence.kpis.samplesSubtitle', '{{h}}h window', { h: workspace.windowHours }),
@@ -171,6 +178,7 @@ export default function RootCauseIntelligencePage() {
           onFocalSignalChange={workspace.setFocalSignal}
           windowHours={workspace.windowHours}
           onWindowHoursChange={workspace.setWindowHours}
+          workspaceRange
         />
       </FadeIn>
       <EvidenceSourceNotice
@@ -199,8 +207,8 @@ export default function RootCauseIntelligencePage() {
             windowHours={workspace.windowHours}
             hasChosenSignal={workspace.hasChosenSignal}
             sources={workspace.evidenceBundle.sources}
-            summary={focalAvailable ? analysis.summary : null}
-            limitations={analysis.limitations}
+            summary={interpretationSummary}
+            limitations={presentation.limitations}
           />
         </section>
       </FadeIn>
@@ -236,7 +244,8 @@ export default function RootCauseIntelligencePage() {
       <FadeIn delay={0.4}>
         <RootCauseHypothesisList
           hypotheses={analysis.hypotheses}
-          focalHistoryAvailable={focalAvailable}
+          focalHistoryAvailable={focalAvailable && (analysis.focalShift == null || presentation.candidateCoverageComplete
+            || analysis.hypotheses.length > 0)}
           hasChosenSignal={workspace.hasChosenSignal}
           focalShiftFound={analysis.focalShift != null}
           isLoading={isLoading}
@@ -250,9 +259,10 @@ export default function RootCauseIntelligencePage() {
       <FadeIn delay={0.5}>
         <RootCauseInterpretationPanel
           summary={interpretationSummary}
-          focalHistoryAvailable={focalAvailable}
-          limitations={analysis.limitations}
+          focalHistoryAvailable={numericSamplesAvailable}
+          limitations={presentation.limitations}
           quality={analysis.quality}
+          presentation={presentation}
           hasChosenSignal={workspace.hasChosenSignal}
           isLoading={isLoading}
           isError={isError}

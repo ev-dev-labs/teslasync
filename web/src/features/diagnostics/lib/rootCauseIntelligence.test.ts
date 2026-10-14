@@ -13,6 +13,7 @@ import {
   MIN_CANDIDATE_EFFECT_SIZE,
   MIN_FOCAL_EFFECT_SIZE,
   NO_CAUSAL_PROOF_DISCLAIMER,
+  presentRootCause,
   robustSpread,
   selectRelatedSignals,
   toNumericPoints,
@@ -119,10 +120,97 @@ describe('classifySignalDomains', () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe('toNumericPoints', () => {
+  it('distinguishes absent and invalid values from measured zero, signed and fractional values', () => {
+    expect(toNumericPoints([
+      { ts: BASE, value: null },
+      { ts: BASE, value: '' },
+      { ts: BASE, value: '  ' },
+      { ts: BASE, value: false },
+      { ts: BASE, value: Infinity },
+      { ts: BASE, value: 'invalid' },
+      { ts: 'invalid', value: 0 },
+      { ts: BASE, value: 0 },
+      { ts: BASE + MIN, value: -2.5 },
+      { ts: BASE + 2 * MIN, value: '+0.125' },
+    ])).toEqual([
+      { ms: BASE, value: 0 },
+      { ms: BASE + MIN, value: -2.5 },
+      { ms: BASE + 2 * MIN, value: 0.125 },
+    ]);
+  });
   it('returns an empty array for empty/null/undefined input', () => {
     expect(toNumericPoints([])).toEqual([]);
     expect(toNumericPoints(null)).toEqual([]);
     expect(toNumericPoints(undefined)).toEqual([]);
+  });
+
+  describe('root-cause presentation eligibility', () => {
+    const focalPoints = flatStep({ count: 48, before: -2.5, after: 0.125, shiftAtIndex: 24 });
+    const catalog = ['Soc', 'PackVoltage', 'BatteryLevel', 'BatteryVoltage'];
+
+    it('keeps selected, resolved, usable and unknown candidate counts distinct without changing raw scores', () => {
+      const relatedSeries = [
+        { signal: 'PackVoltage', points: flatConstant({ count: 48, value: 0 }) },
+        { signal: 'BatteryLevel', points: [{ ts: BASE, value: 'invalid' }] },
+      ];
+      const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog, focalPoints, relatedSeries });
+      const before = JSON.stringify(analysis);
+      const presentation = presentRootCause(analysis, [{ signal: 'Soc', points: focalPoints }, ...relatedSeries]);
+      expect(analysis.relatedCandidates).toHaveLength(3);
+      expect(presentation).toMatchObject({
+        focalNumericEligible: true, scoreComputed: true,
+        candidatesResolved: 2, candidatesUsable: 1, candidatesUnknown: 1, candidateCoverageComplete: false,
+      });
+      expect(presentation.summary).toContain('corroboration is unknown');
+      expect(presentation.summary).not.toContain('isolated change');
+      expect(presentation.limitations.join(' ')).not.toContain('None of the related signals cleared');
+      expect(presentation.limitations.join(' ')).toContain('2 of 3 selected related histories resolved');
+      expect(JSON.stringify(analysis)).toBe(before);
+    });
+
+    it.each([[], [{ ts: BASE, value: 0 }], [{ ts: 'invalid', value: 0 }], [{ ts: BASE, value: 'Park' }]]
+      .map(points => ({ points })))(
+      'withholds uncomputed scores and negative conclusions for ineligible focal history %#', ({ points }) => {
+        const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog, focalPoints: points, relatedSeries: [] });
+        const presentation = presentRootCause(analysis, [{ signal: 'Soc', points }]);
+        expect(presentation.focalNumericEligible).toBe(false);
+        expect(presentation.scoreComputed).toBe(false);
+        expect(presentation.summary).not.toContain('No robust shift');
+        expect(presentation.limitations.join(' ')).not.toContain('did not show a robust');
+        expect(analysis.quality.overallScore).toBe(0);
+      },
+    );
+
+    it('reports measured stable zero only after sufficient numeric coverage, without inventing a computed score', () => {
+      const points = flatConstant({ count: 48, value: 0 });
+      const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog: ['Soc'], focalPoints: points, relatedSeries: [] });
+      const presentation = presentRootCause(analysis, [{ signal: 'Soc', points }]);
+      expect(presentation).toMatchObject({ focalNumericEligible: true, scoreComputed: false });
+      expect(presentation.summary).toBe(analysis.summary);
+      expect(presentRootCause(analysis, []).focalResolved).toBe(false);
+    });
+
+    it('distinguishes a resolved empty candidate from an unresolved candidate', () => {
+      const analysis = analyzeRootCause({
+        focalSignal: 'Soc', catalog: ['Soc', 'PackVoltage'], focalPoints, relatedSeries: [],
+      });
+      expect(presentRootCause(analysis, [{ signal: 'Soc', points: focalPoints }])).toMatchObject({
+        candidatesResolved: 0, candidatesUsable: 0, candidatesUnknown: 1,
+      });
+      expect(presentRootCause(analysis, [
+        { signal: 'Soc', points: focalPoints }, { signal: 'PackVoltage', points: [] },
+      ])).toMatchObject({ candidatesResolved: 1, candidatesUsable: 0, candidatesUnknown: 0 });
+    });
+
+    it('does not infer stability from enough rows that cannot support a before/after split', () => {
+      const points = Array.from({ length: 48 }, (_, index) => ({
+        ts: index === 0 ? BASE : BASE + 20 * MIN, value: 0,
+      }));
+      const analysis = analyzeRootCause({ focalSignal: 'Soc', catalog: ['Soc'], focalPoints: points, relatedSeries: [] });
+      expect(presentRootCause(analysis, [{ signal: 'Soc', points }])).toMatchObject({
+        focalNumericEligible: false, scoreComputed: false,
+      });
+    });
   });
 
   it('drops malformed/non-numeric/null entries without throwing', () => {

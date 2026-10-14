@@ -195,7 +195,7 @@ export interface RawSignalPoint {
   ts?: string | number | null;
   valueNum?: number | string | null;
   value_num?: number | string | null;
-  value?: number | string | null;
+  value?: number | string | boolean | null;
 }
 
 export interface NumericPoint {
@@ -818,6 +818,70 @@ export interface RootCauseAnalysisResult {
   limitations: string[];
   summary: string;
   dataWindow: { earliestMs: number | null; latestMs: number | null };
+}
+
+export interface RootCausePresentation {
+  focalResolved: boolean;
+  focalNumericEligible: boolean;
+  scoreComputed: boolean;
+  candidatesResolved: number;
+  candidatesUsable: number;
+  candidatesUnknown: number;
+  candidateCoverageComplete: boolean;
+  summary: string;
+  limitations: string[];
+}
+
+/** Source eligibility qualifies presentation only; the engine's scores and payload remain unchanged. */
+export function presentRootCause(
+  analysis: RootCauseAnalysisResult,
+  histories: readonly RootCauseAnalysisSeriesInput[],
+): RootCausePresentation {
+  const numericBySignal = new Map(histories.map(({ signal, points }) => [signal, toNumericPoints(points)]));
+  const focal = numericBySignal.get(analysis.focalSignal);
+  const focalNumericEligible = focal != null && focal.length >= MIN_FOCAL_SAMPLES
+    && focal[focal.length - 1]!.ms - focal[0]!.ms >= MIN_WINDOW_MS
+    && findStrongestRobustShift(focal) != null;
+  const candidatesResolved = analysis.relatedCandidates.filter(({ signal }) => numericBySignal.has(signal)).length;
+  const candidatesUsable = analysis.relatedCandidates.filter(({ signal }) => {
+    const points = numericBySignal.get(signal);
+    if (points == null || points.length < MIN_CANDIDATE_SAMPLES) return false;
+    if (analysis.focalShift == null || focal == null) return findStrongestRobustShift(points) != null;
+    const radiusMs = computeSearchRadiusMs(focal[focal.length - 1]!.ms - focal[0]!.ms);
+    return findStrongestRobustShiftNear(points, analysis.focalShift.splitMs, radiusMs) != null;
+  }).length;
+  const candidatesUnknown = analysis.relatedCandidates.length - candidatesResolved;
+  const candidateCoverageComplete = candidatesUsable === analysis.relatedCandidates.length;
+  const scoreComputed = focalNumericEligible && analysis.focalShift != null
+    && Number.isFinite(analysis.quality.overallScore);
+  const incompleteCandidates = !candidateCoverageComplete && analysis.focalShift != null;
+  const summary = analysis.focalSignal === '' ? analysis.summary : !focalNumericEligible
+    ? focal == null
+      ? 'Focal history unavailable; no shift conclusion can be drawn.'
+      : 'Not enough history yet for this signal and window.'
+    : incompleteCandidates && analysis.hypotheses.length === 0
+      ? `${analysis.focalSignal} shows a robust shift, but related numeric evidence is incomplete; corroboration is unknown. ${NO_CAUSAL_PROOF_DISCLAIMER}`
+      : analysis.summary;
+  const limitations = analysis.limitations.filter((note) =>
+    (focalNumericEligible || !note.startsWith('The focal signal did not show'))
+    && (candidateCoverageComplete || !note.startsWith('None of the related signals'))
+    && (scoreComputed || !note.startsWith('Evidence quality is low')));
+  if (!focalNumericEligible && analysis.focalSignal !== '') limitations.push(summary);
+  if (!candidateCoverageComplete) {
+    limitations.push(
+      `${candidatesResolved} of ${analysis.relatedCandidates.length} selected related histories resolved; ` +
+      `${candidatesUsable} have enough valid numeric samples; ${candidatesUnknown} remain unknown. ` +
+      'Missing or unusable histories are not evidence of an absent shift.',
+    );
+    if (scoreComputed) limitations.push(
+      'The raw evidence score retains all selected candidates in its coverage denominator, including unknown or unusable histories; it is not a score of complete corroboration.',
+    );
+  }
+  return {
+    focalResolved: focal != null, focalNumericEligible, scoreComputed,
+    candidatesResolved, candidatesUsable, candidatesUnknown, candidateCoverageComplete,
+    summary, limitations,
+  };
 }
 
 function computeDataWindow(

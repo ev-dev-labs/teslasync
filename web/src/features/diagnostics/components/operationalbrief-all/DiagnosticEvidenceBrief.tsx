@@ -71,7 +71,9 @@ export function DiagnosticEvidenceBrief({
           whyItMatters: null,
           confidence: {
             label: 'not_scored', score: null,
-            basis: [t('diagnostics.brief.scoreBasis', 'Existing evidence-quality score on a 0–1 scale, not a probability or causal confidence.')],
+            basis: metrics.some(metric => metric.occurrenceId === 'root-cause-overall-score' && metric.rawValue == null)
+              ? []
+              : [t('diagnostics.brief.scoreBasis', 'Existing evidence-quality score on a 0–1 scale, not a probability or causal confidence.')],
           },
           likelyCause: null,
           recommendedResponse: null,

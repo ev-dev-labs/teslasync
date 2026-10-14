@@ -3,7 +3,7 @@ import { ShieldAlert } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 
-import type { EvidenceQuality } from '../lib/rootCauseIntelligence';
+import type { EvidenceQuality, RootCausePresentation } from '../lib/rootCauseIntelligence';
 import { QualityBadge } from './QualityBadge';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -11,6 +11,7 @@ export interface RootCauseInterpretationPanelProps {
   summary: string;
   limitations: string[];
   quality: EvidenceQuality;
+  presentation?: RootCausePresentation;
   focalHistoryAvailable?: boolean;
   hasChosenSignal: boolean;
   isLoading: boolean;
@@ -31,6 +32,7 @@ export function RootCauseInterpretationPanel({
   summary,
   limitations,
   quality,
+  presentation,
   focalHistoryAvailable = true,
   hasChosenSignal,
   isLoading,
@@ -45,7 +47,7 @@ export function RootCauseInterpretationPanel({
   return (
     <GlassPanel className={className ?? 'p-4 sm:p-5'}>
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <ShieldAlert className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('rootCauseIntelligence.interpretation.title', 'Interpretation & limits')}
       </PanelTitle>
       {isError ? (
@@ -60,11 +62,11 @@ export function RootCauseInterpretationPanel({
       ) : (
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-2">
-            <QualityBadge band={quality.band} />
+            <QualityBadge band={presentation?.scoreComputed === false ? 'insufficient' : quality.band} />
             <Caption>
               {t('rootCauseIntelligence.interpretation.coverage', '{{withEvidence}} of {{considered}} related signals corroborated · {{samples}} focal samples', {
-                withEvidence: quality.candidatesWithEvidence,
-                considered: quality.candidatesConsidered,
+                withEvidence: presentation?.scoreComputed === false ? '—' : quality.candidatesWithEvidence,
+                considered: presentation?.candidatesUsable ?? quality.candidatesConsidered,
                 samples: focalHistoryAvailable ? quality.focalSampleCount : '—',
               })}
             </Caption>
@@ -85,7 +87,9 @@ export function RootCauseInterpretationPanel({
             </div>
           )}
           <Caption>
-            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', { n: fmtNumber(quality.overallScore) })}
+            {t('rootCauseIntelligence.interpretation.overallScore', 'Overall evidence score {{n}} of 1.00', {
+              n: presentation?.scoreComputed === false ? '—' : fmtNumber(quality.overallScore),
+            })}
           </Caption>
         </div>
       )}
