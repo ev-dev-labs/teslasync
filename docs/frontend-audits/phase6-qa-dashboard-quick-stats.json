@@ -1,0 +1,1519 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-dashboard-quick-stats",
+  "phase": 6,
+  "status": "DONE_SOURCE_AUDIT",
+  "auditMode": "READ_ONLY_SOURCE_ONLY",
+  "capturedAt": "2026-10-14T01:02:52.536214+00:00",
+  "page": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+  "routes": [
+    "/quick-stats"
+  ],
+  "repoRoot": "D:\\repos\\teslasync",
+  "purpose": "All-fleet fixed30day summary/comparison, selected-vehicle spotlight and navigation.",
+  "primaryGoal": "Interpret readings/scopes without confusing stream observation, per-reading freshness, request time or missing versus zero.",
+  "queue": {
+    "line": 378,
+    "statusAtRead": "[~]",
+    "attempts": 1,
+    "actor": "60d55812-5dfc-4e35-99c8-a32b54b4837a",
+    "exactRow": "| [~] | 6 | phase6-qa-dashboard-quick-stats | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-dashboard-quick-stats.json | phase5-page-dashboard-quick-stats | 1 | actor=60d55812-5dfc-4e35-99c8-a32b54b4837a; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | CurrentacceptedQuickStatsPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Preserveaggregate-loadedrows/source-independenttrust/unknownzero/SI/preferences/scopes/sections; no remigration. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 60d55812-5dfc-4e35-99c8-a32b54b4837a, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |",
+    "returnDeadline": "2026-10-14T01:05:28.452Z",
+    "hardDeadline": "2026-10-14T01:10:28.452Z",
+    "edited": false
+  },
+  "existingReportFirst": {
+    "targetReportExisted": false,
+    "targetLogExisted": false,
+    "historicalReport": "docs/frontend-audits/audit-page-093.json",
+    "decision": "New Phase6 report warranted; no implementation edits/remigration.",
+    "acceptedHistory": [
+      {
+        "item": "audit-page-093",
+        "status": "[x]",
+        "queueLine": 582,
+        "commit": "2aeffcc30d"
+      },
+      {
+        "item": "phase3-vehicle-hero-card",
+        "status": "[x]",
+        "queueLine": 1637,
+        "commit": "034e5c7ee5"
+      },
+      {
+        "item": "phase3-hero-observation-contract",
+        "status": "[x]",
+        "queueLine": 1304,
+        "commit": "26ee9909ba"
+      },
+      {
+        "item": "phase3-hero-observation-api",
+        "status": "[x]",
+        "queueLine": 1303,
+        "commit": "c81a4db8ff"
+      },
+      {
+        "item": "phase3-observation-and-anomaly-copy-catalog",
+        "status": "[x]",
+        "queueLine": 1361,
+        "commit": "4c874883c9"
+      },
+      {
+        "item": "phase5-page-dashboard-quick-stats",
+        "status": "[x]",
+        "queueLine": 1842,
+        "commit": "d65b2a8ab3c24295fd27238b7e22a0e9dab63e5d"
+      }
+    ],
+    "closedPhases": "0-5closed,6unfinished,7NOTRUN;acceptedHero unchanged",
+    "resolvedHistoricalIssues": [
+      "selected-state manual refresh guarded",
+      "PageLayout transitively renders PageContainer;no nested rootmain",
+      "rootmobile44/wrapping",
+      "Hero preserveReadingAndScale and observation API/copy accepted",
+      "Hero missing/zero/false/signed readings preserved"
+    ]
+  },
+  "confirmedFindings": [
+    {
+      "id": "QS-001",
+      "file": "web/src/App.tsx",
+      "line": 562,
+      "source": "<Route path=\"quick-stats\" element={<SafeRoute name=\"QuickStats\"><QuickStats /></SafeRoute>} />",
+      "rule": "MDC-030/MDC-032 workspace-shell-ownership",
+      "confidence": "high",
+      "priority": "high",
+      "detail": "Direct Routes child562 is outside Layout parent574. SafeRoute supplies only ErrorBoundary/Suspense. Page relies on useSelectedVehicle but cannot mount Layout-owned desktop/mobile picker, main/gutters or TimeMachineBanner through this branch. URL/persisted selection still works; no auth-bypass assertion.",
+      "fix": "Reserve route-only /quick-stats integration into existing Layout; preserve URL/lazy/SafeRoute and fixed fleet window. No second picker/page chrome.",
+      "owner": "integration/router",
+      "relatedEvidence": [
+        "App.tsx:368-378,562,574,910",
+        "Layout.tsx:1500-1506,1516-1536,1566-1568",
+        "WorkspaceHeader.tsx:33-35,59-67",
+        "QuickStatsPage.tsx:84,136-143"
+      ],
+      "evidenceKind": "source/contract mismatch; runtime NOTRUN"
+    },
+    {
+      "id": "QS-002",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 204,
+      "source": "vehicleState={stateData?.state ?? null}",
+      "rule": "MDC-026/P172 hero-caller-trust-observation",
+      "confidence": "high",
+      "priority": "high",
+      "detail": "State envelope supplies retained readings/observedAt/freshness/live; caller passes only .state and no selected-state DataState. Hero hasTrustMetadata=false, suppressing stream age/unknown/limitation. Pending/fatal no-reading bodies use generic unavailable placeholder. Query fetch-health is not measurement observation; as_of provenance also omitted.",
+      "fix": "Only QuickStats caller+existing adjacent test integration: derive DataState from same selected query/as_of policy, pass retained observedAt/freshness into accepted API, preserve null/zero/false/signs/selection, deduplicate notices. Never use dataUpdatedAt as observation or add per-reading clocks/completeness. Accepted Hero/API/copy unchanged.",
+      "owner": "page/caller integration",
+      "relatedEvidence": [
+        "QuickStatsPage.tsx:91-114,196-205",
+        "useVehicles.ts:145-154,184-193,219-239,260-288",
+        "VehicleHeroCard.tsx:56-60,94-120,197-231,247-248"
+      ],
+      "evidenceKind": "source/contract mismatch; runtime NOTRUN"
+    },
+    {
+      "id": "QS-003",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 164,
+      "source": "label: t('dataSources.status.paused', 'Paused offline'),",
+      "rule": "MDC-026 paused-is-not-offline",
+      "confidence": "high",
+      "priority": "medium",
+      "detail": "Any fetchStatus=paused maps to visible Paused offline regardless of separately-read online boolean. Deferred/paused is not connectivity proof. This notice renders QuickStats three sources; Hero contract expressly rejects this cause inference.",
+      "fix": "Narrow existing DataSourceNotice presentation/copy correction separating paused/deferred from independently established offline; reuse approved Paused copy or separately reserve exact catalog prerequisite. Preserve retained data, source identities/classification and individual/bulk retries.",
+      "owner": "shared DataSourceNotice",
+      "relatedEvidence": [
+        "DataSourceNotice.tsx:79-82,137-138,163-165,220-224",
+        "QuickStatsPage.tsx:95-114,142"
+      ],
+      "evidenceKind": "source/contract mismatch; runtime NOTRUN"
+    },
+    {
+      "id": "QS-004",
+      "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "line": 113,
+      "source": "time: new Date(asOf).toLocaleString(),",
+      "rule": "MDC-044 date-preferences",
+      "confidence": "high",
+      "priority": "medium",
+      "detail": "Brief forwards analyticsState.updatedAt to badge; title uses browser-default toLocaleString without saved locale/timezone/hour-cycle options. Existing useDateFormat owns these preferences. This is request-retention time, not stream/per-reading observation.",
+      "fix": "Narrow badge date-helper adoption+matching reserved test at existing owner; preserve validated instant, request timestamp/provenance/status, no new date engine.",
+      "owner": "shared DataProvenanceBadge",
+      "relatedEvidence": [
+        "DashboardSourceBrief.tsx:47-49",
+        "DataProvenanceBadge.tsx:108-115",
+        "useDateFormat.ts:73-99",
+        "dataState.ts:143-146"
+      ],
+      "evidenceKind": "source/contract mismatch; runtime NOTRUN"
+    },
+    {
+      "id": "QS-005",
+      "file": "web/src/features/dashboard/components/FleetComparisonPanel.tsx",
+      "line": 78,
+      "source": "<Car className=\"h-4 w-4 text-cyan-300\" aria-hidden=\"true\" />",
+      "rule": "MDC-010 decorative-fixed-accent",
+      "confidence": "high",
+      "priority": "low",
+      "detail": "Aria-hidden title icon is grouping decoration, not semantic state, but hardcodes cyan independent of theme. Current saved series palette is restrained; no claim all bars are neon. Dormant fallback is not separately counted.",
+      "fix": "One-owner title-ink change to existing neutral secondary/muted role; preserve saved palette/order/scale/values/rows/rounding/states/actions; no MetricBar/palette rewrite.",
+      "owner": "feature FleetComparisonPanel",
+      "relatedEvidence": [
+        "FleetComparisonPanel.tsx:77-79,100-104",
+        "useChartPalette.ts:20-27,44-48",
+        "colors.ts:79-103,336-364"
+      ],
+      "evidenceKind": "source/contract mismatch; runtime NOTRUN"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "QS-C01",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 56,
+      "rule": "MDC-026 analytics-partial-metadata",
+      "confidence": "medium",
+      "detail": "Historical report cites partial_result/generated_at/source; current type/page omit them. No current backend payload/source inspected.",
+      "requiredEvidenceAndDedup": "Current narrow response/type review before supported metadata adoption. Historical P173/G097, not newly confirmed backend defect."
+    },
+    {
+      "id": "QS-C02",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 33,
+      "rule": "MDC-032 fixed-window-policy",
+      "confidence": "medium",
+      "detail": "Intentional all-fleet30day and no range registration. Changing fixed product meaning needs disposition; missing Layout is QS-001.",
+      "requiredEvidenceAndDedup": "Product/window/start-end decision before hook change. Historical P174; preserve current window/no second picker."
+    },
+    {
+      "id": "QS-C03",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 144,
+      "rule": "MDC-026 duplicate-retained-notices",
+      "confidence": "medium",
+      "detail": "Analytics/registry warning and aggregate DataSourceNotice coexist for same event; actual announcement/retry duplication not exercised.",
+      "requiredEvidenceAndDedup": "Mounted retained/paused announcement proof then bounded caller dedup. State overlap belongs QS-002, not global campaign."
+    },
+    {
+      "id": "QS-C04",
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "line": 246,
+      "rule": "MDC-040/MDC-043 shared-mobile-targets",
+      "confidence": "medium",
+      "detail": "Header refetch lacks mobile44; QueryError sm retry/Drawer md40footer are source target-budget risks. Root/Hero44 present. No geometry/spacing proof.",
+      "requiredEvidenceAndDedup": "Measured sub-md targets/640-768/zoom/density/locales and spacing exceptions. Refs Button35-48,_StatusAwareError67-71,Drawer202-205;not root remigration."
+    },
+    {
+      "id": "QS-C05",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 230,
+      "rule": "MDC-020 navigation-semantics",
+      "confidence": "medium",
+      "detail": "Quick destinations use buttons/navigate instead of native Links; expected modifier/new-tab behavior not established.",
+      "requiredEvidenceAndDedup": "Confirm intent before narrow Link adoption preserving URL/conditional details/names/mobile44;not runtime keyboard failure."
+    },
+    {
+      "id": "QS-C06",
+      "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+      "line": 83,
+      "rule": "MDC-025 unknown-FSM-policy",
+      "confidence": "medium",
+      "detail": "Accepted unrecognized toStatus fallback offline is distinct from unknown observation/reading.",
+      "requiredEvidenceAndDedup": "Real unsupported FSM inputs and explicit policy disposition if needed; do not rewrite accepted Hero/API."
+    },
+    {
+      "id": "QS-C07",
+      "file": "web/src/types/analytics.ts",
+      "line": 6,
+      "rule": "MDC-045 scaled-analytics-wire-exception",
+      "confidence": "medium",
+      "detail": "km/kWh/Whkm normalized at display bridge, cache unchanged;optional CO2unknown. Backend dimensions not executed.",
+      "requiredEvidenceAndDedup": "Designated coordinated SI/type/backend scope only if authorized. Historical P173/G097;preserve multipliers/signs,not new page raw-SI defect."
+    }
+  ],
+  "needs": [
+    {
+      "findingIds": [
+        "QS-001"
+      ],
+      "proposedItem": "phase6-fix-quick-stats-route-shell",
+      "owner": "integration/router",
+      "exactPotentialFiles": [
+        "web/src/App.tsx"
+      ],
+      "status": "PROPOSE_ONLY;parent owns queue/reservation",
+      "existingSourceFileQueueMatches": [],
+      "dedup": "No active exact correction objective found in bounded searches; accepted original work is not redispatched. QS-002 only previously deferred caller integration,not duplicateHeroAPI/copy.",
+      "limits": "Parent reserves matching covering tests;none read/run/written. Any exact catalog prerequisite separately leased;acceptedHero unchanged."
+    },
+    {
+      "findingIds": [
+        "QS-002"
+      ],
+      "proposedItem": "phase6-fix-quick-stats-hero-observation-caller",
+      "owner": "page/caller",
+      "exactPotentialFiles": [
+        "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+        "web/src/features/dashboard/pages/QuickStatsPage.test.tsx"
+      ],
+      "status": "PROPOSE_ONLY;parent owns queue/reservation",
+      "existingSourceFileQueueMatches": [
+        {
+          "queueLine": 582,
+          "status": "[x]",
+          "item": "audit-page-093"
+        },
+        {
+          "queueLine": 1136,
+          "status": "[x]",
+          "item": "phase3-full-test-dashboard-pages-static-loading-fixtures"
+        },
+        {
+          "queueLine": 1842,
+          "status": "[x]",
+          "item": "phase5-page-dashboard-quick-stats"
+        }
+      ],
+      "dedup": "No active exact correction objective found in bounded searches; accepted original work is not redispatched. QS-002 only previously deferred caller integration,not duplicateHeroAPI/copy.",
+      "limits": "Parent reserves matching covering tests;none read/run/written. Any exact catalog prerequisite separately leased;acceptedHero unchanged."
+    },
+    {
+      "findingIds": [
+        "QS-003"
+      ],
+      "proposedItem": "phase6-fix-data-source-notice-paused-copy",
+      "owner": "sharedtrust",
+      "exactPotentialFiles": [
+        "web/src/components/feedback/DataSourceNotice.tsx"
+      ],
+      "status": "PROPOSE_ONLY;parent owns queue/reservation",
+      "existingSourceFileQueueMatches": [
+        {
+          "queueLine": 1023,
+          "status": "[x]",
+          "item": "phase3-data-source-notice"
+        }
+      ],
+      "dedup": "No active exact correction objective found in bounded searches; accepted original work is not redispatched. QS-002 only previously deferred caller integration,not duplicateHeroAPI/copy.",
+      "limits": "Parent reserves matching covering tests;none read/run/written. Any exact catalog prerequisite separately leased;acceptedHero unchanged."
+    },
+    {
+      "findingIds": [
+        "QS-004"
+      ],
+      "proposedItem": "phase6-fix-provenance-badge-date-preferences",
+      "owner": "sharedformatting",
+      "exactPotentialFiles": [
+        "web/src/components/data-display/DataProvenanceBadge.tsx"
+      ],
+      "status": "PROPOSE_ONLY;parent owns queue/reservation",
+      "existingSourceFileQueueMatches": [],
+      "dedup": "No active exact correction objective found in bounded searches; accepted original work is not redispatched. QS-002 only previously deferred caller integration,not duplicateHeroAPI/copy.",
+      "limits": "Parent reserves matching covering tests;none read/run/written. Any exact catalog prerequisite separately leased;acceptedHero unchanged."
+    },
+    {
+      "findingIds": [
+        "QS-005"
+      ],
+      "proposedItem": "phase6-fix-fleet-comparison-title-ink",
+      "owner": "featurepresentation",
+      "exactPotentialFiles": [
+        "web/src/features/dashboard/components/FleetComparisonPanel.tsx"
+      ],
+      "status": "PROPOSE_ONLY;parent owns queue/reservation",
+      "existingSourceFileQueueMatches": [],
+      "dedup": "No active exact correction objective found in bounded searches; accepted original work is not redispatched. QS-002 only previously deferred caller integration,not duplicateHeroAPI/copy.",
+      "limits": "Parent reserves matching covering tests;none read/run/written. Any exact catalog prerequisite separately leased;acceptedHero unchanged."
+    }
+  ],
+  "sections": [
+    {
+      "id": "fleet-metrics",
+      "name": "Fleet metrics / Fleet operating summary",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 147,
+      "alwaysMountedInSource": true,
+      "metricSlots": 8
+    },
+    {
+      "id": "spotlight",
+      "name": "Vehicle spotlight and fleet comparison",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 175,
+      "alwaysMountedInSource": true,
+      "heroGaugeSlots": 4,
+      "heroDetails": 8,
+      "comparisonRows": "all returned entries;count runtime-dependent"
+    },
+    {
+      "id": "quick-links",
+      "name": "Quick links and powered-by footer",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 219,
+      "alwaysMountedInSource": true,
+      "conditional": "selected-details action only"
+    }
+  ],
+  "actions": [
+    {
+      "id": "page-refresh",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 124,
+      "target": "analytics+registry;selected state guarded positiveID"
+    },
+    {
+      "id": "brief-review",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 168,
+      "target": "drawer/narrative/all8metrics"
+    },
+    {
+      "id": "analytics-fatal-retry",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 159,
+      "target": "analytics"
+    },
+    {
+      "id": "analytics-empty-retry",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 165,
+      "target": "analytics"
+    },
+    {
+      "id": "registry-fatal-retry",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 185,
+      "target": "registry"
+    },
+    {
+      "id": "empty-registry",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 192,
+      "target": "/vehicles nativeCTA"
+    },
+    {
+      "id": "comparison-retry",
+      "file": "web/src/features/dashboard/components/FleetComparisonPanel.tsx",
+      "line": 85,
+      "target": "analytics error/empty"
+    },
+    {
+      "id": "dashboard",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 230,
+      "target": "/buttonnavigation"
+    },
+    {
+      "id": "selected-details",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 241,
+      "target": "/vehicles/{id} conditional"
+    },
+    {
+      "id": "analytics",
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "line": 252,
+      "target": "/statistics"
+    },
+    {
+      "id": "hero-details",
+      "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+      "line": 327,
+      "target": "nativeLink"
+    },
+    {
+      "id": "hero-commands",
+      "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+      "line": 336,
+      "target": "nativeLink;not commandmutation"
+    },
+    {
+      "id": "hero-map",
+      "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+      "line": 342,
+      "target": "nativeLink"
+    },
+    {
+      "id": "retained-refresh",
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "line": 102,
+      "target": "analytics/registry individualretry"
+    },
+    {
+      "id": "header-query-refetch",
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "line": 336,
+      "target": "worst query only;not streamobservation"
+    },
+    {
+      "id": "notice-retries",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 266,
+      "target": "individual and separate bulkretry"
+    },
+    {
+      "id": "brief-close",
+      "file": "web/src/components/ui/Drawer.tsx",
+      "line": 174,
+      "target": "header/footerClose;Escape/backdrop/focus owner,nativeNOTRUN"
+    }
+  ],
+  "currentPins": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "bytes": 16978,
+      "lineCount": 296
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "bytes": 182554,
+      "lineCount": 2539
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "bytes": 163930,
+      "lineCount": 2460
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "bytes": 31079,
+      "lineCount": 1593
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+      "bytes": 8608,
+      "lineCount": 152
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+      "bytes": 1743758,
+      "lineCount": 1460
+    },
+    {
+      "file": "migration-queue.md",
+      "sha256": "bd1c8b7c76b2cb648f6b7bd86d9196de02a307a4e56324e6994aa2f3f37282c7",
+      "bytes": 2542996,
+      "lineCount": 2041
+    },
+    {
+      "file": ".agents/state.md",
+      "sha256": "3c872c7c6c31fd02834cfb97c116e126a29fd827b1c4d35ff2b4a086fb34e3e4",
+      "bytes": 458986,
+      "lineCount": 7248
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+      "bytes": 37483,
+      "lineCount": 707
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "bytes": 22645,
+      "lineCount": 629
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "bytes": 3585,
+      "lineCount": 94
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "bytes": 6501,
+      "lineCount": 221
+    },
+    {
+      "file": "docs/MOBILE_GUIDELINES.md",
+      "sha256": "c2aad7d2ea44a3c2ea317a1b6f38d59c5a6cb71fd13d91816fb60a301f9f2228",
+      "bytes": 7412,
+      "lineCount": 166
+    },
+    {
+      "file": "docs/A11Y_GUIDELINES.md",
+      "sha256": "5d8ff67ca9cecab201c214d252304eedef653230d8463067a69b8b2c94697580",
+      "bytes": 10771,
+      "lineCount": 234
+    },
+    {
+      "file": "docs/I18N_GUIDELINES.md",
+      "sha256": "9dafaa22475219a8ddb7e36905d428a6e0f7ef4a685006ee6d7f257878b8de94",
+      "bytes": 8039,
+      "lineCount": 216
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-093.json",
+      "sha256": "e38831b6645654d6915981448b8303e5c35892223d975a88fd1d30cb7a9dd7bc",
+      "bytes": 32657,
+      "lineCount": 359
+    },
+    {
+      "file": ".gitignore",
+      "sha256": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e",
+      "bytes": 2122,
+      "lineCount": 130
+    },
+    {
+      "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+      "sha256": "0cee6c9a04927c8197e409ccf73d2193cb133b23adf8cc597470d683845e07ca",
+      "bytes": 12404,
+      "lineCount": 263
+    },
+    {
+      "file": "web/src/features/dashboard/components/FleetComparisonPanel.tsx",
+      "sha256": "390cae2c0549a3b9d5ad4f8781a956f12eaf92c534e39a5a4c3d74133248024d",
+      "bytes": 4339,
+      "lineCount": 109
+    },
+    {
+      "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
+      "sha256": "f346e79c1157b1ba127ef0c881e52266041b05cefa0c6be04aafb1e8e5a4e8a3",
+      "bytes": 2064,
+      "lineCount": 54
+    },
+    {
+      "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+      "sha256": "30524233d7fc748b17223dcfe180c38890956b3ea00346e9d4c2072a8c463b70",
+      "bytes": 15750,
+      "lineCount": 352
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "bytes": 658,
+      "lineCount": 17
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/Section.tsx",
+      "sha256": "eea4b10c64d008260bb9330e2142e4d0f3e3671f80af8c1d7493b13044d0de75",
+      "bytes": 731,
+      "lineCount": 23
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "bytes": 3322,
+      "lineCount": 74
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "bytes": 10783,
+      "lineCount": 259
+    },
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "sha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "bytes": 92115,
+      "lineCount": 1716
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "bytes": 2737,
+      "lineCount": 74
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "bytes": 11591,
+      "lineCount": 321
+    },
+    {
+      "file": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "sha256": "42d86533a953d9ee7c25e933fa7200890a420ee31868fa515f01d89b4f0e6fa1",
+      "bytes": 8350,
+      "lineCount": 244
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "bytes": 4359,
+      "lineCount": 93
+    },
+    {
+      "file": "web/src/components/data-display/StatCard.tsx",
+      "sha256": "06caf0f4775f44a4fa3ef04d04199c1513bfba8722801f36f0ee44d0ee430a7d",
+      "bytes": 4160,
+      "lineCount": 123
+    },
+    {
+      "file": "web/src/components/data-display/DataFreshness.tsx",
+      "sha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+      "bytes": 11545,
+      "lineCount": 342
+    },
+    {
+      "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+      "sha256": "804547bcb6e9be1d6210dc459efee9ed7a8cb76999322f98c5cf7d80ea242057",
+      "bytes": 3987,
+      "lineCount": 131
+    },
+    {
+      "file": "web/src/components/charts/LinearGauge.tsx",
+      "sha256": "f02c0cff30b5a3e8a4016235c73f23d482ece9ef7e15566c3e62308250fe2e7a",
+      "bytes": 12030,
+      "lineCount": 251
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "bytes": 5174,
+      "lineCount": 93
+    },
+    {
+      "file": "web/src/components/ui/Drawer.tsx",
+      "sha256": "f4e17ba0f8c43c4c567fedf3cb17d3e7f27ff13b2219f45c9bd62cebe1f7f72d",
+      "bytes": 6711,
+      "lineCount": 211
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "bytes": 4093,
+      "lineCount": 115
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "sha256": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+      "bytes": 9480,
+      "lineCount": 291
+    },
+    {
+      "file": "web/src/components/feedback/EmptyState.tsx",
+      "sha256": "81246a08e354c8c05b05b3b39880e8832442c4c30ed468defe53a7478858fa37",
+      "bytes": 3617,
+      "lineCount": 97
+    },
+    {
+      "file": "web/src/components/feedback/QueryError.tsx",
+      "sha256": "5dc7d6a24694c2f34411d8b042864c94a630be9fc0a516586c2596172f19e48a",
+      "bytes": 460,
+      "lineCount": 16
+    },
+    {
+      "file": "web/src/components/feedback/_StatusAwareError.tsx",
+      "sha256": "1b02ed9b09fd8befd1f0b38fa6b4957749874856ec6eedb5963b7601a6d23bcc",
+      "bytes": 8280,
+      "lineCount": 280
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "bytes": 1493,
+      "lineCount": 39
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "bytes": 70205,
+      "lineCount": 1898
+    },
+    {
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "sha256": "f775818ac815813432f0a576ab6e22dbdbbd5106d513aa81fb56b953c5dadb20",
+      "bytes": 22722,
+      "lineCount": 642
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "bytes": 15482,
+      "lineCount": 434
+    },
+    {
+      "file": "web/src/types/analytics.ts",
+      "sha256": "91e89cfd927d2fc29b859b6b5828068ea37356b02eccd84dc3fc3485d5245d6c",
+      "bytes": 5322,
+      "lineCount": 198
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "bytes": 6593,
+      "lineCount": 174
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "bytes": 2035,
+      "lineCount": 65
+    },
+    {
+      "file": "web/src/hooks/useAsOfDate.ts",
+      "sha256": "dce9cc82af1d73ac61f793d0df69ff124e44fa21d85afdd0d60d74ddb1ad8c1e",
+      "bytes": 3028,
+      "lineCount": 84
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "bytes": 6545,
+      "lineCount": 194
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "bytes": 4608,
+      "lineCount": 106
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "bytes": 2095,
+      "lineCount": 47
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "bytes": 1161,
+      "lineCount": 24
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "bytes": 2108,
+      "lineCount": 49
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "bytes": 5230,
+      "lineCount": 148
+    },
+    {
+      "file": "web/src/hooks/useSettings.ts",
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "bytes": 5253,
+      "lineCount": 146
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "bytes": 2801,
+      "lineCount": 53
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "bytes": 7868,
+      "lineCount": 137
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "bytes": 16774,
+      "lineCount": 500
+    },
+    {
+      "file": "web/src/lib/colors.ts",
+      "sha256": "a5c53faeaaa3a2d07c6475f0d64f67ddce9e36e6c3405ac983584f4a1fcf5e93",
+      "bytes": 13999,
+      "lineCount": 388
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "bytes": 4411,
+      "lineCount": 168
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "bytes": 11392,
+      "lineCount": 127
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97",
+      "bytes": 31836,
+      "lineCount": 289
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "bytes": 68125,
+      "lineCount": 919
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "bytes": 1842282,
+      "lineCount": 38994
+    }
+  ],
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-inventory.md",
+    "migration-queue.md",
+    ".agents/state.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/A11Y_GUIDELINES.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/frontend-audits/audit-page-093.json",
+    ".gitignore",
+    "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+    "web/src/features/dashboard/components/FleetComparisonPanel.tsx",
+    "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
+    "web/src/components/vehicles/VehicleHeroCard.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/Section.tsx",
+    "web/src/components/layout/layout-reference/SourceContent.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/Layout.tsx",
+    "web/src/components/layout/WorkspaceHeader.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/components/data-display/StatCard.tsx",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/components/data-display/DataProvenanceBadge.tsx",
+    "web/src/components/charts/LinearGauge.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/Drawer.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/feedback/DataSourceNotice.tsx",
+    "web/src/components/feedback/EmptyState.tsx",
+    "web/src/components/feedback/QueryError.tsx",
+    "web/src/components/feedback/_StatusAwareError.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/hooks/useAnalytics.ts",
+    "web/src/api/dataState.ts",
+    "web/src/types/analytics.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useAsOfDate.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useChartPalette.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/colors.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/App.tsx",
+    "web/src/i18n/en.json"
+  ],
+  "readCoverage": {
+    "contract": "all2540lines in successive reads",
+    "documents": "relevantmission0/1/2/15-37/43-46;latesthandoff1-260 plus scopedsearches;inventory/queue/state exactsearches;applicablefrontendinstructions",
+    "sources": "direct page/feature/Hero/brief/feedback/metric/date/palette full;App lazy/SafeRoute and450-592/850-919;Layout searches+1460-1570;WorkspaceHeader picker snippets",
+    "hooks": "useVehicles1-330/useAnalytics1-220/dataState1-260/typesanalytics1-110;only mounted hook bodies classified",
+    "lib": "unitconverter snippets;colors1-160/270-365;loader1-10/registry195-208",
+    "catalog": "read-only JSONlookup81literalkeys;no generator/generatedcatalog inspection",
+    "notInspected": "tests/deeperunrelatedsharedleafinternals/backend"
+  },
+  "checks": [
+    {
+      "name": "source-pattern-hookURL-literalI18n",
+      "status": "EXECUTED",
+      "exitCode": 0,
+      "rawOutput": "web/logs/phase6-qa-dashboard-quick-stats.log",
+      "literalCalls": 81
+    },
+    {
+      "name": "final-json-count-anchor-pin-validation",
+      "status": "EXECUTED",
+      "exitCode": 0,
+      "pinsChecked": 65,
+      "sourceDrift": [],
+      "contextualDrift": [
+        {
+          "file": "migration-queue.md",
+          "capturedSha256": "bd1c8b7c76b2cb648f6b7bd86d9196de02a307a4e56324e6994aa2f3f37282c7",
+          "currentSha256": "3cf5e091cb7710acd134162dc388d0a2eec7b130d8138476a30b31cd6841eb3f"
+        }
+      ]
+    },
+    {
+      "name": "npx tsc --noEmit/lint/tests/build/fullsuites/browser/native/API",
+      "status": "NOTRUN",
+      "exitCode": null,
+      "testCounts": {
+        "discovered": null,
+        "executed": null,
+        "passed": null,
+        "failed": null,
+        "skipped": null
+      }
+    }
+  ],
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-qa-dashboard-quick-stats.json",
+    "web/logs/phase6-qa-dashboard-quick-stats.log"
+  ],
+  "release": {
+    "artifactWriteScopeReleased": true,
+    "sourceWriteLeaseHeld": false,
+    "nativeLockHeld": false,
+    "acceptedHeroUnchanged": true,
+    "closedPhasesUnchanged": true,
+    "releasedAt": "2026-10-14T01:04:48.437370Z",
+    "sourceWriteRelease": "No sourcelease acquired;allsource/tests/catalog readonly;both assigned artifactpaths released",
+    "queueAndGitWrites": false
+  },
+  "counts": {
+    "confirmedFindings": 5,
+    "candidates": 7,
+    "narrowNeeds": 5,
+    "sections": 3,
+    "actionContracts": 17,
+    "fleetMetricSlots": 8,
+    "heroGaugeSlots": 4,
+    "heroDetailSlots": 8,
+    "heroNativeLinks": 3,
+    "rootLineCount": 263,
+    "pagePlusDirectFeaturePresentationLines": 426,
+    "filesRead": 65,
+    "currentPinCount": 65,
+    "findingsByRule": {
+      "MDC-030/MDC-032 workspace-shell-ownership": 1,
+      "MDC-026/P172 hero-caller-trust-observation": 1,
+      "MDC-026 paused-is-not-offline": 1,
+      "MDC-044 date-preferences": 1,
+      "MDC-010 decorative-fixed-accent": 1
+    },
+    "findingsByFile": {
+      "web/src/App.tsx": 1,
+      "web/src/features/dashboard/pages/QuickStatsPage.tsx": 1,
+      "web/src/components/feedback/DataSourceNotice.tsx": 1,
+      "web/src/components/data-display/DataProvenanceBadge.tsx": 1,
+      "web/src/features/dashboard/components/FleetComparisonPanel.tsx": 1
+    },
+    "rootTagOccurrences": {
+      "Section": 1,
+      "section": 1,
+      "GlassPanel": 5,
+      "DashboardSourceBrief": 1,
+      "VehicleHeroCard": 1,
+      "FleetComparisonPanel": 1,
+      "Button": 4,
+      "FadeIn": 3,
+      "ChartContainer": 0
+    },
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "semantics": "Source slots/tag/action-contract counts,not rendered row/panel/test counts.",
+    "literalI18nCallsChecked": 81
+  },
+  "preservation": {
+    "sourceHash": "0cee6c9a04927c8197e409ccf73d2193cb133b23adf8cc597470d683845e07ca",
+    "currentLineCount": 263,
+    "historicalAuditLineCount": 257,
+    "limit": "Historical source differs;no Git/originalinverse/tests proof. Existing sourceacceptance remains historical.",
+    "SIAndSigns": [
+      "analytics km->m,kWh->Wh,Whkm->Whm only at metricbridge;cache unchanged",
+      "comparison allentries not used to rebuild aggregate;null distance/efficiencyunknown",
+      "Hero metres/Celsius/W display-only;W/1000 retains negatives,zero/false real",
+      "formatMetric missing/nonfinite/count validation precedes specialistformatter;rawValue retained",
+      "optionalCO2unknown not fabricatedzero"
+    ],
+    "preferences": [
+      "existing units/locale/precision/palette retained",
+      "saved cb_safe/neon nonempty restrainedhex arrays;no variable-gradient defect asserted for thiscaller",
+      "Hero datehelperunchanged;provenance-title bypass QS-004"
+    ],
+    "states": {
+      "initial": "brief8slots/comparison+registryskeletons;selected-state gap QS-002",
+      "fatal": "analytics/registry localrecovery;state globalnotice+genericHerobody",
+      "retained": "usable analytics/comparison/registry/state values remain",
+      "paused": "no fakeDataStateerror;falseoffline labelQS-003",
+      "empty": "analyticsretry/registryvehiclesCTA/comparisonretry/Heroplaceholder",
+      "partial": "independent sources/unknownfields visible;analyticsmetadata candidateonly",
+      "unknownZeroFalse": "null/nonfiniteabsent;zero/false/signedpower preserved;observationnotfetchtime",
+      "sectionsActions": "3alwaysmountedsections;onlyselecteddetailsactionconditional"
+    },
+    "sourceWrites": [],
+    "testWrites": [],
+    "catalogWrites": [],
+    "acceptedHeroUnchanged": true
+  },
+  "i18n": {
+    "literalResults": [
+      {
+        "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+        "literalCallsChecked": 40,
+        "canonicalMismatchCount": 0,
+        "mismatches": []
+      },
+      {
+        "file": "web/src/features/dashboard/components/FleetComparisonPanel.tsx",
+        "literalCallsChecked": 5,
+        "canonicalMismatchCount": 0,
+        "mismatches": []
+      },
+      {
+        "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
+        "literalCallsChecked": 6,
+        "canonicalMismatchCount": 0,
+        "mismatches": []
+      },
+      {
+        "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+        "literalCallsChecked": 30,
+        "canonicalMismatchCount": 0,
+        "mismatches": []
+      }
+    ],
+    "acceptedHeroLimitationExists": true,
+    "catalogWrites": false,
+    "limit": "Only81literalcalls checked;dynamic/splitcatalog/runtimeNOTRUN;technicalunits/URLs/VIN/userdata/dashes exempt"
+  },
+  "ruleChecks": {
+    "scans": [
+      {
+        "file": "web/src/features/dashboard/pages/QuickStatsPage.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [
+            {
+              "line": 234,
+              "match": "{vehicle && ("
+            }
+          ],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/features/dashboard/components/FleetComparisonPanel.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/features/dashboard/components/operationalbrief-all/DashboardSourceBrief.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/vehicles/VehicleHeroCard.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [
+            {
+              "line": 99,
+              "match": "useEffect("
+            }
+          ],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/data-display/OperationalBrief.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [
+            {
+              "line": 210,
+              "match": "{primaryAttention && ("
+            }
+          ],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [
+            {
+              "line": 65,
+              "match": "{showHeader && ("
+            },
+            {
+              "line": 68,
+              "match": "{showValue && ("
+            },
+            {
+              "line": 80,
+              "match": "{hasReading && ("
+            }
+          ],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/feedback/DataSourceNotice.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": [
+            {
+              "line": 228,
+              "match": "<PageContainer"
+            }
+          ]
+        }
+      },
+      {
+        "file": "web/src/components/data-display/DataProvenanceBadge.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": [
+            {
+              "line": 11,
+              "match": "<PageContainer"
+            }
+          ]
+        }
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [
+            {
+              "line": 221,
+              "match": "{operationalMode.isReadOnly && <"
+            },
+            {
+              "line": 222,
+              "match": "{resolvedQuery && <"
+            },
+            {
+              "line": 236,
+              "match": "{copyLink && <"
+            },
+            {
+              "line": 253,
+              "match": "{dataSources && <"
+            }
+          ],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/data-display/DataFreshness.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [
+            {
+              "line": 140,
+              "match": "useEffect("
+            }
+          ],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/charts/LinearGauge.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [],
+          "old-api-import": [],
+          "hidden-section": [
+            {
+              "line": 207,
+              "match": "{summary && ("
+            },
+            {
+              "line": 214,
+              "match": "{unit && ("
+            },
+            {
+              "line": 222,
+              "match": "{hasReading && ("
+            },
+            {
+              "line": 242,
+              "match": "{showScale && ("
+            }
+          ],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "patternMatches": {
+          "static-inline-style": [],
+          "raw-html": [],
+          "direct-library-import": [
+            {
+              "line": 1,
+              "match": "from 'framer-motion'"
+            }
+          ],
+          "old-api-import": [],
+          "hidden-section": [],
+          "fetch-useeffect": [],
+          "hardcoded-string": [],
+          "PageContainer-literal": []
+        }
+      }
+    ],
+    "hookURLChecks": [
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "lines": [
+          74,
+          81
+        ],
+        "patternMatchCounts": {
+          "double-prefix": 0,
+          "camelcase-param": 0,
+          "fetch-useeffect": 0
+        }
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "lines": [
+          260,
+          289
+        ],
+        "patternMatchCounts": {
+          "double-prefix": 0,
+          "camelcase-param": 0,
+          "fetch-useeffect": 0
+        }
+      },
+      {
+        "file": "web/src/api/hooks/useAnalytics.ts",
+        "lines": [
+          31,
+          36
+        ],
+        "patternMatchCounts": {
+          "double-prefix": 0,
+          "camelcase-param": 0,
+          "fetch-useeffect": 0
+        }
+      }
+    ],
+    "classification": "Regex candidates manually classified,not AST/lint/nativePASS. Allmatches retained.",
+    "exceptions": [
+      "PageLayout transitively suppliesPageContainer",
+      "vehicleconditional guards actionnotsection",
+      "optionalattention/header/unit/readout/fill guards retainsections",
+      "Hero/DataFreshness effectagetimers notdatafetch",
+      "FadeIn vendorimport issharedmotion boundary",
+      "dynamicwidth/colorstylesallowed"
+    ],
+    "backendRules11to14": "NOT_APPLICABLE;no Go/backend audit"
+  },
+  "dataSources": [
+    {
+      "id": "fleet-analytics",
+      "hook": "useAnalyticsSummary(30)",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 31,
+      "requestPath": "/analytics/fleet?days=30",
+      "queryKey": [
+        "analytics",
+        "summary",
+        30
+      ],
+      "ownership": "allfleet;not selectedvehicle orsumofcomparisonrows",
+      "provenance": "historical",
+      "signalForwarded": true
+    },
+    {
+      "id": "registry",
+      "hook": "useVehicles/useSelectedVehicle",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 74,
+      "requestPath": "/vehicles",
+      "queryKey": [
+        "vehicles"
+      ],
+      "ownership": "URL/path>knownpersisted>firstknownvehicle;samekey subscriptions",
+      "signalForwarded": true
+    },
+    {
+      "id": "state",
+      "hook": "useVehicleState(vehicleId??0)",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 260,
+      "requestPath": "/vehicles/{id}/state;optionalencodedas_of",
+      "queryKey": "vehicleKeys.state(id,asOf)",
+      "enabled": "id>0/manualguard",
+      "policy": "livequeryPolicy/STANDARDpolling;as_of disablesinterval",
+      "metadata": [
+        "state",
+        "live",
+        "observedAt",
+        "freshness",
+        "verifiedFields"
+      ],
+      "limitation": "streamobservation only;no per-readingtimestamps/coverage;caller omissionQS-002",
+      "signalForwarded": true
+    },
+    {
+      "id": "preferences",
+      "hook": "useUnits/useFormatting/useNumberFormatting/useChartPalette/useDateFormat/useOperationalMetrics",
+      "ownership": "existingsettings/displayowners;no writes/transportexecution"
+    }
+  ],
+  "components": [
+    "PageLayout->PageContainer->DataSourceNotice/DataFreshnessAuto",
+    "DashboardSourceBrief->OperationalBrief->OperationalNarrativeDetails/Drawer",
+    "VehicleHeroCard->LinearGauge/StatCard/SourceContent",
+    "FleetComparisonPanel->MetricBar",
+    "existing Button/GlassPanel/Section/feedback/FadeIn;no competing system"
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "spotlightbase1/xl3columns,Herospans2",
+      "quicklinkswrap/stack,rootmobile44explicitmd36",
+      "Heroidentity/VINwrap,gauges2/4,cards2/4,Links44",
+      "MetricBarlabels/readouts wrap;Briefcompact1/2/3/6grid"
+    ],
+    "widths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "native": "NOTRUN",
+    "limits": "No rectangles/safearea/RTL/zoom/longlocale/container proof. Gauge size affects typography/track,not literal100pxwidth;historicalcriticismnotcopied."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "localizedrefreshname/decorativeiconshidden",
+      "pageheading/labelledSection/spotlight/Herogroup/gaugesummaries/comparisonprogressnames",
+      "nativeHeroLinks/emptyCTAsharedfocus;quicknavigationcandidate",
+      "BriefDrawerexistingdialog/focus/scrollowner",
+      "FadeIn/MetricBarmotionpreference;agetimersnotfetch"
+    ],
+    "native": "NOTRUN",
+    "limits": "Contrast/forcedcolors/screenreader/Tab/Escape/restoration/hitareas/OSmotion unexercised;missingshellownerQS-001"
+  },
+  "evidenceLimits": {
+    "releaseAcceptance": "DocumentationDONE only;not wholepage/native/applicationPASS",
+    "native": "NOTRUN",
+    "TypeScript": "NOTRUN;npx tsc --noEmit not run",
+    "lintTestsBuildFullSuitesBrowserAPI": "NOTRUN",
+    "backend": "No current backend/router/response/currency/bounds/partial contract exercised;historical evidence candidatesonly",
+    "scope": "Deeper shared leaves/splitcatalog runtime notexhaustivelyaudited;no testsread/run",
+    "pinWindow": "65capturepins/finalcheck;sourceunchanged duringboundedartifactwindow;context drift listed,not attributed/discarded;notoriginalinverse/wholetreeproof",
+    "permissionDeviation": "Initial inadvertent read-only Git status executed despite noGitrestriction;noGitwrites,nofurtherGit. Inheritedqueue/package deltas preserved/unattributed.",
+    "failures": [
+      "rg unavailable exit1;successfulPython substitution/noinstall",
+      "oversizeddiscovery/truncation exit1;successfulnarrow retries",
+      "cp1252 UnicodeEncodeError exit1;successfulUTF8retry",
+      "view .ts owner nonexistent;.tsx actualowner resolved/read",
+      "shell362 and390 Windowsos206 commandlaunch exit1;noartifactwritten by either;shortercommands succeeded"
+    ],
+    "prohibitedOperations": "No source/tests/catalog/Gitwrites/subagents/install/server/Docker/heartbeat/browser/API/native/fullsuites."
+  },
+  "finalVerifiedAt": "2026-10-14T01:04:48.437370Z",
+  "routeEvidence": {
+    "App.tsx": {
+      "route": 562,
+      "LayoutParent": 574,
+      "SafeRoute": [
+        368,
+        378
+      ]
+    },
+    "loader": "web/src/lib/routeLoaders.ts:3",
+    "registry": "web/src/lib/routeRegistry.ts:204",
+    "workspace": "vehicleallowed/rangenotregistered;actualshellmissingQS-001"
+  }
+}
