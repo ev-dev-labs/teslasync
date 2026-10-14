@@ -47,13 +47,12 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, o
 
   return (
     <>
-    <ul className="space-y-2" role="listbox" aria-label={t('dashcam.catalog.listAria', 'Imported clips')}>
+    <ul className="space-y-2" aria-label={t('dashcam.catalog.listAria', 'Imported clips')}>
       {clips.map((clip) => {
         const selected = clip.id === selectedClipId;
         return (
           <li key={clip.id} className="flex items-center gap-2">
             <SelectableCard
-              role="option"
               selected={selected}
               onClick={() => onSelect(clip.id)}
               className="min-w-0 flex-1"
@@ -77,7 +76,7 @@ export function ClipCatalogList({ clips, totalCount, selectedClipId, onSelect, o
               size="sm"
               aria-label={t('dashcam.catalog.delete', 'Delete clip')}
               onClick={() => deleteClip.mutate(clip.id)}
-              className="min-h-11 min-w-11 shrink-0 p-0 text-rose-300 hover:text-rose-200"
+              className="min-h-11 min-w-11 shrink-0 p-0 text-[var(--semantic-danger)]"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
