@@ -176,7 +176,7 @@ func (s *Service) InsuranceRiskProfile(
 		profile.LossCostIndex = 1
 		profile.Quality = quality(
 			domain.QualityInsufficient, 0, nil, window,
-			"no completed drives with distance and duration in the selected window",
+			"risk model not computed: no completed drives with finite positive distance and positive duration in the selected window",
 		)
 		return profile, nil
 	}
@@ -243,7 +243,8 @@ func (s *Service) InsuranceRiskProfile(
 	profile.SeverityIndex = clamp(math.Exp(0.5*severityRaw), 0.4, 3.0)
 	profile.LossCostIndex = clamp(profile.FrequencyIndex*profile.SeverityIndex, 0.25, 4.0)
 	profile.RiskGrade = gradeLossCost(profile.LossCostIndex)
-	profile.PeerPercentile = domain.Float64Pointer(clamp(profile.RiskScore, 0, 100))
+	// A risk score is not a percentile without a comparison population.
+	profile.PeerPercentile = nil
 	profile.Trend = riskTrend(usable, window)
 	profile.Levers = riskLevers(scored, profile, policyRecord)
 	if policyRecord != nil {
@@ -298,7 +299,7 @@ func qualityReasons(sampleCount int, hasPolicy bool) []string {
 func usableDrives(drives []port.DriveRecord) []port.DriveRecord {
 	usable := make([]port.DriveRecord, 0, len(drives))
 	for _, drive := range drives {
-		if drive.EndedAt == nil || drive.DistanceM == nil || *drive.DistanceM <= 0 {
+		if drive.EndedAt == nil || drive.DistanceM == nil || math.IsNaN(*drive.DistanceM) || math.IsInf(*drive.DistanceM, 0) || *drive.DistanceM <= 0 {
 			continue
 		}
 		if drive.DurationS == nil || *drive.DurationS <= 0 {

@@ -174,6 +174,101 @@ beforeEach(() => {
 });
 
 describe('InsuranceTelematicsPage — confirm-gated delete', () => {
+  it.each([null, 0, 35, 100])('does not present returned percentile %s as a peer or history comparison', (percentile) => {
+    const profile = makeProfile({ peer_percentile: percentile });
+    mockProfile.mockReturnValue(makeQuery(profile));
+    renderPage();
+
+    const metric = summaryMetric('Underwriting position', 'percentile');
+    expect(metric).toHaveAttribute('data-value-state', 'missing');
+    expect(metric).toHaveTextContent('Not computed');
+    expect(card('Underwriting position')).not.toHaveTextContent('Against your own history distribution');
+    expect(card('Underwriting position')).not.toHaveTextContent('peer percentile compares against your own history');
+    expect(summaryMetric('Underwriting position', 'score')).toHaveTextContent('35');
+    expect(summaryMetric('Underwriting position', 'frequency')).toHaveTextContent('1.1');
+    expect(summaryMetric('Underwriting position', 'severity')).toHaveTextContent('0.9');
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('4 drives');
+    expect(summaryMetric('Premium simulation', 'modelled')).toHaveTextContent('$1,080.00');
+    expect(profile.peer_percentile).toBe(percentile);
+  });
+
+  it('separates measured zero exposure from an insufficient, uncomputed model without changing the response', () => {
+    const reason = 'no completed drives with distance and duration in the selected window';
+    const profile = makeProfile({
+      exposure_distance_m: 0, exposure_duration_s: 0, drive_count: 0, night_distance_m: 0,
+      risk_score: 0, risk_grade: 'standard', frequency_index: 1, severity_index: 1,
+      loss_cost_index: 1, peer_percentile: 0,
+      quality: { status: 'insufficient', sample_count: 0, coverage_pct: null,
+        window_start: null, window_end: null, reasons: [reason] },
+    });
+    mockProfile.mockReturnValue(makeQuery(profile));
+    renderPage();
+
+    for (const key of ['score', 'frequency', 'severity', 'losscost', 'percentile']) {
+      const metric = summaryMetric('Underwriting position', key);
+      expect(metric).toHaveAttribute('data-value-state', 'missing');
+      expect(metric).toHaveTextContent('Not computed');
+      expect(metric).toHaveTextContent(reason);
+      expect(metric.querySelector('[data-operational-value]')).toHaveClass('text-[var(--text-primary)]');
+    }
+    for (const key of ['exposure', 'duration', 'night']) {
+      expect(summaryMetric('Underwriting position', key)).toHaveAttribute('data-value-state', 'value');
+    }
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveTextContent('0 drives');
+    for (const key of ['modelled', 'delta', 'discount', 'expected', 'perDistance']) {
+      expect(summaryMetric('Premium simulation', key)).toHaveAttribute('data-value-state', 'missing');
+      expect(summaryMetric('Premium simulation', key)).toHaveTextContent(reason);
+    }
+    expect(summaryMetric('Premium simulation', 'baseline')).toHaveTextContent('$1,200.00');
+    expect(summaryMetric('Premium simulation', 'deductible')).toHaveTextContent('$500.00');
+    expect(card('Underwriting position')).not.toHaveTextContent('Standard');
+    expect(profile.risk_score).toBe(0);
+    expect(profile.frequency_index).toBe(1);
+    expect(profile.premium?.modelled_premium_minor).toBe(108000);
+  });
+
+  it.each([
+    ['missing', undefined, 'missing'],
+    ['invalid', Number.NaN, 'invalid'],
+    ['infinite', Number.POSITIVE_INFINITY, 'invalid'],
+    ['measured zero', 0, 'value'],
+    ['fractional', 0.25, 'value'],
+  ])('keeps %s risk input distinct from a computed numeric value', (_label, riskScore, state) => {
+    mockProfile.mockReturnValue(makeQuery({ ...makeProfile(), risk_score: riskScore }));
+    renderPage();
+    expect(summaryMetric('Underwriting position', 'score')).toHaveAttribute('data-value-state', state);
+  });
+
+  it.each([
+    [null, 'missing'],
+    [Number.NaN, 'invalid'],
+    [Number.NEGATIVE_INFINITY, 'invalid'],
+    [0, 'value'],
+    [0.25, 'value'],
+  ])('validates recorded exposure independently of model availability (%s)', (distance, state) => {
+    mockProfile.mockReturnValue(makeQuery({
+      ...makeProfile(),
+      exposure_distance_m: distance,
+      quality: { status: 'insufficient', sample_count: 0, coverage_pct: null,
+        window_start: null, window_end: null, reasons: ['Insufficient driving evidence'] },
+    }));
+    renderPage();
+    expect(summaryMetric('Underwriting position', 'exposure')).toHaveAttribute('data-value-state', state);
+    expect(summaryMetric('Underwriting position', 'score')).toHaveAttribute('data-value-state', 'missing');
+  });
+
+  it.each([-1250, 1250])('preserves signed premium difference %s and fractional model indices', (delta) => {
+    const profile = makeProfile({ risk_score: 0, frequency_index: 0.25, severity_index: 1.75 });
+    mockProfile.mockReturnValue(makeQuery({
+      ...profile, premium: { ...profile.premium, delta_minor: delta, delta_pct: delta / 1000 },
+    }));
+    renderPage();
+    expect(summaryMetric('Underwriting position', 'score')).toHaveAttribute('data-value-state', 'value');
+    expect(summaryMetric('Underwriting position', 'frequency')).toHaveTextContent('0.25');
+    expect(summaryMetric('Underwriting position', 'severity')).toHaveTextContent('1.75');
+    expect(summaryMetric('Premium simulation', 'delta')).toHaveTextContent(delta < 0 ? '-$12.50' : '$12.50');
+  });
+
   it('retains all four real briefs with exposure, policy units, caps and no insurer-quote claim', () => {
     mockProfile.mockReturnValue(makeQuery(makeProfile()));
     renderPage();
