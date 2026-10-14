@@ -35,12 +35,16 @@ function panel(query: DataStateSource<unknown>, empty: boolean, onRetry?: () => 
   </InsightPanel>;
 }
 
-function renderPanel(query: DataStateSource<unknown>, empty: boolean, onRetry?: () => void) {
+function renderPanels(children: ReactNode) {
   const client = createClient();
   function Providers({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={client}><MemoryRouter>{children}</MemoryRouter></QueryClientProvider>;
   }
-  return render(panel(query, empty, onRetry), { wrapper: Providers });
+  return render(children, { wrapper: Providers });
+}
+
+function renderPanel(query: DataStateSource<unknown>, empty: boolean, onRetry?: () => void) {
+  return renderPanels(panel(query, empty, onRetry));
 }
 
 const retainedCases = [
@@ -90,6 +94,83 @@ describe('InsightPanel retained authoritative emptiness', () => {
       fireEvent.click(refreshButtons.find(button => !warning.contains(button))!);
       expect(onRetry ?? refetch).toHaveBeenCalledTimes(2);
       if (onRetry) expect(refetch).not.toHaveBeenCalled();
+    });
+
+  it.each(retainedCases)('keeps $shape $phase independent of fatal recovery and healthy insights',
+    ({ data, error, fetchStatus, message }) => {
+      const retainedRefetch = vi.fn();
+      const retainedRetry = vi.fn();
+      const fatalRefetch = vi.fn();
+      const healthyRefetch = vi.fn();
+      const inspect = vi.fn();
+      const retainedQuery = {
+        data, error, fetchStatus, dataUpdatedAt: Date.parse(hazards.generated_at), refetch: retainedRefetch,
+      };
+      function sources(fatalQuery: DataStateSource<unknown>, hazardQuery = retainedQuery, empty = true) {
+        return <div dir="rtl">
+          <div data-testid="retained-source">{panel(hazardQuery, empty, retainedRetry)}</div>
+          <div data-testid="fatal-source">
+            <InsightPanel title="Modeled evidence" query={fatalQuery} empty={!fatalQuery.data}>
+              <span>Recovered modeled evidence</span>
+            </InsightPanel>
+          </div>
+          <div data-testid="healthy-source">
+            <InsightPanel title="Independent insights" description="Independent source details"
+              query={{ data: hazards, refetch: healthyRefetch }}>
+              <span>Recorded observations: {hazards.items[0].observation_count}</span>
+              <span>Coverage: {hazards.data_quality?.coverage_pct ?? '—'}</span>
+              <Button onClick={inspect}>Inspect independent insights</Button>
+            </InsightPanel>
+          </div>
+        </div>;
+      }
+      const view = renderPanels(sources({ error: new Error('Initial failure'), refetch: fatalRefetch }));
+      const retained = within(screen.getByTestId('retained-source'));
+      const fatal = within(screen.getByTestId('fatal-source'));
+      const healthy = within(screen.getByTestId('healthy-source'));
+      expect(screen.getAllByRole('heading')).toHaveLength(3);
+      expect(retained.getByText(EMPTY_MESSAGE)).toBeInTheDocument();
+      expect(retained.getByTestId('stale-refresh-warning')).toHaveTextContent(message);
+      expect(retained.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
+      expect(fatal.getByText('Intelligence evidence could not be loaded.')).toBeInTheDocument();
+      expect(fatal.queryByText('Recovered modeled evidence')).not.toBeInTheDocument();
+      expect(fatal.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(healthy.getByText('Recorded observations: 0')).toBeInTheDocument();
+      expect(healthy.getByText('Coverage: —')).toBeInTheDocument();
+      expect(healthy.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(healthy.getByRole('heading', { name: 'Independent insights' }).closest('[dir]'))
+        .toHaveAttribute('dir', 'rtl');
+
+      retained.getAllByRole('button', { name: 'Refresh' }).forEach(button => fireEvent.click(button));
+      expect(retainedRetry).toHaveBeenCalledTimes(2);
+      expect(retainedRefetch).not.toHaveBeenCalled();
+      expect(fatalRefetch).not.toHaveBeenCalled();
+      fireEvent.click(fatal.getByRole('button', { name: 'Retry' }));
+      expect(fatalRefetch).toHaveBeenCalledOnce();
+      expect(retainedRetry).toHaveBeenCalledTimes(2);
+      fireEvent.click(healthy.getByRole('button', { name: 'Inspect independent insights' }));
+      expect(inspect).toHaveBeenCalledOnce();
+      expect(healthyRefetch).not.toHaveBeenCalled();
+
+      const recoveredFatal = { data: hazards, isSuccess: true, refetch: fatalRefetch };
+      view.rerender(sources(recoveredFatal));
+      expect(fatal.getByText('Recovered modeled evidence')).toBeInTheDocument();
+      expect(fatal.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
+      expect(retained.getByText(EMPTY_MESSAGE)).toBeInTheDocument();
+      expect(retained.getByTestId('stale-refresh-warning')).toHaveTextContent(message);
+      expect(healthy.getByText('Coverage: —')).toBeInTheDocument();
+
+      view.rerender(sources(recoveredFatal, { ...retainedQuery, data: hazards, error: null, fetchStatus: 'idle' }, false));
+      expect(retained.getByText(hazards.items[0].hazard_type)).toBeInTheDocument();
+      expect(retained.getByRole('button', { name: 'Inspect evidence' })).toBeInTheDocument();
+      expect(retained.queryByText(EMPTY_MESSAGE)).not.toBeInTheDocument();
+      expect(retained.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+      expect(fatal.getByText('Recovered modeled evidence')).toBeInTheDocument();
+      expect(healthy.getByText('Recorded observations: 0')).toBeInTheDocument();
+      expect(healthy.getByRole('button', { name: 'Inspect independent insights' })).toBeInTheDocument();
+      expect(retainedRetry).toHaveBeenCalledTimes(2);
+      expect(fatalRefetch).toHaveBeenCalledOnce();
+      expect(healthyRefetch).not.toHaveBeenCalled();
     });
 
   it.each([
