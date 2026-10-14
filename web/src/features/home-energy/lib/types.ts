@@ -92,7 +92,12 @@ export interface OrchestrationInput {
   vehicles: VehicleInput[];
   /** Forecast solar generation, watts, one entry per slot. */
   solarForecastW: number[];
-  /** Forecast household base load (excludes vehicle charging), watts, one entry per slot. */
+  /**
+   * Forecast household load, watts, one entry per slot. Consumer history may
+   * already include historical vehicle charging and cannot be decomposed from
+   * this source alone. Preserve those observations without inventing a charging
+   * subtraction; planned vehicle charging is accounted for separately.
+   */
   loadForecastW: number[];
   /** Tariff, one entry per slot. */
   tariff: TariffSlot[];
