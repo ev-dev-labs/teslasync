@@ -135,7 +135,7 @@ export function ColdWarmComparison({
                   label={t('coldStart.coldGroup', 'Cold starts ({{count}} drives)', {
                     count: summary.cold.drives,
                   })}
-                  value={summary.cold.whPerKm ?? 0}
+                  value={summary.cold.whPerKm}
                   max={maxEfficiency}
                   color={CHART_COLORS[0]}
                   sublabel={formatEfficiency(summary.cold.whPerKm)}
@@ -144,7 +144,7 @@ export function ColdWarmComparison({
                   label={t('coldStart.warmGroup', 'Warm starts ({{count}} drives)', {
                     count: summary.warm.drives,
                   })}
-                  value={summary.warm.whPerKm ?? 0}
+                  value={summary.warm.whPerKm}
                   max={maxEfficiency}
                   color={CHART_COLORS[1]}
                   sublabel={formatEfficiency(summary.warm.whPerKm)}

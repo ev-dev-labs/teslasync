@@ -137,8 +137,33 @@ vi.mock('@/components/layout', () => ({
   Grid: ({ children }: { children: ReactNode }) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async () => ({
+  motion: (await vi.importActual<typeof import('framer-motion')>('framer-motion')).motion,
   FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
+
+vi.mock('@/hooks/useMotionPreference', () => ({
+  useMotionPreference: () => ({ reduce: true, durationMs: 0 }),
+}));
+
+vi.mock('@/hooks/useNumberFormatting', () => ({
+  useNumberFormatting: () => ({ fmtNumber: (value: number) => String(value) }),
+}));
+
+vi.mock('@/components/data-display', async () => ({
+  MetricBar: (await import('@/components/data-display/MetricBar')).MetricBar,
+}));
+
+vi.mock('../components/operationalbrief-a-m/NestedDrivingBrief', () => ({
+  NestedDrivingBrief: () => null,
+}));
+
+vi.mock('../components/cold-start/useColdStartDisplay', () => ({
+  useColdStartDisplay: () => ({
+    formatEfficiency: (value: number | null | undefined) =>
+      value != null && Number.isFinite(value) ? `${value} Wh/km` : '—',
+    formatEnergy: (value: number | null) => value == null ? '—' : `${value} Wh`,
+  }),
 }));
 
 vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
@@ -182,6 +207,8 @@ vi.mock('../components/operationalbrief-a-m/ColdStartBrief', async () => {
 });
 
 import ColdStartPage from './ColdStartPage';
+import { ColdWarmComparison } from '../components/cold-start/ColdWarmComparison';
+import { summarizeColdStarts } from '../lib/coldStart';
 
 function query(overrides: Record<string, unknown> = {}) {
   return {
@@ -263,6 +290,77 @@ describe('ColdStartPage', () => {
       start: '2026-01-01T08:00:00.000Z',
       end: '2026-08-08T07:00:00.000Z',
       limit: 1000,
+    });
+
+    describe('ColdWarmComparison efficiency readings', () => {
+      const readings = [
+        { name: 'missing', value: null, hasReading: false },
+        { name: 'NaN', value: Number.NaN, hasReading: false },
+        { name: 'positive infinity', value: Number.POSITIVE_INFINITY, hasReading: false },
+        { name: 'negative infinity', value: Number.NEGATIVE_INFINITY, hasReading: false },
+        { name: 'measured zero', value: 0, hasReading: true },
+        { name: 'negative signed fraction', value: -25.5, hasReading: true },
+        { name: 'positive fraction below one', value: 0.25, hasReading: true },
+        { name: 'positive signed fraction', value: 300.75, hasReading: true },
+      ];
+
+      describe.each(['cold', 'warm'] as const)('%s cohort', cohort => {
+        it.each(readings)('preserves $name separately from unknown readings', ({ value, hasReading }) => {
+          const summary = summarizeColdStarts([]);
+          summary.cold = { drives: 5, distanceM: 5_000, whPerKm: 200 };
+          summary.warm = { drives: 5, distanceM: 5_000, whPerKm: 200 };
+          summary[cohort].whPerKm = value;
+
+          render(
+            <ColdWarmComparison
+              summary={summary}
+              penaltyCostLabel={null}
+              state={{ isLoading: false, error: null, onRetry: vi.fn() }}
+            />,
+          );
+
+          const bar = screen.getByRole('progressbar', {
+            name: cohort === 'cold' ? 'Cold starts (5 drives)' : 'Warm starts (5 drives)',
+          });
+          const max = Math.max(value ?? 0, 200, 1);
+          const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
+          expect(bar).toHaveAttribute('aria-valuemax', String(safeMax));
+          expect(bar.querySelector('[data-metric-fill]') !== null).toBe(hasReading);
+          if (hasReading && value != null) {
+            expect(bar).toHaveAttribute('aria-valuenow', String(Math.min(Math.max(value, 0), safeMax)));
+            expect(bar).not.toHaveAttribute('aria-valuetext');
+            expect(bar).toHaveTextContent(`${value} Wh/km`);
+          } else {
+            expect(bar).not.toHaveAttribute('aria-valuenow');
+            expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+            expect(bar).toHaveTextContent('—');
+            expect(bar).not.toHaveTextContent('0 Wh/km');
+          }
+        });
+      });
+
+      it('retains the minimum max guard while distinguishing missing from measured zero', () => {
+        const summary = summarizeColdStarts([]);
+        summary.cold = { drives: 5, distanceM: 5_000, whPerKm: null };
+        summary.warm = { drives: 5, distanceM: 5_000, whPerKm: 0 };
+
+        render(
+          <ColdWarmComparison
+            summary={summary}
+            penaltyCostLabel={null}
+            state={{ isLoading: false, error: null, onRetry: vi.fn() }}
+          />,
+        );
+
+        const cold = screen.getByRole('progressbar', { name: 'Cold starts (5 drives)' });
+        const warm = screen.getByRole('progressbar', { name: 'Warm starts (5 drives)' });
+        for (const bar of [cold, warm]) expect(bar).toHaveAttribute('aria-valuemax', '1');
+        expect(cold).not.toHaveAttribute('aria-valuenow');
+        expect(cold.querySelector('[data-metric-fill]')).toBeNull();
+        expect(warm).toHaveAttribute('aria-valuenow', '0');
+        expect(warm.querySelector('[data-metric-fill]')).not.toBeNull();
+        expect(warm).toHaveTextContent('0 Wh/km');
+      });
     });
   });
 
