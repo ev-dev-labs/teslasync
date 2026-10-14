@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 
 import { cn } from '@/lib/cn';
 import { fmtInt as libFmtInt } from '@/lib/numberFormat';
 import { formatRelative } from '@/lib/dateFormat';
+import { addCivilDays } from '@/lib/dateRange';
 import { typography } from '@/lib/tokens';
 import { Icons } from '@/lib/icons';
 
@@ -18,6 +20,7 @@ import {
   Checkbox,
   RadioCard,
   DataTable,
+  useSortToggle,
   PanelTitle,
   Label,
   Text,
@@ -46,9 +49,11 @@ import {
   useCreateAccountExport,
   useExportColumns,
   exportDownloadUrl,
+  type CreateExportPayload,
 } from '@/api/hooks/useExports';
 import { ScheduledExportsPanel } from './ScheduledExportsPanel';
 import type { Vehicle } from '@/api/types';
+import type { DataState } from '@/api/dataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 /* ------------------------------------------------------------------ */
@@ -75,7 +80,7 @@ interface ExportJobSummary {
 }
 
 interface ExportSubmitPayload {
-  type: ExportType;
+  type: CreateExportPayload['type'];
   format: ExportFormat;
   vehicle_id?: number;
   start?: string;
@@ -116,6 +121,16 @@ const EXPORT_FORMATS: { value: ExportFormat; labelKey: string; label: string; ic
   { value: 'csv', labelKey: 'dataExport.formats.csv', label: 'CSV', icon: Icons.fileSpreadsheet, descKey: 'dataExport.formats.csvDesc', desc: 'Comma-separated values, compatible with Excel and Google Sheets' },
   { value: 'json', labelKey: 'dataExport.formats.json', label: 'JSON', icon: Icons.fileJson, descKey: 'dataExport.formats.jsonDesc', desc: 'Structured JSON format for programmatic access' },
 ];
+
+const EXPORT_JOB_TYPES: Record<ExportType, CreateExportPayload['type'] | null> = {
+  drives: 'drives',
+  charging: 'charging',
+  trips: 'trips',
+  analytics: 'analytics',
+  full_backup: 'backup',
+  maintenance: null,
+  energy: null,
+};
 
 const DATE_PRESETS: { labelKey: string; label: string; days: number }[] = [
   { labelKey: 'dataExport.presets.last7', label: 'Last 7 days', days: 7 },
@@ -162,9 +177,18 @@ const TYPE_BADGE_VARIANT: Record<ExportType, 'info' | 'success' | 'warning' | 'd
 /* ------------------------------------------------------------------ */
 
 function daysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split('T')[0];
+  return addCivilDays(new Date().toISOString().split('T')[0], -days);
+}
+
+function validExportDates(start: string, end: string): boolean {
+  // Both queued endpoints parse date-only UTC midnights and include the end
+  // instant itself, not the remainder of that day.
+  const valid = (date: string) => !date || (
+    /^\d{4}-\d{2}-\d{2}$/.test(date) &&
+    Number.isFinite(Date.parse(`${date}T00:00:00Z`)) &&
+    new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) === date
+  );
+  return valid(start) && valid(end) && (!start || !end || start <= end);
 }
 
 function fmtInt(n: number | undefined): string {
@@ -220,21 +244,22 @@ function FormatSelector({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-3" role="group" aria-label={t('dataExport.wizard.step2', 'STEP 2 — choose format')}>
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2" role="radiogroup" aria-label={t('dataExport.wizard.step2', 'STEP 2 — choose format')}>
       {EXPORT_FORMATS.map((f) => {
         const Icon = f.icon;
-        const active = selected === f.value;
         return (
-          <Button
+          <RadioCard
             key={f.value}
-            variant={active ? 'primary' : 'outline'}
-            size="md"
-            aria-pressed={active}
+            name="export-format"
+            value={f.value}
+            checked={selected === f.value}
+            accent="neutral"
+            aria-label={t(f.labelKey, f.label)}
             icon={<Icon className="h-4 w-4" aria-hidden="true" />}
-            onClick={() => onChange(f.value)}
-          >
-            {t(f.labelKey, f.label)}
-          </Button>
+            onChange={() => onChange(f.value)}
+            label={t(f.labelKey, f.label)}
+            description={t(f.descKey, f.desc)}
+          />
         );
       })}
     </div>
@@ -257,6 +282,8 @@ function DatePresetSelector({
           <Button
             key={p.days}
             size="sm"
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             variant={active ? 'primary' : 'ghost'}
             aria-pressed={active}
             onClick={() => onChange(p.days)}
@@ -398,15 +425,17 @@ function CustomDateRange({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap gap-3">
+    <div className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
       <Input
         type="date"
+        className="min-h-11 md:min-h-10"
         label={t('dataExport.startDate', 'Start')}
         value={startDate}
         onChange={(e) => onStartChange(e.target.value)}
       />
       <Input
         type="date"
+        className="min-h-11 md:min-h-10"
         label={t('dataExport.endDate', 'End')}
         value={endDate}
         onChange={(e) => onEndChange(e.target.value)}
@@ -483,24 +512,55 @@ function StatsRow({
 /*  Export Wizard                                                       */
 /* ------------------------------------------------------------------ */
 
+interface VehicleTargetProps {
+  vehiclesState: DataState<Vehicle[]>;
+  onRetryVehicles: () => void;
+}
+
+function VehicleTargetFeedback({ vehiclesState, onRetryVehicles, unknownTarget }: VehicleTargetProps & { unknownTarget?: string }) {
+  const { t } = useTranslation();
+  return (
+    <div role="status">
+      <StaleRefreshWarning state={vehiclesState} label={t('dataExport.vehicle', 'Vehicle')} />
+      {vehiclesState.fatalError ? (
+        <QueryError error={vehiclesState.fatalError} onRetry={onRetryVehicles} />
+      ) : vehiclesState.data === undefined ? (
+        <Text color="secondary">{vehiclesState.isRefreshBlocked
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : t('statCard.loading', 'Loading')}</Text>
+      ) : vehiclesState.data.length === 0 ? (
+        <EmptyState message={t('palette.noVehicles', 'No vehicles available')} />
+      ) : null}
+      {unknownTarget && (
+        <HelperText>{t('common.unknown', 'Unknown')} — #{unknownTarget}</HelperText>
+      )}
+    </div>
+  );
+}
+
 function ExportWizard({
-  vehicles,
+  vehiclesState,
+  onRetryVehicles,
   onSubmit,
   isPending,
 }: {
-  vehicles: Vehicle[] | undefined;
+  vehiclesState: DataState<Vehicle[]>;
+  onRetryVehicles: () => void;
   onSubmit: (payload: ExportSubmitPayload) => void;
   isPending: boolean;
 }) {
   const { t } = useTranslation();
+  const vehicles = vehiclesState.data;
+  const [searchParams] = useSearchParams();
   const {
     vehicleId: globalVehicleId,
     setVehicleId: setGlobalVehicleId,
   } = useSelectedVehicle();
   const [exportType, setExportType] = useState<ExportType>('drives');
+  const jobType = EXPORT_JOB_TYPES[exportType];
   const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
   const [vehicleId, setVehicleId] = useState(
-    globalVehicleId == null ? '' : String(globalVehicleId),
+    searchParams.get('vehicle_id') || (globalVehicleId == null ? '' : String(globalVehicleId)),
   );
   const [presetDays, setPresetDays] = useState(30);
   const [customStart, setCustomStart] = useState('');
@@ -511,10 +571,17 @@ function ExportWizard({
   // legacy byte-for-byte behaviour". A non-null value is the explicit
   // ordered allowlist the backend should honour.
   const [selectedColumns, setSelectedColumns] = useState<string[] | null>(null);
+  const unknownTarget = vehicleId !== '' && !vehicles?.some(v => String(v.id) === vehicleId);
+  const targetReady = !!vehicles?.length && !vehiclesState.fatalError && !unknownTarget;
+  const datesReady = !useCustomRange || (
+    !!customStart && !!customEnd && validExportDates(customStart, customEnd)
+  );
 
   useEffect(() => {
-    setVehicleId(globalVehicleId == null ? '' : String(globalVehicleId));
-  }, [globalVehicleId]);
+    // A fleet refresh must not turn a removed target into a different scope.
+    setVehicleId(previous => previous && !vehicles?.some(v => String(v.id) === previous)
+      ? previous : globalVehicleId == null ? previous : String(globalVehicleId));
+  }, [globalVehicleId, vehicles]);
 
   const handleVehicleChange = useCallback(
     (value: string) => {
@@ -540,16 +607,17 @@ function ExportWizard({
   }, []);
 
   const handleSubmit = useCallback(() => {
+    if (!targetReady || !datesReady || jobType === null) return;
     const payload: ExportSubmitPayload = {
-      type: exportType,
+      type: jobType,
       format: exportFormat,
     };
     if (vehicleId) {
       payload.vehicle_id = Number(vehicleId);
     }
-    if (useCustomRange && customStart) {
+    if (useCustomRange) {
       payload.start = customStart;
-      payload.end = customEnd || new Date().toISOString().split('T')[0];
+      payload.end = customEnd;
     } else if (presetDays > 0) {
       payload.start = daysAgo(presetDays);
       payload.end = new Date().toISOString().split('T')[0];
@@ -558,7 +626,7 @@ function ExportWizard({
       payload.columns = selectedColumns;
     }
     onSubmit(payload);
-  }, [exportType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, selectedColumns, onSubmit]);
+  }, [targetReady, datesReady, jobType, exportFormat, vehicleId, presetDays, customStart, customEnd, useCustomRange, selectedColumns, onSubmit]);
 
   const vehicleOptions = useMemo(() => {
     const opts = [{ value: '', label: t('dataExport.allVehicles', 'All vehicles') }];
@@ -567,8 +635,9 @@ function ExportWizard({
         opts.push({ value: String(v.id), label: v.display_name || v.vin });
       }
     }
+    if (unknownTarget) opts.push({ value: vehicleId, label: `${t('common.unknown', 'Unknown')} — #${vehicleId}` });
     return opts;
-  }, [vehicles, t]);
+  }, [vehicles, t, unknownTarget, vehicleId]);
 
   return (
     <GlassPanel className="p-4 sm:p-5 lg:p-6">
@@ -581,6 +650,14 @@ function ExportWizard({
       <div className="mb-5">
         <Label className="mb-2 block">{t('dataExport.wizard.step1', 'STEP 1 — select data type')}</Label>
         <ExportTypeSelector selected={exportType} onChange={handleExportTypeChange} />
+        {jobType === null && (
+          <div role="status" className="mt-3">
+            <Text>{t('error.unsupported.title', 'Feature not supported')}</Text>
+            <HelperText>
+              {t('error.unsupported.message', 'This feature is not available with the current server or deployment configuration.')}
+            </HelperText>
+          </div>
+        )}
       </div>
 
       {/* Step 2: Format */}
@@ -597,28 +674,33 @@ function ExportWizard({
       />
 
       {/* Step 3: Vehicle */}
-      {vehicles && vehicles.length > 0 && (
-        <div className="mb-5 max-w-xs">
-          <Label className="mb-2 block">{t('dataExport.wizard.step3', 'STEP 3 — select vehicle')}</Label>
-          <Select
-            aria-label={t('dataExport.wizard.step3', 'STEP 3 — select vehicle')}
-            options={vehicleOptions}
-            value={vehicleId}
-            onChange={(e) => handleVehicleChange(e.target.value)}
-            placeholder={t('dataExport.allVehicles', 'All vehicles')}
-          />
-        </div>
-      )}
+      <div className="mb-5">
+        <Label className="mb-2 block">{t('dataExport.wizard.step3', 'STEP 3 — select vehicle')}</Label>
+        <Select
+          aria-label={t('dataExport.wizard.step3', 'STEP 3 — select vehicle')}
+          options={vehicleOptions}
+          value={vehicleId}
+          onChange={(e) => handleVehicleChange(e.target.value)}
+          placeholder={t('dataExport.allVehicles', 'All vehicles')}
+          disabled={!vehicles?.length || !!vehiclesState.fatalError}
+        />
+        <VehicleTargetFeedback vehiclesState={vehiclesState} onRetryVehicles={onRetryVehicles} unknownTarget={unknownTarget ? vehicleId : undefined} />
+      </div>
 
       {/* Step 4: Date Range */}
       <div className="mb-6">
         <Label className="mb-2 block">{t('dataExport.wizard.step4', 'STEP 4 — date range')}</Label>
         <DatePresetSelector selected={useCustomRange ? -1 : presetDays} onChange={handlePresetChange} />
+        <HelperText>
+          {t('dataExport.startDate', 'Start')} 00:00 UTC ≤ {t('common.timestamp', 'Timestamp')} ≤ {t('dataExport.endDate', 'End')} 00:00 UTC
+        </HelperText>
         <div className="mt-3 flex items-center gap-3">
           <Button
             variant={useCustomRange ? 'primary' : 'ghost'}
             size="sm"
             aria-pressed={useCustomRange}
+            wrapLabel
+            className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             icon={<Icons.calendar className="h-3.5 w-3.5" aria-hidden="true" />}
             onClick={() => setUseCustomRange(!useCustomRange)}
           >
@@ -633,6 +715,7 @@ function ExportWizard({
               onStartChange={setCustomStart}
               onEndChange={setCustomEnd}
             />
+            {!datesReady && <HelperText role="alert">{t('vehicleSettings.validation.invalidDate', 'Enter a valid date and time.')}</HelperText>}
           </div>
         )}
       </div>
@@ -641,7 +724,9 @@ function ExportWizard({
       <Button
         variant="primary"
         size="lg"
+        wrapLabel
         loading={isPending}
+        disabled={!targetReady || !datesReady || jobType === null}
         icon={<Icons.download className="h-4 w-4" aria-hidden="true" />}
         onClick={handleSubmit}
       >
@@ -692,11 +777,15 @@ function ColumnPickerSection({
   if (!catalogType) {
     return null;
   }
-  if (catalogQuery.isLoading && !catalogState.hasData) {
+  if (catalogState.status === 'initial') {
     return (
       <div className="mb-5">
         <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
-        <Skeleton className="h-24 w-full" />
+        {catalogState.isRefreshBlocked ? (
+          <Text color="secondary" role="status">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+        ) : (
+          <Skeleton className="h-24 w-full" />
+        )}
       </div>
     );
   }
@@ -708,8 +797,17 @@ function ColumnPickerSection({
       </div>
     );
   }
-  if (!data || !data.supports_selection || (data.columns?.length ?? 0) === 0) {
+  if (data?.supports_selection === false) {
     return null;
+  }
+  if (!data || !data.supports_selection || (data.columns?.length ?? 0) === 0) {
+    return (
+      <div className="mb-5" data-testid="export-column-picker">
+        <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
+        <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', 'STEP 2½ — columns')} />
+        <EmptyState message={t('common.noData', 'No data available')} />
+      </div>
+    );
   }
 
   // The "selected" set drives the checkbox UI. Default = every column.
@@ -770,13 +868,15 @@ function ColumnPickerSection({
               'Select which columns to include in the export. Required columns cannot be removed.',
             )}
           </HelperText>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="ghost"
               size="sm"
               onClick={handleSelectAll}
               disabled={allSelected}
               data-testid="export-column-select-all"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             >
               {t('dataExport.columns.selectAll', 'Select all')}
             </Button>
@@ -785,6 +885,8 @@ function ColumnPickerSection({
               size="sm"
               onClick={handleClear}
               data-testid="export-column-clear"
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
             >
               {t('dataExport.columns.clear', 'Clear')}
             </Button>
@@ -803,7 +905,7 @@ function ColumnPickerSection({
                 key={col.name}
                 data-testid={`export-column-row-${col.name}`}
                 className={cn(
-                  'flex min-h-11 items-center gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2',
+                  'flex min-w-0 min-h-11 flex-wrap items-center gap-2 rounded-md border border-[var(--border-default)] bg-[var(--surface-1)] px-3 py-2 md:min-h-0',
                   !required && 'hover:bg-[var(--surface-2)]',
                 )}
               >
@@ -838,6 +940,7 @@ function ColumnPickerSection({
 function ExportHistoryTable({
   jobs,
   isLoading,
+  isRefreshBlocked,
   error,
   vehicles,
   onDownload,
@@ -845,6 +948,7 @@ function ExportHistoryTable({
 }: {
   jobs: ExportJobSummary[] | undefined;
   isLoading: boolean;
+  isRefreshBlocked: boolean;
   error?: unknown;
   vehicles: Vehicle[] | undefined;
   onDownload: (job: ExportJobSummary) => void;
@@ -853,6 +957,33 @@ function ExportHistoryTable({
   const { formatDurationMsLong } = useNumberFormatting();
   const { formatBytes, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
+  const { sortKey, sortDir, onSort } = useSortToggle();
+  const sortedJobs = useMemo(() => {
+    const source = jobs ?? [];
+    if (!sortKey) return source;
+    const value = (job: ExportJobSummary): string | number | null => {
+      switch (sortKey) {
+        case 'type': return job.type ?? null;
+        case 'status': return job.status ?? null;
+        case 'records': return job.record_count ?? null;
+        case 'size': return job.file_size ?? null;
+        case 'time': {
+          const timestamp = Date.parse(job.created_at);
+          return Number.isFinite(timestamp) ? timestamp : null;
+        }
+        default: return null;
+      }
+    };
+    return [...source].sort((a, b) => {
+      const left = value(a);
+      const right = value(b);
+      if (left == null && right == null) return 0;
+      if (left == null) return 1;
+      if (right == null) return -1;
+      const comparison = left < right ? -1 : left > right ? 1 : 0;
+      return sortDir === 'asc' ? comparison : -comparison;
+    });
+  }, [jobs, sortKey, sortDir]);
   const vehicleMap = useMemo(() => {
     const map = new Map<number, string>();
     if (vehicles) {
@@ -960,6 +1091,8 @@ function ExportHistoryTable({
               variant="ghost"
               size="sm"
               icon={<Icons.download className="h-3.5 w-3.5" aria-hidden="true" />}
+              wrapLabel
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               onClick={() => onDownload(row)}
             >
               {t('dataExport.download', 'Download')}
@@ -990,7 +1123,7 @@ function ExportHistoryTable({
             </Badge>
           )}
         </div>
-        <Button variant="ghost" size="sm" icon={<Icons.refresh className="h-3.5 w-3.5" aria-hidden="true" />} onClick={onRefresh}>
+        <Button variant="ghost" size="sm" wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" icon={<Icons.refresh className="h-3.5 w-3.5" aria-hidden="true" />} onClick={onRefresh}>
           {t('dataExport.refresh', 'Refresh')}
         </Button>
       </div>
@@ -1003,6 +1136,8 @@ function ExportHistoryTable({
             resourceName={t('dataExport.resourceName', 'Export jobs')}
           />
         </div>
+      ) : !jobs && isRefreshBlocked ? (
+        <Text color="secondary" role="status" className="p-5">{t('dataSources.status.paused', 'Refresh paused')}</Text>
       ) : isLoading && (!jobs || jobs.length === 0) ? (
         <div className="space-y-3 p-5">
           {Array.from({ length: 5 }).map((_, i) => (
@@ -1020,7 +1155,10 @@ function ExportHistoryTable({
           <DataTable
             tableId="system:data-export-jobs"
             columns={columns}
-            data={jobs}
+            data={sortedJobs}
+            sortKey={sortKey}
+            sortDir={sortDir}
+            onSort={onSort}
             enableValueFilters
             keyExtractor={(row) => row.id}
             emptyMessage={t('dataExport.noJobs', 'No export jobs')}
@@ -1037,27 +1175,29 @@ function ExportHistoryTable({
 /*  Account Export Panel                                             */
 /* ------------------------------------------------------------------ */
 
-interface AccountExportPanelProps {
-  vehicles: Vehicle[] | undefined;
-}
-
-function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
+function AccountExportPanel({ vehiclesState, onRetryVehicles }: VehicleTargetProps) {
   const { t } = useTranslation();
+  const vehicles = vehiclesState.data;
+  const [searchParams] = useSearchParams();
   const {
     vehicleId: globalVehicleId,
     setVehicleId: setGlobalVehicleId,
   } = useSelectedVehicle();
   const [vehicleId, setVehicleId] = useState<string>(
-    globalVehicleId == null ? 'all' : String(globalVehicleId),
+    searchParams.get('vehicle_id') || (globalVehicleId == null ? 'all' : String(globalVehicleId)),
   );
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
   const createAccount = useCreateAccountExport();
+  const unknownTarget = vehicleId !== 'all' && !vehicles?.some(v => String(v.id) === vehicleId);
+  const targetReady = !!vehicles?.length && !vehiclesState.fatalError && !unknownTarget;
+  const datesReady = validExportDates(startDate, endDate);
 
   useEffect(() => {
-    setVehicleId(globalVehicleId == null ? 'all' : String(globalVehicleId));
-  }, [globalVehicleId]);
+    setVehicleId(previous => previous !== 'all' && !vehicles?.some(v => String(v.id) === previous)
+      ? previous : globalVehicleId == null ? previous : String(globalVehicleId));
+  }, [globalVehicleId, vehicles]);
 
   const handleVehicleChange = useCallback(
     (value: string) => {
@@ -1071,15 +1211,16 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
   );
 
   const handleStart = useCallback(() => {
+    if (!targetReady || !datesReady) return;
     const payload: { vehicle_id?: number; start?: string; end?: string } = {};
     if (vehicleId !== 'all') {
       const id = Number(vehicleId);
-      if (!Number.isNaN(id)) payload.vehicle_id = id;
+      payload.vehicle_id = id;
     }
-    if (startDate) payload.start = new Date(startDate).toISOString();
-    if (endDate) payload.end = new Date(endDate).toISOString();
+    if (startDate) payload.start = startDate;
+    if (endDate) payload.end = endDate;
     createAccount.mutate(payload);
-  }, [vehicleId, startDate, endDate, createAccount]);
+  }, [targetReady, datesReady, vehicleId, startDate, endDate, createAccount]);
 
   const vehicleOptions = useMemo(
     () => [
@@ -1088,8 +1229,9 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
         value: String(v.id),
         label: v.display_name || v.vin || `Vehicle ${v.id}`,
       })),
+      ...(unknownTarget ? [{ value: vehicleId, label: `${t('common.unknown', 'Unknown')} — #${vehicleId}` }] : []),
     ],
-    [vehicles, t],
+    [vehicles, t, unknownTarget, vehicleId],
   );
 
   return (
@@ -1115,20 +1257,28 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
           value={vehicleId}
           onChange={(e) => handleVehicleChange(e.target.value)}
           options={vehicleOptions}
+          disabled={!vehicles?.length || !!vehiclesState.fatalError}
         />
         <Input
           label={t('dataExport.account.startDate', 'Start date (optional)')}
+          className="min-h-11 md:min-h-10"
           type="date"
           value={startDate}
           onChange={(e) => setStartDate(e.target.value)}
         />
         <Input
           label={t('dataExport.account.endDate', 'End date (optional)')}
+          className="min-h-11 md:min-h-10"
           type="date"
           value={endDate}
           onChange={(e) => setEndDate(e.target.value)}
         />
       </div>
+      <HelperText>
+        {t('dataExport.startDate', 'Start')} 00:00 UTC ≤ {t('common.timestamp', 'Timestamp')} ≤ {t('dataExport.endDate', 'End')} 00:00 UTC
+      </HelperText>
+      {!datesReady && <HelperText role="alert">{t('vehicleSettings.validation.invalidDate', 'Enter a valid date and time.')}</HelperText>}
+      <VehicleTargetFeedback vehiclesState={vehiclesState} onRetryVehicles={onRetryVehicles} unknownTarget={unknownTarget ? vehicleId : undefined} />
 
       <div className="flex flex-col gap-3 border-t border-[var(--border-subtle)] pt-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-start gap-2">
@@ -1144,7 +1294,10 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
           variant="primary"
           size="md"
           onClick={handleStart}
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
           loading={createAccount.isPending}
+          disabled={!targetReady || !datesReady}
           icon={<Icons.download className="h-4 w-4" aria-hidden="true" />}
         >
           {t('dataExport.account.start', 'Start full export')}
@@ -1174,7 +1327,7 @@ export default function DataExportPage() {
   });
   const jobsState = useDataState(jobsQuery, { provenance: 'historical' });
   const jobs = jobsState.data;
-  const jobsLoading = jobsQuery.isLoading && !jobsState.hasData;
+  const jobsLoading = jobsState.status === 'initial' && !jobsState.isRefreshBlocked;
   const jobsError = jobsState.fatalError;
 
   const vehiclesQuery = useQuery<Vehicle[]>({
@@ -1238,6 +1391,8 @@ export default function DataExportPage() {
           variant="ghost"
           size="sm"
           icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
+          wrapLabel
+          className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
           onClick={handleRefresh}
         >
           {t('dataExport.refresh', 'Refresh')}
@@ -1265,12 +1420,9 @@ export default function DataExportPage() {
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
           <div className="xl:col-span-2">
-            <StaleRefreshWarning state={vehiclesState} label={t('dataExport.vehicle', 'Vehicle')} />
-            {vehiclesState.fatalError && (
-              <QueryError error={vehiclesState.fatalError} onRetry={() => { void vehiclesQuery.refetch(); }} />
-            )}
             <ExportWizard
-              vehicles={vehicles}
+              vehiclesState={vehiclesState}
+              onRetryVehicles={() => { void vehiclesQuery.refetch(); }}
               onSubmit={handleSubmit}
               isPending={submitExport.isPending}
             />
@@ -1285,7 +1437,7 @@ export default function DataExportPage() {
       {/* 3 — GDPR-style "Download my data" full-width band */}
       <FadeIn delay={0.1}>
         <section aria-label={t('dataExport.account.aria', 'Full account export')}>
-          <AccountExportPanel vehicles={vehicles} />
+          <AccountExportPanel vehiclesState={vehiclesState} onRetryVehicles={() => { void vehiclesQuery.refetch(); }} />
         </section>
       </FadeIn>
 
@@ -1295,6 +1447,7 @@ export default function DataExportPage() {
           <ExportHistoryTable
             jobs={jobs}
             isLoading={jobsLoading}
+            isRefreshBlocked={jobsState.isRefreshBlocked}
             error={jobsError}
             vehicles={vehicles}
             onDownload={handleDownload}
