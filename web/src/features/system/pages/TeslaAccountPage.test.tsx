@@ -28,13 +28,15 @@
  * Strategy mirrors the sibling VehicleCostPage / HelpPage suites: render the
  * REAL page + REAL shared subtree (PageContainer, MetricCard, KVList, Avatar,
  * Timeline, QueryError, EmptyState). Only the two data hooks, `usePageTitle`,
- * and react-i18next are mocked. Network is never touched. The clock is pinned
+ * and react-i18next are mocked. Write-affordance cases use the real mode
+ * provider; GET recovery uses the real query/client with mocked fetch only.
+ * No real network is touched. The clock is pinned
  * so the relative-time helpers are deterministic, and every date assertion is
  * computed via the SAME `@/lib/dateFormat` helpers the page uses, so the
  * suite is immune to the runner's locale / timezone.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within, waitFor, cleanup } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -64,6 +66,11 @@ const { profileMock, refreshMock } = vi.hoisted(() => ({
   refreshMock: vi.fn(),
 }));
 const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+const connection = vi.hoisted(() => ({ online: true }));
+
+vi.mock('@/hooks/useOnlineStatus', () => ({
+  useOnlineStatus: () => connection.online,
+}));
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({
@@ -131,6 +138,8 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { ApiError } from '@/lib/resilience';
 import { formatDate, formatDateTime, formatRelative } from '@/lib/dateFormat';
 import type { TeslaUserProfile } from '@/api/hooks/useUser';
+import { OperationalModeProvider } from '@/hooks/useOperationalMode';
+import { createQueryClient } from '@/api/queryClient';
 
 const mockUsePageTitle = usePageTitle as unknown as ReturnType<typeof vi.fn>;
 
@@ -200,14 +209,20 @@ function envelope(
   return { profile, fetched_at: fetched };
 }
 
-function setup(query: FakeQuery, mutation: FakeMutation = makeMutation()) {
-  profileMock.mockReturnValue(query);
+function setup(
+  query: FakeQuery | null,
+  mutation: FakeMutation = makeMutation(),
+  route = '/tesla-account',
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
+  if (query) profileMock.mockReturnValue(query);
   refreshMock.mockReturnValue(mutation);
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter>
-        <TeslaAccountPage />
+      <MemoryRouter initialEntries={[route]}>
+        <OperationalModeProvider>
+          <TeslaAccountPage />
+        </OperationalModeProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -241,6 +256,7 @@ beforeEach(() => {
   mockUsePageTitle.mockReset();
   datePreferences.locale = 'en-US';
   datePreferences.tz = 'UTC';
+  connection.online = true;
 });
 
 afterEach(() => {
@@ -411,6 +427,9 @@ describe('TeslaAccountPage — populated', () => {
 describe('TeslaAccountPage — refresh + retry interactions', () => {
   it('fires the mutation from both the header and the sync-centre buttons', () => {
     const mutation = makeMutation();
+    mutation.mutate.mockImplementation((_variables, options?: { onSettled?: () => void }) => {
+      options?.onSettled?.();
+    });
     setup(makeQuery({ data: envelope(PROFILE) }), mutation);
 
     const buttons = refreshButtons();
@@ -421,6 +440,190 @@ describe('TeslaAccountPage — refresh + retry interactions', () => {
     expect(mutation.mutate).toHaveBeenCalledTimes(1);
     fireEvent.click(buttons[1]);
     expect(mutation.mutate).toHaveBeenCalledTimes(2);
+  });
+
+  describe('TeslaAccountPage — write affordance', () => {
+    it.each([
+      { mode: 'live', online: true, asOf: null, reason: null },
+      { mode: 'historical', online: true, asOf: FETCHED_AT, reason: 'Return to live mode before making operational changes.' },
+      { mode: 'cached', online: false, asOf: null, reason: 'Reconnect before making operational changes.' },
+      { mode: 'cached historical', online: false, asOf: FETCHED_AT, reason: 'Return to live mode before making operational changes.' },
+    ])('$mode preserves every empty-profile action and gates only writes', ({ online, asOf, reason }) => {
+      connection.online = online;
+      const mutation = makeMutation();
+      mutation.mutate.mockImplementation((_variables, options?: { onSettled?: () => void }) => options?.onSettled?.());
+      setup(makeQuery({ data: envelope(null, null) }), mutation,
+        asOf ? `/tesla-account?as_of=${encodeURIComponent(asOf)}` : '/tesla-account');
+      const buttons = refreshButtons();
+      expect(buttons).toHaveLength(3);
+      for (const button of buttons) {
+        expect(button).toHaveClass('min-h-11');
+        if (reason) {
+          expect(button).toBeDisabled();
+          expect(button).not.toHaveAttribute('aria-busy');
+          expect(button).toHaveAttribute('title', reason);
+        } else {
+          expect(button).toBeEnabled();
+        }
+        fireEvent.click(button);
+      }
+      expect(mutation.mutate).toHaveBeenCalledTimes(reason ? 0 : 3);
+      if (reason) {
+        expect(screen.getByText('Operational changes are read-only')).toBeInTheDocument();
+        expect(screen.getByText(reason)).toBeInTheDocument();
+      } else {
+        expect(screen.queryByText('Operational changes are read-only')).not.toBeInTheDocument();
+      }
+      for (const heading of ['Profile', 'Sync', 'Account details', 'Activity']) {
+        expect(panel(heading)).toBeInTheDocument();
+      }
+      expect(panel('Sync')).toHaveTextContent('Fetches your latest account profile from the Tesla Fleet API.');
+    });
+
+    it.each([
+      { mode: 'historical', online: true, asOf: FETCHED_AT },
+      { mode: 'cached', online: false, asOf: null },
+    ])('$mode blocks direct refresh-handler activation even when DOM disabling is bypassed', ({ online, asOf }) => {
+      connection.online = online;
+      const mutation = makeMutation();
+      setup(makeQuery({ data: envelope(null, null) }), mutation,
+        asOf ? `/tesla-account?as_of=${encodeURIComponent(asOf)}` : '/tesla-account');
+      for (const button of refreshButtons()) {
+        // Invoke the supplied handler itself, not React's disabled-event filter.
+        const propsKey = Object.keys(button).find(key => key.startsWith('__reactProps$'));
+        expect(propsKey).toBeDefined();
+        const props = (button as unknown as Record<string, { onClick?: () => void }>)[propsKey!];
+        expect(props.onClick).toBeTypeOf('function');
+        act(() => props.onClick?.());
+      }
+      expect(mutation.mutate).not.toHaveBeenCalled();
+    });
+
+    it('blocks same-event cross-control duplication before pending rerenders and releases only on settlement', () => {
+      const mutation = makeMutation();
+      setup(makeQuery({ data: envelope(null, null) }), mutation);
+      const buttons = refreshButtons();
+      mutation.mutate.mockImplementationOnce(() => fireEvent.click(buttons[1]));
+      fireEvent.click(buttons[0]);
+      fireEvent.click(buttons[2]);
+      expect(mutation.mutate).toHaveBeenCalledTimes(1);
+      const [, options] = mutation.mutate.mock.calls[0] as [undefined, { onSettled: () => void }];
+      act(() => options.onSettled());
+      fireEvent.click(buttons[2]);
+      expect(mutation.mutate).toHaveBeenCalledTimes(2);
+    });
+
+    it('guards a programmatic pending transition before disabled controls rerender', () => {
+      const mutation = makeMutation();
+      setup(makeQuery({ data: envelope(PROFILE) }), mutation);
+      expect(refreshButtons()[0]).toBeEnabled();
+      mutation.isPending = true;
+      fireEvent.click(refreshButtons()[0]);
+      expect(mutation.mutate).not.toHaveBeenCalled();
+    });
+
+    it('releases the duplicate guard after a synchronous mutation dispatch failure', () => {
+      const mutation = makeMutation();
+      setup(makeQuery({ data: envelope(PROFILE) }), mutation);
+      const button = refreshButtons()[0];
+      const propsKey = Object.keys(button).find(key => key.startsWith('__reactProps$'))!;
+      const { onClick } = (button as unknown as Record<string, { onClick: () => void }>)[propsKey];
+      mutation.mutate.mockImplementationOnce(() => { throw new Error('Synthetic dispatch failure'); });
+      expect(onClick).toThrow('Synthetic dispatch failure');
+      act(() => onClick());
+      expect(mutation.mutate).toHaveBeenCalledTimes(2);
+    });
+
+    it.each([
+      { mode: 'historical', online: true, asOf: FETCHED_AT },
+      { mode: 'cached', online: false, asOf: null },
+    ])('$mode keeps retained source dates and GET recovery while refresh writes are disabled', ({ online, asOf }) => {
+      connection.online = online;
+      const query = makeQuery({ data: envelope(PROFILE), isError: true, error: new Error('Synthetic refresh failure') });
+      const mutation = makeMutation();
+      setup(query, mutation,
+        asOf ? `/tesla-account?as_of=${encodeURIComponent(asOf)}` : '/tesla-account');
+      expect(panel('Profile')).toHaveTextContent(PROFILE.full_name);
+      expect(panel('Account details')).toHaveTextContent(PROFILE.email);
+      expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      expect(refreshButtons()).toHaveLength(2);
+      expect(refreshButtons().every(button => button.hasAttribute('disabled'))).toBe(true);
+      const recover = within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' });
+      expect(recover).toBeEnabled();
+      fireEvent.click(recover);
+      expect(query.refetch).toHaveBeenCalledOnce();
+      expect(mutation.mutate).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { mode: 'historical', online: true, asOf: FETCHED_AT },
+      { mode: 'cached', online: false, asOf: null },
+      { mode: 'cached historical', online: false, asOf: FETCHED_AT },
+    ])('$mode retries the real profile GET after an error without ever dispatching a POST', async ({ online, asOf }) => {
+      connection.online = online;
+      const actual = await vi.importActual<typeof import('@/api/hooks/useUser')>('@/api/hooks/useUser');
+      profileMock.mockImplementation(actual.useTeslaUserProfile);
+      const client = createQueryClient();
+      client.setDefaultOptions({ queries: { ...client.getDefaultOptions().queries, retry: false } });
+      const fetchMock = vi.fn<typeof fetch>()
+        .mockRejectedValueOnce(new DOMException('Synthetic initial read failure', 'AbortError'))
+        .mockResolvedValue(new Response(JSON.stringify(envelope(PROFILE)), {
+          headers: { 'Content-Type': 'application/json' },
+        }));
+      vi.stubGlobal('fetch', fetchMock);
+      const mutation = makeMutation();
+      const route = asOf ? `/tesla-account?as_of=${encodeURIComponent(asOf)}` : '/tesla-account';
+      const oldUrl = window.location.href;
+      window.history.replaceState({}, '', route);
+      const onlineSpy = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online);
+      try {
+        const view = setup(null, mutation, route, client);
+        if (online) {
+          await waitFor(() => expect(screen.getAllByRole('button', { name: 'Retry' }).length).toBeGreaterThan(0));
+          const retry = screen.getAllByRole('button', { name: 'Retry' })[0];
+          expect(retry).toBeEnabled();
+          fireEvent.click(retry);
+        } else {
+          await waitFor(() => expect(screen.getAllByRole('button', { name: 'Retry when online' })[0]).toBeDisabled());
+          expect(refreshButtons().every(button => button.hasAttribute('disabled'))).toBe(true);
+          onlineSpy.mockReturnValue(true);
+          connection.online = true;
+          act(() => window.dispatchEvent(new Event('online')));
+          view.rerender(
+            <QueryClientProvider client={client}>
+              <MemoryRouter initialEntries={[route]}>
+                <OperationalModeProvider><TeslaAccountPage /></OperationalModeProvider>
+              </MemoryRouter>
+            </QueryClientProvider>,
+          );
+        }
+        await waitFor(() => expect(panel('Profile')).toHaveTextContent(PROFILE.full_name));
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        for (const [url, options] of fetchMock.mock.calls) {
+          expect(url).toBe('/api/v1/tesla/user/profile');
+          expect(options?.method ?? 'GET').toBe('GET');
+          expect(options?.signal).toBeInstanceOf(AbortSignal);
+          expect(options).not.toHaveProperty('requiresLiveMode');
+        }
+        for (const button of refreshButtons()) {
+          if (asOf) {
+            expect(button).toBeDisabled();
+            fireEvent.click(button);
+          } else {
+            expect(button).toBeEnabled();
+          }
+        }
+        expect(mutation.mutate).not.toHaveBeenCalled();
+        expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+      } finally {
+        cleanup();
+        client.clear();
+        onlineSpy.mockRestore();
+        vi.unstubAllGlobals();
+        window.history.replaceState({}, '', oldUrl);
+      }
+    });
   });
 
   it('disables the refresh controls and marks them busy while the mutation is pending', () => {

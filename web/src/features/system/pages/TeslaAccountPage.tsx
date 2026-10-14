@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   RefreshCw, User, Mail, Hash, Clock, CheckCircle2,
@@ -7,18 +8,21 @@ import {
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Badge, StatusPill, Heading, Text, Label, Caption, HelperText, Icon } from '@/components/ui';
 import { KVList, Avatar, Timeline } from '@/components/data-display';
-import { QueryError, EmptyState, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { QueryError, EmptyState, Skeleton, StaleRefreshWarning, OperationalWriteNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useTeslaUserProfile, useRefreshTeslaProfile } from '@/api/hooks/useUser';
 import { getTeslaAccountSyncStatus, TeslaAccountStatStrip } from '../components/statstrip-tesla-account/TeslaAccountStatStrip';
 
 export default function TeslaAccountPage() {
   const { t } = useTranslation();
   const { formatDateTime, formatRelative } = useDateFormat();
+  const { canWrite, writeBlockReason } = useOperationalMode();
+  const refreshInFlight = useRef(false);
   usePageTitle(t('teslaAccount.title', 'Tesla account'));
 
   const profileQuery = useTeslaUserProfile();
@@ -49,9 +53,18 @@ export default function TeslaAccountPage() {
 
   const accountId = profile?.id != null ? `#${profile.id}` : '—';
 
-  // All refresh entry points share the mutation's pending guard.
+  // The ref closes the same-event gap before the mutation's pending render.
   const refresh = () => {
-    if (!refreshMutation.isPending) refreshMutation.mutate();
+    if (!canWrite || refreshMutation.isPending || refreshInFlight.current) return;
+    refreshInFlight.current = true;
+    try {
+      refreshMutation.mutate(undefined, {
+        onSettled: () => { refreshInFlight.current = false; },
+      });
+    } catch (cause) {
+      refreshInFlight.current = false;
+      throw cause;
+    }
   };
 
   const resourceName = t('teslaAccount.resource', 'Tesla profile');
@@ -75,6 +88,8 @@ export default function TeslaAccountPage() {
       wrapLabel
       className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
       loading={refreshMutation.isPending}
+      disabled={!canWrite}
+      title={writeBlockReason ?? undefined}
       icon={<Icon icon={RefreshCw} />}
       aria-label={t('teslaAccount.refresh', 'Refresh from Tesla')}
     >
@@ -89,6 +104,7 @@ export default function TeslaAccountPage() {
       secondaryActions={actions}
       query={profileQuery}
     >
+      <OperationalWriteNotice />
       <StaleRefreshWarning state={profileState} />
       {/* 1 — KPI band */}
       <FadeIn>
@@ -157,6 +173,7 @@ export default function TeslaAccountPage() {
                 />
                 <div className="flex justify-center">
                   <Button onClick={refresh} loading={refreshMutation.isPending} wrapLabel
+                    disabled={!canWrite} title={writeBlockReason ?? undefined}
                     className="min-h-11 min-w-11 md:min-h-10 md:min-w-0">
                     {t('teslaAccount.refresh', 'Refresh from Tesla')}
                   </Button>
@@ -194,6 +211,8 @@ export default function TeslaAccountPage() {
                 className="w-full min-h-11"
                 onClick={refresh}
                 loading={refreshMutation.isPending}
+                disabled={!canWrite}
+                title={writeBlockReason ?? undefined}
                 icon={<Icon icon={RefreshCw} />}
               >
                 {t('teslaAccount.refresh', 'Refresh from Tesla')}
