@@ -28,13 +28,14 @@
  * suite) so the page runs end-to-end without a network. i18n is stubbed to
  * return the English `defaultValue` with `{{var}}` interpolation.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, within, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ApiError } from '@/lib/resilience';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import type {
   ConnectionPool,
   DBStats,
@@ -193,12 +194,136 @@ function firstBodyRowName(): string {
 }
 
 beforeEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockUseDBStats.mockReset();
   mockUseMigrations.mockReset();
   mockUseConnectionPool.mockReset();
   mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats() }));
   mockUseMigrations.mockReturnValue(makeQuery({ data: migration() }));
   mockUseConnectionPool.mockReturnValue(makeQuery({ data: pool() }));
+});
+
+afterEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+});
+
+describe('DBHealthPage — row chart context and count preferences', () => {
+  it('discloses the top fifteen returned tables by rows while keeping all sixteen details and independent sorting', () => {
+    const tables = Array.from({ length: 16 }, (_, index): TableInfo => ({
+      ...TABLES[0],
+      name: `table_${String(index).padStart(2, '0')}_complete_identity`,
+      rowCount: index * 1_000,
+      sizeBytes: (16 - index) * MB,
+    }));
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tables, tableCount: 16 }) }));
+    renderPage();
+
+    const scope = 'Showing 15 of 16 returned tables by row count. The complete table list is below.';
+    expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
+    expect(screen.getByRole('img', { name: 'Rows' })).toHaveAccessibleDescription(scope);
+    const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
+    const rankedNames = within(chartTable).getAllByRole('row').slice(1)
+      .map((row) => within(row).getAllByRole('cell')[0].textContent);
+    expect(rankedNames).toEqual(tables.slice(1).reverse().map((table) => table.name));
+    expect(within(chartTable).queryByText(tables[0].name)).toBeNull();
+    expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(17);
+    expect(within(tablesGrid()).getByText(tables[0].name)).toBeInTheDocument();
+    expect(within(tablesGrid()).getAllByRole('row')[1]).toHaveTextContent(tables[0].name);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Rows' }));
+    expect(within(tablesGrid()).getAllByRole('row')[1]).toHaveTextContent(tables[15].name);
+    expect(within(chartTable).getAllByRole('row').slice(1)
+      .map((row) => within(row).getAllByRole('cell')[0].textContent)).toEqual(rankedNames);
+    expect(tables[0].rowCount).toBe(0);
+    expect(tables[15].rowCount).toBe(15_000);
+  });
+
+  it('describes all returned tables when fewer than fifteen are present without claiming an omitted subset', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tableCount: 100 }) }));
+    renderPage();
+    const scope = 'Showing 3 of 3 returned tables by row count. The complete table list is below.';
+    expect(screen.getByRole('img', { name: 'Rows' })).toHaveAccessibleDescription(scope);
+    expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
+    expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(4);
+  });
+
+  it('does not invent a returned-table count while statistics are unavailable', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({ data: undefined }));
+    renderPage();
+    expect(screen.queryByText(/returned tables by row count/)).toBeNull();
+    expect(screen.getByText('No tables found')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Pool usage' })).toHaveAttribute('aria-valuenow', '20');
+  });
+
+  it('updates desktop index cells and chart count alternatives with locale preferences while preserving zero and unknown gaps', () => {
+    const tables: TableInfo[] = [
+      { ...TABLES[0], name: 'localized_counts', rowCount: 12_345, indexCount: 1_234 },
+      { ...TABLES[1], name: 'zero_counts', rowCount: 0, indexCount: 0 },
+      { ...TABLES[2], name: 'unknown_counts', rowCount: null as unknown as number, indexCount: null as unknown as number },
+    ];
+    mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tables }) }));
+    const { unmount } = renderPage();
+    const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
+    const indexCell = (name: string) => within(within(tablesGrid()).getByText(name).closest('tr')!)
+      .getAllByRole('cell')[3];
+    const chartCountCell = (name: string) => within(within(chartTable).getByText(name).closest('tr')!)
+      .getAllByRole('cell')[1];
+    expect(indexCell('localized_counts')).toHaveTextContent(/^1,234$/);
+    expect(chartCountCell('localized_counts')).toHaveTextContent(/^12,345$/);
+
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(4);
+    });
+    expect(indexCell('localized_counts')).toHaveTextContent(/^1\.234$/);
+    expect(chartCountCell('localized_counts')).toHaveTextContent(/^12\.345$/);
+    expect(indexCell('zero_counts')).toHaveTextContent(/^0$/);
+    expect(chartCountCell('zero_counts')).toHaveTextContent(/^0$/);
+    expect(indexCell('unknown_counts')).toHaveTextContent(/^—$/);
+    expect(chartCountCell('unknown_counts')).toHaveTextContent(/^—$/);
+    expect(tables[0]).toMatchObject({ rowCount: 12_345, indexCount: 1_234 });
+    expect(tables[2]).toMatchObject({ rowCount: null, indexCount: null });
+    unmount();
+  });
+
+  it('uses the same localized integer index count in narrow table details without losing vacuum evidence', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(4);
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats({ tables: [{ ...TABLES[0], indexCount: 1_234 }] }),
+    }));
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 400));
+    try {
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+      const details = within(screen.getByRole('dialog', { name: 'Tables' }));
+      expect(details.getByText('1.234')).toBeInTheDocument();
+      expect(details.queryByText('1234')).toBeNull();
+      expect(details.getByText('Last vacuum')).toBeInTheDocument();
+      expect(details.getByText('zebra_events')).toBeInTheDocument();
+      fireEvent.click(details.getByRole('button', { name: /^Close$/ }));
+      expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
+    } finally {
+      bounds.mockRestore();
+    }
+  });
+
+  it('retains accurate chart scope and all returned details when only the statistics refresh fails', () => {
+    mockUseDBStats.mockReturnValue(makeQuery({
+      data: dbStats(), isError: true, error: new Error('statistics refresh'),
+    }));
+    renderPage();
+    expect(screen.getByRole('img', { name: 'Rows' })).toHaveAccessibleDescription(
+      'Showing 3 of 3 returned tables by row count. The complete table list is below.',
+    );
+    expect(within(tablesGrid()).getByText('zebra_events')).toBeInTheDocument();
+    expect(screen.getByText('Current version')).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Pool usage' })).toHaveAttribute('aria-valuenow', '20');
+  });
 });
 
 describe('DBHealthPage — populated view', () => {
@@ -388,6 +513,9 @@ describe('DBHealthPage — empty states', () => {
     // Chart empty state + table empty message (distinct copy).
     expect(screen.getByText('No data available')).toBeInTheDocument();
     expect(screen.getByText('No tables found')).toBeInTheDocument();
+    expect(screen.getAllByText(
+      'Showing 0 of 0 returned tables by row count. The complete table list is below.',
+    ).length).toBeGreaterThan(0);
     // KPI band reads 0 rather than hiding.
     expect(metricValue('Tables')).toBe('0');
     expect(metricValue('Total rows')).toBe('0');
@@ -608,7 +736,7 @@ describe('DBHealthPage — hardening', () => {
       expect(details.getByText('2')).toBeInTheDocument();
       expect(details.getByText('Last vacuum')).toBeInTheDocument();
       expect(details.getByText('300.00 MB')).toBeInTheDocument();
-      fireEvent.click(details.getByRole('button', { name: 'Close', exact: true }));
+      fireEvent.click(details.getByRole('button', { name: /^Close$/ }));
       expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
     } finally {
       bounds.mockRestore();

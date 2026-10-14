@@ -119,6 +119,12 @@ export default function DBHealthPage() {
         })),
     [tables],
   );
+  const rowChartScope = dbStats?.tables != null
+    ? t('dbHealth.rowChartScope', 'Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.', {
+        shown: fmtInt(chartData.length),
+        total: fmtInt(tables.length),
+      })
+    : undefined;
 
   // Backend returns {version, dirty} — handle both field names
   const migrationVersion =
@@ -200,10 +206,11 @@ export default function DBHealthPage() {
       {
         key: 'indexes',
         filterValue: (tbl) => tbl.indexCount ?? null,
+        filterValueLabel: (_value, tbl) => tbl.indexCount != null ? fmtInt(tbl.indexCount) : '—',
         align: 'right',
         header: t('dbHealth.table.indexes', 'Indexes'),
         render: (tbl: TableInfo) => (
-          <Text mono color="muted">{tbl.indexCount ?? '—'}</Text>
+          <Text mono color="muted">{tbl.indexCount != null ? fmtInt(tbl.indexCount) : '—'}</Text>
         ),
         className: 'text-right',
       },
@@ -299,11 +306,13 @@ export default function DBHealthPage() {
             ) : (
               <ChartContainer
                 title={t('dbHealth.rows', 'Rows')}
+                subtitle={rowChartScope}
                 ariaLabel={t('dbHealth.rows', 'Rows')}
+                ariaDescription={rowChartScope}
                 data={chartData.map((r) => ({ name: r.name, rows: r.rows }))}
                 dataColumns={[
                   { key: 'name', label: t('dbHealth.col.table', 'Hypertable') },
-                  { key: 'rows', label: t('dbHealth.col.rows', 'Rows') },
+                  { key: 'rows', label: t('dbHealth.col.rows', 'Rows'), kind: 'count' },
                 ]}
                 loading={statsLoading}
                 empty={!statsLoading && chartData.length === 0}
@@ -314,7 +323,7 @@ export default function DBHealthPage() {
                     <XAxis
                       type="number"
                       tick={axisTick}
-                      tickFormatter={(v: number) => fmtNumber(v)}
+                      tickFormatter={(v: number) => fmtInt(v)}
                     />
                     <YAxis
                       type="category"
