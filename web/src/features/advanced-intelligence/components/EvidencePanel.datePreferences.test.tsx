@@ -9,13 +9,16 @@ const preferences = vi.hoisted(() => ({
   locale: 'en-GB',
   settings: { tz_display_default: 'utc' as 'utc' | 'user' | 'vehicle', timezone_user: 'Asia/Tokyo' },
 }));
+const selection = vi.hoisted(() => ({
+  vehicle: { id: 7, timezone: 'Europe/Berlin' } as { id: number; timezone: string } | null,
+}));
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => preferences,
 }));
 vi.unmock('@/lib/timezone');
 vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({ vehicle: { id: 7, timezone: 'Europe/Berlin' } }),
+  useSelectedVehicle: () => selection,
 }));
 
 const START = '2026-01-15T00:30:00Z';
@@ -33,6 +36,7 @@ beforeEach(() => {
   preferences.locale = 'en-GB';
   preferences.settings.tz_display_default = 'utc';
   preferences.settings.timezone_user = 'Asia/Tokyo';
+  selection.vehicle = { id: 7, timezone: 'Europe/Berlin' };
 });
 afterEach(cleanup);
 
@@ -146,5 +150,70 @@ describe('EvidencePanel date preferences', () => {
     expect(screen.getByRole('region', { name: 'Limitations' })).toBeVisible();
     expect(screen.getByText('Explicitly unsupported')).toBeVisible();
     expect(screen.getByText('• No physical actuation.')).toBeVisible();
+  });
+
+  it.each([
+    { locale: 'en-US', start: 'Jan 15, 2026, 12:30 AM', end: 'Jan 16, 2026, 12:45 PM' },
+    { locale: 'en-GB', start: '15 Jan 2026, 00:30', end: '16 Jan 2026, 12:45' },
+    { locale: 'fr-FR', start: '15 janv. 2026, 00:30', end: '16 janv. 2026, 12:45' },
+    { locale: 'ja-JP', start: '2026年1月15日 00:30', end: '2026年1月16日 12:45' },
+  ])('updates real date order and 12/24-hour presentation for saved $locale in every direct role', ({ locale, start, end }) => {
+    const { rerender } = render(<EvidencePanel quality={quality} evidence={evidence} />);
+    preferences.locale = locale;
+    rerender(<EvidencePanel quality={quality} evidence={evidence} />);
+    expect(within(screen.getByRole('region', { name: 'Data quality' })).getByText(`${start} – ${end}`)).toBeVisible();
+    const sources = screen.getByRole('region', { name: 'Evidence sources' });
+    expect(within(sources).getByText(`0 samples · ${start}`)).toBeVisible();
+    expect(within(sources).getByText(end)).toBeVisible();
+    expect(quality.window_start).toBe(START);
+    expect(quality.window_end).toBe(END);
+    expect(evidence.map(item => item.observed_at)).toEqual([START, END]);
+  });
+
+  it('reacts to the selected vehicle timezone and real fallback rules without changing the payload', () => {
+    preferences.settings.tz_display_default = 'vehicle';
+    const { rerender } = render(<EvidencePanel quality={quality} evidence={evidence} />);
+    expect(screen.getByText('15 Jan 2026, 01:30 – 16 Jan 2026, 13:45')).toBeVisible();
+    selection.vehicle = { id: 8, timezone: 'America/Los_Angeles' };
+    rerender(<EvidencePanel quality={quality} evidence={evidence} />);
+    expect(screen.getByText('14 Jan 2026, 16:30 – 16 Jan 2026, 04:45')).toBeVisible();
+    expect(screen.getByText('0 samples · 14 Jan 2026, 16:30')).toBeVisible();
+    selection.vehicle = null;
+    rerender(<EvidencePanel quality={quality} evidence={evidence} />);
+    expect(screen.getByText('15 Jan 2026, 09:30 – 16 Jan 2026, 21:45')).toBeVisible();
+    selection.vehicle = { id: 8, timezone: 'UTC' };
+    rerender(<EvidencePanel quality={quality} evidence={evidence} />);
+    expect(screen.getByText('15 Jan 2026, 09:30 – 16 Jan 2026, 21:45')).toBeVisible();
+    preferences.settings.tz_display_default = 'user';
+    preferences.settings.timezone_user = '';
+    rerender(<EvidencePanel quality={quality} evidence={evidence} />);
+    expect(screen.getByText('14 Jan 2026, 16:30 – 16 Jan 2026, 04:45')).toBeVisible();
+    expect(evidence.map(item => item.observed_at)).toEqual([START, END]);
+  });
+
+  it('keeps each source instant distinct across a daylight-saving gap and invalid quality endpoints unknown', () => {
+    preferences.settings.tz_display_default = 'user';
+    preferences.settings.timezone_user = 'America/Los_Angeles';
+    const beforeGap = '2026-03-08T09:30:00Z';
+    const afterGap = '2026-03-08T10:30:00Z';
+    const gapQuality = Object.freeze({ ...quality, window_start: beforeGap, window_end: afterGap });
+    const gapEvidence = [
+      Object.freeze({ ...evidence[0], observed_at: beforeGap }),
+      Object.freeze({ ...evidence[1], observed_at: afterGap }),
+    ];
+    const { rerender } = render(<EvidencePanel quality={gapQuality} evidence={gapEvidence} />);
+    expect(screen.getByText('8 Mar 2026, 01:30 – 8 Mar 2026, 03:30')).toBeVisible();
+    expect(screen.getByText('0 samples · 8 Mar 2026, 01:30')).toBeVisible();
+    expect(screen.getByText('8 Mar 2026, 03:30')).toBeVisible();
+    preferences.settings.tz_display_default = 'utc';
+    rerender(<EvidencePanel quality={gapQuality} evidence={gapEvidence} />);
+    expect(screen.getByText('8 Mar 2026, 09:30 – 8 Mar 2026, 10:30')).toBeVisible();
+    expect(gapQuality.window_start).toBe(beforeGap);
+    expect(gapQuality.window_end).toBe(afterGap);
+    expect(gapEvidence.map(item => item.observed_at)).toEqual([beforeGap, afterGap]);
+    rerender(<EvidencePanel quality={{ ...quality, window_start: 'invalid-window', window_end: '' }} evidence={gapEvidence} />);
+    expect(screen.getByText('— – —')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Evidence sources' })).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Limitations' })).toBeVisible();
   });
 });
