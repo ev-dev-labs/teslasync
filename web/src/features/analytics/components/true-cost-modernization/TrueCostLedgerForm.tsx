@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Button, Input, Select } from '@/components/ui';
 import type { TcoLedgerCategory } from '@/types/analytics';
+import { ledgerCategoryLabel } from './ledgerCategoryLabel';
 
 interface TrueCostLedgerFormProps {
   categories: readonly TcoLedgerCategory[];
@@ -27,7 +28,7 @@ export function TrueCostLedgerForm({
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
       <Select
         label={t('tco.ledger.category', 'Category')}
-        options={categories.map((c) => ({ value: c, label: c }))}
+        options={categories.map((c) => ({ value: c, label: ledgerCategoryLabel(c, t) }))}
         value={category}
         onChange={(e) => setCategory(e.target.value as TcoLedgerCategory)}
       />

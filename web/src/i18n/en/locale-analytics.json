@@ -1699,6 +1699,16 @@
     "ledger": {
       "date": "Date",
       "category": "Category",
+      "categories": {
+        "payment": "Payment",
+        "insurance": "Insurance",
+        "maintenance": "Maintenance",
+        "service": "Service",
+        "tires": "Tires",
+        "accessories": "Accessories",
+        "depreciation": "Depreciation",
+        "other": "Other"
+      },
       "amount": "Amount",
       "note": "Note",
       "deleteConfirm": "Delete",

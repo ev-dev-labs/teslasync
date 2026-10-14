@@ -2,11 +2,12 @@ import type { useTranslation } from 'react-i18next';
 import { Trash2 } from 'lucide-react';
 import { Button, Text, type Column } from '@/components/ui';
 import type { TcoLedgerEntry } from '@/types/analytics';
+import { ledgerCategoryLabel } from './ledgerCategoryLabel';
 
 /** Pure table configuration; the ledger retains memoization, state and actions. */
 export function makeTrueCostLedgerColumns(
   t: ReturnType<typeof useTranslation>['t'],
-  formatCurrency: (amount: number) => string,
+  formatCurrency: (amount: number, currency: string) => string,
   setPendingDelete: (entry: TcoLedgerEntry) => void,
 ): Column<TcoLedgerEntry>[] {
   return [
@@ -20,20 +21,21 @@ export function makeTrueCostLedgerColumns(
     {
       key: 'category',
       filterValue: (e) => e.category,
+      filterValueLabel: (_value, e) => ledgerCategoryLabel(e.category, t),
       header: t('tco.ledger.category', 'Category'),
       sortable: true,
-      render: (e) => <Text variant="bodySm">{e.category}</Text>,
+      render: (e) => <Text variant="bodySm">{ledgerCategoryLabel(e.category, t)}</Text>,
     },
     {
       key: 'amount',
       filterValue: (e) => `${e.currency}:${e.amount}`,
-      filterValueLabel: (_value, e) => formatCurrency(e.amount),
+      filterValueLabel: (_value, e) => formatCurrency(e.amount, e.currency),
       header: t('tco.ledger.amount', 'Amount'),
       align: 'right',
       sortable: true,
       render: (e) => (
         <Text variant="bodySm" className="tabular-nums">
-          {formatCurrency(e.amount)}
+          {formatCurrency(e.amount, e.currency)}
         </Text>
       ),
     },
