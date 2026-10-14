@@ -3,8 +3,8 @@ import { useTranslation } from 'react-i18next';
 import type { DataStateSource } from '@/api/dataState';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { formatDateTime } from '@/lib/dateFormat';
 
 interface OwnershipBriefMetric extends StatMetric {
   tone?: 'default' | 'positive' | 'warning' | 'critical' | 'accent';
@@ -25,6 +25,7 @@ export function OwnershipBrief({
   title, description, scope, metrics, source, enabled = true, window, observedAt,
 }: OwnershipBriefProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const state = useDataState(source);
   const operationalMetrics = useOperationalMetrics(metrics.map((metric) => ({
     ...metric, description: metric.description ?? title,
@@ -37,6 +38,8 @@ export function OwnershipBrief({
     ? t('ownership.brief.selectionRequired', 'Selection required')
     : state.fatalError
       ? t('ownership.brief.unavailable', 'Source unavailable')
+      : !state.hasData && state.isRefreshBlocked
+        ? t('energyFlow.state.pausedTitle', 'Source paused')
       : state.status === 'stale'
         ? t('ownership.brief.retained', 'Retained source')
         : !state.hasData
@@ -68,11 +71,11 @@ export function OwnershipBrief({
           ? t('ownership.brief.observedAt', 'Source as of {{date}}', { date: formatDateTime(observedAt) })
           : t('ownership.brief.freshnessUnknown', 'Source freshness unknown')}</span>
         {state.updatedAt != null && <span>{t('ownership.brief.loadedAt', 'Client loaded {{date}}', {
-          date: formatDateTime(new Date(state.updatedAt).toISOString()),
+          date: formatDateTime(new Date(state.updatedAt)),
         })}</span>}
       </>}
       provenance={t('ownership.brief.provenance', 'Returned source values; model assumptions and limitations remain in the evidence below.')}
-      loading={enabled && !state.hasData && Boolean(source.isLoading || source.isPending)}
+      loading={enabled && !state.hasData && !state.isRefreshBlocked && Boolean(source.isLoading || source.isPending)}
       metrics={operationalMetrics.map((metric, index) => ({
         ...metric, tone: metric.valueState === 'value' ? tones[metrics[index].tone ?? 'default'] : 'neutral',
       }))}
