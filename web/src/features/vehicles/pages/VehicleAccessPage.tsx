@@ -17,7 +17,7 @@ import {
   type BadgeProps,
   type Column,
 } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -128,7 +128,7 @@ export default function VehicleAccessPage() {
     if (removeDriver.isPending || removeTarget?.share_user_id == null || !vehicleId) return;
     removeDriver.mutate(
       { vehicleId, shareUserId: removeTarget.share_user_id },
-      { onSettled: () => setRemoveTarget(null) },
+      { onSuccess: () => { setRemoveTarget(null); removeDriver.reset(); } },
     );
   }, [removeTarget, vehicleId, removeDriver]);
 
@@ -136,7 +136,7 @@ export default function VehicleAccessPage() {
     if (revokeInvitation.isPending || !revokeTarget || !vehicleId) return;
     revokeInvitation.mutate(
       { vehicleId, invitationId: revokeTarget.invitation_id },
-      { onSettled: () => setRevokeTarget(null) },
+      { onSuccess: () => { setRevokeTarget(null); revokeInvitation.reset(); } },
     );
   }, [revokeTarget, vehicleId, revokeInvitation]);
 
@@ -306,8 +306,6 @@ export default function VehicleAccessPage() {
         '/vehicles/:id': vehicle?.display_name ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id: vehicleId }),
       }}
     >
-      <StaleRefreshWarning state={driversState} label={t('vehicleAccess.drivers.title', 'Drivers')} />
-      <StaleRefreshWarning state={invitationsState} label={t('vehicleAccess.invitations.title', 'Share invitations')} />
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <VehicleEvidenceBrief id="vehicle-access-summary"
@@ -350,8 +348,12 @@ export default function VehicleAccessPage() {
               </Button>
             </div>
 
-            {driversLoading ? (
-              <Skeleton height={220} />
+            {!driversState.hasData && !driversState.fatalError ? (
+              driversState.isRefreshBlocked ? (
+                <Text role="status" color="secondary">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+              ) : (
+                <Skeleton height={220} />
+              )
             ) : driversState.fatalError ? (
               <QueryError
                 error={driversState.fatalError}
@@ -383,10 +385,8 @@ export default function VehicleAccessPage() {
             roleBreakdown={roleBreakdown}
             totalInvitations={invitationsList.length}
             totalDrivers={driversList.length}
-            isLoading={driversLoading || invitationsLoading}
-            isError={driversState.fatalError != null || invitationsState.fatalError != null}
-            error={driversState.fatalError ?? invitationsState.fatalError}
-            onRetry={() => { refetchDrivers(); refetchInvitations(); }}
+            driversState={driversState}
+            invitationsState={invitationsState}
           />
         </section>
       </FadeIn>
@@ -427,8 +427,12 @@ export default function VehicleAccessPage() {
             </div>
           </div>
 
-          {invitationsLoading ? (
-            <Skeleton height={220} />
+          {!invitationsState.hasData && !invitationsState.fatalError ? (
+            invitationsState.isRefreshBlocked ? (
+              <Text role="status" color="secondary">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+            ) : (
+              <Skeleton height={220} />
+            )
           ) : invitationsState.fatalError ? (
             <QueryError
               error={invitationsState.fatalError}
@@ -464,8 +468,13 @@ export default function VehicleAccessPage() {
         confirmLabel={t('vehicleAccess.drivers.removeConfirm', 'Remove')}
         variant="danger"
         loading={removeDriver.isPending}
+        details={removeDriver.error && !removeDriver.isPending ? <QueryError compact error={removeDriver.error} onRetry={handleRemoveDriver} /> : undefined}
         onConfirm={handleRemoveDriver}
-        onCancel={() => setRemoveTarget(null)}
+        onCancel={() => {
+          if (removeDriver.isPending) return;
+          setRemoveTarget(null);
+          removeDriver.reset();
+        }}
       />
       <ConfirmDialog
         open={revokeTarget !== null}
@@ -474,8 +483,13 @@ export default function VehicleAccessPage() {
         confirmLabel={t('vehicleAccess.invitations.revokeConfirm', 'Revoke')}
         variant="danger"
         loading={revokeInvitation.isPending}
+        details={revokeInvitation.error && !revokeInvitation.isPending ? <QueryError compact error={revokeInvitation.error} onRetry={handleRevokeInvitation} /> : undefined}
         onConfirm={handleRevokeInvitation}
-        onCancel={() => setRevokeTarget(null)}
+        onCancel={() => {
+          if (revokeInvitation.isPending) return;
+          setRevokeTarget(null);
+          revokeInvitation.reset();
+        }}
       />
     </PageLayout>
   );

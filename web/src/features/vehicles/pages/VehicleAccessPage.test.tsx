@@ -28,7 +28,7 @@
  *   - error: a failed drivers query surfaces QueryError with a working Retry
  *     wired to refetch; the same holds for a failed invitations query.
  *   - interactions: Remove opens a ConfirmDialog and fires the DELETE mutation
- *     with `{ vehicleId, shareUserId }` on confirm (and closes on settle);
+ *     with `{ vehicleId, shareUserId }` on confirm (and closes on success);
  *     Cancel closes without mutating; Revoke fires with `{ vehicleId,
  *     invitationId }`; the header Refresh / Invite buttons fire their mutations
  *     with the route vehicle id.
@@ -154,7 +154,7 @@ function makeQuery(over: Record<string, unknown> = {}) {
 
  
 function makeMutation(over: Record<string, unknown> = {}) {
-  return { mutate: vi.fn(), isPending: false, ...over };
+  return { mutate: vi.fn(), reset: vi.fn(), error: null as Error | null, isPending: false, ...over };
 }
 
 function makeDriver(over: Partial<VehicleDriver> = {}): VehicleDriver {
@@ -422,7 +422,7 @@ describe('VehicleAccessPage — error handling', () => {
 });
 
 describe('VehicleAccessPage — remove driver', () => {
-  it('confirms then fires the DELETE mutation and closes on settle', async () => {
+  it('confirms then fires the DELETE mutation and closes on success', async () => {
     mockDrivers.mockReturnValue(
       makeQuery({ data: [makeDriver({ id: 1, share_user_id: 1001 })] }),
     );
@@ -439,11 +439,12 @@ describe('VehicleAccessPage — remove driver', () => {
     expect(removeDriverM.mutate).toHaveBeenCalledTimes(1);
     const [payload, opts] = removeDriverM.mutate.mock.calls[0];
     expect(payload).toEqual({ vehicleId: '7', shareUserId: 1001 });
-    expect(typeof opts.onSettled).toBe('function');
+    expect(typeof opts.onSuccess).toBe('function');
 
-    // Settling closes the dialog (parent keeps it open during the mutation).
-    act(() => opts.onSettled());
+    // Only confirmed success closes the dialog.
+    act(() => opts.onSuccess());
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(removeDriverM.reset).toHaveBeenCalledTimes(1);
   });
 
   it('cancels without mutating', async () => {
@@ -459,6 +460,7 @@ describe('VehicleAccessPage — remove driver', () => {
 
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(removeDriverM.mutate).not.toHaveBeenCalled();
+    expect(removeDriverM.reset).toHaveBeenCalledTimes(1);
   });
 
   it('keeps a driver whose share_user_id is the falsy-but-valid 0 removable', async () => {
@@ -530,6 +532,52 @@ describe('VehicleAccessPage — preserved mobile capabilities', () => {
 });
 
 describe('VehicleAccessPage — independent summary trust', () => {
+  it('keeps roles visible in the overview while invitations actively load', () => {
+    mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers }));
+    mockInvitations.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
+    renderPage();
+    const roles = screen.getByRole('region', { name: 'Driver roles' });
+    expect(within(roles).getByText('Owner')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Invitation status' }).querySelector('[aria-busy="true"]')).not.toBeNull();
+  });
+
+  it('does not present paused initial sources as empty or zero', () => {
+    const retry = vi.fn();
+    mockDrivers.mockReturnValue(makeQuery({ fetchStatus: 'paused', refetch: retry }));
+    renderPage();
+    expect(screen.queryByText('No drivers found. Refresh to sync from Tesla.')).not.toBeInTheDocument();
+    const roles = screen.getByRole('region', { name: 'Driver roles' });
+    expect(within(roles).getByText('Refresh paused')).toBeInTheDocument();
+    expect(within(roles).queryByText('No drivers yet')).not.toBeInTheDocument();
+    expect(kpiRegion().querySelectorAll('[data-value-state="missing"]')).toHaveLength(1);
+    fireEvent.click(within(roles).getByRole('button', { name: 'Retry' }));
+    expect(retry).toHaveBeenCalledTimes(1);
+  });
+
+  it('retries failed overview invitations without refetching healthy drivers and recovers in place', () => {
+    const retryInvitations = vi.fn();
+    const retryDrivers = vi.fn();
+    mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers, refetch: retryDrivers }));
+    mockInvitations.mockReturnValue(makeQuery({ error: new Error('initial failure'), refetch: retryInvitations }));
+    const view = renderPage();
+    const invitationSection = screen.getByRole('region', { name: 'Invitation status' });
+    expect(screen.getByText('Owner')).toBeInTheDocument();
+    fireEvent.click(within(invitationSection).getByRole('button', { name: 'Retry' }));
+    expect(retryInvitations).toHaveBeenCalledTimes(1);
+    expect(retryDrivers).not.toHaveBeenCalled();
+    mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, error: new Error('refresh failed'), refetch: retryInvitations }));
+    view.rerenderPage();
+    expect(within(invitationSection).getByText('Accepted')).toBeInTheDocument();
+    expect(within(invitationSection).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(within(invitationSection).getByRole('button', { name: 'Refresh' }));
+    expect(retryInvitations).toHaveBeenCalledTimes(2);
+    expect(retryDrivers).not.toHaveBeenCalled();
+    mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites }));
+    view.rerenderPage();
+    expect(within(invitationSection).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(within(invitationSection).getByText('Accepted')).toBeInTheDocument();
+  });
+
   it('retains driver counts when invitations are still initially loading', () => {
     mockDrivers.mockReturnValue(makeQuery({ data: populatedDrivers }));
     mockInvitations.mockReturnValue(makeQuery({ isLoading: true, isFetching: true }));
@@ -595,7 +643,7 @@ describe('VehicleAccessPage — pending destructive confirmations', () => {
     expect(removeDriverM.mutate).toHaveBeenCalledTimes(1);
     expect(dialog).toBeInTheDocument();
     const [, options] = removeDriverM.mutate.mock.calls[0];
-    act(() => options.onSettled());
+    act(() => options.onSuccess());
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
@@ -614,8 +662,60 @@ describe('VehicleAccessPage — pending destructive confirmations', () => {
     expect(revokeInvitationM.mutate).toHaveBeenCalledTimes(1);
     expect(dialog).toBeInTheDocument();
     const [, options] = revokeInvitationM.mutate.mock.calls[0];
-    act(() => options.onSettled());
+    act(() => options.onSuccess());
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+  });
+});
+
+describe('VehicleAccessPage — failed destructive confirmation recovery', () => {
+  it.each(['remove', 'revoke'] as const)('retains the failed %s target for retry and clears on confirmed success', async (action) => {
+    mockDrivers.mockReturnValue(makeQuery({ data: [makeDriver()] }));
+    mockInvitations.mockReturnValue(makeQuery({ data: [makeInvite({ invitation_id: 'failed-invite' })] }));
+    const mutation = action === 'remove' ? removeDriverM : revokeInvitationM;
+    const trigger = action === 'remove' ? 'Remove driver' : 'Revoke invitation';
+    const confirm = action === 'remove' ? 'Remove' : 'Revoke';
+    const payload = action === 'remove'
+      ? { vehicleId: '7', shareUserId: 1001 }
+      : { vehicleId: '7', invitationId: 'failed-invite' };
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: trigger }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: confirm }));
+    const [, options] = mutation.mutate.mock.calls[0];
+    mutation.error = new Error('Access update failed');
+    mutation.isPending = false;
+    act(() => options.onSettled?.(undefined, mutation.error));
+    view.rerenderPage();
+
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getByText("Can't reach server")).toBeInTheDocument();
+    expect(mutation.reset).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Retry' }));
+    expect(mutation.mutate).toHaveBeenCalledTimes(2);
+    expect(mutation.mutate.mock.calls[1][0]).toEqual(payload);
+    act(() => mutation.mutate.mock.calls[1][1].onSuccess());
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mutation.reset).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['remove', 'revoke'] as const)('clears a failed %s target and error only on idle Cancel', async (action) => {
+    mockDrivers.mockReturnValue(makeQuery({ data: [makeDriver()] }));
+    mockInvitations.mockReturnValue(makeQuery({ data: [makeInvite()] }));
+    const mutation = action === 'remove' ? removeDriverM : revokeInvitationM;
+    const trigger = action === 'remove' ? 'Remove driver' : 'Revoke invitation';
+    const confirm = action === 'remove' ? 'Remove' : 'Revoke';
+    mutation.reset.mockImplementation(() => { mutation.error = null; });
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: trigger }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: confirm }));
+    mutation.error = new Error('Access update failed');
+    view.rerenderPage();
+    expect(within(screen.getByRole('dialog')).getByText("Can't reach server")).toBeInTheDocument();
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(mutation.reset).toHaveBeenCalledTimes(1);
+    fireEvent.click(screen.getByRole('button', { name: trigger }));
+    expect(within(screen.getByRole('dialog')).queryByText("Can't reach server")).not.toBeInTheDocument();
+    expect(mutation.mutate).toHaveBeenCalledTimes(1);
   });
 });
 
