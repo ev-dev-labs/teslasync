@@ -39,13 +39,6 @@ import { StatisticsBatteryBrief } from '../components/operationalbrief-n-z/Stati
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
 
-type StatisticsFleet = NonNullable<ReturnType<typeof useFleetAnalytics>['data']> & {
-  partial_result?: {
-    is_partial: boolean;
-    reasons: string[] | null;
-  } | null;
-};
-
 const STATE_SERIES: Record<string, number> = {
   driving: 1,
   charging: 0,
@@ -115,7 +108,7 @@ export default function StatisticsPage() {
   const { data: stateSummary, isLoading: stateLoading } = stateQuery;
   const fleetQuery = useFleetAnalytics({ start: startInstant, end: endInstantExclusive });
   const { data: fleetResponse, isLoading: fleetLoading } = fleetQuery;
-  const fleet: StatisticsFleet | undefined = fleetResponse;
+  const fleet = fleetResponse;
   const stateSource = useDataState(stateQuery, { provenance: 'historical' });
   const fleetSource = useDataState(fleetQuery, { provenance: 'historical' });
 
@@ -207,7 +200,15 @@ export default function StatisticsPage() {
             size="standard"
             title={t('statistics.stateDistribution', 'State distribution')}
             ariaLabel={t('statistics.stateDistributionAria', 'Vehicle state distribution pie chart')}
-            exportable
+            loading={stateSummary == null && stateLoading && stateQuery.fetchStatus !== 'paused' && !stateSource.fatalError}
+            error={stateSource.fatalError}
+            onRetry={() => { void stateQuery.refetch(); }}
+            empty={stateSummary != null && stateData.length === 0}
+            emptyIcon={<Clock className="h-8 w-8" aria-hidden="true" />}
+            emptyMessage={t('statistics.noStates', 'No state distribution data')}
+            emptyDescription={t('statistics.noStatesDescription', 'Driving, charging, and parked-state history will populate this distribution over time.')}
+            emptyActionTo={{ label: t('routes.stateMachineDebugger', 'State machine debugger'), to: '/state-debugger' }}
+            exportable={stateSummary != null}
             exportFilename="state-distribution"
             height={280}
             data={stateData}
@@ -270,6 +271,10 @@ export default function StatisticsPage() {
               {(fleet.partial_result.reasons ?? []).map((reason, index) => (
                 <Text as="p" variant="bodySm" color="secondary" key={`${reason}-${index}`}>{reason}</Text>
               ))}
+              <Button variant="ghost" size="sm" disabled={fleetQuery.isFetching}
+                onClick={() => { void fleetQuery.refetch(); }}>
+                {t('common.refresh', 'Refresh')}
+              </Button>
             </DataStateNotice>
           )}
           <ChartCard
@@ -277,7 +282,15 @@ export default function StatisticsPage() {
             title={t('statistics.vehicleComparison', 'Vehicle comparison')}
             ariaLabel={t('statistics.vehicleComparisonAria', 'Distance and energy bar chart comparing all vehicles in the fleet')}
             chartKey="fleet-vehicle-comparison"
-            exportable
+            loading={fleet == null && fleetLoading && fleetQuery.fetchStatus !== 'paused' && !fleetSource.fatalError}
+            error={fleetSource.fatalError}
+            onRetry={() => { void fleetQuery.refetch(); }}
+            empty={fleet != null && compData.length <= 1}
+            emptyIcon={<Car className="h-8 w-8" aria-hidden="true" />}
+            emptyMessage={t('statistics.singleVehicle', 'Add more vehicles to compare')}
+            emptyDescription={t('statistics.singleVehicleDescription', 'Fleet comparison requires activity from at least two registered vehicles.')}
+            emptyActionTo={{ label: t('statistics.manageVehicles', 'Manage vehicles'), to: '/vehicles' }}
+            exportable={fleet != null}
             exportFilename="vehicle-comparison"
             height={300}
             data={compData}
