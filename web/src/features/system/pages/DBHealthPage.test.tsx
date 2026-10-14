@@ -193,6 +193,13 @@ function firstBodyRowName(): string {
   );
 }
 
+function closeTableDetails() {
+  const footer = screen.getByRole('dialog', { name: 'Tables' })
+    .querySelector<HTMLElement>('[data-modal-footer]');
+  if (!footer) throw new Error('table detail footer not found');
+  fireEvent.click(within(footer).getByRole('button', { name: /^Close$/ }));
+}
+
 beforeEach(() => {
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
@@ -222,7 +229,8 @@ describe('DBHealthPage — row chart context and count preferences', () => {
 
     const scope = 'Showing 15 of 16 returned tables by row count. The complete table list is below.';
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
-    expect(screen.getByRole('img', { name: 'Rows' })).toHaveAccessibleDescription(scope);
+    expect(screen.getByRole('figure', { name: 'Rows' }))
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
     const chartTable = screen.getAllByRole('table').find((table) => table !== tablesGrid())!;
     const rankedNames = within(chartTable).getAllByRole('row').slice(1)
       .map((row) => within(row).getAllByRole('cell')[0].textContent);
@@ -244,7 +252,8 @@ describe('DBHealthPage — row chart context and count preferences', () => {
     mockUseDBStats.mockReturnValue(makeQuery({ data: dbStats({ tableCount: 100 }) }));
     renderPage();
     const scope = 'Showing 3 of 3 returned tables by row count. The complete table list is below.';
-    expect(screen.getByRole('img', { name: 'Rows' })).toHaveAccessibleDescription(scope);
+    expect(screen.getByRole('figure', { name: 'Rows' }))
+      .toHaveAccessibleDescription(new RegExp(scope.replace(/\./g, '\\.')));
     expect(screen.getAllByText(scope).length).toBeGreaterThan(0);
     expect(within(tablesGrid()).getAllByRole('row')).toHaveLength(4);
   });
@@ -305,7 +314,7 @@ describe('DBHealthPage — row chart context and count preferences', () => {
       expect(details.queryByText('1234')).toBeNull();
       expect(details.getByText('Last vacuum')).toBeInTheDocument();
       expect(details.getByText('zebra_events')).toBeInTheDocument();
-      fireEvent.click(details.getByRole('button', { name: /^Close$/ }));
+      closeTableDetails();
       expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
     } finally {
       bounds.mockRestore();
@@ -317,8 +326,8 @@ describe('DBHealthPage — row chart context and count preferences', () => {
       data: dbStats(), isError: true, error: new Error('statistics refresh'),
     }));
     renderPage();
-    expect(screen.getByRole('img', { name: 'Rows' })).toHaveAccessibleDescription(
-      'Showing 3 of 3 returned tables by row count. The complete table list is below.',
+    expect(screen.getByRole('figure', { name: 'Rows' })).toHaveAccessibleDescription(
+      /Showing 3 of 3 returned tables by row count\. The complete table list is below\./,
     );
     expect(within(tablesGrid()).getByText('zebra_events')).toBeInTheDocument();
     expect(screen.getByText('Current version')).toBeInTheDocument();
@@ -736,7 +745,7 @@ describe('DBHealthPage — hardening', () => {
       expect(details.getByText('2')).toBeInTheDocument();
       expect(details.getByText('Last vacuum')).toBeInTheDocument();
       expect(details.getByText('300.00 MB')).toBeInTheDocument();
-      fireEvent.click(details.getByRole('button', { name: /^Close$/ }));
+      closeTableDetails();
       expect(screen.queryByRole('dialog', { name: 'Tables' })).toBeNull();
     } finally {
       bounds.mockRestore();
