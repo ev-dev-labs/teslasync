@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-status-api-card-ink-rtl",
+  "status": "PASS_SCOPED_COVERING_RUNTIME_PROOF",
+  "sourceCommitFromAssignment": "91dab6383d0886502316b990f5a7cc9e5fdbbfa9",
+  "requestUtc": "2026-10-14T15:07:41.446Z",
+  "absoluteReturnDeadlineUtc": "2026-10-14T15:27:41.446Z",
+  "sameExistingItem": true,
+  "applicationFilesReadOnly": true,
+  "sourceEdits": 0,
+  "fixtureEdits": 0,
+  "canonicalCatalogEdits": 0,
+  "sourceSha256": "5643bc273cd2b8f247d623d2f26f410a896413c1fd9c4890cac502919d65f28c",
+  "fixtureSha256": "1c80a62d9d3f82305d38c405dbc9780ac02561a19bcf862767c67a2f48b3f7f1",
+  "hashAuthority": "Current read-only files match FINAL_HASHES in web/logs/phase6-fix-status-api-card-ink-rtl.log. No Git command or commit lookup was run.",
+  "source": "web/src/features/system/components/StatusApiEndpointCard.tsx",
+  "fixture": "web/src/features/system/components/StatusApiEndpointCard.test.tsx",
+  "selector": "StatusApiEndpointCard \u2014 theme ink and logical alignment",
+  "selectedNames": [
+    "uses neutral theme-aware secondary ink for the endpoint path and decorative icon",
+    "keeps logical copy spacing and wrapping hooks with complete long content in ltr",
+    "keeps logical copy spacing and wrapping hooks with complete long content in rtl",
+    "preserves keyboard copy, disclosure focus and every serialized response field"
+  ],
+  "accounting": {
+    "originalAuthored": 10,
+    "addedExpandedAuthored": 4,
+    "totalDiscovered": 14,
+    "selected": 4,
+    "executed": 4,
+    "passed": 4,
+    "failed": 0,
+    "skippedBySelector": 10,
+    "testFilesPassed": 1,
+    "unchangedHistoricalGenuinePassesRepeated": 0,
+    "zeroExecutionIsPass": false,
+    "attemptsUsedBefore": 0,
+    "coveringRuntimeAttemptsThisItem": 1,
+    "attemptsUsedAfter": 1,
+    "originalHelperNativeBudgetsRenewed": false
+  },
+  "command": {
+    "cwd": "D:\\repos\\teslasync\\web",
+    "environment": {
+      "VITE_GIT_SHA": "scoped-no-git"
+    },
+    "nodeVersion": "v26.8.1",
+    "rawCommand": ".\\node_modules\\.bin\\vitest.cmd run src\\features\\system\\components\\StatusApiEndpointCard.test.tsx -t 'StatusApiEndpointCard \u2014 theme ink and logical alignment' --pool=forks --maxWorkers=1 --reporter=verbose",
+    "exit": 0,
+    "reportedDurationSeconds": 76.18,
+    "normalViteConfig": true,
+    "startupGuardsBypassed": false,
+    "catalogSplitCheck": "OK",
+    "namespaceAudit": "completed without startup failure; reported 2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved",
+    "runnerWarnings": [
+      "Not implemented: Window's scrollTo() method",
+      "Not implemented: Window's scrollTo() method"
+    ],
+    "rawOutput": "web/logs/phase6-proof-status-api-card-ink-rtl.log"
+  },
+  "evidenceLimits": {
+    "themeProof": "jsdom assertions verify the existing neutral secondary typography token on path and decorative icon; not composed visual contrast.",
+    "rtlProof": "Both dir=ltr and dir=rtl cases verify logical ms-auto spacing, wrapping hooks, complete long Arabic content, complete copied path and polite success feedback; not measured browser layout.",
+    "keyboardProof": "Executed user-event Tab/Enter/Space interactions verify copy, disclosure focus retention, region linkage, complete serialized response and re-collapse.",
+    "historicalEvidence": "Original source-owner lint/type/preservation receipts remain historical and were not rerun or promoted to fresh gates.",
+    "fullTypecheck": "NOTRUN: report-only proof item requires scoped existing checks, not a repository-wide compiler gate.",
+    "fullBuildLintSuites": "NOTRUN: prohibited by item scope.",
+    "browserNativeAcceptance": "NOTRUN: not required by this four-case covering fixture proof; no browser, server startup, downloads or Docker rebuild.",
+    "apiHooks": "No hooks or data requests in the presentational card; no endpoint or wire/storage changes.",
+    "globalGateClaim": false,
+    "nativeGateClaim": false
+  },
+  "changedFiles": [
+    "docs/frontend-audits/phase6-proof-status-api-card-ink-rtl.json",
+    "web/logs/phase6-proof-status-api-card-ink-rtl.log"
+  ]
+}
