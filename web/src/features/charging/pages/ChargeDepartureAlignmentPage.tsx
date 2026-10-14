@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link2 } from 'lucide-react';
 
@@ -18,9 +18,13 @@ import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { chartTokens } from '@/lib/tokens';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 import { deriveDataState } from '@/api/dataState';
 import { analyzeChargeDepartureAlignment } from '../lib/chargeDepartureAlignment';
@@ -28,17 +32,21 @@ import { AlignmentStats, AlignmentPairs, observedBounds } from '../components/ch
 
 const CHART_KEY = 'charge-departure-alignment';
 
-function dayLabel(ms: number, locale: string): string {
-  return new Date(ms).toLocaleDateString(locale, { month: 'short', day: 'numeric' });
-}
-
 export default function ChargeDepartureAlignmentPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDateTime, formatDateShort, tz } = useDateFormat();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
+  const instantLabel = useCallback((ms: number) => {
+    const date = new Date(ms);
+    if (!Number.isFinite(ms)) return formatDateTime(date);
+    return `${formatDateTime(date, { clock: { second: '2-digit' } })} (${tz}) · ${date.toISOString()}`;
+  }, [formatDateTime, tz]);
   usePageTitle(t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment'));
 
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const hiddenSeries = useHiddenSeries(CHART_KEY);
+  const palette = useChartPalette();
   const axisTick = {
     fill: chartTokens.axisStroke,
     fontSize: getChartFontSize(),
@@ -81,7 +89,7 @@ export default function ChargeDepartureAlignmentPage() {
   const chartData = useMemo(
     () =>
       summary.pairs.map((p) => ({
-        date: dayLabel(p.chargeEndedMs, i18n.language),
+        date: new Date(p.chargeEndedMs).toISOString(),
         dwellMin: Math.round(p.dwellS / 60),
         margin: p.readinessMarginPct,
         misaligned: p.flags.length > 0,
@@ -89,14 +97,17 @@ export default function ChargeDepartureAlignmentPage() {
           ? t('chargeDepartureAlignment.modernization.heuristic', 'Heuristic flags, not confirmed faults')
           : t('chargeDepartureAlignment.wellMatched', 'Well matched'),
       })),
-    [summary.pairs, i18n.language, t],
+    [summary.pairs, t],
   );
 
   // Keep the color-only boolean out of scalar alternatives; the localized
   // pairing status stays in both accessible rows and CSV.
   const exportData = useMemo(
-    () => chartData.map(({ misaligned: _misaligned, ...rest }) => rest),
-    [chartData],
+    () => chartData.map(({ misaligned: _misaligned, ...rest }) => ({
+      ...rest,
+      date: instantLabel(Date.parse(rest.date)),
+    })),
+    [chartData, instantLabel],
   );
 
   if (vehicleId == null) {
@@ -181,8 +192,8 @@ export default function ChargeDepartureAlignmentPage() {
                   )}</Caption>
                   <Caption as="dd">{boundsLabel}: {bounds != null
                     ? t('chargeDepartureAlignment.modernization.bounds', '{{first}} → {{last}} ({{count}} valid timestamps)', {
-                      first: new Date(bounds.first).toLocaleString(i18n.language),
-                      last: new Date(bounds.last).toLocaleString(i18n.language),
+                      first: instantLabel(bounds.first),
+                      last: instantLabel(bounds.last),
                       count: bounds.count,
                     })
                     : t('chargeDepartureAlignment.modernization.noBounds', 'No valid observed timestamps available.')}</Caption>
@@ -200,6 +211,11 @@ export default function ChargeDepartureAlignmentPage() {
             subtitle={[
               t('chargeDepartureAlignment.chartHint', 'Bars are minutes parked after charging; the line is SoC left after that drive'),
               t('chargeDepartureAlignment.modernization.heuristic', 'Heuristic flags, not confirmed faults'),
+              t(
+                'chargeDepartureAlignment.modernization.chartTime',
+                'Chart timestamps use {{zone}}. Pairing uses elapsed instants within 24 hours, not local calendar dates or a business timezone.',
+                { zone: tz },
+              ),
             ].join(' · ')}
             ariaLabel={t(
               'chargeDepartureAlignment.chartAria',
@@ -228,30 +244,33 @@ export default function ChargeDepartureAlignmentPage() {
             exportData={exportData}
             dataColumns={[
               { key: 'date', label: t('chargeDepartureAlignment.col.date', 'Date') },
-              { key: 'dwellMin', label: t('chargeDepartureAlignment.col.dwell', 'Dwell (min)') },
-              { key: 'margin', label: t('chargeDepartureAlignment.col.margin', 'Readiness margin (%)') },
+              { key: 'dwellMin', label: t('chargeDepartureAlignment.col.dwell', 'Dwell (min)'),
+                format: value => isFiniteNumber(value) ? fmtInt(value) : '—' },
+              { key: 'margin', label: t('chargeDepartureAlignment.col.margin', 'Readiness margin (%)'),
+                format: value => isFiniteNumber(value) ? fmtNumber(value) : '—' },
               { key: 'flags', label: t('chargeDepartureAlignment.modernization.flags', 'Pairing signals') },
             ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
-                <XAxis dataKey="date" tick={axisTick} />
+                <XAxis dataKey="date" tick={axisTick} tickFormatter={formatDateShort} />
                 <YAxis yAxisId="dwell" tick={axisTick} />
                 <YAxis yAxisId="margin" orientation="right" tick={axisTick} domain={[0, 100]} unit="%" />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<ChartTooltip labelFormatter={label => instantLabel(Date.parse(String(label)))} />} />
                 <ChartLegend state={hiddenSeries} />
                 <Bar
                   yAxisId="dwell"
                   dataKey="dwellMin"
                   name={t('chargeDepartureAlignment.col.dwell', 'Dwell (min)')}
+                  fill={palette[0]}
                   radius={[3, 3, 0, 0]}
                   hide={hiddenSeries.isHidden('dwellMin')}
                 >
                   {chartData.map((d, i) => (
                     <Cell
                       key={i}
-                      fill={d.misaligned ? chartTokens.series[3] : chartTokens.series[0]}
+                      fill={d.misaligned ? palette[3] : palette[0]}
                       fillOpacity={d.misaligned ? 1 : 0.7}
                     />
                   ))}
@@ -261,7 +280,7 @@ export default function ChargeDepartureAlignmentPage() {
                   type="monotone"
                   dataKey="margin"
                   name={t('chargeDepartureAlignment.col.margin', 'Readiness margin (%)')}
-                  stroke={chartTokens.series[2]}
+                  stroke={palette[2]}
                   strokeWidth={2}
                   dot
                   hide={hiddenSeries.isHidden('margin')}

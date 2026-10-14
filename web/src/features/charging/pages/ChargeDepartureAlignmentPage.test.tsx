@@ -1,19 +1,25 @@
-import type { ComponentProps, PropsWithChildren } from 'react';
+import type { ComponentProps, PropsWithChildren, ReactElement } from 'react';
 import { createInstance, type i18n } from 'i18next';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
-import type { ChartContainer, XAxis, YAxis } from '@/components/charts';
+import type { ChartContainer, ChartTooltip, XAxis, YAxis } from '@/components/charts';
+import { formatDateTime, formatDateShort } from '@/lib/dateFormat';
+import { resolveTimezone } from '@/lib/timezone';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { objectsToCSV, toCSV } from '@/lib/csvExport';
 import type { AlignmentStats } from '../components/charge-departure-alignment-modernization/AlignmentStats';
 import type { AlignmentPairs } from '../components/charge-departure-alignment-modernization/AlignmentPairs';
 import type { ChargeDepartureAlignmentSummary, DeparturePair } from '../lib/chargeDepartureAlignment';
 import { chartTokens, typography } from '@/lib/tokens';
+import { resolveChartPalette, type ChartPaletteId } from '@/hooks/useChartPalette';
 import english from '@/i18n/en.json';
 import ChargeDepartureAlignmentPage from './ChargeDepartureAlignmentPage';
 
 vi.unmock('react-i18next');
+vi.unmock('@/lib/timezone');
 
 const source = vi.hoisted(() => ({
   sessions: {} as DataStateSource<Array<{ ended_at?: string | null }>>,
@@ -26,8 +32,31 @@ const source = vi.hoisted(() => ({
   driveHook: vi.fn(),
   analyze: vi.fn(),
   hidden: vi.fn((key: string) => key === 'margin'),
+  locale: 'en-US',
+  mode: 'utc' as 'utc' | 'user' | 'vehicle',
+  userZone: 'America/Los_Angeles',
+  vehicleZone: 'Asia/Tokyo',
+  tooltip: undefined as ComponentProps<typeof ChartTooltip> | undefined,
+  axis: undefined as ComponentProps<typeof XAxis> | undefined,
+  plotted: undefined as Array<{ dwellMin: number; margin: number | null }> | undefined,
+  palette: 'cb_safe' as ChartPaletteId,
 }));
 
+vi.mock('@/hooks/useChartPalette', async importOriginal => ({
+  ...await importOriginal<typeof import('@/hooks/useChartPalette')>(),
+  useChartPalette: () => resolveChartPalette(source.palette),
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: source.locale,
+    settings: {
+      tz_display_default: source.mode,
+      timezone_user: source.userZone,
+      currency_symbol: '$',
+    },
+  }),
+}));
 vi.mock('@/api/hooks/useCharging', () => ({
   useChargingHistory: (vehicleId?: string) => {
     source.chargeHook(vehicleId);
@@ -40,7 +69,9 @@ vi.mock('@/api/hooks/useDriving', () => ({
     return source.drives;
   },
 }));
-vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: 4 }) }));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicleId: 4, vehicle: { timezone: source.vehicleZone } }),
+}));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useHiddenSeries', () => ({
   useHiddenSeries: (key: string) => ({ chartKey: key, isHidden: source.hidden }),
@@ -74,17 +105,27 @@ vi.mock('@/components/charts', async importOriginal => ({
     </section>;
   },
   ResponsiveContainer: ({ children }: PropsWithChildren) => <>{children}</>,
-  ComposedChart: ({ children }: PropsWithChildren) => <>{children}</>,
+  ComposedChart: ({ children, data }: PropsWithChildren<{ data: typeof source.plotted }>) => {
+    source.plotted = data;
+    return <>{children}</>;
+  },
   CartesianGrid: ({ stroke }: { stroke?: string }) => <output data-testid="grid-stroke">{stroke}</output>,
-  XAxis: ({ tick }: ComponentProps<typeof XAxis>) => <output data-testid="x-tick">{JSON.stringify(tick)}</output>,
+  XAxis: (props: ComponentProps<typeof XAxis>) => {
+    source.axis = props;
+    return <output data-testid="x-tick">{JSON.stringify(props.tick)}</output>;
+  },
   YAxis: ({ tick, yAxisId, domain, unit }: ComponentProps<typeof YAxis>) =>
     <output data-testid={`y-tick-${yAxisId}`}>{JSON.stringify({ tick, domain, unit })}</output>,
-  Bar: ({ dataKey, hide, children }: PropsWithChildren<{ dataKey: string; hide: boolean }>) =>
-    <div data-testid={dataKey} data-hidden={hide}>{children}</div>,
-  Line: ({ dataKey, hide }: { dataKey: string; hide: boolean }) =>
-    <div data-testid={dataKey} data-hidden={hide} />,
-  Cell: () => null,
-  Tooltip: () => null,
+  Bar: ({ dataKey, hide, fill, children }: PropsWithChildren<{ dataKey: string; hide: boolean; fill?: string }>) =>
+    <div data-testid={dataKey} data-hidden={hide} data-fill={fill}>{children}</div>,
+  Line: ({ dataKey, hide, stroke }: { dataKey: string; hide: boolean; stroke?: string }) =>
+    <div data-testid={dataKey} data-hidden={hide} data-stroke={stroke} />,
+  Cell: ({ fill, fillOpacity }: { fill?: string; fillOpacity?: number }) =>
+    <output data-testid="dwell-cell" data-fill={fill} data-opacity={fillOpacity} />,
+  Tooltip: ({ content }: { content: ReactElement<ComponentProps<typeof ChartTooltip>> }) => {
+    source.tooltip = content.props;
+    return null;
+  },
   ChartLegend: ({ state }: { state: { chartKey: string } }) =>
     <output data-testid="legend-key">{state.chartKey}</output>,
 }));
@@ -139,14 +180,109 @@ beforeEach(async () => {
     tightMarginCount: 0, excessBufferCount: 0,
   };
   source.chart = undefined;
+  source.locale = 'en-US';
+  source.mode = 'utc';
+  source.tooltip = undefined;
+  source.axis = undefined;
+  source.plotted = undefined;
+  source.palette = 'cb_safe';
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 afterEach(() => {
   cleanup();
   document.documentElement.style.removeProperty('--font-scale');
   document.documentElement.style.removeProperty('--font-sans');
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 
 describe('Charge departure page contract adoption', () => {
+  it.each(['cb_safe', 'neon'] as const)(
+    'applies the saved %s palette without changing series preferences or datasets',
+    savedPalette => {
+      source.palette = savedPalette === 'cb_safe' ? 'neon' : 'cb_safe';
+      const sessionsBefore = structuredClone(source.sessions.data);
+      const drivesBefore = structuredClone(source.drives.data);
+      const summaryBefore = structuredClone(source.summary);
+      const page = mountPage();
+      const plottedBefore = structuredClone(source.plotted);
+      const accessibleBefore = structuredClone(source.chart?.data);
+      const csvBefore = objectsToCSV(source.chart?.exportData ?? []);
+
+      source.palette = savedPalette;
+      page.rerender(
+        <I18nextProvider i18n={translations}>
+          <MemoryRouter initialEntries={['/charge-departure-alignment']}>
+            <ChargeDepartureAlignmentPage />
+          </MemoryRouter>
+        </I18nextProvider>,
+      );
+
+      const palette = resolveChartPalette(savedPalette);
+      expect(screen.getByTestId('dwellMin')).toHaveAttribute('data-fill', palette[0]);
+      const cells = screen.getAllByTestId('dwell-cell');
+      expect(cells[0]).toHaveAttribute('data-fill', palette[0]);
+      expect(cells[0]).toHaveAttribute('data-opacity', '0.7');
+      expect(cells[1]).toHaveAttribute('data-fill', palette[3]);
+      expect(cells[1]).toHaveAttribute('data-opacity', '1');
+      expect(screen.getByTestId('margin')).toHaveAttribute('data-stroke', palette[2]);
+      expect(screen.getByTestId('dwellMin')).toHaveAttribute('data-hidden', 'false');
+      expect(screen.getByTestId('margin')).toHaveAttribute('data-hidden', 'true');
+      expect(screen.getByTestId('legend-key')).toHaveTextContent('charge-departure-alignment');
+      expect(source.chart?.chartKey).toBe('charge-departure-alignment');
+      expect(source.plotted).toEqual(plottedBefore);
+      expect(source.chart?.data).toEqual(accessibleBefore);
+      expect(source.chart?.exportData).toEqual(accessibleBefore);
+      expect(objectsToCSV(source.chart?.exportData ?? [])).toBe(csvBefore);
+      expect(source.sessions.data).toEqual(sessionsBefore);
+      expect(source.drives.data).toEqual(drivesBefore);
+      expect(source.summary).toEqual(summaryBefore);
+      expect(source.analyze).toHaveBeenLastCalledWith(source.sessions.data, source.drives.data);
+    },
+  );
+
+  it('updates scalar number formatting with decimal-comma preferences without changing chart measurements or CSV', () => {
+    source.summary.pairs = [
+      pair({ dwellS: 1234 * 60, readinessMarginPct: 45.678 }),
+      pair({ dwellS: 0, readinessMarginPct: 0 }),
+      pair({ readinessMarginPct: null }),
+    ];
+    const page = mountPage();
+    const rawCSV = objectsToCSV(source.chart?.exportData ?? []);
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    page.rerender(
+      <I18nextProvider i18n={translations}>
+        <MemoryRouter initialEntries={['/charge-departure-alignment']}>
+          <ChargeDepartureAlignmentPage />
+        </MemoryRouter>
+      </I18nextProvider>,
+    );
+
+    const columns = source.chart?.dataColumns;
+    const dwell = columns?.find(column => column.key === 'dwellMin')?.format;
+    const margin = columns?.find(column => column.key === 'margin')?.format;
+    expect(dwell?.(1234)).toBe('1.234');
+    expect(dwell?.(0)).toBe('0');
+    expect(margin?.(45.678)).toBe('45,678');
+    expect(margin?.(0)).toBe('0,000');
+    for (const missing of [null, undefined, NaN, Infinity]) {
+      expect(dwell?.(missing)).toBe('—');
+      expect(margin?.(missing)).toBe('—');
+    }
+    expect(source.plotted?.map(({ dwellMin, margin }) => ({ dwellMin, margin }))).toEqual([
+      { dwellMin: 1234, margin: 45.678 },
+      { dwellMin: 0, margin: 0 },
+      { dwellMin: 60, margin: null },
+    ]);
+    expect(source.chart?.data).toEqual(source.chart?.exportData);
+    expect(objectsToCSV(source.chart?.exportData ?? [])).toBe(rawCSV);
+    expect(toCSV(source.chart?.exportData ?? [], [
+      { key: 'dwellMin' }, { key: 'margin' },
+    ])).toBe('dwellMin,margin\r\n1234,45.678\r\n0,0\r\n60,');
+  });
+
   it('uses shared chart font and grid roles while preserving axes, series, legend and scalar exports', () => {
     mountPage();
     const tick = { fill: chartTokens.axisStroke, fontSize: 17, fontFamily: 'Test Sans, sans-serif' };
@@ -163,9 +299,9 @@ describe('Charge departure page contract adoption', () => {
     expect(source.chart?.height).toBe(340);
     expect(source.chart?.dataColumns?.map(column => column.key)).toEqual(['date', 'dwellMin', 'margin', 'flags']);
     expect(source.chart?.exportData).toEqual([
-      { date: new Date('2026-09-01T09:00:00Z').toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      { date: `${formatDateTime('2026-09-01T09:00:00Z', { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · 2026-09-01T09:00:00.000Z`,
         dwellMin: 60, margin: 45, flags: 'Well matched' },
-      { date: new Date('2026-09-01T09:00:00Z').toLocaleDateString('en', { month: 'short', day: 'numeric' }),
+      { date: `${formatDateTime('2026-09-01T09:00:00Z', { locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' } })} (UTC) · 2026-09-01T09:00:00.000Z`,
         dwellMin: 90, margin: null, flags: 'Heuristic flags, not confirmed faults' },
     ]);
     expect(source.chart?.data).toEqual(source.chart?.exportData);
@@ -187,7 +323,46 @@ describe('Charge departure page contract adoption', () => {
     expect(history).toHaveTextContent('Observed charge-end timestamps');
     expect(history).toHaveTextContent('Observed drive-start timestamps');
     expect(history).toHaveTextContent('1 valid timestamps');
-    expect(history).toHaveTextContent(new Date('2026-09-01T09:00:00Z').toLocaleString('en'));
+    expect(history).toHaveTextContent(formatDateTime('2026-09-01T09:00:00Z', {
+      locale: 'en-US', tz: 'UTC', clock: { second: '2-digit' },
+    }));
+  });
+
+  describe('Complete charge instants with saved display preferences', () => {
+    it.each([
+      ['utc', 'en-US'],
+      ['user', 'en-GB'],
+      ['vehicle', 'de-DE'],
+    ] as const)('preserves year, time and exact identity in %s mode with %s locale', (mode, locale) => {
+      source.mode = mode;
+      source.locale = locale;
+      const instants = [
+        '2025-12-31T23:30:45.123Z',
+        '2026-01-01T23:30:45.123Z',
+        '2026-11-01T08:30:00.000Z',
+        '2026-11-01T09:30:00.000Z',
+      ];
+      source.summary.pairs = instants.map((date, index) => pair({
+        chargeId: `charge-${index}`, driveId: index,
+        chargeEndedMs: Date.parse(date),
+      }));
+      mountPage();
+      const zone = resolveTimezone(mode, source.vehicleZone, source.userZone);
+      const labels = instants.map(iso =>
+        `${formatDateTime(iso, { locale, tz: zone, clock: { second: '2-digit' } })} (${zone}) · ${iso}`,
+      );
+      expect(source.chart?.data?.map(row => row.date)).toEqual(labels);
+      expect(source.chart?.exportData?.map(row => row.date)).toEqual(labels);
+      expect(new Set(labels).size).toBe(instants.length);
+      instants.forEach((iso, index) => {
+        expect(source.tooltip?.labelFormatter?.(iso)).toBe(labels[index]);
+        expect(source.axis?.tickFormatter?.(iso, index)).toBe(formatDateShort(iso, { locale, tz: zone }));
+      });
+      expect(source.tooltip?.labelFormatter?.(undefined)).toBe('—');
+      expect(source.chart?.subtitle).toContain(`Chart timestamps use ${zone}.`);
+      expect(source.chart?.subtitle).toContain('Pairing uses elapsed instants within 24 hours');
+      expect(source.analyze).toHaveBeenLastCalledWith(source.sessions.data, source.drives.data);
+    });
   });
 
   it.each(['initial', 'empty', 'fatal', 'retained', 'paused'] as const)(
