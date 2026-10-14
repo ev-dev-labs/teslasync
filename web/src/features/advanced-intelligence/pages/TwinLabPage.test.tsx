@@ -125,6 +125,115 @@ describe('TwinLabPage restrained source adoption', () => {
     });
   });
 
+  it.each([
+    /Route distance/, /Average speed/, /Scenario horizon/, /Auxiliary load/,
+  ])('retains missing %s drafts and blocks submission without substituting zero', (label) => {
+    renderPage();
+    const input = screen.getAllByLabelText<HTMLInputElement>(label)[0];
+    fireEvent.change(input, { target: { value: '' } });
+    expect(input).toHaveValue(null);
+    expect(input.validity.valueMissing).toBe(true);
+    fireEvent.change(screen.getAllByLabelText(/Scenario name/)[0], { target: { value: 'Edited name' } });
+    expect(input).toHaveValue(null);
+    fireEvent.submit(input.form!);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: label.source === 'Average speed' ? '12.55' : '123.45' } });
+    expect(input.validity.valid).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Run confirmed simulation' }));
+    expect(state.mutation.mutate).toHaveBeenCalledOnce();
+  });
+
+  it.each([
+    [/Route distance/, '0'], [/Route distance/, '2000001'],
+    [/Average speed/, '-1'], [/Average speed/, '71'],
+    [/Scenario horizon/, '59'], [/Outside temperature/, '-81'],
+    [/Outside temperature/, '81'], [/Auxiliary load/, '-1'],
+    [/Auxiliary load/, '50001'],
+  ] as const)('retains invalid %s value %s and blocks even direct submission', (label, value) => {
+    renderPage();
+    const input = screen.getAllByLabelText<HTMLInputElement>(label)[0];
+    fireEvent.change(input, { target: { value } });
+    expect(input).toHaveValue(Number(value));
+    expect(input.validity.valid).toBe(false);
+    fireEvent.submit(input.form!);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it('distinguishes malformed auxiliary input from explicit measured zero', () => {
+    renderPage();
+    const input = screen.getAllByLabelText<HTMLInputElement>(/Auxiliary load/)[0];
+    fireEvent.change(input, { target: { value: 'not-a-number' } });
+    expect(input).toHaveValue(null);
+    fireEvent.submit(input.form!);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: '0' } });
+    expect(input.validity.valid).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'Run confirmed simulation' }));
+    expect(state.mutation.mutate.mock.calls[0][0].scenarios[0].auxiliary_load_w).toBe(0);
+  });
+
+  it.each(['-12.55', '0', '12.55'])('submits signed and fractional SI values with temperature %s', (temperature) => {
+    renderPage();
+    const edits: Array<[RegExp, string]> = [
+      [/Route distance/, '12345.67'], [/Average speed/, '12.55'],
+      [/Scenario horizon/, '3600.25'], [/Outside temperature/, temperature],
+      [/Auxiliary load/, '123.45'],
+    ];
+    for (const [label, value] of edits) {
+      const input = screen.getAllByLabelText<HTMLInputElement>(label)[0];
+      fireEvent.change(input, { target: { value } });
+      expect(input.validity.valid).toBe(true);
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Run confirmed simulation' }));
+    expect(state.mutation.mutate.mock.calls[0][0].scenarios[0]).toEqual({
+      name: 'Scenario 1', distance_m: 12345.67, speed_mps: 12.55, horizon_s: 3600.25,
+      outside_temp_c: Number(temperature), auxiliary_load_w: 123.45,
+    });
+  });
+
+  it('preserves a missing survivor draft through scenario removal and addition', () => {
+    renderPage();
+    fireEvent.change(screen.getAllByLabelText(/Auxiliary load/)[1], { target: { value: '' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove scenario' })[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Add scenario' }));
+    const inputs = screen.getAllByLabelText<HTMLInputElement>(/Auxiliary load/);
+    expect(inputs[0]).toHaveValue(null);
+    expect(inputs[1]).toHaveValue(1000);
+    fireEvent.submit(inputs[0].form!);
+    expect(state.mutation.mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { survivorName: 'Scenario 2', addedNames: ['Scenario 3', 'Scenario 4'] },
+    { survivorName: 'Scenario 3', addedNames: ['Scenario 2', 'Scenario 4'] },
+    { survivorName: 'Caller scenario', addedNames: ['Scenario 2', 'Scenario 3'] },
+  ])('adds unused default names without renaming edited survivor $survivorName', ({ survivorName, addedNames }) => {
+    renderPage();
+    fireEvent.change(screen.getAllByLabelText(/Scenario name/)[1], { target: { value: survivorName } });
+    fireEvent.change(screen.getAllByLabelText(/Route distance/)[1], { target: { value: '123456' } });
+    fireEvent.change(screen.getAllByLabelText(/Outside temperature/)[1], { target: { value: '' } });
+    fireEvent.change(screen.getAllByLabelText(/Auxiliary load/)[1], { target: { value: '0' } });
+    fireEvent.click(screen.getAllByRole('button', { name: 'Remove scenario' })[0]);
+    for (const name of addedNames) {
+      fireEvent.click(screen.getByRole('button', { name: 'Add scenario' }));
+      expect(screen.getAllByLabelText(/Scenario name/).at(-1)).toHaveValue(name);
+    }
+    expect(screen.getAllByLabelText(/Scenario name/).map(input => (input as HTMLInputElement).value))
+      .toEqual([survivorName, ...addedNames]);
+    fireEvent.click(screen.getByRole('button', { name: 'Run confirmed simulation' }));
+    expect(state.mutation.mutate).toHaveBeenCalledExactlyOnceWith({
+      vehicle_id: 7, confirmed: true,
+      scenarios: [
+        { name: survivorName, horizon_s: 3600, distance_m: 123456, speed_mps: 27,
+          outside_temp_c: null, auxiliary_load_w: 0 },
+        ...addedNames.map(name => ({
+          name, horizon_s: 3600, distance_m: 60000, speed_mps: 27,
+          outside_temp_c: 20, auxiliary_load_w: 1000,
+        })),
+      ],
+    });
+  });
+
   it('disables simulation without workspace vehicle and keeps disclosure and controls', () => {
     state.vehicleId = null;
     renderPage();
@@ -189,10 +298,12 @@ describe('TwinLabPage restrained source adoption', () => {
     expect(brief.querySelector('[data-operational-metric="efficiency"]')).toHaveAttribute('data-value-state', 'missing');
     expect(brief.querySelector('[data-operational-metric="usable-battery"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief).toHaveTextContent('0.00 kWh');
+    expect(card('Range-effect uncertainty comparison'))
+      .toHaveTextContent('At least two supported scenario results are required.');
     const rows = within(chartTable()).getAllByRole('row');
     expect(within(rows[0]).getAllByRole('columnheader').map(cell => cell.textContent))
       .toEqual(['Scenario name', 'Low', 'Estimate', 'High']);
-    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['Modeled A', '-1', '0', '2']);
+    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['Modeled A', '-1.00', '0.00', '2.00']);
     expect(within(rows[2]).getAllByRole('cell').map(cell => cell.textContent)).toEqual(['Unsupported B', '—', '—', '—']);
     expect(scenario('Modeled A')).toHaveTextContent('0.00%');
     expect(scenario('Modeled A')).toHaveTextContent('-5.00%');
@@ -205,6 +316,7 @@ describe('TwinLabPage restrained source adoption', () => {
 
   it('keeps brief details, full evidence context and chart export actions reachable', () => {
     state.mutation.data = structuredClone(twin);
+    state.mutation.data.scenarios[1].range_delta_m = 0;
     renderPage();
     fireEvent.click(within(screen.getByTestId('advanced-intelligence-twin-brief')).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Calibrated baseline details' });
@@ -293,7 +405,94 @@ describe('TwinLabPage restrained source adoption', () => {
     expectSections();
     expect(card('Range-effect uncertainty comparison')).toHaveTextContent('At least two supported scenario results are required.');
     expect(scenario('Modeled A')).toHaveTextContent('first-assumption');
+    expect(within(chartTable()).getAllByRole('row')).toHaveLength(2);
     expect(screen.getByTestId('advanced-intelligence-twin-brief')).toHaveTextContent('calibrated-not-guaranteed');
+  });
+
+  it.each([
+    { name: 'missing', values: [null, undefined, null] },
+    { name: 'invalid', values: [NaN, Infinity, -Infinity] },
+  ])('does not count $name range inputs as supported or discard their rows', ({ values }) => {
+    state.mutation.data = structuredClone(twin);
+    Object.assign(state.mutation.data.scenarios[0], {
+      range_low_m: values[0], range_delta_m: values[1], range_high_m: values[2],
+    });
+    const original = structuredClone(state.mutation.data);
+    renderPage();
+    expect(card('Range-effect uncertainty comparison'))
+      .toHaveTextContent('At least two supported scenario results are required.');
+    const rows = within(chartTable()).getAllByRole('row');
+    expect(rows).toHaveLength(3);
+    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Modeled A', '—', '—', '—']);
+    expect(within(rows[2]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Unsupported B', '—', '—', '—']);
+    expect(state.mutation.data).toEqual(original);
+  });
+
+  it('counts finite partial estimates including signed zero, negative and fractional values', () => {
+    state.mutation.data = structuredClone(twin);
+    Object.assign(state.mutation.data.scenarios[0], {
+      range_low_m: null, range_delta_m: -0, range_high_m: NaN,
+    });
+    Object.assign(state.mutation.data.scenarios[1], {
+      range_low_m: -1250, range_delta_m: undefined, range_high_m: 250,
+    });
+    state.mutation.data.scenarios.push({
+      ...twin.scenarios[1], name: 'Missing C',
+    });
+    const original = structuredClone(state.mutation.data);
+    renderPage();
+    expect(card('Range-effect uncertainty comparison'))
+      .not.toHaveTextContent('At least two supported scenario results are required.');
+    const rows = within(chartTable()).getAllByRole('row');
+    expect(rows).toHaveLength(4);
+    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Modeled A', '—', '-0.00', '—']);
+    expect(within(rows[2]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Unsupported B', '-1.25', '—', '0.25']);
+    expect(within(rows[3]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Missing C', '—', '—', '—']);
+    expect(Object.is(state.mutation.data.scenarios[0].range_delta_m, -0)).toBe(true);
+    expect(state.mutation.data).toEqual(original);
+  });
+
+  it('formats all three distance columns as measurements with grouping and fractional precision', () => {
+    state.mutation.data = structuredClone(twin);
+    Object.assign(state.mutation.data.scenarios[0], {
+      range_low_m: -1234567, range_delta_m: 1234, range_high_m: 2345678,
+    });
+    Object.assign(state.mutation.data.scenarios[1], {
+      range_low_m: 0, range_delta_m: -0, range_high_m: 0,
+    });
+    const original = structuredClone(state.mutation.data);
+    renderPage();
+    const rows = within(chartTable()).getAllByRole('row');
+    expect(within(rows[1]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Modeled A', '-1,234.57', '1.23', '2,345.68']);
+    expect(within(rows[2]).getAllByRole('cell').map(cell => cell.textContent))
+      .toEqual(['Unsupported B', '0.00', '-0.00', '0.00']);
+    expect(state.mutation.data).toEqual(original);
+  });
+
+  it('retains invalid sensitivity evidence with guidance without mistaking measured zero for missing', () => {
+    state.mutation.data = structuredClone(twin);
+    state.mutation.data.scenarios[1].sensitivity_drivers = [
+      { driver: 'invalid-effect', effect_pct: NaN },
+      { driver: 'infinite-effect', effect_pct: Infinity },
+    ];
+    state.mutation.data.scenarios[0].sensitivity_drivers = [
+      { driver: 'signed-zero-effect', effect_pct: -0 },
+      { driver: 'fractional-effect', effect_pct: -0.25 },
+    ];
+    renderPage();
+    expect(scenario('Unsupported B')).toHaveTextContent('invalid-effect');
+    expect(scenario('Unsupported B')).toHaveTextContent('infinite-effect');
+    expect(scenario('Unsupported B')).toHaveTextContent('No supported data is available.');
+    expect(scenario('Unsupported B')).not.toHaveTextContent('0.00%');
+    expect(scenario('Modeled A')).toHaveTextContent('-0.00%');
+    expect(scenario('Modeled A')).toHaveTextContent('-0.25%');
+    expect(scenario('Modeled A')).not.toHaveTextContent('No supported data is available.');
   });
 
   it('keeps baseline and evidence when a resolved result contains no scenarios', () => {
