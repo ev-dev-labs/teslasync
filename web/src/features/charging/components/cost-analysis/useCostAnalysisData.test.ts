@@ -14,9 +14,9 @@
  *     1000× overstatement; it is now converted to kWh.
  *   - lifetimeMetrics.minSessionCost folded a literal 0 into `Math.min`, pinning
  *     the "cheapest paid session" to 0 whenever any paid session existed.
- * …plus the hardening: an unparseable `started_at` used to index buckets[NaN]
- * and throw; a missing `total_energy_added_wh` used to poison the sums with NaN;
- * and mpg=0 used to divide 0/0. All three are now guarded.
+ * Coverage distinguishes recorded totals from paired cost/energy rates.
+ * Nullable raw measurements retain missingness; unavailable numeric view
+ * fields use NaN for the existing formatters, never an invented zero.
  *
  * `toDistanceDisplay` is supplied as the real metres→miles converter so the
  * distance assertions exercise the exact production contract.
@@ -443,28 +443,142 @@ describe('useCostAnalysisData — hardening', () => {
     expect(result.current.coreStats).not.toBeNull();
   });
 
-  it('coerces a missing total_energy_added_wh to 0 (no NaN)', () => {
+  it('marks an unmeasured energy total as unknown rather than measured zero', () => {
     const noEnergy = makeSession({
       id: 21,
-      total_energy_added_wh: undefined as unknown as number,
+      total_energy_added_wh: undefined,
       cost_decimal: 5,
     });
     const result = render({ sessions: [noEnergy] });
     const stats = result.current.coreStats!;
-    expect(Number.isFinite(stats.totalEnergy)).toBe(true);
-    expect(stats.totalEnergy).toBe(0);
+    expect(stats.totalEnergy).toBeNaN();
+    expect(result.current.coverage.unknownEnergyCount).toBe(1);
     expect(Number.isFinite(result.current.lifetimeMetrics!.freeEnergy)).toBe(true);
   });
 
-  it('avoids NaN when mpg is 0', () => {
+  it('marks an invalid mpg as unknown rather than free gasoline', () => {
     const result = render({ sessions: THREE, mpg: 0 });
     const gas = result.current.gasComparison!;
-    expect(gas.gasCost).toBe(0);
-    expect(gas.costPerMileGas).toBe(0);
+    expect(gas.gasCost).toBeNaN();
+    expect(gas.costPerMileGas).toBeNaN();
     expect(
       result.current.monthlyData.every(
         (m) => Number.isFinite(m.gasEquiv) && Number.isFinite(m.savings),
       ),
     ).toBe(true);
+  });
+
+  describe('useCostAnalysisData — measurement coverage', () => {
+    it('uses matched cost/energy observations for partial rates, not all loaded energy', () => {
+      const result = render({ sessions: [
+        makeSession({ id: 1, cost_decimal: 0, total_energy_added_wh: 500 }),
+        makeSession({ id: 2, cost_decimal: -0.25, total_energy_added_wh: 250 }),
+        makeSession({ id: 3, cost_decimal: null, total_energy_added_wh: 10_000 }),
+        makeSession({ id: 4, cost_decimal: 2, total_energy_added_wh: null }),
+      ] }).current;
+      expect(result.coverage).toMatchObject({
+        pricedCount: 3, energyCount: 3, pairedCount: 2,
+        unknownCostCount: 1, unknownEnergyCount: 1,
+        pricedEnergyKwh: 0.75, rateStatus: 'partial',
+      });
+      expect(result.coverage.rate).toBeCloseTo(-1 / 3);
+      expect(result.coreStats?.totalCost).toBe(1.75);
+      expect(result.coreStats?.totalEnergy).toBe(10.75);
+      expect(result.coreStats?.avgCostPerKwh).toBeCloseTo(-1 / 3);
+      expect(result.monthlyData[0].coverage).toEqual(result.coverage);
+      expect(result.monthlyData[0].avgCostPerKwh).toBeCloseTo(-1 / 3);
+      expect(result.chargerTypeData[0].coverage).toEqual(result.coverage);
+      const hour = result.hourlyData.find(h => h.sessions > 0)!;
+      expect(hour.coverage).toEqual(result.coverage);
+      expect(hour.avgCost).toBeCloseTo(1.75 / 3);
+      expect(result.touInsights).toBeNull();
+      expect(result.coreStats?.savings).toBeNaN();
+      expect(result.gasComparison?.evCost).toBeNaN();
+      expect(result.lifetimeMetrics?.avgSessionCost).toBeCloseTo(1.75 / 3);
+      expect(result.lifetimeMetrics?.avgSessionEnergy).toBeCloseTo(10.75 / 3);
+      expect(result.lifetimeMetrics?.minSessionCost).toBe(-0.25);
+      expect(result.lifetimeMetrics?.freeCount).toBe(1);
+    });
+
+    it.each([null, undefined, NaN, Infinity, -Infinity])(
+      'keeps missing/invalid cost %s distinct from measured zero',
+      cost_decimal => {
+        const result = render({ sessions: [makeSession({ cost_decimal })] }).current;
+        expect(result.rawMeasurements[0].cost).toBeNull();
+        expect(result.coverage).toMatchObject({
+          pricedCount: 0, unknownCostCount: 1, rate: null, rateStatus: 'unknown',
+        });
+        expect(result.coreStats?.avgCostPerKwh).toBeNaN();
+        expect(result.monthlyData[0].avgCostPerKwh).toBeNaN();
+        expect(result.hourlyData.find(h => h.sessions)?.avgCost).toBeNaN();
+        expect(result.lifetimeMetrics?.avgSessionCost).toBeNaN();
+        expect(result.lifetimeMetrics?.maxSessionCost).toBeNaN();
+        expect(result.lifetimeMetrics?.minSessionCost).toBeNaN();
+        expect(result.lifetimeMetrics?.freeCount).toBe(0);
+        expect(result.costPerKwhTrend).toEqual([]);
+      },
+    );
+
+    it.each([null, undefined, NaN, Infinity, -Infinity])(
+      'keeps missing/invalid energy %s distinct from measured zero',
+      total_energy_added_wh => {
+        const result = render({ sessions: [makeSession({ total_energy_added_wh, cost_decimal: 0 })] }).current;
+        expect(result.rawMeasurements[0].energyWh).toBeNull();
+        expect(result.coverage).toMatchObject({ unknownEnergyCount: 1, rate: null, rateStatus: 'unknown' });
+        expect(result.operationalTotals.energyKwh).toBe(0);
+        expect(result.coreStats?.avgCostPerKwh).toBeNaN();
+        expect(result.lifetimeMetrics?.freeCount).toBe(1);
+        expect(result.lifetimeMetrics?.freeEnergy).toBeNaN();
+        expect(result.lifetimeMetrics?.avgSessionEnergy).toBeNaN();
+        expect(result.costPerKwhTrend).toEqual([]);
+      },
+    );
+
+    it('retains genuine free rates and distinguishes a measured zero denominator', () => {
+      const free = render({ sessions: [makeSession({ cost_decimal: 0, total_energy_added_wh: 250 })] }).current;
+      expect(free.coverage).toMatchObject({ rate: 0, rateStatus: 'complete', unknownCostCount: 0 });
+      expect(free.coreStats?.avgCostPerKwh).toBe(0);
+      expect(free.lifetimeMetrics?.freeEnergy).toBe(0.25);
+      const zero = render({ sessions: [makeSession({ cost_decimal: 0, total_energy_added_wh: 0 })] }).current;
+      expect(zero.rawMeasurements[0]).toMatchObject({ cost: 0, energyWh: 0 });
+      expect(zero.coverage).toMatchObject({ energyCount: 1, unknownEnergyCount: 0, rate: null });
+      expect(zero.coreStats?.avgCostPerKwh).toBeNaN();
+      expect(zero.lifetimeMetrics?.avgSessionEnergy).toBe(0);
+    });
+
+    it('retains measured zero and signed calculator prices, but rejects invalid prices', () => {
+      const zero = render({ sessions: [sessionA], gasPrice: 0, electricityRate: 0 }).current;
+      expect(zero.gasComparison?.gasCost).toBe(0);
+      expect(zero.gasComparison?.evCost).toBe(0);
+      const signed = render({ sessions: [sessionA], gasPrice: -0.5, electricityRate: -0.125 }).current;
+      expect(signed.gasComparison?.gasCost).toBeCloseTo(-100 / 30 * 0.5);
+      expect(signed.gasComparison?.evCost).toBe(-1.25);
+      const invalid = render({ sessions: [sessionA], gasPrice: Infinity, electricityRate: NaN }).current;
+      expect(invalid.coreStats?.gasCost).toBeNaN();
+      expect(invalid.gasComparison?.gasCost).toBeNaN();
+      expect(invalid.gasComparison?.evCost).toBeNaN();
+    });
+
+    it('retains signed and fractional energy without rounding or treating it as missing', () => {
+      const result = render({ sessions: [
+        makeSession({ cost_decimal: -0.125, total_energy_added_wh: -250.5 }),
+        makeSession({ id: 2, cost_decimal: 0.375, total_energy_added_wh: 750.5 }),
+      ] }).current;
+      expect(result.rawMeasurements[0]).toMatchObject({ cost: -0.125, energyWh: -250.5 });
+      expect(result.coverage).toMatchObject({ energyCount: 2, rate: 0.5, rateStatus: 'complete' });
+      expect(result.coreStats?.totalEnergy).toBe(0.5);
+      expect(result.coreStats?.totalCost).toBe(0.25);
+    });
+
+    it('preserves unknown duration/distance and fractional or zero elapsed time before rendering', () => {
+      const result = render({ sessions: [
+        makeSession({ ended_at: null }),
+        makeSession({ id: 2, ended_at: '2024-01-15T10:00:30Z', start_odometer_m: 10, end_odometer_m: 9.5 }),
+        makeSession({ id: 3, ended_at: '2024-01-15T10:00:00Z', start_odometer_m: 0, end_odometer_m: 0 }),
+      ] }).current;
+      expect(result.rawMeasurements.map(s => s.durationMinutes)).toEqual([null, 0.5, 0]);
+      expect(result.rawMeasurements.map(s => s.distanceM)).toEqual([null, -0.5, 0]);
+      expect(result.lifetimeMetrics?.avgDuration).toBe(0.25);
+    });
   });
 });
