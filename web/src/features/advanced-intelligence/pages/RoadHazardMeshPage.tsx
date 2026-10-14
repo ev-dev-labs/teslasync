@@ -20,7 +20,8 @@ const PAGE_SIZE = 18;
 function severityVariant(severity: string) {
   if (severity === 'critical' || severity === 'high') return 'danger' as const;
   if (severity === 'medium' || severity === 'warning') return 'warning' as const;
-  return 'info' as const;
+  if (severity === 'low' || severity === 'info') return 'info' as const;
+  return 'neutral' as const;
 }
 
 export default function RoadHazardMeshPage() {
@@ -88,7 +89,10 @@ export default function RoadHazardMeshPage() {
                     <Icon icon={MapPinned} size="lg" className={typography.color.secondary} />
                     <Text id={`${headingId}-${index}-hazard`} as="h3" variant="subhead" className="min-w-0 break-all">{cluster.hazard_type}</Text>
                   </div>
-                  <Badge variant={severityVariant(cluster.severity)} className="max-w-full break-all">{cluster.severity}</Badge>
+                  <Badge variant={severityVariant(cluster.severity)} className="max-w-full break-all">
+                    {cluster.severity.trim() && cluster.severity !== 'unknown'
+                      ? cluster.severity : t('common.unknown', 'Unknown')}
+                  </Badge>
                 </div>
                 <Table variant="embedded" aria-label={t('advancedIntelligence.hazards.title', 'Road hazard mesh')}
                   aria-describedby={`${headingId}-${index}-hazard ${headingId}-${index}-cell`}><tbody>
@@ -129,6 +133,7 @@ export default function RoadHazardMeshPage() {
               page={page}
               pageSize={PAGE_SIZE}
               total={query.data?.total ?? 0}
+              totalKind={query.data == null ? 'unknown' : 'exact'}
               onPageChange={setPage}
             />
           ) : null}
