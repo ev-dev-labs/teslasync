@@ -5,10 +5,11 @@ import { useChargingHistory } from '@/api/hooks/useCharging';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { CardGrid, PageLayout } from '@/components/layout';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Select } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
@@ -41,6 +42,8 @@ export default function ChargeAdvisorPage() {
   usePageTitle(t('chargeAdvisor.title', 'Charge Advisor'));
 
   const { vehicleId } = useSelectedVehicle();
+  const operationalMode = useOperationalMode();
+  const liveRecommendationsBlocked = operationalMode.mode !== 'live';
   const { formatEnergy } = useUnits();
   const timeZone = useTimezone('vehicle');
   const vehicleIdStr = vehicleId == null ? undefined : String(vehicleId);
@@ -117,6 +120,21 @@ export default function ChargeAdvisorPage() {
         ? live.state.isChargingObservation.value : null;
       const chargeLimitPct = isLiveFieldFresh(live.state.advisorProvenance.chargeLimitSoc, currentStateNowMs)
         ? live.state.chargeLimitSocObservation.value : null;
+      // Neither retained live signals nor completed endpoints are an as-of advice contract.
+      if (liveRecommendationsBlocked) {
+        return {
+          ...result,
+          current: {
+            ...result.current,
+            freshness: result.current.batteryPct == null ? 'unavailable' as const : 'stale' as const,
+            connected: null,
+            retrievalState: 'unknown' as const,
+            isCharging: null,
+            chargeLimitPct: null,
+          },
+          guidance: result.current.batteryPct == null ? 'current_state_unavailable' as const : 'stale' as const,
+        };
+      }
       return {
         ...result,
         current: { ...result.current, isCharging, chargeLimitPct },
@@ -130,6 +148,7 @@ export default function ChargeAdvisorPage() {
       drives,
       liveSnapshot,
       live.state,
+      liveRecommendationsBlocked,
       reserveFloorPct,
       timeZone,
     ],
@@ -182,6 +201,17 @@ export default function ChargeAdvisorPage() {
         </div>
       )}
     >
+      {liveRecommendationsBlocked && (
+        <AlertBanner
+          variant="warning"
+          role="status"
+          data-testid="charge-advisor-operational-notice"
+          title={t('chargeAdvisor.kpis.currentStale', 'Displayed as stale; guidance is blocked')}
+        >
+          {operationalMode.label}
+          {' '}{operationalMode.writeBlockReason}
+        </AlertBanner>
+      )}
       <FadeIn>
         <ChargeAdvisorKpiBand analysis={analysis} state={state} />
       </FadeIn>
@@ -200,7 +230,7 @@ export default function ChargeAdvisorPage() {
         />
       )}
       <FadeIn delay={0.05}>
-        <ChargeAdvisorCurrentState analysis={analysis} state={state} provenance={live.state.advisorProvenance} />
+        <ChargeAdvisorCurrentState analysis={analysis} state={state} provenance={liveRecommendationsBlocked ? {} : live.state.advisorProvenance} />
       </FadeIn>
       <FadeIn delay={0.1}>
         <ChargeAdvisorScenarioChart analysis={analysis} state={state} />

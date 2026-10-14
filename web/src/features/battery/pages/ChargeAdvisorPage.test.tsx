@@ -7,10 +7,16 @@ import { ToastProvider } from '@/components/feedback';
 import type { ChargingSession } from '@/types/charging';
 import type { Drive } from '@/types/driving';
 import type { VehicleLiveState } from '@/hooks/useVehicleLive';
+import type { OperationalModeContextValue } from '@/hooks/useOperationalMode';
 
 const FROZEN_NOW = Date.parse('2026-06-02T12:00:00.000Z');
 const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
+  operationalMode: {
+    mode: 'live', asOf: null, online: true, isReadOnly: false,
+    label: 'Live', description: 'Current data with live actions available.',
+    writeBlockReason: null, canWrite: true,
+  } as OperationalModeContextValue,
   drives: undefined as unknown,
   charging: undefined as unknown,
   timeZone: 'America/Los_Angeles',
@@ -77,6 +83,10 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
     vehicles: [{ id: 7, display_name: 'Test Tesla', vin: 'TEST' }],
     setVehicleId: vi.fn(),
   }),
+}));
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => h.operationalMode,
 }));
 
 vi.mock('@/lib/timezone', async (importOriginal) => {
@@ -277,6 +287,11 @@ beforeEach(() => {
   h.observations = null;
   h.provenance = null;
   h.vehicleId = 7;
+  h.operationalMode = {
+    mode: 'live', asOf: null, online: true, isReadOnly: false,
+    label: 'Live', description: 'Current data with live actions available.',
+    writeBlockReason: null, canWrite: true,
+  };
   h.timeZone = 'America/Los_Angeles';
   h.drives = query(readyDrives(), {}, h.driveRefetch);
   h.charging = query([chargingAt('2026-05-30')], {}, h.chargingRefetch);
@@ -298,6 +313,60 @@ afterEach(() => {
 });
 
 describe('ChargeAdvisorPage', () => {
+  it.each(['as_of', 'cached'] as const)(
+    'blocks live recommendation readiness in %s mode and restores live behavior',
+    mode => {
+      h.live.state.isCharging = true;
+      const view = renderPage();
+      expect(screen.getByText('Already charging')).toBeInTheDocument();
+      expect(screen.getByText('Charging now')).toBeInTheDocument();
+      h.operationalMode = {
+        mode, asOf: mode === 'as_of' ? '2026-05-20T12:00:00Z' : null,
+        online: mode !== 'cached', isReadOnly: true, canWrite: false,
+        label: mode === 'as_of' ? 'As of' : 'Cached',
+        description: mode === 'as_of'
+          ? 'Historical state reconstructed at the selected time. Operational changes are disabled.'
+          : 'The connection is offline. Retained data remains available, but it may be stale.',
+        writeBlockReason: mode === 'as_of'
+          ? 'Return to live mode before making operational changes.'
+          : 'Reconnect before making operational changes.',
+      };
+      view.rerenderPage();
+      expectEveryShell();
+      const notice = screen.getByTestId('charge-advisor-operational-notice');
+      expect(notice).toHaveTextContent('Displayed as stale; guidance is blocked');
+      expect(notice).toHaveTextContent(h.operationalMode.label);
+      expect(notice).toHaveTextContent(h.operationalMode.writeBlockReason!);
+      expect(screen.getByText('Current state is stale')).toBeInTheDocument();
+      expect(screen.queryByText('Already charging')).not.toBeInTheDocument();
+      expect(screen.queryByText('Charging now')).not.toBeInTheDocument();
+      expect(screen.queryByText('Charge limit 80.00%')).not.toBeInTheDocument();
+      const current = within(screen.getByTestId('charge-advisor-current'));
+      expect(current.getByText('80.00%')).toBeInTheDocument();
+      expect(current.queryByText('Fresh')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('charge-advisor-accounting')).getAllByText('Returned rows')).toHaveLength(2);
+      h.operationalMode = { ...h.operationalMode, mode: 'live', isReadOnly: false, canWrite: true };
+      view.rerenderPage();
+      expect(screen.queryByTestId('charge-advisor-operational-notice')).not.toBeInTheDocument();
+      expect(screen.getByText('Already charging')).toBeInTheDocument();
+      expect(screen.getByText('Charging now')).toBeInTheDocument();
+      expectEveryShell();
+    },
+  );
+
+  it.each(['as_of', 'cached'] as const)('also blocks a fresh completed-endpoint fallback in %s mode', mode => {
+    h.operationalMode = { ...h.operationalMode, mode, isReadOnly: true, canWrite: false };
+    h.provenance = {};
+    h.charging = query([chargingAt('2026-06-01')]);
+    renderPage();
+    const current = within(screen.getByTestId('charge-advisor-current'));
+    expect(current.getByText('Completed charge end')).toBeInTheDocument();
+    expect(current.getByText('80.00%')).toBeInTheDocument();
+    expect(current.queryByText('Fresh')).not.toBeInTheDocument();
+    expect(screen.getByText('Current state is stale')).toBeInTheDocument();
+    expectEveryShell();
+  });
+
   it.each([
     ['drive', 'loading'],
     ['drive', 'error'],
