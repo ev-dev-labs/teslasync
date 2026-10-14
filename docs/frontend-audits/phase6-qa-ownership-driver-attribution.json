@@ -1,0 +1,1184 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-ownership-driver-attribution",
+  "attempt": 1,
+  "status": "DONE_SOURCE_AUDIT_WITH_FINDINGS",
+  "route": "/ownership/driver-attribution",
+  "timing": {
+    "actual_first_probe_utc": "2026-10-14T02:09:51.7251499Z",
+    "queue_reserved_utc": "2026-10-14T02:04:58.538Z",
+    "return_deadline_utc": "2026-10-14T02:24:58.538Z",
+    "hard_deadline_utc": "2026-10-14T02:29:58.538Z",
+    "artifact_created_utc": "2026-10-14T02:21:48.287606+00:00",
+    "clock_not_reset": true
+  },
+  "scope": {
+    "mode": "READONLY source/direct supports/existing tests",
+    "page": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+    "writable_only": [
+      "docs/frontend-audits/phase6-qa-ownership-driver-attribution.json",
+      "web/logs/phase6-qa-ownership-driver-attribution.log"
+    ],
+    "no_source_test_catalog_git_writes": true,
+    "no_actual_identity_assignment_location_access": true,
+    "queue_snapshot": [
+      {
+        "line": 140,
+        "text": "| [~] | 6 | phase6-qa-ownership-driver-attribution | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-ownership-driver-attribution.json; web\\logs\\phase6-qa-ownership-driver-attribution.log | phase5-page-ownership-driver-attribution | 1 | reserved02:04:58.538Z; actor pending | - | DriverAttributionPage/direct supports; source-only, no actual identities/assignment/location/API/mutation access. |"
+      }
+    ],
+    "actor_identity": "Queue still says actor pending; no runtime actor ID fabricated."
+  },
+  "governing_reads": {
+    "orchestrator": "docs/orchestrator-loop.md ALL 296 lines",
+    "design_contract": "docs/frontend-design-contract.md applicable 1-284,419-654,1254-1341 and complete heading index; other unrelated owner addenda not audited",
+    "mission": "docs/frontend-mission.md applicable principles/design/state/mobile/a11y/QA/DoD ranges, recorded in log",
+    "inventory": "docs/frontend-inventory.md exact DriverAttribution row207 and historical audit-page-156.json read",
+    "handoff": "docs/session-handoff.md current 1-95 read; historic completed source receipt retained, not refreshed",
+    "queue": "migration-queue.md exact current claim, prior audit/Phase5 source receipt and owner searches read; queue line position moved114 to131 during external queue edits",
+    "instructions": [
+      ".github/copilot-instructions.md applicable integrity/frontend/SI/security/testing sections",
+      ".github/instructions/react-frontend.instructions.md FULL",
+      ".github/instructions/frontend-si-cutover.instructions.md FULL",
+      ".github/instructions/unit-conversion.instructions.md FULL"
+    ],
+    "precedence": "Current design contract supersedes legacy neon/glass directions; source-only task prohibition leaves runtime gates NOTRUN."
+  },
+  "summary": {
+    "confirmed_findings": 9,
+    "by_rule": {
+      "workspace-range": 1,
+      "unknown-as-success": 1,
+      "mobile-field-action-loss": 1,
+      "unknown-attribution": 1,
+      "pre-rounded-source": 1,
+      "hardcoded-string": 3,
+      "inert-sort-declaration": 1
+    },
+    "by_primary_file": {
+      "web/src/features/ownership/pages/DriverAttributionPage.tsx": 5,
+      "web/src/features/ownership/components/GhostDrivesPanel.tsx": 3,
+      "web/src/features/ownership/components/EvidencePanel.tsx": 1
+    },
+    "by_severity": {
+      "high": 3,
+      "medium": 6
+    },
+    "conditional_candidates": 3,
+    "native_candidate_groups": 1,
+    "deduplicated_owner_needs": 4,
+    "sections_reviewed": 9,
+    "chart_series_reviewed": 2,
+    "pinned_source_test_files": 42,
+    "changed_pins": 0,
+    "acceptance": "Source audit only, not page/native/application/Phase6 acceptance."
+  },
+  "confirmed_findings": [
+    {
+      "id": "DA001",
+      "rule": "workspace-range",
+      "severity": "high",
+      "title": "Analysis remains a local rolling window; shared range and both request bounds are absent",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 69,
+          "end_line": 69
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 83,
+          "end_line": 84
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 453,
+          "end_line": 460
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 325,
+          "end_line": 340
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 351,
+          "end_line": 364
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23,
+          "end_line": 77
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 156,
+          "end_line": 166
+        }
+      ],
+      "mechanism": "windowDays is local state. Report/ghost hooks serialize only vehicle_id/window_days (plus report limit/offset), accept no startInstant/endInstantExclusive, and the actual route is absent from RANGE_ENABLED_PATHS. Showing returned window.from/to is useful provenance but does not implement header range selection.",
+      "source_only_repro": "For /ownership/driver-attribution, source route lookup has range=false; inspect the two query constructors: neither can transmit an independently chosen start and end. No API request or endpoint capability was tested.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Integration must establish explicit-bound/full-population server support, then typed hooks, real route registration and useRangeState adoption. Preserve 30/60/90/180/365-day options, selected vehicle, DST/timezone semantics; do not remove functioning local scope before replacement.",
+      "owner_need": "N1",
+      "history": "Reconfirmed audit-page-156 architecture range issue; source migration completed, not reopened.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA002",
+      "rule": "unknown-as-success",
+      "severity": "high",
+      "title": "Ghost empty state claims known-driver coverage without selection or samples",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 36,
+          "end_line": 37
+        },
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 125,
+          "end_line": 149
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 351,
+          "end_line": 368
+        },
+        {
+          "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+          "line": 49,
+          "end_line": 57
+        }
+      ],
+      "mechanism": "The same clear-window message is used whenever ghosts.length is zero. vehicleId=null disables the query; sourceEnabled=false immediately selects empty. A returned scanned=0/ghosts=[] also selects empty. Neither case establishes that every drive fits a known profile or that unknown-driver activity was excluded.",
+      "source_only_repro": "Symbolic case A: vehicleId=null, data=undefined, isLoading=false. Case B: selected vehicle, returned {scanned:0,ghosts:[]}. Follow branches to the literal every-scanned-drive-fits-known-profile claim. No real identity data accessed.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Separate selection-required, unresolved/paused, zero-scanned and supported no-flags states. State behavioral flag absence, not proof of physical identity or complete coverage. Preserve nonzero scanned population and source retry.",
+      "owner_need": "N2",
+      "history": "Reconfirmed historical audit-page-156 unknown/success concern; existing GhostDrivesPanel tests only cover scanned=24 clear state.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA003",
+      "rule": "mobile-field-action-loss",
+      "severity": "high",
+      "title": "Ghost table hides Label and specialist fields below md without a detail path",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 72,
+          "end_line": 120
+        },
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 168,
+          "end_line": 174
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 505,
+          "end_line": 523
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 732,
+          "end_line": 743
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1404,
+          "end_line": 1417
+        }
+      ],
+      "mechanism": "Ghost table supplies mobileColumns=[drive,score,reason] but no mobilePresentation, expandable or row action alternative. Shared DataTable adds hidden md:table-cell to trip, deviation and assign. Distance/duration, deviation/confidence and Label are therefore not reachable on this source mobile branch. Main-page cluster/profile/fingerprint adapters do retain their details and actions; this finding is only the direct Ghost support.",
+      "source_only_repro": "Below md with at least one synthetic flagged row, apply colHiddenClass to trip/deviation/assign. mobileEnabled=false prevents the Quick view adapter. Inspect source only; no viewport/browser exercised.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Use the existing mobile table summary/details adapter and inline Label action with all original fields available in details. Retain ownership-ghost-drives and loaded export scope; verify 44px targets under a separately authorized native check.",
+      "owner_need": "N2",
+      "history": "Main-page historical mobile gaps are repaired in current source; Ghost support remains distinct.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA004",
+      "rule": "unknown-attribution",
+      "severity": "medium",
+      "title": "Every unrecognized attribution source is presented as inferred",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 303,
+          "end_line": 306
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 420,
+          "end_line": 433
+        }
+      ],
+      "mechanism": "DriveFingerprint.source is an open string. The two-way equality classifies every non-labelled value as inferred, including unknown/new classifications, thereby asserting a provenance that source did not establish. Ambiguous remains a separate badge, correctly preserved.",
+      "source_only_repro": "Take a symbolic fingerprint with source=unknown (or any future nonempty value other than labelled/inferred); the render branch produces the localized inferred badge. No actual attribution or backend response was queried.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Explicitly map confirmed labelled and inferred values; render an honest neutral unknown/unrecognized fallback for other values without narrowing the public source contract or asserting identity.",
+      "owner_need": "N3",
+      "history": "New bounded source finding, separate from the repaired VerdictBadge unknown-verdict fallback.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA005",
+      "rule": "pre-rounded-source",
+      "severity": "medium",
+      "title": "Chart data discards precision before preference-aware display",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 121,
+          "end_line": 132
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 564,
+          "end_line": 575
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 582,
+          "end_line": 590
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "line": 20,
+          "end_line": 45
+        }
+      ],
+      "mechanism": "share_pct and aggression_score are converted through toFixed(1) into rounded numbers in shareData. Chart, tooltip and accessible data table all consume that rounded array; later fmtNumber/formatPct cannot recover precision requested by the user. Table and summary source values are otherwise raw.",
+      "source_only_repro": "For symbolic share_pct=12.3456 and aggression_score=34.5678 with precision=3, chart data becomes 12.3 and 34.6, while source-aware formatting elsewhere can retain additional digits. This is numerical source derivation, not a rendered test.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Keep raw share_pct/aggression_score in chart data; format only ticks/tooltips/table output at the display boundary with effective preferences. Preserve /100 versus % distinctions and hidden-series IDs.",
+      "owner_need": "N3",
+      "history": "Current table/tooltip unit distinction is repaired; precision loss remains a separate mechanism.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA006",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Six accent choices expose raw English option labels",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 56,
+          "end_line": 57
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 688,
+          "end_line": 695
+        }
+      ],
+      "mechanism": "The persisted accent identifiers cyan/emerald/amber/purple/rose/indigo are used directly as option labels, bypassing t(). The Select forwards opt.label into option text. User-entered profile names are data and are not this finding.",
+      "source_only_repro": "In any non-English locale, inspect ACCENTS.map: value=accent and label=accent remain the six untranslated English identifiers. No native popup opened.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Keep persisted values unchanged; localize visible labels. Parent must serialize any needed six canonical accent-copy leaves and generated catalog integration; worker edits none.",
+      "owner_need": "N3",
+      "history": "Reconfirmed historical accent-option localization gap.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA007",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Separation summary caption bypasses existing localized verdict labels",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 505,
+          "end_line": 516
+        },
+        {
+          "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+          "line": 29,
+          "end_line": 31
+        },
+        {
+          "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+          "line": 103,
+          "end_line": 105
+        },
+        {
+          "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+          "line": 118,
+          "end_line": 124
+        }
+      ],
+      "mechanism": "The metric context is raw report.separation_verdict. OwnershipBrief forwards it into OperationalBrief metrics unchanged, so known English machine classifications are visible in summary/details even though the nearby VerdictBadge localizes those same values. Arbitrary source prose must not be blindly translated or recased.",
+      "source_only_repro": "Use symbolic separation_verdict=strong with a translated ownership.verdict.strong catalog: interpretation Badge resolves t(), summary context remains strong. No locale/browser test executed.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Reuse the existing known-verdict localized keys for known summary classifications while preserving neutral text for genuinely unrecognized source values. No new registry or strength threshold.",
+      "owner_need": "N3",
+      "history": "Shared VerdictBadge localization is completed and accepted; this caller context was not covered by that owner.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA008",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "title": "Known quality classification is rendered as an untranslated enum",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 69,
+          "end_line": 73
+        },
+        {
+          "file": "web/src/types/ownership.ts",
+          "line": 12,
+          "end_line": 20
+        },
+        {
+          "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+          "line": 100,
+          "end_line": 102
+        }
+      ],
+      "mechanism": "DataQuality.status is the closed sufficient/limited/insufficient vocabulary. EvidencePanel prints quality.status verbatim; localized quality labels elsewhere do not translate this visible badge. The existing semantic variant mapping itself is retained, not inferred from numeric thresholds.",
+      "source_only_repro": "For a non-English locale and symbolic status=limited, the badge child is the literal machine string rather than ownership.verdict.limited. No actual sample data or locale mount accessed.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Use existing canonical known-status labels (or reuse the appropriate current domain presenter) without changing sufficient/limited/insufficient tones, reasons, samples, bounds or evidence rows. This is a shared ownership EvidencePanel need, not a page-local clone.",
+      "owner_need": "N4",
+      "history": "Reconfirmed historical shared EvidencePanel localization gap; unrelated advanced-intelligence EvidencePanel owners are not this owner.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    },
+    {
+      "id": "DA009",
+      "rule": "inert-sort-declaration",
+      "severity": "medium",
+      "title": "Ghost score and deviation declare sorting but the caller never wires it",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 69,
+          "end_line": 69
+        },
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 102,
+          "end_line": 102
+        },
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 168,
+          "end_line": 174
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 196,
+          "end_line": 198
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1571,
+          "end_line": 1578
+        }
+      ],
+      "mechanism": "Both columns set sortable=true, but GhostDrivesPanel supplies neither onSort nor sorted data/sortKey/sortDir. Shared DataTable mounts interactive sorting only when col.sortable && onSort. Two inert declarations are one caller-wiring mechanism, counted once. Main-page cluster and fingerprint sorting is wired correctly.",
+      "source_only_repro": "Inspect the Ghost score/deviation column declarations, then DataTable caller and shared conditional: neither sort header can mount a sort action. Source-only; no clicking or runtime test.",
+      "repro_status": "SOURCE_DERIVED_NOT_EXECUTED",
+      "fix": "Wire existing typed caller-owned sorting on raw score/distance_ratio with original order before user interaction and stable drive IDs. Preserve confidence fields and loaded export scope.",
+      "owner_need": "N2",
+      "history": "Reconfirmed Ghost portion of historical inert-sort issue; main page portion repaired.",
+      "confidence": "confirmed source mechanism; no runtime claim"
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "DAC01",
+      "classification": "conditional source hazard, not confirmed runtime violation",
+      "title": "Open assignment/profile editors and success callbacks may cross a vehicle change",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 62,
+          "end_line": 62
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 70,
+          "end_line": 77
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 134,
+          "end_line": 154
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 377,
+          "end_line": 383
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 766,
+          "end_line": 783
+        }
+      ],
+      "mechanism": "Local drafts contain no owning vehicle/generation and assignment submission only checks positive IDs. If the same page instance survives vehicle change, old draft IDs and late onSuccess can affect a newer editor.",
+      "source_only_repro": "Symbolic same-instance rerender from selected vehicle A to B while an editor/request is outstanding. Inspect state retention and callbacks; do not submit any real assignment.",
+      "missing_evidence": "Mounted lifecycle/remount boundary, membership/authorization behavior, native select behavior and asynchronous settlement were not exercised. Backend acceptance or cross-vehicle mutation is NOT claimed.",
+      "owner": "Page lifecycle/integration investigation; no confirmed-fix dispatch inferred."
+    },
+    {
+      "id": "DAC02",
+      "classification": "conditional trust/copy candidate",
+      "title": "Strong separation explanation may overstate cost-splitting reliance",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 828,
+          "end_line": 841
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 849,
+          "end_line": 861
+        }
+      ],
+      "mechanism": "Strong copy says attributions can be trusted for cost splitting while inference, ambiguity, quality and identity limitations are separately displayed.",
+      "source_only_repro": "Inspect strong branch alongside symbolic limited coverage/ambiguity; do not query actual identities or cost assignments.",
+      "missing_evidence": "Backend separation-verdict/quality consistency and product-authorized meaning are unknown. Existing design contract explicitly preserves this original interpretation; it is not counted as a confirmed violation or identity proof.",
+      "owner": "Domain/integration copy review, not a global status remap."
+    },
+    {
+      "id": "DAC03",
+      "classification": "conditional population/integration candidate",
+      "title": "Only first 100 fingerprints are reachable; full-range semantics require integration evidence",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 83,
+          "end_line": 83
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 795,
+          "end_line": 818
+        },
+        {
+          "file": "web/src/api/hooks/useOwnership.ts",
+          "line": 325,
+          "end_line": 340
+        }
+      ],
+      "mechanism": "Limit=100, offset=0 is fixed and no server pagination/full-result export handler is supplied. The caption honestly distinguishes shown rows from report.total; shared exports correctly state loaded matching/selected scope.",
+      "source_only_repro": "Symbolic total=101 with 100 returned fingerprints produces Showing 100 of 101; no action in page requests offset 100.",
+      "missing_evidence": "Requirement to expose every row, full-range denominator, backend cluster/ghost coverage and total semantics are not proven by frontend source. Do not call a bounded loaded export a full-result export or count this limitation as a confirmed regression.",
+      "owner": "Same integration owner as N1 if full-result access is explicitly authorized."
+    }
+  ],
+  "native_candidates": [
+    {
+      "id": "DAN01",
+      "classification": "NOTRUN declaration-only native acceptance matrix",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 453,
+          "end_line": 461
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 631,
+          "end_line": 645
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 714,
+          "end_line": 727
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 748,
+          "end_line": 810
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 865,
+          "end_line": 865
+        },
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 168,
+          "end_line": 174
+        }
+      ],
+      "checks": [
+        "320/375/390/430/768/1024/1280/1440/1920/2560px and narrow allocated containers",
+        "Dark/light/saved custom palettes; composed text/control contrast and actual forced colors",
+        "RTL, long names/captions, 200% text/font scaling",
+        "Native Select popup keyboard/typeahead/Escape; labels and form constraint validation",
+        "Quick view/Review details/nested danger dialog focus containment and restoration",
+        "Screen reader announcements, chart alternatives and reduced motion/low bandwidth",
+        "Loading, independent fatal, refresh-retained and initial-paused presentations",
+        "44x44 mobile targets and unclipped focus; Ghost Label small Button source is h-9 before any native/layout effects"
+      ],
+      "limit": "No browser/device/server/network/API/mutation/native run authorized. These declarations are not passes, not additional confirmed findings."
+    }
+  ],
+  "needs": [
+    {
+      "id": "N1",
+      "owner": "Parent-authorized workspace/backend/typed-hook integration",
+      "finding_ids": [
+        "DA001"
+      ],
+      "files_if_future_authorized": [
+        "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+        "web/src/api/hooks/useOwnership.ts",
+        "web/src/lib/workspaceScope.ts",
+        "matching scoped tests; backend endpoint files only with new explicit scope"
+      ],
+      "needs": "Establish both bounds and complete-range filtering/aggregation semantics; register actual route and adopt shared range without dropping current window capabilities. No existing confirmed repair row for this precise objective was found; parent decides queue claim. Completed Phase5 row stays closed."
+    },
+    {
+      "id": "N2",
+      "owner": "Shared ownership GhostDrivesPanel",
+      "finding_ids": [
+        "DA002",
+        "DA003",
+        "DA009"
+      ],
+      "files_if_future_authorized": [
+        "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+        "web/src/features/ownership/components/GhostDrivesPanel.test.tsx"
+      ],
+      "needs": "One deduplicated caller owner for prerequisite/zero-sample wording, complete mobile details/Label and active raw-value sort. Do not repair DataTable globally or duplicate page-local support."
+    },
+    {
+      "id": "N3",
+      "owner": "DriverAttributionPage caller presentation + parent serialized catalog integration",
+      "finding_ids": [
+        "DA004",
+        "DA005",
+        "DA006",
+        "DA007"
+      ],
+      "files_if_future_authorized": [
+        "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+        "web/src/features/ownership/pages/DriverAttributionPage.test.tsx"
+      ],
+      "needs": "Honest unknown provenance, raw chart values, localized accent labels and known verdict summary context. Existing ownership.verdict.strong/moderate/weak labels can be reused. Proposed missing-copy need: six localized accent labels with current stable values; only parent/catalog owner may integrate canonical/generated catalogs."
+    },
+    {
+      "id": "N4",
+      "owner": "Shared ownership EvidencePanel",
+      "finding_ids": [
+        "DA008"
+      ],
+      "files_if_future_authorized": [
+        "web/src/features/ownership/components/EvidencePanel.tsx",
+        "new matching scoped test only after explicit exclusive claim"
+      ],
+      "needs": "Localize the three known quality labels using existing ownership.verdict.sufficient/limited/insufficient keys. Preserve tones/data/reasons/bounds; do not conflate with other feature EvidencePanel fix owners."
+    }
+  ],
+  "section_action_inventory": [
+    {
+      "name": "Behavioural notice",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 465,
+          "end_line": 473
+        }
+      ],
+      "data_actions": "Always-declared informational banner; behavioral non-biometric disclaimer. No identity proof."
+    },
+    {
+      "name": "Ghost-driver alerts",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 475,
+          "end_line": 487
+        },
+        {
+          "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+          "line": 30,
+          "end_line": 177
+        }
+      ],
+      "data_actions": "Independent vehicle/window query; scanned denominator, score, trip, deviation/confidence, reason and Label callback; DA002/003/009."
+    },
+    {
+      "name": "Separation quality",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 489,
+          "end_line": 544
+        }
+      ],
+      "data_actions": "Five raw numeric occurrences: clusters, separation, confirmed(labelled), inferred, ambiguous; source scope, both recorded analysis bounds and unknown source freshness; Review details via existing brief. DA007."
+    },
+    {
+      "name": "Cluster mix and driving intensity",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 547,
+          "end_line": 616
+        }
+      ],
+      "data_actions": "Two stable share/aggression series, legend-hidden preference, accessible chart data; share %, aggression /100. DA005."
+    },
+    {
+      "name": "Cluster characteristics",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 619,
+          "end_line": 647
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 157,
+          "end_line": 277
+        }
+      ],
+      "data_actions": "Ten original columns; typed raw drives/distance/aggression sort; SI distance/efficiency/speed, nullable regen/cost; mobile full details."
+    },
+    {
+      "name": "Named drivers",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 650,
+          "end_line": 730
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 391,
+          "end_line": 441
+        }
+      ],
+      "data_actions": "Independent profiles; add/cancel, name/accent/primary inputs, save, value filters, created timestamp, confirm-gated Remove; create/delete errors. Mobile Remove and details; DA006."
+    },
+    {
+      "name": "Drive fingerprints",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 732,
+          "end_line": 820
+        },
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 279,
+          "end_line": 389
+        }
+      ],
+      "data_actions": "Drive/time, attribution state, ambiguity, confidence, SI distance/duration, signed separation margin, dominant traits, Label; raw confidence/distance sorting, loaded-total caption, assignment form confirm/cancel/errors. DA004; DAC01/03."
+    },
+    {
+      "name": "Interpretation",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 822,
+          "end_line": 845
+        }
+      ],
+      "data_actions": "Known strong/moderate/weak explanation; unknown verdict remains unknown instead of weak; localized informational/neutral/warning badge. DAC02 not confirmed."
+    },
+    {
+      "name": "Evidence quality limitations",
+      "locations": [
+        {
+          "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+          "line": 847,
+          "end_line": 864
+        },
+        {
+          "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+          "line": 48,
+          "end_line": 194
+        }
+      ],
+      "data_actions": "Quality status, samples, coverage, observation window start/end, reasons, every evidence source/summary/sample/time, explicit unsupported identity and changed-style discrimination. DA008."
+    }
+  ],
+  "state_review": {
+    "initial_loading": "OwnershipPanel 53-57 only initial/no retained data uses loading, SourceContent 42-51 skeleton. Separation preserveSummary keeps source/unknown metrics; no fake measured readings.",
+    "fatal": "OwnershipPanel 53/64-70 replaces only failed source body; sibling profile/report/ghost shells remain. Summary error still retains unknown metrics at line84. PageLayout does not pass a fatal whole-page gate.",
+    "retained_refresh_failure": "deriveDataState 234-240 preserves bytes and produces refreshError; OwnershipPanel 42-48/54-57 shows retained notice and SourceContent 63-67 individual retry.",
+    "initial_paused": "deriveDataState 204-219 exposes isRefreshBlocked without fatalError; OwnershipPanel 47/54/75-77 displays initial-query-paused context and no fabricated empty body. OwnershipBrief may label Loading source while pending; pause notice supplies missing context. Not a fresh runtime pass.",
+    "retained_paused": "deriveDataState 244-250 retains data/status stale; OwnershipPanel cached-pause wording distinct from error.",
+    "disabled_selection": "Most panels use sourceEnabled=vehicleId!=null and honest unsupported/empty/selection metadata. Ghost clear-state exception DA002 is specifically confirmed.",
+    "unknown_vs_zero": "Summary uses raw nullable report counts/score; numeric bridge validates missing/invalid; cost, speed, regen, efficiency and next-centroid margin use null em dash, real cost zero survives. Null collections normalized to [] are not independently assumed to prove numeric empty populations.",
+    "writes": "Source-only create/delete/assignment callbacks are declared; deletion awaits danger confirmation; lifecycle closes/resets only on success; Button loading disables submit and deleting row. Request client lines358/372 invokes operational-write/offline guards. Nothing was submitted and auth/native/server safeguards are not runtime-accepted."
+  },
+  "si_preferences_i18n_review": {
+    "si_and_signs": [
+      {
+        "locations": [
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 198,
+            "end_line": 198
+          },
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 207,
+            "end_line": 207
+          },
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 217,
+            "end_line": 217
+          },
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 265,
+            "end_line": 265
+          },
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 329,
+            "end_line": 329
+          },
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 336,
+            "end_line": 336
+          },
+          {
+            "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+            "line": 345,
+            "end_line": 345
+          }
+        ],
+        "evidence": "Hooks return raw SI fields; useUnits formats meters and m/s at render boundary. Ownership helpers handle Wh/m, ISO minor denomination, seconds, null/nonfinite and signs. Separation margin remains next minus own without abs/clamp; signed cost remains valid; raw-value sorting retained."
+      }
+    ],
+    "precision_locale": "useNumberFormatting subscribes to global formatter preferences; useUnits derives effective locale/precision/distance/speed/energy. Date displays use shared formatDateTime; source timezone/12-24h acceptance not rendered. DA005 is early chart rounding, not wire/cache conversion.",
+    "physical_symbols_exception": "%, /100, #, min/h/d/y and SI energy/distance symbols are domain units/identifier notation, not counted as English prose violations. Returned feature labels/reasons/evidence summaries and user names are source data, not statically hardcoded identities.",
+    "persisted_ids": [
+      "driver-attribution-chart",
+      "ownership-driver-clusters",
+      "ownership-driver-profiles",
+      "ownership-driver-fingerprints",
+      "ownership-ghost-drives"
+    ],
+    "palette": "Dynamic accentColor resolves existing user chart palette; chartTokens are reused. Dynamic profile dot/ghost score width are acceptable inline styles, not static-var violations. No theme or saved accent rewrite."
+  },
+  "existing_tests": {
+    "execution": "NOTRUN by explicit task restriction",
+    "runner_discovered": null,
+    "executed": 0,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "source_authored_counts": [
+      {
+        "file": "web/src/features/ownership/pages/DriverAttributionPage.test.tsx",
+        "it_declarations": 10,
+        "it_each_declarations": 2,
+        "literal_parameter_expanded_cases": 15
+      },
+      {
+        "file": "web/src/features/ownership/components/GhostDrivesPanel.test.tsx",
+        "it_declarations": 5,
+        "literal_parameter_expanded_cases": 5
+      },
+      {
+        "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+        "it_declarations": 18,
+        "literal_parameter_expanded_cases": 18
+      },
+      {
+        "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+        "it_declarations": 5,
+        "literal_parameter_expanded_cases": 5
+      }
+    ],
+    "total_source_expanded_cases": 43,
+    "limits": "Authored counts are literal source inventory, never runtime discovery or passes. Page tests mock data and i18n and exercise real shared UI; existing mobile test is source-authored synthetic width evidence, not native acceptance. Existing Ghost tests lack disabled/zero-scanned/mobile/sort cases. No colocated useOwnership.test.ts exists at probed path.",
+    "additional_direct_support_test_read": {
+      "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "status": "Read source only; NOTRUN; not added to the four-file authored count43"
+    }
+  },
+  "check_receipts": {
+    "raw_command_output_log": "web/logs/phase6-qa-ownership-driver-attribution.log",
+    "successful_grep_checks": [
+      {
+        "rule": "static-inline-style",
+        "exit": 0,
+        "matching_lines": 2,
+        "disposition": "both dynamic exceptions"
+      },
+      {
+        "rule": "raw-html",
+        "exit": 0,
+        "matching_lines": 1,
+        "disposition": "formatter JSDoc example, not element"
+      },
+      {
+        "rule": "direct-library-import",
+        "exit": 1,
+        "matching_lines": 0
+      },
+      {
+        "rule": "old-api-import",
+        "exit": 1,
+        "matching_lines": 0
+      },
+      {
+        "rule": "double-prefix",
+        "exit": 1,
+        "matching_lines": 0
+      },
+      {
+        "rule": "camelcase-param",
+        "exit": 1,
+        "matching_lines": 0
+      },
+      {
+        "rule": "hidden-section",
+        "exit": 1,
+        "matching_lines": 0
+      },
+      {
+        "rule": "hardcoded-string-candidates",
+        "exit": 0,
+        "matching_lines": 46,
+        "disposition": "semantic review confirms DA006-008 only; comments/units/unrelated hooks/classes excluded"
+      },
+      {
+        "rule": "missing-page-container-candidates",
+        "exit": 0,
+        "matching_lines": 3,
+        "disposition": "PageLayout delegates to PageContainer at wrapper line11"
+      },
+      {
+        "rule": "fetch-useeffect",
+        "exit": 1,
+        "matching_lines": 0
+      }
+    ],
+    "grep_scope": "10 core page/ownership supports including useOwnership.ts; unrelated hook domains matched by broad regex are excluded semantically. Building-block primitives are inspected at relevant mechanisms, not falsely reported for raw native HTML/vendor boundaries. Backend rules OUT_OF_SCOPE; no internal Go files audited.",
+    "probe_failures": [
+      {
+        "shell_id": "2267",
+        "exit": 1,
+        "error": "rg unavailable / WinError2"
+      },
+      {
+        "shell_id": "2268",
+        "exit": 1,
+        "error": "rg unavailable / WinError2 after scoped git status exit0"
+      },
+      {
+        "shell_id": "2299",
+        "exit": 1,
+        "error": "Python cp1252 UnicodeEncodeError U+2192 position2007063"
+      },
+      {
+        "shell_id": "2300",
+        "exit": 1,
+        "error": "Python cp1252 UnicodeEncodeError U+2192 position40374"
+      }
+    ],
+    "initial_output_limit": "Initial formatted FullName discovery printed blank cells. Tool transcript contains full four failure tracebacks; log backfill duplicates actual error tails, not invented failed stdout. Successful UTF-8 reads logged full raw output. Host view replay has no numeric process exit."
+  },
+  "source_test_hashes": [
+    {
+      "file": "web/src/features/ownership/pages/DriverAttributionPage.tsx",
+      "before_sha256": "85a45537eee7d1af5fb2463f22d7d124bde6afecdb71c8bfc4dc3302a868f52c",
+      "after_sha256": "85a45537eee7d1af5fb2463f22d7d124bde6afecdb71c8bfc4dc3302a868f52c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/pages/DriverAttributionPage.test.tsx",
+      "before_sha256": "ea12707742db26ec4ab9b613f7bfabb3c2c58b3ac43f9a984f786233c9c8b92d",
+      "after_sha256": "ea12707742db26ec4ab9b613f7bfabb3c2c58b3ac43f9a984f786233c9c8b92d",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useOwnership.ts",
+      "before_sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "after_sha256": "0b8ebf9b896bf06d510ebd95db56b915d74688e5666a9efa1faa55cfb769c8af",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/types/ownership.ts",
+      "before_sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "after_sha256": "8aac4dbb7f1a5239b44a709bf30a38054c1669ff43e64c4f540853ec5b4f6fab",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/GhostDrivesPanel.tsx",
+      "before_sha256": "5e5b2b833304b3bada719a1485623ecdd89f54d19e3c3620c5e3070b9dae1515",
+      "after_sha256": "5e5b2b833304b3bada719a1485623ecdd89f54d19e3c3620c5e3070b9dae1515",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.tsx",
+      "before_sha256": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "after_sha256": "8c408e99aab7a019ec0d673458895b496dc8ee94bb6bfcbeab2cd16f91167392",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/EvidencePanel.tsx",
+      "before_sha256": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "after_sha256": "14136114508038891d06e3927ac73486c3b7e3a843b1fa8b0b29b1305e77d4b2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.tsx",
+      "before_sha256": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "after_sha256": "b81a73e8d47fe507855b5d82d221b309bf2f5dee847293087652db6729693384",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/formatters.ts",
+      "before_sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "after_sha256": "0e1110729b6a2b3acab5427a06bef2430773fe8a3164c78b5aa6a9d8762c078a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "before_sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "after_sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "before_sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "after_sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before_sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "after_sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "before_sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "after_sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "before_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "after_sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "before_sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "after_sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/GhostDrivesPanel.test.tsx",
+      "before_sha256": "2afcba233b19f8f7bfe7b7c99c00ffeefa536a0423438a080cb81416cf06eff0",
+      "after_sha256": "2afcba233b19f8f7bfe7b7c99c00ffeefa536a0423438a080cb81416cf06eff0",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/OwnershipPanel.test.tsx",
+      "before_sha256": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "after_sha256": "42da86a2c70487ddebdb3d5213b40ec907b64562264bb24fcc30dccf8dad4390",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/OwnershipBrief.test.tsx",
+      "before_sha256": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "after_sha256": "ec99f6f0afc52243e9f6ad97f048a832990109ce09502ca97263f9b88437af01",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/MutationError.tsx",
+      "before_sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "after_sha256": "ac90a2f219389a12b7c5f9287513e06e59554e834603ab5a368a3c116c785f81",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.tsx",
+      "before_sha256": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "after_sha256": "a63c0696cafd4b0cc82c834271ad484f566671cd0e07e97a5a14aa5817562293",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/operationalbrief-all/specialistDisplay.ts",
+      "before_sha256": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "after_sha256": "22eb84fc59e0765a5df43f027df32a2e9aaffdb81cbe69b49ac73969ae9389bb",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "before_sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "after_sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "before_sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "after_sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "before_sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "after_sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "before_sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "after_sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "before_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "after_sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "before_sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "after_sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/currencyFormat.ts",
+      "before_sha256": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "after_sha256": "94a663d71e8e2f1db4bd6f723665837e1ac22c333e1864124af8938bfea95563",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useHiddenSeries.ts",
+      "before_sha256": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+      "after_sha256": "a7cfecebbb60e53783e13dbfabcca5ca685b06f72ab6684fe3b6f712409d876e",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useChartPalette.ts",
+      "before_sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "after_sha256": "8b58474ed3e45309f3f7bf29adcc802d056128cdbe7fa937e3f15c2db649e333",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useConfirm.ts",
+      "before_sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "after_sha256": "639e5af08827ea0d0e10c54d3c282356a27cf847fb9247727b8f8c5145496856",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "before_sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "after_sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "before_sha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "after_sha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "before_sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "after_sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "before_sha256": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "after_sha256": "a5ea6977c603a5af95150b655b403d36f0970bbd704231703fb136ad9e447a5a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "before_sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "after_sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "before_sha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "after_sha256": "3c752e3448f4f2f4e73f0f9ba86a585a0431f641a0b99a89009083be884a7fa2",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "before_sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "after_sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "before_sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "after_sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "before_sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "after_sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before_sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "after_sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/ownership/components/VerdictBadge.test.tsx",
+      "before_sha256": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "after_sha256": "d0d1c544e576258674e4b0716f96a58126f4fc1d47c32d6399a6b5588ed35d41",
+      "unchanged": true
+    }
+  ],
+  "notrun_limits": [
+    "Fresh tests or passing reruns",
+    "lint/build/global npx tsc --noEmit",
+    "Browser/Playwright/screenshots/native/device/visual/mobile/a11y runtime acceptance",
+    "Server/helper/subagent/install/process startup",
+    "HTTP/network/API requests and backend endpoint/authorization/population execution",
+    "Actual identities/assignments/locations, create/delete/label mutations",
+    "Canonical/generated catalog edits and any source/test edit",
+    "Git writes, staging, commits, branch changes or cleanup"
+  ],
+  "final_validation": {
+    "status": "PASSED_ARTIFACT_ONLY",
+    "utc": "2026-10-14T02:23:33.039499+00:00",
+    "json_parse_exit": 0,
+    "pin_check_exit": 0,
+    "location_checks": 66,
+    "source_test_pins_checked": 42,
+    "source_test_pins_unchanged": 42,
+    "source_test_pin_drift": [],
+    "count_and_owner_consistency_exit": 0,
+    "scoped_git_status_exit": 0,
+    "command": "python inline json.loads + exact item/paths/counts/owner/citation/hash assertions; git --no-pager status --short -- exact pinned files and two artifacts",
+    "no_test_lint_build_tsc_claim": true
+  },
+  "release": {
+    "utc": "2026-10-14T02:23:33.039499+00:00",
+    "source_write_claim": "NONE; source remained read-only",
+    "artifact_command_release": "RELEASED after final artifact parse/pin validation",
+    "released_artifacts": [
+      "docs/frontend-audits/phase6-qa-ownership-driver-attribution.json",
+      "web/logs/phase6-qa-ownership-driver-attribution.log"
+    ],
+    "no_owned_live_command_or_service": true,
+    "source_only_audit_complete": true,
+    "native_page_phase6_acceptance": false
+  }
+}
