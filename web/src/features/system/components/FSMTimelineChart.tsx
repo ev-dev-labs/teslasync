@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, CHART_COLORS,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CHART_COLORS,
   ChartContainer, ChartTooltip, chartGrid, axisTick,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { chartTokens } from '@/lib/tokens';
 import type { FSMTransition } from '@/types/fsm';
 
 interface FSMTimelineChartProps {
@@ -152,10 +153,10 @@ export function FSMTimelineChart({ transitions, hours, emptyMessage }: FSMTimeli
       {buckets.length > 0 ? (
         <ResponsiveContainer width="100%" height={220}>
           <AreaChart data={buckets}>
-            <CartesianGrid {...chartGrid} />
+            {chartGrid}
             <XAxis dataKey="time" {...axisTick} />
             <YAxis {...axisTick} allowDecimals={false} />
-            <Tooltip content={<ChartTooltip />} />
+            <Tooltip content={<ChartTooltip />} cursor={chartTokens.cursor} />
             {fsmTypes.map((type, i) => (
               <Area
                 key={type}
@@ -163,8 +164,9 @@ export function FSMTimelineChart({ transitions, hours, emptyMessage }: FSMTimeli
                 dataKey={type}
                 stackId="1"
                 stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                strokeWidth={2}
                 fill={CHART_COLORS[i % CHART_COLORS.length]}
-                fillOpacity={0.3}
+                fillOpacity={0.08}
               />
             ))}
           </AreaChart>

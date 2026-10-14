@@ -22,7 +22,20 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { cloneElement, type ComponentProps, type ReactElement, type ReactNode } from 'react';
+import { CHART_COLORS } from '@/components/charts';
+import { chartTokens } from '@/lib/tokens';
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    Area: (props: ComponentProps<typeof actual.Area>) =>
+      <actual.Area {...props} isAnimationActive={false} />,
+    ResponsiveContainer: ({ children }: { children: ReactElement<{ width?: number; height?: number }> }) =>
+      cloneElement(children, { width: 800, height: 220 }),
+  };
+});
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -202,6 +215,31 @@ describe('buildFsmTimeline', () => {
 });
 
 describe('<FSMTimelineChart>', () => {
+  it('uses restrained renderer roles without changing stacked series, palette, or axes', () => {
+    const { container } = render(
+      <FSMTimelineChart
+        transitions={[tx('driving', minutesAgo(5)), tx('parked', minutesAgo(3))]}
+        hours={6}
+      />,
+    );
+
+    const areas = container.querySelectorAll('.recharts-area');
+    expect(areas).toHaveLength(2);
+    areas.forEach((area, index) => {
+      const fill = area.querySelector('.recharts-area-area');
+      const stroke = area.querySelector('.recharts-area-curve');
+      expect(fill).toHaveAttribute('fill', CHART_COLORS[index]);
+      expect(fill).toHaveAttribute('fill-opacity', '0.08');
+      expect(stroke).toHaveAttribute('stroke', CHART_COLORS[index]);
+      expect(stroke).toHaveAttribute('stroke-width', '2');
+    });
+    expect(container.querySelector('.recharts-cartesian-grid-horizontal line'))
+      .toHaveAttribute('stroke', chartTokens.gridStroke);
+    expect(container.querySelectorAll('.recharts-xAxis')).toHaveLength(1);
+    expect(container.querySelectorAll('.recharts-yAxis')).toHaveLength(1);
+    expect(screen.queryByText('No transition data for timeline')).not.toBeInTheDocument();
+  });
+
   it('renders the labelled chart figure when there is data to plot', () => {
     render(
       <FSMTimelineChart
