@@ -4,6 +4,7 @@ import {
   ChartContainer,
   ChartLegend,
   ChartTooltip,
+  chartAnimationProps,
   chartGrid,
   axisTickSm,
   CHART_COLORS,
@@ -90,6 +91,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
           <Tooltip content={<ChartTooltip />} />
           <ChartLegend />
           <Bar
+            {...chartAnimationProps()}
             yAxisId="count"
             dataKey="count"
             name={t('charging.curve.dcSessions', 'DC Sessions')}

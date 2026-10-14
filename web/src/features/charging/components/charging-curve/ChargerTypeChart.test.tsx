@@ -41,6 +41,29 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { ChargingSession } from '@/api/types';
 
+const chartSpies = vi.hoisted(() => ({
+  bar: vi.fn((_props: Record<string, unknown>) => null),
+  composed: vi.fn(),
+}));
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    ComposedChart: ({ children, ...props }: { children?: ReactNode; data: unknown }) => {
+      chartSpies.composed(props);
+      return <>{children}</>;
+    },
+    Bar: chartSpies.bar,
+    XAxis: () => null,
+    YAxis: () => null,
+    CartesianGrid: () => null,
+    Tooltip: () => null,
+    ChartLegend: () => null,
+  };
+});
+
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via shared
 // UI) reads it. Install a benign stub before any shared module evaluates.
 vi.hoisted(() => {
@@ -195,7 +218,38 @@ function dataRowCells(label: string): string[] {
 }
 
 beforeEach(() => {
+  vi.restoreAllMocks();
   vi.clearAllMocks();
+});
+
+describe('ChargerTypeChart — motion-aware series', () => {
+  it.each([false, true])('preserves both populated series with reduced motion=%s', (reduce) => {
+    const matchMedia = window.matchMedia;
+    vi.spyOn(window, 'matchMedia').mockImplementation((query) => ({
+      ...matchMedia(query),
+      matches: reduce && query.includes('prefers-reduced-motion'),
+    }));
+    renderChart([
+      session(1, 30, { charger_type: 'Tesla', peak_power_w: 120_000, total_energy_added_wh: 40_000 }),
+    ]);
+
+    expect(screen.getByRole('figure', { name: TITLE })).toHaveAttribute(
+      'data-chart-key', 'charger-type-chart',
+    );
+    expect(chartSpies.composed).toHaveBeenCalledWith(expect.objectContaining({
+      data: [{ label: 'Supercharger', count: 1, avgKw: 120, avgKwh: 40, avgDuration: 30 }],
+    }));
+    expect(chartSpies.bar.mock.calls.map(([props]) => ({
+      dataKey: props.dataKey,
+      yAxisId: props.yAxisId,
+      isAnimationActive: props.isAnimationActive,
+      animationDuration: props.animationDuration,
+    }))).toEqual([
+      { dataKey: 'avgKw', yAxisId: 'kw', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+      { dataKey: 'avgKwh', yAxisId: 'kwh', isAnimationActive: !reduce, animationDuration: reduce ? 0 : 300 },
+    ]);
+    expect(dataRowCells('Supercharger')).toEqual(['Supercharger', '1', '120.00', '40.00', '30']);
+  });
 });
 
 describe('ChargerTypeChart — chrome + a11y', () => {

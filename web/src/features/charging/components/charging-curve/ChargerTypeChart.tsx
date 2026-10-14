@@ -8,6 +8,7 @@ import {
   ChartContainer,
   ChartLegend,
   ChartTooltip,
+  chartAnimationProps,
   chartGrid,
   axisTickSm,
   CHART_COLORS,
@@ -113,6 +114,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
           <Tooltip content={<ChartTooltip />} />
           <ChartLegend state={hidden} />
           <Bar
+            {...chartAnimationProps()}
             yAxisId="kw"
             dataKey="avgKw"
             name={t('charging.curve.avgPower', 'Avg Power')}
@@ -128,6 +130,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
             ))}
           </Bar>
           <Bar
+            {...chartAnimationProps()}
             yAxisId="kwh"
             dataKey="avgKwh"
             name={t('charging.curve.avgEnergy', 'Avg Energy')}
