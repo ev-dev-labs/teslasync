@@ -1,0 +1,968 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-what-if",
+  "attempt": 1,
+  "mode": "source-only inspection; no source/test writes; no passing rerun",
+  "page": "web/src/features/driving/pages/WhatIfPage.tsx",
+  "routes": [
+    "/what-if"
+  ],
+  "status": "SOURCE_REPORT_COMPLETE_WITH_NEEDS; PAGE/NATIVE ACCEPTANCE NOTRUN",
+  "snapshotUTC": "2026-10-14T01:53:01.940800+00:00",
+  "clocks": {
+    "firstObservedUTC": "2026-10-14T01:43:45.4336865Z",
+    "reservationUTC": "2026-10-14T01:39:44.162Z",
+    "returnUTC": "2026-10-14T01:59:44.162Z",
+    "hardUTC": "2026-10-14T02:04:44.162Z",
+    "earlierActualPlus20And25Wins": true,
+    "actualActorCreationUTC": "not exposed; no fabricated actor/start lease"
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "queueLine": 66,
+    "predecessor": "phase5-page-driving-what-if",
+    "acceptedQueueLine": 1940,
+    "acceptedCommit": "dd27514dac712fc67a6dcd8d2e824d74bbe7e52f",
+    "inventory": "docs/frontend-inventory.md:180,1268-1269",
+    "historicalAudit": "docs/frontend-audits/audit-page-129.json",
+    "closedPhasesPreserved": true,
+    "phase6": "unfinished",
+    "phase7": "NOTRUN",
+    "reads": [
+      "docs/orchestrator-loop.md all296 lines",
+      "docs/frontend-design-contract.md core architecture/trust/SI/scope/numeric/a11y/mobile/evidence clauses1-690 and later addenda2240-2519; unrelated geometry addenda not claimed fully reviewed",
+      "docs/frontend-mission.md principles/architecture plus responsive/forms/states/domain/data separation and QA/DoD sections43-45",
+      "docs/frontend-inventory.md authority plus exact WhatIf route/owner rows",
+      "docs/session-handoff.md latest new-machine block and recovery conventions",
+      "migration-queue.md current lifecycle/exact QA and accepted predecessor rows plus whole-row dedup searches",
+      ".github/copilot-instructions.md frontend integrity/architecture/SI and remaining sections",
+      ".github/instructions/react-frontend.instructions.md full including decomposition suffix",
+      ".github/instructions/frontend-si-cutover.instructions.md full",
+      ".github/instructions/unit-conversion.instructions.md full",
+      "docs/frontend-worker-conventions.md full"
+    ],
+    "historicalReceipt": "Queue records external Vitest startup1/zero execution, not a pass. web/logs/phase5-page-driving-what-if.log is absent on this host; no fresh run and no guessed historical result."
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-driving-what-if.json",
+    "web/logs/phase6-qa-driving-what-if.log"
+  ],
+  "purpose": "Compare a selected recorded drive to locally estimated speed/tire/HVAC/ambient scenarios without altering records or controlling a device.",
+  "confirmedIssueCount": 7,
+  "confirmedIssues": [
+    {
+      "id": "WI-001",
+      "rule": "workspace-drive-scope",
+      "contract": [
+        "MDC-032",
+        "MDC-046"
+      ],
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 68,
+      "relatedLines": [
+        61,
+        65,
+        69,
+        71,
+        72,
+        147,
+        150,
+        151
+      ],
+      "severity": "high",
+      "owner": "page/caller",
+      "mechanism": "selectedId is unscoped React state. activeId prefers it over the current vehicle list and both detail/telemetry hooks are keyed only by that drive ID. There is no current-vehicle membership reconciliation or drive.vehicleId guard.",
+      "repro": "SOURCE REPRO ONLY, NOT EXECUTED: with vehicle A list containing drive 101, explicitly select 101; switch the workspace vehicle to B whose successful list contains only 202. selectedId remains 101, activeId remains 101, and detail/telemetry still consume A evidence while the picker options are B. The same stale selection survives a new successful empty list.",
+      "fix": "Reconcile selected drive authority to the selected vehicle and its resolved list using existing scope owners; preserve knob values and distinguish unresolved list from successful empty list. Do not clear valid retained selections merely on refresh failure.",
+      "evidence": [
+        "web/src/api/hooks/useDriving.ts:197-205,329-334",
+        "web/src/hooks/useSelectedVehicle.ts:48-74"
+      ],
+      "testGap": "WhatIfPage.test.tsx:65-75 changes only drive selection under a fixed mocked vehicle; no cross-vehicle transition case.",
+      "history": "Same mechanism was recorded in audit-page-129 architectureIssues; still present at current pinned source. Not a request to rerun Phase5 migration.",
+      "sourceLine": "  const [selectedId, setSelectedId] = useState('');"
+    },
+    {
+      "id": "WI-002",
+      "rule": "source-trust-state-collapse",
+      "contract": [
+        "MDC-026",
+        "MDC-040"
+      ],
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 113,
+      "relatedLines": [
+        143,
+        167,
+        168,
+        169,
+        182,
+        267,
+        269,
+        271,
+        329,
+        330
+      ],
+      "severity": "high",
+      "owner": "page/caller",
+      "mechanism": "Local readiness uses isLoading, activeId and result.ok, not resolved/paused source state. TanStack initial paused queries can be pending with isLoading=false. A paused or disabled unresolved list enters noDrives; paused detail enters noEnergy; initial list loading does not make the summary/takeaway loading because detail is still disabled. A fatal detail gets an accurate QueryError in Energy but still the noEnergy text in Takeaway. retained includes refreshError only, so retained paused sources can be labeled Source available by the brief.",
+      "repro": "SOURCE REPRO ONLY, NOT EXECUTED: set drives data undefined/isPending=true/fetchStatus=paused/isLoading=false/error=null. activeId is empty, so line182 emits No drives found before any successful list response. With a resolved list and detail data undefined/paused, line271 and line330 emit lacks energy although no drive evidence has resolved. With cached valid detail and fetchStatus=paused, retained=false and result.ok=true yield Source available while DataSourceNotice separately reports paused.",
+      "fix": "Use existing source-state/prerequisite contracts for initial fetching, initial paused, disabled prerequisite, fatal, authoritative empty, retained refresh and retained paused. Keep all section shells and separate retries; avoid contradictory no-energy/no-drives messages in unresolved/fatal branches. Pass an honest sourceStatus to the existing brief rather than expanding shared trust APIs.",
+      "evidence": [
+        "web/src/api/dataState.ts:190-219",
+        "web/src/components/feedback/DataSourceNotice.tsx:75-120,258-269",
+        "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx:28-34"
+      ],
+      "testGap": "Page mock query helper at test:16 models only loading/idle and error, never initial paused, disabled-unresolved or retained paused. Existing fatal/retry and retained-error assertions remain authored NOTRUN.",
+      "sourceLine": "  const loading = driveQuery.isLoading && !driveState.hasData;"
+    },
+    {
+      "id": "WI-003",
+      "rule": "model-observation-provenance",
+      "contract": [
+        "MDC-026",
+        "MDC-045"
+      ],
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 206,
+      "relatedLines": [
+        163,
+        165,
+        166,
+        278,
+        296,
+        298
+      ],
+      "severity": "medium",
+      "owner": "page/caller (domain assumptions read-only)",
+      "mechanism": "The no-guesswork blurb contradicts generic model constants and default/inferred pack assumptions. The warning about incomplete telemetry checks only absent/zero-length arrays. A nonempty payload with null elevation, isClimateOn and outsideTemp is accepted without this warning, although analyzeTelemetry substitutes climb=0, climateOn=true and ambient fallback. The brief correctly discloses model outputs, but this does not make all component/pack inputs observed.",
+      "repro": "SOURCE REPRO ONLY, NOT EXECUTED: valid positive-energy drive, telemetry containing one point with elevation=null/isClimateOn=null/outsideTemp=null. hasData=true and length=1 suppress line296 warning; model lines83-111,145 still supply default assumptions. Even complete telemetry retains generic MASS_KG/CDA/TIRE_CRR and can use DEFAULT_PACK_WH, yet line206 says no guesswork.",
+      "fix": "Retain the correct model-versus-observed brief disclosure and all numeric evidence. Qualify decomposition, default/inferred pack and field-level telemetry coverage explicitly using existing provenance/help; do not equate nonempty telemetry with complete observations or modify model formulas as a cosmetic fix. Canonical copy change must be a serialized parent/catalog need, not a worker catalog edit.",
+      "evidence": [
+        "web/src/features/driving/lib/whatIfModel.ts:22-31,69,83-111,144-145,184-191",
+        "web/src/types/driving.ts:64-86",
+        "web/src/i18n/en.json whatIf.blurb / whatIf.telemetryAssumptions"
+      ],
+      "testGap": "Page:43-47 covers unavailable telemetry, not nonempty field-null coverage; model fixture uses full climate/elevation/temp values.",
+      "history": "Generic assumptions/no-guesswork inconsistency is retained historical audit debt; the nonempty field-null warning mechanism is separately verified at current source.",
+      "sourceLine": "                    'Take a real drive and change how it was driven. The engine decomposes the energy you actually used and recomputes it — no guesswork, anchored to your data.',"
+    },
+    {
+      "id": "WI-004",
+      "rule": "baseline-observed-reconciliation",
+      "contract": [
+        "MDC-045",
+        "MDC-033"
+      ],
+      "file": "web/src/features/driving/lib/whatIfModel.ts",
+      "line": 154,
+      "relatedLines": [
+        152,
+        161,
+        192,
+        203
+      ],
+      "severity": "high",
+      "owner": "domain-model",
+      "mechanism": "other=max(0,observed-modeled0), so baseline.total=modeled0+max(0,observed-modeled0)=max(modeled0,observed). Whenever modeled0>observed the displayed Actual drive and was baseline exceed recorded energy. This violates the source model comment that baseline always reconciles, without requiring any runtime assumption.",
+      "repro": "SOURCE ALGEBRA REPRO ONLY, NOT EXECUTED: finite drive distanceM=10000,durationS=600,avgSpeedMps=16.67,energyUsedWh=1 with empty telemetry. The positive rolling term alone is (0.011*1800*9.81*10000)/3600/0.9, greater than 1 Wh. Eligibility at line142 accepts the input, residual becomes 0, baseline total exceeds 1 Wh. Page lines118,278 label that modeled sum as the actual/previous energy.",
+      "fix": "Domain owner must resolve the baseline calibration contract with bounded model tests for modeled above/below/equal observed, while preserving signed scenario-minus-baseline deltas, raw SI and all categories. Do not change generic constants or normalize measurements in presentation code. If unreconciled components remain, expose their modeled character instead of claiming exact measured decomposition.",
+      "evidence": [
+        "web/src/features/driving/pages/WhatIfPage.tsx:118,278-284",
+        "web/src/features/driving/lib/whatIfModel.ts:4-8,147-161",
+        "web/src/features/driving/lib/whatIfModel.test.ts:39-46"
+      ],
+      "testGap": "Current reconciliation test exercises one relatively high observed-energy fixture; it has no modeled0>observed counterexample. No model was executed.",
+      "history": "The possibility was already documented in audit-page-129; this report pins the exact current algebra rather than creating a second historical audit objective.",
+      "sourceLine": "  const other = Math.max(0, observed - modeled0);"
+    },
+    {
+      "id": "WI-005",
+      "rule": "baseline-scenario-isolation",
+      "contract": [
+        "MDC-045",
+        "MDC-033"
+      ],
+      "file": "web/src/features/driving/lib/whatIfModel.ts",
+      "line": 145,
+      "relatedLines": [
+        151,
+        152,
+        154,
+        161,
+        191,
+        192,
+        204
+      ],
+      "severity": "high",
+      "owner": "domain-model",
+      "mechanism": "When telemetry supplies no finite ambient reading, nativeAmbient falls back to the scenario ambient knob. Moving that knob changes climate0 and possibly other/total and baselineArrivalSoc, so the Actual drive baseline is not fixed for a fixed recording. For modeled0>observed, baseline total itself moves; otherwise the component split still changes.",
+      "repro": "SOURCE REPRO ONLY, NOT EXECUTED: hold a valid drive and empty or field-null telemetry fixed, vary only knobs.ambientC from 18 to -10. analyzeTelemetry returns ambientC=null/climateOn=true; nativeAmbient follows the knob, changing baseline climate power at lines114-117/151. Nothing in the drive record changed.",
+      "fix": "Define an immutable recorded-baseline ambient assumption or explicit unavailable assumption at the domain owner, separate from scenario controls. Preserve scenario ambientC in Celsius and preference-aware display; test baseline invariance across every knob under incomplete telemetry. No local computation or new unit engine.",
+      "evidence": [
+        "web/src/features/driving/pages/WhatIfPage.tsx:75-77,245-253,278",
+        "web/src/features/driving/lib/whatIfModel.ts:106-117,145-161"
+      ],
+      "testGap": "Model tests change speed/tires/HVAC but do not assert baseline invariance under ambient changes with absent temperature.",
+      "sourceLine": "  const nativeAmbient = ambientC ?? knobs.ambientC;"
+    },
+    {
+      "id": "WI-006",
+      "rule": "date-preference-bypass",
+      "contract": [
+        "MDC-044",
+        "MDC-046"
+      ],
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 84,
+      "relatedLines": [
+        20,
+        86,
+        165
+      ],
+      "severity": "medium",
+      "owner": "page/caller",
+      "mechanism": "Both picker labels and summary scope call pure formatDateShort without locale/timezone options. The pure helper uses host defaults; driveOptions memo depends only on drives/formatDistance. Saved effective timezone changes do not bind these labels, and selected locale is not supplied to either date call.",
+      "repro": "SOURCE REPRO ONLY, NOT EXECUTED: browser in UTC/en-US, effective display timezone America/Los_Angeles and locale de-DE, recorded startTs=2026-01-01T00:30:00Z. Current helpers use browser Jan1 instead of the selected-zone Dec31 and selected locale. Change only timezone: the memo has no dependency on it.",
+      "fix": "Use the existing reactive useDateFormat formatter at both call sites and include that formatter in memo dependencies. Preserve raw UTC instants and the independent recorded-drive selector; do not add a date range picker or rewrite shared dateFormat.",
+      "evidence": [
+        "web/src/lib/dateFormat.ts:29-50,75-82",
+        "web/src/hooks/useDateFormat.ts:73-85,99-101"
+      ],
+      "testGap": "Page tests mock number/unit helpers and do not assert locale/timezone/reactive date behavior. Existing shared date tests are not page acceptance.",
+      "sourceLine": "        label: `${formatDateShort(d.startTs)} · ${formatDistance(d.distanceM)}`,"
+    },
+    {
+      "id": "WI-007",
+      "rule": "unknown-zero-eligibility-reason",
+      "contract": [
+        "MDC-026",
+        "MDC-045"
+      ],
+      "file": "web/src/features/driving/lib/whatIfModel.ts",
+      "line": 142,
+      "relatedLines": [
+        125,
+        127,
+        131,
+        142
+      ],
+      "severity": "medium",
+      "owner": "domain-model with later caller integration",
+      "mechanism": "The sole ok=false result carries no ineligibility reason and merges missing drive, distance<10, observed<=0 and speed<=0. Page always describes this as missing energy. A measured zero energy, positive energy on a short recording, or known zero average speed are different facts from an absent energy measurement. Neutral zero fields are correctly suppressed by the summary, but source/domain reasons are not preserved.",
+      "repro": "SOURCE REPRO ONLY, NOT EXECUTED: compare energyUsedWh=null versus energyUsedWh=0 with the same positive distance/speed. num maps missing to 0 and both take the same neutral branch; page noEnergy says lacks energy in both. Alternatively use finite energyUsedWh=100, distanceM=5 and positive avgSpeedMps: energy is present but the same lacks-energy message appears. This finding does NOT request making an unsupported zero-energy simulation valid.",
+      "fix": "Domain owner should expose accurate eligibility distinctions without fabricating model values, then an exact caller integration must retain unknown/recorded-zero/unsupported geometry states and localized recovery. Preserve the existing positive-energy mathematical eligibility unless the domain owner establishes another contract.",
+      "evidence": [
+        "web/src/features/driving/pages/WhatIfPage.tsx:168,271-274,330",
+        "web/src/types/driving.ts:7-9,21-26",
+        "web/src/features/driving/lib/whatIfModel.test.ts:31-36"
+      ],
+      "testGap": "Existing model test explicitly rejects measured zero but checks only ok; no caller reason/zero versus missing distinction or short-distance reason is covered.",
+      "sourceLine": "  if (!drive || distance < 10 || observed <= 0 || avgSpeed <= 0) return neutral;"
+    }
+  ],
+  "candidateCount": 4,
+  "candidates": [
+    {
+      "id": "WI-C01",
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 126,
+      "rule": "specialist-number-precision-review",
+      "mechanism": "arrival metric display.precision=0 overrides saved precision via formatMetric:40, while delta uses fmtNumber saved precision. Raw numeric value is retained.",
+      "whyNotConfirmed": "Whole-percent arrival may be the intended specialist presentation preserved from the accepted page. Product/domain precision contract is needed before classifying the override as a regression.",
+      "next": "Review intended arrival precision and accessible/detail precision for a fractional result with preference=2; no fresh test or formatter change here.",
+      "sourceLine": "      display: { precision: 0 },"
+    },
+    {
+      "id": "WI-C02",
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 65,
+      "rule": "record-picker-bounds-review",
+      "mechanism": "useDrives gets no start/end/limit/offset from this page; hook documentation describes a default 50-row response. Short date labels omit year/time and can collide for similar drives. /what-if is deliberately not range-enabled.",
+      "whyNotConfirmed": "This is a single-record simulator, not a full-history aggregate; absence of a global range and an independent drive selector are not themselves violations. Actual server ordering/completeness was not exercised.",
+      "next": "If full-history browsing or unambiguous record labels are required, establish that requirement at existing list/scope/formatter owners; disclose returned subset without inventing pagination/API capabilities.",
+      "sourceLine": "  const drivesQuery = useDrives(vehicleIdStr);"
+    },
+    {
+      "id": "WI-C03",
+      "file": "web/src/features/driving/lib/whatIfModel.ts",
+      "line": 92,
+      "rule": "signed-physical-model-review",
+      "mechanism": "Model sums only positive elevation increments, ignores recorded regenEnergyWh, applies coldPenalty and clamps SoC. energyDeltaWh remains signed scenario-minus-baseline; displayed save/cost uses magnitudes with explicit direction.",
+      "whyNotConfirmed": "The physics-lite model explicitly chooses positive climbing work and relative deltas; a signed downhill/regen-net specification or calibration evidence was not supplied. Do not promote an unexecuted scientific validity claim or convert signed SI inputs to absolutes.",
+      "next": "Authorized domain review may establish descending routes, regen and cold behavior; no model job, model evaluation or real telemetry access was performed.",
+      "sourceLine": "      if (prev != null && e > prev) climb += e - prev;"
+    },
+    {
+      "id": "WI-C04",
+      "file": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "line": 189,
+      "rule": "composed-mobile-a11y-review",
+      "mechanism": "Page declares one-column to xl grid, min-w-0/wrapping picker/takeaway and shared field names. Current Slider/Select/Toggle declare mobile 44px hit regions, correcting historical track-size-only concerns. Shared CompositionRail keeps all five text legend entries and forced-color outlines.",
+      "whyNotConfirmed": "No mounted viewport, open native selector, touch/focus, RTL/200% text, custom palette contrast, screen-reader or forced-colors inspection is authorized. Source declarations do not demonstrate clipping, contrast or runtime compliance.",
+      "next": "Future existing-queue native acceptance must cover mission widths, narrow allocated containers, dark/light/custom, RTL/long text/200%, keyboard, focus, forced colors, reduced motion and retained/paused/error states using safe synthetic read-only scope.",
+      "sourceLine": "            <section className=\"grid grid-cols-1 gap-4 xl:grid-cols-3\">"
+    }
+  ],
+  "summary": {
+    "countsByRule": {
+      "workspace-drive-scope": 1,
+      "source-trust-state-collapse": 1,
+      "model-observation-provenance": 1,
+      "baseline-observed-reconciliation": 1,
+      "baseline-scenario-isolation": 1,
+      "date-preference-bypass": 1,
+      "unknown-zero-eligibility-reason": 1
+    },
+    "confirmedByPrimaryFile": {
+      "web/src/features/driving/pages/WhatIfPage.tsx": 4,
+      "web/src/features/driving/lib/whatIfModel.ts": 3
+    },
+    "priorityFixes": [
+      "WI-001 scope identity",
+      "WI-002 unresolved/paused/fatal/retained truth",
+      "WI-004/WI-005 fixed reconciled baseline",
+      "WI-003 provenance and WI-007 eligibility reasons",
+      "WI-006 date preferences"
+    ],
+    "nativeConfirmed": 0,
+    "nativeStatus": "NOTRUN; zero native findings is not native acceptance"
+  },
+  "needs": [
+    {
+      "id": "WI-NEED-PAGE",
+      "owner": "orchestrator-assigned existing WhatIf page/caller owner",
+      "files": [
+        "web/src/features/driving/pages/WhatIfPage.tsx",
+        "web/src/features/driving/pages/WhatIfPage.test.tsx"
+      ],
+      "issues": [
+        "WI-001",
+        "WI-002",
+        "WI-003",
+        "WI-006"
+      ],
+      "request": "One deduplicated narrow caller repair, not four page migrations: scope reconciliation, source trust, honest assumptions and existing reactive date formatter. Preserve every section/action/raw input/default knob/query policy. Canonical copy additions/changes are parent-serialized after exact leaves are known; no catalog lease assumed.",
+      "queueDedup": "Current complete matching-row search found only this QA, accepted Phase5 page and original audit for WhatIf source. Completed advanced-evidence-date-preferences has different caller files, not a generic permission to mutate date utilities. No exact current WhatIf fix objective found; this report creates no queue item."
+    },
+    {
+      "id": "WI-NEED-MODEL",
+      "owner": "orchestrator-assigned existing driving domain/model owner",
+      "files": [
+        "web/src/features/driving/lib/whatIfModel.ts",
+        "web/src/features/driving/lib/whatIfModel.test.ts"
+      ],
+      "issues": [
+        "WI-004",
+        "WI-005",
+        "WI-007"
+      ],
+      "request": "One deduplicated scientific baseline/eligibility contract repair with immutable recording baseline and accurate missing/zero/ineligible reasons. A later exact caller integration needs serialization with WI-NEED-PAGE; no overlapping page writers. No changing constants or physics based solely on aesthetic QA.",
+      "queueDedup": "No current queue row matched whatIfModel or a WhatIf model fix. Preserve accepted page and old source debt; report-only worker does not reserve implementation files."
+    }
+  ],
+  "deduplicatedFixOwnerCount": 2,
+  "sourceCoverage": {
+    "contentSections": [
+      {
+        "name": "Simulated drive outcome",
+        "line": 160,
+        "alwaysMounted": true,
+        "metrics": 3,
+        "actions": [
+          "shared Review details"
+        ]
+      },
+      {
+        "name": "Knobs",
+        "line": 191,
+        "alwaysMounted": true,
+        "actions": [
+          "Reset",
+          "Average speed",
+          "Tire pressure",
+          "Climate (HVAC)",
+          "Ambient temperature"
+        ]
+      },
+      {
+        "name": "Energy breakdown",
+        "line": 261,
+        "alwaysMounted": true,
+        "rails": 2,
+        "categoriesPerRail": 5,
+        "states": [
+          "detail fatal retry",
+          "loading skeleton",
+          "model ineligible fallback",
+          "populated breakdown",
+          "telemetry assumptions"
+        ]
+      },
+      {
+        "name": "Takeaway",
+        "line": 304,
+        "alwaysMounted": true,
+        "states": [
+          "save/cost signed sentence and badge",
+          "detail loading skeleton",
+          "generic noEnergy fallback"
+        ]
+      }
+    ],
+    "conditionalSourceRecovery": {
+      "line": 178,
+      "count": 1,
+      "actions": [
+        "list retry",
+        "Browse drives -> /drives"
+      ]
+    },
+    "sectionAccounting": "4 always-mounted content sections + 1 conditional source-recovery location; historical five-section receipt preserved without inventing a fifth always-mounted panel.",
+    "actions": [
+      "record selector sends same ID to detail and telemetry",
+      "speedFactor0.8..1.2 step0.05",
+      "tires low/nominal/high guard",
+      "HVAC boolean",
+      "ambientC -10..40 step1",
+      "Reset to factor1/nominal/HVACtrue/18C",
+      "independent list/detail/telemetry retry declarations",
+      "Browse drives /drives",
+      "OperationalBrief Review details"
+    ],
+    "bounds": "Single selected drive. useDrives lacks explicit date bounds and uses backend default cap documented as50. /what-if range=false, vehicle=true by current workspace declarations; independent record picker is acceptable. Not lifetime/whole-range proof.",
+    "dataSources": [
+      {
+        "hook": "useDrives(vehicleIdStr)",
+        "url": "/drives?vehicle_id=...",
+        "owner": "web/src/api/hooks/useDriving.ts:107-131",
+        "signal": true,
+        "enabled": "!!vehicleId",
+        "scope": "selected vehicle; default returned list window"
+      },
+      {
+        "hook": "useDrive(activeId)",
+        "url": "/drives/{id}",
+        "owner": "web/src/api/hooks/useDriving.ts:197-206",
+        "signal": true,
+        "enabled": "!!id",
+        "scope": "drive ID; live=true uses existing FAST polling"
+      },
+      {
+        "hook": "useDriveTelemetry(activeId)",
+        "url": "/drives/{id}/telemetry",
+        "owner": "web/src/api/hooks/useDriving.ts:329-335",
+        "signal": true,
+        "enabled": "!!driveId",
+        "scope": "drive ID; coverage not established by nonempty array"
+      }
+    ],
+    "routeSourceMatch": "internal/api/router.go:3506-3518 declares GET list/detail/telemetry. No HTTP request or backend/device action.",
+    "SIAndPreferences": "Model consumes meters, seconds, m/s, Wh, degrees Celsius and percent; no cached/wire display conversion. useUnits formats distance/energy/duration/temp at render. useNumberFormatting provides reactive locale/precision for speed label and delta. Signed energyDeltaWh=scenario.total-baseline.total is preserved; negative saves/positive costs use explicit signs and magnitudes. Unknown start SoC produces null arrival, no neutral zero metrics when !ok. Arrival precision candidate and date preference confirmed finding are separately recorded.",
+    "trust": "Fatal list/detail have independent retries and retained refresh errors preserve controls and usable model evidence; source notice exposes telemetry retry. Initial-paused/retained-paused/eligibility distinctions are incomplete as cited. Unknown observation time remains explicitly stated by DrivingSummaryBrief:48.",
+    "a11yMobileDeclarations": "Localized selector aria-labels; Slider native range labels/generated IDs/aria-valuetext; Toggle native switch checked/name; populated decorative icons aria-hidden. Shared rail has image summary and five text categories including visual omissions <=0.5%; computed widths/colors are allowed dynamic style, not static inline violations. Current shared controls declare44px belowmd, page min-w-0/wrapping and one-column-to-xl layout. FadeIn uses existing OS-reduced-motion OR low-bandwidth preference. No composed acceptance claimed."
+  },
+  "legacyPatternAudit": {
+    "scope": "five production files: page, EnergyBreakdown, DrivingSummaryBrief, whatIfModel and useDriving; shared implementation/test syntax is not a page violation",
+    "staticInlineStyleMatches": 0,
+    "rawHTMLMatchesCaseSensitive": 0,
+    "directLibraryImportMatches": 0,
+    "oldApiImportMatches": 0,
+    "doublePrefixMatches": 0,
+    "camelcaseUrlParamCandidateMatches": 0,
+    "hiddenPanelCandidateMatches": 0,
+    "fetchUseEffectCandidateMatches": 0,
+    "pageWrapperMatches": 1,
+    "pageWrapper": "PageLayout -> layout-reference/PageLayout.tsx:11 -> PageContainer; not a missing-page-container violation",
+    "hardcodedVisibleCandidateMatches": 5,
+    "hardcodedVisibleClassification": "All five textual-regex candidates are TypeScript request<T> generic syntax in useDriving, not visible English. Page and direct UI adapter strings inspected via t() calls/component labels; canonical WhatIf/Driving brief English leaves read without writes. A regex does not prove all possible localization contracts.",
+    "initialSearchCorrection": "Case-insensitive raw HTML search matched shared <Button> once; corrected -CaseSensitive search returned0. Both raw receipts preserved; no violation counted.",
+    "backendRules": "N/A to assigned page QA; router declarations only, no full backend audit."
+  },
+  "tests": {
+    "status": "NOTRUN",
+    "runnerDiscovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "runnerSkipped": null,
+    "authoredDeclarations": 22,
+    "declarationsByFile": {
+      "WhatIfPage.test.tsx": 11,
+      "whatIfModel.test.ts": 5,
+      "WhatIfEnergyBreakdown.test.tsx": 3,
+      "WhatIfBrief.test.tsx": 3
+    },
+    "countMethod": "Static it(...) source declarations, not runner discovery or a passing test receipt. Direct fixture file pinned as test support.",
+    "coverageLimits": "Existing authored controls/retained/error/unknown/SI assertions are preserved, not executed. Mocked units/query readiness do not establish real preferences, source truth or native acceptance."
+  },
+  "sourcePins": [
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256Before": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "sha256After": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "unchanged": true,
+      "lines": 434,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/api/hooks/useDriving.test.ts",
+      "sha256Before": "262328f5fce699a08c3a75080db95a7170a18e511afd2dd6d1dc896789025357",
+      "sha256After": "262328f5fce699a08c3a75080db95a7170a18e511afd2dd6d1dc896789025357",
+      "unchanged": true,
+      "lines": 109,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/api/hooks/useDriving.ts",
+      "sha256Before": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "sha256After": "c3dfd3825d09bc1ba37281bfe4d48d5626ddbc27059f0a90eef5f14fffc27392",
+      "unchanged": true,
+      "lines": 454,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/data-display/CompositionRail.tsx",
+      "sha256Before": "c586fc50bd71686bce383be91eaa65d1c777d06647e262b2ae02602b18f509de",
+      "sha256After": "c586fc50bd71686bce383be91eaa65d1c777d06647e262b2ae02602b18f509de",
+      "unchanged": true,
+      "lines": 105,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256Before": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "sha256After": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "unchanged": true,
+      "lines": 321,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/feedback/DataSourceNotice.test.tsx",
+      "sha256Before": "77837e22dcf1f00beb8ea068582fd60bbf0d0670c4e377c5f3f28c41fbe250d8",
+      "sha256After": "77837e22dcf1f00beb8ea068582fd60bbf0d0670c4e377c5f3f28c41fbe250d8",
+      "unchanged": true,
+      "lines": 206,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/feedback/DataSourceNotice.tsx",
+      "sha256Before": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+      "sha256After": "79b11817e939f044a2c1f6fbfa1617b61a435c8461dc84b99b6014f54059afc6",
+      "unchanged": true,
+      "lines": 291,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256Before": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "sha256After": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "unchanged": true,
+      "lines": 259,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.test.tsx",
+      "sha256Before": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+      "sha256After": "43c89ddc08017a42eaaba33a69cbf083b62a32fd67ce7a6d1dcf716b8892fc1e",
+      "unchanged": true,
+      "lines": 81,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256Before": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "sha256After": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "unchanged": true,
+      "lines": 17,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256Before": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "sha256After": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "unchanged": true,
+      "lines": 39,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256Before": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "sha256After": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "unchanged": true,
+      "lines": 93,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/ui/Select.tsx",
+      "sha256Before": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "sha256After": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "unchanged": true,
+      "lines": 119,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/ui/Slider.tsx",
+      "sha256Before": "05f761492b7bb4d9f3ebd188f30840ac77e538fc3967c6f24c5daf44925d83b8",
+      "sha256After": "05f761492b7bb4d9f3ebd188f30840ac77e538fc3967c6f24c5daf44925d83b8",
+      "unchanged": true,
+      "lines": 126,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/components/ui/Toggle.tsx",
+      "sha256Before": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "sha256After": "5fdc057826af98bdf2e7e914806bc86a8fa1b6ab1472a822a9d6caf6bc8baa11",
+      "unchanged": true,
+      "lines": 140,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/components/WhatIfEnergyBreakdown.test.tsx",
+      "sha256Before": "ed91a0ca8fc6b99b16551515f3f1c4a88607975852c6983fac69933c7cc3d621",
+      "sha256After": "ed91a0ca8fc6b99b16551515f3f1c4a88607975852c6983fac69933c7cc3d621",
+      "unchanged": true,
+      "lines": 59,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/components/WhatIfEnergyBreakdown.tsx",
+      "sha256Before": "3af230d08cca90f0659ccc9ae251c5ed16b03aa7e20258d15fcfa6710985b68c",
+      "sha256After": "3af230d08cca90f0659ccc9ae251c5ed16b03aa7e20258d15fcfa6710985b68c",
+      "unchanged": true,
+      "lines": 42,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx",
+      "sha256Before": "bcb8c5bb0646613a424b14c4a22b04b456a7507195ff2b4e4bd5c45be5948060",
+      "sha256After": "bcb8c5bb0646613a424b14c4a22b04b456a7507195ff2b4e4bd5c45be5948060",
+      "unchanged": true,
+      "lines": 53,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/WhatIfBrief.test.tsx",
+      "sha256Before": "1308574945c43972392215af389768516956c04328f2422c40a8bd6c56181ffe",
+      "sha256After": "1308574945c43972392215af389768516956c04328f2422c40a8bd6c56181ffe",
+      "unchanged": true,
+      "lines": 80,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/components/operationalbrief-n-z/drivingBrief.fixtures.ts",
+      "sha256Before": "22b50284c5f0a54ea7331df16b4406bb157a18ae273489a6f45715739667651e",
+      "sha256After": "22b50284c5f0a54ea7331df16b4406bb157a18ae273489a6f45715739667651e",
+      "unchanged": true,
+      "lines": 14,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/lib/whatIfModel.test.ts",
+      "sha256Before": "30b946430a9385cdfbb33bd2f468fc2dd7d73bcf6041012dbc51167c482f8450",
+      "sha256After": "30b946430a9385cdfbb33bd2f468fc2dd7d73bcf6041012dbc51167c482f8450",
+      "unchanged": true,
+      "lines": 75,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/lib/whatIfModel.ts",
+      "sha256Before": "fdc0b66723f83480bf48f209084e7a8d66ac8e40af4388fc6a8c58ac6227e6c2",
+      "sha256After": "fdc0b66723f83480bf48f209084e7a8d66ac8e40af4388fc6a8c58ac6227e6c2",
+      "unchanged": true,
+      "lines": 207,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/pages/WhatIfPage.test.tsx",
+      "sha256Before": "799f39919d35dda4cc5a8b7efe228e33712fcc27167f52930afd1e2525004117",
+      "sha256After": "799f39919d35dda4cc5a8b7efe228e33712fcc27167f52930afd1e2525004117",
+      "unchanged": true,
+      "lines": 144,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/features/driving/pages/WhatIfPage.tsx",
+      "sha256Before": "3e2cb19721f7d3e669e6ff84394c963fccc9e65ca80d9da4591ab3c8bedf70e5",
+      "sha256After": "3e2cb19721f7d3e669e6ff84394c963fccc9e65ca80d9da4591ab3c8bedf70e5",
+      "unchanged": true,
+      "lines": 338,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256Before": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "sha256After": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "unchanged": true,
+      "lines": 65,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256Before": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "sha256After": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "unchanged": true,
+      "lines": 148,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "sha256Before": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "sha256After": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "unchanged": true,
+      "lines": 49,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256Before": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "sha256After": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "unchanged": true,
+      "lines": 47,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256Before": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "sha256After": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "unchanged": true,
+      "lines": 24,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256Before": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "sha256After": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "unchanged": true,
+      "lines": 174,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256Before": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "sha256After": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "unchanged": true,
+      "lines": 194,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/lib/dateFormat.contract.test.ts",
+      "sha256Before": "4a210dfec7e175a73f221db0d6630cf91948fb3a2bd016c934ccc09ae9a4ef0b",
+      "sha256After": "4a210dfec7e175a73f221db0d6630cf91948fb3a2bd016c934ccc09ae9a4ef0b",
+      "unchanged": true,
+      "lines": 234,
+      "kind": "test",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256Before": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "sha256After": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "unchanged": true,
+      "lines": 462,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256Before": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "sha256After": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "unchanged": true,
+      "lines": 137,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/lib/numberFormat.ts",
+      "sha256Before": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "sha256After": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "unchanged": true,
+      "lines": 172,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256Before": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "sha256After": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "unchanged": true,
+      "lines": 500,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256Before": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "sha256After": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "unchanged": true,
+      "lines": 168,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    },
+    {
+      "path": "web/src/types/driving.ts",
+      "sha256Before": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "sha256After": "ec3c65df87afcc71b65aea70bc3f83ae235150ad66c144243abc603eceb61161",
+      "unchanged": true,
+      "lines": 411,
+      "kind": "source",
+      "baseline": "first BEFORE/SUPPLEMENTAL_BEFORE receipt in log; shared files are observation pins, not exclusive locks"
+    }
+  ],
+  "pinSummary": {
+    "files": 38,
+    "sourceFiles": 29,
+    "testOrFixtureFiles": 9,
+    "changed": 0,
+    "method": "sha256 of bytes before first read and after inspection; first receipts retained even for shared mutable files"
+  },
+  "NOTRUN": [
+    "model invocation/evaluation/job",
+    "real data/vehicle/device/identity access",
+    "HTTP/API/browser/network actions",
+    "browser/native/visual/screenshots/keyboard/screen-reader/touch/contrast/forced-colors/viewport acceptance",
+    "fresh tests or unchanged passing reruns",
+    "lint/build/global npx tsc --noEmit",
+    "catalog generation/guards",
+    "source preservation helper/global QA helpers",
+    "servers/installs/subagents/Git writes"
+  ],
+  "commandEvidence": {
+    "log": "web/logs/phase6-qa-driving-what-if.log",
+    "rawOutputPreserved": true,
+    "failures": [
+      {
+        "command": "initial Python hash/document/queue inspection",
+        "exit": 1,
+        "failure": "UnicodeEncodeError printing a recorded UTF-8 log through default cp1252 console; log write had already completed. Later reads used UTF-8 stdout and preserved original failure."
+      }
+    ],
+    "missingEvidence": [
+      "Incorrect guessed shared PageLayout.tsx path was missing; actual layout-reference/PageLayout.tsx discovered/read/pinned.",
+      "Historical phase5 raw log absent on this host; inherited queue receipt is not substituted for a fresh test pass."
+    ],
+    "initialGitReads": "Only read-only status/branch/log probes at startup; no index/config/commit/reset/branch mutation. No subsequent Git commands.",
+    "outputTransport": "Large raw inspection outputs are also visible through tool-managed temporary receipt paths; worker writes only its two authorized artifacts.",
+    "initialGitRawLocation": "Initial read-only discovery output is retained in the caller tool transcript; branch/log stdout is also in this task log. No Git mutation command was issued.",
+    "rawCommands": "Executed searches with exact regexes, source read ranges, hashes and numeric exits are recorded in the log; full PowerShell/Python command bodies are retained in the caller tool transcript. Tool view reads have no process exit code. Large inspection outputs were tool-managed, not worker output redirection."
+  },
+  "evidenceLimits": [
+    "Confirmed mechanisms are static file/line/algebra traces with unexecuted synthetic repro conditions. They are not observed production behavior or passed/failing runtime tests.",
+    "No real IDs, coordinates, VINs or user records acquired. Repro numbers are hypothetical, never injected into application or evaluated.",
+    "Unrelated source/queue/catalog changes from other owners are not attributed to this task. No global working-tree acceptance claim.",
+    "Design contract core/relevant sections were reviewed; unrelated geometry addenda were not claimed fully read.",
+    "No TypeScript/build/lint/test/native pass is claimed. Phase5 source acceptance remains accepted and Phase6/7 acceptance remains open."
+  ],
+  "finalValidation": {
+    "jsonParse": "PASS; exact report successfully parsed by two independent on-disk inspection commands; final immutable post-write read follows",
+    "pinCheck": "PASS",
+    "countAndLineCheck": "PASS",
+    "checkedUTC": "2026-10-14T01:53:58.183538+00:00",
+    "changedFiles": [],
+    "limit": "Documentation/byte-pin inspection only, not application test/lint/build/type/native acceptance",
+    "citationRefinement": "Candidate precision/elevation citations corrected to exact matching source lines; original validation output retained."
+  },
+  "release": {
+    "artifactsAndCommands": "RELEASED at completion of final immutable JSON/pin receipt in matching log; no further source/artifact work queued by this worker",
+    "sourceAndTests": "READONLY throughout; no implementation write lease acquired",
+    "releasePreparationUTC": "2026-10-14T01:54:53.273736+00:00",
+    "returnDeadlineUTC": "2026-10-14T01:59:44.162Z",
+    "hardDeadlineUTC": "2026-10-14T02:04:44.162Z",
+    "noOngoingOwnCommands": true
+  },
+  "protectedCatalogReadPin": {
+    "path": "web/src/i18n/en.json",
+    "sha256Before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+    "sha256After": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+    "unchanged": true,
+    "readOnly": true
+  },
+  "sourceRecheckUTC": "2026-10-14T01:53:58.183538+00:00",
+  "filesRead": [
+    ".github/copilot-instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-129.json",
+    "docs/frontend-audits/phase6-qa-driving-speed-sweet-spot.json",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/orchestrator-loop.md",
+    "docs/session-handoff.md",
+    "internal/api/router.go",
+    "migration-queue.md",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useDriving.test.ts",
+    "web/src/api/hooks/useDriving.ts",
+    "web/src/components/data-display/CompositionRail.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/feedback/DataSourceNotice.test.tsx",
+    "web/src/components/feedback/DataSourceNotice.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/index.ts",
+    "web/src/components/layout/layout-reference/PageLayout.test.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/components/ui/Button.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/ui/Slider.tsx",
+    "web/src/components/ui/Toggle.tsx",
+    "web/src/features/driving/components/WhatIfEnergyBreakdown.test.tsx",
+    "web/src/features/driving/components/WhatIfEnergyBreakdown.tsx",
+    "web/src/features/driving/components/operationalbrief-n-z/DrivingSummaryBrief.tsx",
+    "web/src/features/driving/components/operationalbrief-n-z/WhatIfBrief.test.tsx",
+    "web/src/features/driving/components/operationalbrief-n-z/drivingBrief.fixtures.ts",
+    "web/src/features/driving/lib/whatIfModel.test.ts",
+    "web/src/features/driving/lib/whatIfModel.ts",
+    "web/src/features/driving/pages/WhatIfPage.test.tsx",
+    "web/src/features/driving/pages/WhatIfPage.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/i18n/en.json",
+    "web/src/lib/dateFormat.contract.test.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/types/driving.ts"
+  ]
+}
