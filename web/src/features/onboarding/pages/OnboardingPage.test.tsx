@@ -7,6 +7,9 @@ import '../../../i18n';
 
 import OnboardingPage from './OnboardingPage';
 import type { OnboardingStatus } from '@/api/hooks/useOnboarding';
+import { __resetAnnouncerForTests } from '@/hooks/useAnnouncer';
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer';
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy';
 
 // Mock framer-motion so FadeIn renders children eagerly without
 // IntersectionObserver awareness.
@@ -130,17 +133,23 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
-    <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={['/onboarding']}>
-        <OnboardingPage />
-      </MemoryRouter>
-    </QueryClientProvider>,
-  );
+  return render(<OnboardingPage />, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/onboarding']}>
+          {children}
+        </MemoryRouter>
+      </QueryClientProvider>
+    ),
+  });
 }
 
 describe('OnboardingPage', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
+    __resetStatusAnnouncerForTests();
+    __resetAnnouncerForTests();
+    __resetAnnouncePolicyForTests();
     refetchSpy.mockClear();
     navigateMock.mockClear();
     mockIsLoading = false;
@@ -381,18 +390,150 @@ describe('OnboardingPage', () => {
     expect(screen.queryByRole('button', { name: 'Continue to dashboard' })).toBeNull();
   });
 
+  it.each(['fetching', 'paused', 'failed', 'idle'] as const)(
+    'keeps all completion anchors unknown before a status response (%s)',
+    (state) => {
+      mockStatus = undefined;
+      mockIsLoading = state === 'fetching';
+      mockIsFetching = state === 'fetching';
+      mockFetchStatus = state === 'fetching' || state === 'paused' ? state : 'idle';
+      mockError = state === 'failed' ? new Error('Setup status read unavailable') : null;
+      renderPage();
+
+      const steps = screen.getByRole('list', { name: 'Onboarding steps' });
+      expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
+      expect(within(steps).getAllByText('Unknown')).toHaveLength(3);
+      for (const label of ['Completed', 'In progress', 'Not started']) {
+        expect(within(steps).queryByText(label)).toBeNull();
+      }
+      for (const key of ['tesla', 'vehicle', 'telemetry']) {
+        expect(steps.querySelector(`#onboarding-step-${key}`)).not.toBeNull();
+      }
+      expect(screen.getByRole('button', { name: 'Connect Tesla account' })).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
+      expect(screen.queryByRole('button', { name: 'Continue to dashboard' })).toBeNull();
+    },
+  );
+
+  it('replaces unknown evidence with confirmed anchor states when setup status arrives', () => {
+    mockStatus = undefined;
+    const { rerender } = renderPage();
+    mockStatus = status({ tesla_connected: true });
+    rerender(<OnboardingPage />);
+
+    const steps = screen.getByRole('list', { name: 'Onboarding steps' });
+    expect(within(steps).queryByText('Unknown')).toBeNull();
+    for (const label of ['Completed', 'In progress', 'Not started']) {
+      expect(within(steps).getByText(label)).toBeInTheDocument();
+    }
+    expect(screen.queryByRole('button', { name: 'Connect Tesla account' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
+    expect(steps.querySelector('#onboarding-step-vehicle')).toHaveAttribute('aria-current', 'step');
+  });
+
   it('retains paused setup status and current-step refresh without claiming a device outage', () => {
     mockStatus = status({ tesla_connected: true });
     mockFetchStatus = 'paused';
     renderPage();
 
     expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(screen.getByTestId('stale-refresh-warning')).getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getByText('Refresh is paused. Retained data remains available.')).toBeInTheDocument();
+    expect(screen.queryByText('This page refreshes automatically every 30 seconds.')).toBeNull();
     expect(screen.getByText('Retained setup status')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeEnabled();
     expect(screen.queryByRole('button', { name: 'Connect Tesla account' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
     expect(screen.queryByText(/device is offline/i)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Continue to dashboard' })).toBeNull();
+  });
+
+  it('explains initial paused refresh without claiming missing anchors or a device outage', () => {
+    mockStatus = undefined;
+    mockFetchStatus = 'paused';
+    renderPage();
+
+    const pending = screen.getByTestId('onboarding-status-pending');
+    expect(pending).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(pending).getByText('Refresh paused')).toBeInTheDocument();
+    expect(within(pending).getByText(
+      'Setup status has not been received; no completed-step or vehicle count is known.',
+    )).toBeInTheDocument();
+    expect(screen.queryByText('This page refreshes automatically every 30 seconds.')).toBeNull();
+    expect(screen.queryByText(/device is offline/i)).toBeNull();
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Check again' }));
+    expect(refetchSpy).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('button', { name: 'Connect Tesla account' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: "What you'll unlock" }).children).toHaveLength(4);
+  });
+
+  it('announces the initial status outcome once without hiding sections or narrating polling', () => {
+    mockStatus = undefined;
+    mockIsLoading = true;
+    mockIsFetching = true;
+    mockFetchStatus = 'fetching';
+    const { rerender } = renderPage();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+
+    mockIsLoading = false;
+    mockIsFetching = false;
+    mockFetchStatus = 'paused';
+    rerender(<OnboardingPage />);
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+
+    mockStatus = status({ tesla_connected: true });
+    mockFetchStatus = 'idle';
+    rerender(<OnboardingPage />);
+    const announcement = screen.getByTestId('announcer-polite');
+    expect(announcement).toHaveTextContent('Setup status loaded');
+    const initialAnnouncement = announcement.textContent;
+
+    mockIsFetching = true;
+    mockFetchStatus = 'fetching';
+    rerender(<OnboardingPage />);
+    mockIsFetching = false;
+    mockFetchStatus = 'idle';
+    mockStatus = status({ tesla_connected: true, vehicle_count: 1 });
+    rerender(<OnboardingPage />);
+    expect(announcement.textContent).toBe(initialAnnouncement);
+    expect(screen.getByTestId('announcer-assertive')).toBeEmptyDOMElement();
+    expect(screen.getByRole('list', { name: 'Onboarding steps' })).toBeInTheDocument();
+  });
+
+  it('does not promise interval polling while the tab is hidden', () => {
+    vi.spyOn(document, 'hidden', 'get').mockReturnValue(true);
+    renderPage();
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('This page refreshes automatically every 30 seconds.')).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Skip for now' })).toBeEnabled();
+  });
+
+  it('announces a failed initial load without announcing successful completion', () => {
+    mockStatus = undefined;
+    mockIsLoading = true;
+    mockIsFetching = true;
+    mockFetchStatus = 'fetching';
+    const { rerender } = renderPage();
+
+    mockIsLoading = false;
+    mockIsFetching = false;
+    mockFetchStatus = 'idle';
+    mockError = new Error('Setup status read unavailable');
+    rerender(<OnboardingPage />);
+
+    expect(screen.getByTestId('announcer-assertive')).toHaveTextContent('Could not refresh Setup status');
+    expect(screen.getByTestId('announcer-polite')).toBeEmptyDOMElement();
+    expect(screen.getByRole('navigation', { name: 'Resources & help' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Check again' })).toBeEnabled();
+    expect(screen.getByRole('list', { name: "What you'll unlock" }).children).toHaveLength(4);
   });
 
   it('keeps failed initial setup explainable and recoverable without removing neighboring sections', () => {

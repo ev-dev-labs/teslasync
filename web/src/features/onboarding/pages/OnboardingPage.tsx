@@ -14,12 +14,14 @@ import {
 import { PageLayout } from '@/components/layout';
 import { PersonaSelect } from '@/components/forms';
 import { GlassPanel, Button, BUTTON_BASE, BUTTON_VARIANTS, IconBox, SectionTitle, Text } from '@/components/ui';
-import { VisuallyHidden } from '@/components/a11y';
+import { AnnouncerRegion, VisuallyHidden } from '@/components/a11y';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { deriveDataState } from '@/api/dataState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDocumentHidden } from '@/hooks/useRefreshPolicy';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 import { cn } from '@/lib/cn';
@@ -56,9 +58,15 @@ export default function OnboardingPage() {
   const onboardingQuery = useOnboardingStatus();
   const { data, isLoading, refetch, isFetching } = onboardingQuery;
   const onboardingState = deriveDataState(onboardingQuery);
+  useLoadAnnouncement({
+    label: t('onboarding.status.sectionLabel', 'Setup status'),
+    isLoading: !onboardingState.hasData && !onboardingState.fatalError,
+    isError: Boolean(onboardingState.fatalError),
+  });
   const { skip } = useOnboardingSkip();
   const { preferences, updatePreferences } = useProductPreferences();
   const { reduce } = useMotionPreference();
+  const documentHidden = useDocumentHidden();
   const refreshIconClassName = cn(
     'h-4 w-4 motion-reduce:animate-none',
     isFetching && !reduce && 'animate-spin',
@@ -70,6 +78,11 @@ export default function OnboardingPage() {
   const telemetryHealth = data?.telemetry_health ?? 'unknown';
   const setupComplete = data?.setup_complete ?? data?.is_complete ?? false;
   const isComplete = setupComplete;
+  const pausedTitle = t('dataSources.status.paused', 'Refresh paused');
+  const pausedRetainedMessage = t(
+    'maintenance.sources.refreshBlocked',
+    'Refresh is paused. Retained data remains available.',
+  );
 
   const steps = useMemo<OnboardingStep[]>(
     () => [
@@ -80,7 +93,7 @@ export default function OnboardingPage() {
           'onboarding.tesla.desc',
           'TeslaSync needs Fleet API access to read vehicle data. Sign in with your Tesla account to authorize the connection.',
         ),
-        done: setupComplete || teslaConnected,
+        done: onboardingState.hasData ? setupComplete || teslaConnected : null,
         cta: {
           label: t('onboarding.tesla.cta', 'Connect Tesla account'),
           to: '/tesla-account',
@@ -93,7 +106,8 @@ export default function OnboardingPage() {
           'onboarding.vehicle.desc',
           'Vehicles linked to your Tesla account will sync automatically. This usually takes less than a minute after connecting.',
         ),
-        done: setupComplete || vehicleCount > 0,
+        done: onboardingState.hasData ? setupComplete || vehicleCount > 0 : null,
+        busy: isFetching,
         cta: {
           label: isFetching
             ? t('onboarding.vehicle.checking', 'Checking…')
@@ -111,14 +125,14 @@ export default function OnboardingPage() {
           'onboarding.telemetry.desc',
           'Once your vehicle uploads its first signal batch (usually within 5 minutes of driving), live data will appear across the app. See the Fleet Telemetry setup guide if it does not arrive.',
         ),
-        done: setupComplete || dataFlowing,
+        done: onboardingState.hasData ? setupComplete || dataFlowing : null,
         cta: {
           label: t('onboarding.telemetry.docs', 'Setup guide'),
           href: '/docs/fleet-telemetry-setup',
         },
       },
     ],
-    [setupComplete, teslaConnected, vehicleCount, dataFlowing, refetch, isFetching, t],
+    [onboardingState.hasData, setupComplete, teslaConnected, vehicleCount, dataFlowing, refetch, isFetching, t],
   );
 
   const renderCta = (step: OnboardingStep): ReactNode => {
@@ -189,6 +203,8 @@ export default function OnboardingPage() {
       data-testid="onboarding-scroll-container"
       className="h-screen h-dvh overflow-y-auto overscroll-y-contain bg-[var(--bg)] px-3 py-4 pb-safe [touch-action:pan-y] sm:px-5 sm:py-6 lg:px-8 lg:py-8"
     >
+      {/* This standalone route does not mount Layout's announcer. */}
+      <AnnouncerRegion />
       <PageLayout
         title={t('onboarding.welcome', 'Welcome to TeslaSync')}
         subtitle={
@@ -201,8 +217,14 @@ export default function OnboardingPage() {
         }
         className="w-full min-w-0 pb-8 sm:pb-10"
         busy={isLoading || isFetching}
+        announce={false}
       >
-        <StaleRefreshWarning state={onboardingState} hideRetry />
+        <StaleRefreshWarning
+          state={onboardingState}
+          title={onboardingState.isRefreshBlocked ? pausedTitle : undefined}
+          message={onboardingState.isRefreshBlocked ? pausedRetainedMessage : undefined}
+          hideRetry
+        />
         {/* 1 — Existing setup-status summary; the checklist remains interactive below. */}
         <FadeIn>
           <OnboardingSetupStatusBand
@@ -283,7 +305,9 @@ export default function OnboardingPage() {
               {!onboardingState.hasData && (
                 <AlertBanner
                   variant="info"
-                  title={t('onboarding.brief.notReceived', 'Setup status not yet received')}
+                  title={onboardingState.isRefreshBlocked
+                    ? pausedTitle
+                    : t('onboarding.brief.notReceived', 'Setup status not yet received')}
                   className="mb-5"
                   data-testid="onboarding-status-pending"
                   data-refresh-blocked={onboardingState.isRefreshBlocked || undefined}
@@ -316,7 +340,9 @@ export default function OnboardingPage() {
               <Text variant="bodySm" as="p">
                 {isComplete
                   ? t('onboarding.ready', 'You are all set — your dashboard is ready.')
-                  : t('onboarding.polling', 'This page refreshes automatically every 30 seconds.')}
+                  : onboardingState.isRefreshBlocked || documentHidden
+                    ? pausedTitle
+                    : t('onboarding.polling', 'This page refreshes automatically every 30 seconds.')}
               </Text>
               <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap">
                 <Button
