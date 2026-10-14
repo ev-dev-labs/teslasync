@@ -48,6 +48,13 @@
     "errorPrefix": "Error: {{msg}}"
   },
   "commandReliability": {
+    "grade": {
+      "excellent": "Excellent",
+      "flaky": "Flaky",
+      "good": "Good",
+      "unproven": "Not enough attempts",
+      "unreliable": "Unreliable"
+    },
     "summary": {
       "scope": "Selected vehicle command history, with existing success and retry-intent definitions."
     },
@@ -869,7 +876,7 @@
       "future": "Future"
     },
     "phaseDesc": {
-      "done": "Shipped and available in your deployment today.",
+      "done": "Marked completed in the bundled roadmap; availability in this deployment is not verified.",
       "current": "Areas receiving attention; priorities may change.",
       "next": "Potential next priorities, not scheduled commitments.",
       "future": "Ideas to evaluate, not promised releases."
@@ -2108,6 +2115,9 @@
         "unlock": "Unlock",
         "valet_off": "Valet off"
       },
+      "emptyTitle": "No commands sent yet",
+      "loading": "Loading command activity",
+      "title": "Recent command activity",
       "unknownCommand": "{{command}}"
     },
     "alerts": {
