@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, expectTypeOf, it, onTestFinished, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -53,7 +53,10 @@ function setup() {
   return { client, wrapper: Wrapper };
 }
 
-beforeEach(() => requestMock.mockReset());
+beforeEach(() => {
+  // Returning the mock registers it as a Vitest teardown callback.
+  requestMock.mockReset();
+});
 afterEach(() => {
   cleanup();
   clients.forEach(client => client.clear());
@@ -248,8 +251,19 @@ describe('GDPR manifest contract', () => {
     const { result } = renderHook(() => useGDPRExport(manifest.id), setup());
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBe(error);
+    expect(result.current.error).toMatchObject({ status, code });
     expect(result.current.data).toBeUndefined();
     expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.fetchStatus).toBe('idle');
+    for (const attempt of [1, 2]) {
+      expect(requestMock).toHaveBeenNthCalledWith(attempt, '/admin/gdpr/exports/artifact-a', {
+        signal: expect.any(AbortSignal),
+      });
+    }
+    onTestFinished(() => {
+      expect(requestMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('retains metadata after refresh failure and recovers on explicit refetch', async () => {
