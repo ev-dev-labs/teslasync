@@ -9,11 +9,12 @@ import {
 } from '@/components/charts';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { cn } from '@/lib/cn';
-import type { DigestMetrics, AlertPieEntry } from '../weekly-digest/types';
+import type { AlertPieEntry } from '../weekly-digest/types';
+import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
 import type { StatPeriod } from '@/lib/metric-reference';
 
 interface AlertsPanelProps {
-  metrics: DigestMetrics;
+  metrics: WeeklyDigestMetrics;
   period: StatPeriod;
   alertPieData: AlertPieEntry[];
   isLoading?: boolean;

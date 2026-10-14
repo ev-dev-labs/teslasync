@@ -7,13 +7,16 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { DigestSummary } from '../weekly-digest-modernization/DigestSummary';
+import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
 import { DigestTrend } from '../weekly-digest-modernization/DigestTrend';
 import { trendFor } from '../weekly-digest/helpers';
 import { formatEfficiencyFromSI } from '../weekly-digest/display';
 
 export function DigestOperationalSummary({
   metrics, period, funFact, comparison = false, isLoading, isError, error, onRetry, driveAvailable, chargingAvailable,
-}: ComponentProps<typeof DigestSummary> & { driveAvailable?: boolean; chargingAvailable?: boolean }) {
+}: Omit<ComponentProps<typeof DigestSummary>, 'metrics'> & {
+  metrics: WeeklyDigestMetrics; driveAvailable?: boolean; chargingAvailable?: boolean;
+}) {
   const { t } = useTranslation();
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -80,7 +83,9 @@ export function DigestOperationalSummary({
         ? t('analytics.weeklyDigest.brief.retained', 'Retained or partial weekly records')
         : t('analytics.weeklyDigest.brief.unavailable', 'Weekly sources unavailable')
         : isLoading ? t('analytics.weeklyDigest.brief.loading', 'Loading weekly records')
-          : t('analytics.weeklyDigest.brief.available', 'Returned weekly records')}
+          : drivesKnown || chargingKnown
+            ? t('analytics.weeklyDigest.brief.available', 'Returned weekly records')
+            : t('analytics.weeklyDigest.brief.unavailable', 'Weekly sources unavailable')}
       statusTone={isError ? 'warning' : 'neutral'} metrics={operationalMetrics} loading={Boolean(isLoading && !drivesKnown && !chargingKnown)}
       scope={period.label}
       freshness={t('analytics.weeklyDigest.modernization.comparisonPeriod', 'Compared with previous week')}

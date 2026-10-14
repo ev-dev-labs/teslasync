@@ -14,12 +14,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import type { StatPeriod } from '@/lib/metric-reference';
-import type { DigestMetrics, DailyEnergyEntry } from '../weekly-digest/types';
+import type { DailyEnergyEntry } from '../weekly-digest/types';
+import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
 import { pctChange } from '../weekly-digest/helpers';
 import { presentedMetric } from './presentation';
 
 interface ChargingPanelProps {
-  metrics: DigestMetrics;
+  metrics: WeeklyDigestMetrics;
   period: StatPeriod;
   dailyEnergyData: DailyEnergyEntry[];
   isLoading?: boolean;
@@ -66,7 +67,7 @@ export function ChargingPanel({
           presentedMetric(
             'energy-added',
             t('analytics.weeklyDigest.totalEnergyAdded', 'Total energy added'),
-            formatEnergy(metrics.chargeEnergyAddedWh ?? 0),
+            metrics.chargeEnergyAddedWh != null ? formatEnergy(metrics.chargeEnergyAddedWh) : '—',
             <Zap className="h-4 w-4" aria-hidden="true" />,
           ),
           presentedMetric(
@@ -86,11 +87,11 @@ export function ChargingPanel({
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-4 rounded-lg bg-[var(--surface-2)] px-4 py-3">
         <Caption>{t('analytics.weeklyDigest.energyVsLastWeek', 'Energy vs. last week')}</Caption>
         <Badge
-          variant={(metrics.chargeEnergyAddedWh ?? 0) >= (metrics.prevChargeEnergyWh ?? 0)
-            ? 'success' : 'warning'}
+          variant={metrics.chargeEnergyAddedWh == null || metrics.prevChargeEnergyWh == null
+            ? 'neutral' : metrics.chargeEnergyAddedWh >= metrics.prevChargeEnergyWh ? 'success' : 'warning'}
           size="sm"
         >
-          {(metrics.prevChargeEnergyWh ?? 0) > 0
+          {metrics.chargeEnergyAddedWh != null && metrics.prevChargeEnergyWh != null && metrics.prevChargeEnergyWh > 0
             ? `${fmtNumber(pctChange(
                 metrics.chargeEnergyAddedWh ?? 0,
                 metrics.prevChargeEnergyWh ?? 0,

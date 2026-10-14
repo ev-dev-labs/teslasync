@@ -15,13 +15,14 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatDate } from '@/lib/dateFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { StatPeriod } from '@/lib/metric-reference';
-import type { DigestMetrics, DailyDistanceEntry } from '../weekly-digest/types';
+import type { DailyDistanceEntry } from '../weekly-digest/types';
+import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
 import { formatEfficiencyFromSI } from '../weekly-digest/display';
 import { pctChange } from '../weekly-digest/helpers';
 import { presentedMetric } from './presentation';
 
 interface DrivingPanelProps {
-  metrics: DigestMetrics;
+  metrics: WeeklyDigestMetrics;
   period: StatPeriod;
   dailyDistanceData: DailyDistanceEntry[];
   isLoading?: boolean;

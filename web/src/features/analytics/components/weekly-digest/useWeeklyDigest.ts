@@ -21,13 +21,30 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const ANALYTICS_WINDOW_LIMIT = 1000;
 
-function averagePresent(values: Array<number | null | undefined>): number {
+export type WeeklyDigestMetrics = Omit<DigestMetrics,
+  'batteryStart' | 'batteryEnd' | 'chargeEnergyAddedWh' | 'prevChargeEnergyWh'
+> & {
+  batteryStart: number | null;
+  batteryEnd: number | null;
+  batteryGain?: number | null;
+  chargeEnergyAddedWh: number | null;
+  prevChargeEnergyWh: number | null;
+};
+
+function averagePresent(values: Array<number | null | undefined>): number | null {
   const present = values.filter(
     (value): value is number => typeof value === 'number' && Number.isFinite(value),
   );
   return present.length > 0
     ? present.reduce((sum, value) => sum + value, 0) / present.length
-    : 0;
+    : null;
+}
+
+function chargingEnergy(sessions: readonly ChargingSession[], available: boolean): number | null {
+  if (!available) return null;
+  if (sessions.some(session => session.total_energy_added_wh == null
+    || !Number.isFinite(session.total_energy_added_wh))) return null;
+  return sessions.reduce((sum, session) => sum + (session.total_energy_added_wh ?? 0), 0);
 }
 
 function efficiencyWhPerM(drives: readonly Drive[]): number {
@@ -141,7 +158,11 @@ export function useWeeklyDigest() {
     refetch: refetchCharging,
   } = chargingQuery;
 
-  const alertsQuery = useAlertHistory(ANALYTICS_WINDOW_LIMIT);
+  const alertsQuery = useAlertHistory(ANALYTICS_WINDOW_LIMIT, {
+    vehicle_id: selectedVehicleNumber ?? undefined,
+    from: queryStart,
+    to: queryEndExclusive,
+  }, selectedVehicleNumber != null);
   const {
     data: alerts,
     isLoading: alertsLoading,
@@ -218,13 +239,17 @@ export function useWeeklyDigest() {
       (alert) =>
         isInRange(alert.created_at, weekStart, weekEnd)
         && selectedVehicleNumber !== null
-        && (alert.vehicle_id === selectedVehicleNumber || alert.vehicle_id === 0),
+        && (alert.all_vehicles === true
+          || (alert.vehicle_ids?.length
+            ? alert.vehicle_ids.includes(selectedVehicleNumber)
+            : alert.vehicle_id === selectedVehicleNumber
+              || (alert.all_vehicles !== false && alert.vehicle_id === 0))),
     ),
     [alerts, selectedVehicleNumber, weekStart, weekEnd],
   );
 
   /* ── Aggregated metrics ── */
-  const metrics: DigestMetrics = useMemo(() => {
+  const metrics: WeeklyDigestMetrics = useMemo(() => {
     // safeNumber() coerces null / undefined / NaN / ±Infinity to 0 so a single
     // malformed API row can't poison an aggregate into NaN (the fields are typed
     // `number`, but partial telemetry rows can arrive with missing values).
@@ -267,14 +292,8 @@ export function useWeeklyDigest() {
             safeNumber(drive.distanceM) > safeNumber(best.distanceM) ? drive : best,
           )
         : undefined;
-    const chargeEnergyAddedWh = weekCharging.reduce(
-      (sum, session) => sum + safeNumber(session.total_energy_added_wh),
-      0,
-    );
-    const prevChargeEnergyWh = prevWeekCharging.reduce(
-      (sum, session) => sum + safeNumber(session.total_energy_added_wh),
-      0,
-    );
+    const chargeEnergyAddedWh = chargingEnergy(weekCharging, chargingSessions != null);
+    const prevChargeEnergyWh = chargingEnergy(prevWeekCharging, chargingSessions != null);
     const chargingPowersW = weekCharging
       .map((session) => chargingPowerW(session))
       .filter((powerW) => powerW > 0);
@@ -283,6 +302,11 @@ export function useWeeklyDigest() {
       : 0;
     const batteryStart = averagePresent(weekCharging.map((session) => session.start_soc_pct));
     const batteryEnd = averagePresent(weekCharging.map((session) => session.end_soc_pct));
+    const batteryGain = averagePresent(weekCharging.map(session =>
+      session.start_soc_pct != null && Number.isFinite(session.start_soc_pct)
+        && session.end_soc_pct != null && Number.isFinite(session.end_soc_pct)
+        ? session.end_soc_pct - session.start_soc_pct : null,
+    ));
 
     const alertsByType: Record<string, number> = {};
     for (const a of weekAlerts) {
@@ -310,10 +334,11 @@ export function useWeeklyDigest() {
       chargingSessionCount: weekCharging.length,
       batteryStart,
       batteryEnd,
+      batteryGain,
       alertsByType,
       alertTotal: weekAlerts.length,
     };
-  }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts, displayPrecision, displayLocale]);
+  }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts, chargingSessions, displayPrecision, displayLocale]);
 
   /* ── Daily distance chart data ── */
   const dailyDistanceData: DailyDistanceEntry[] = useMemo(() => {

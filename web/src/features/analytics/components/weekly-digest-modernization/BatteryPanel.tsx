@@ -6,7 +6,8 @@ import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { StatPeriod } from '@/lib/metric-reference';
-import type { DigestMetrics } from '../weekly-digest/types';
+import type { WeeklyDigestMetrics } from '../weekly-digest/useWeeklyDigest';
+import { GlassPanel, Text } from '@/components/ui';
 import { BatteryPill } from '../weekly-digest';
 import { presentedMetric } from './presentation';
 
@@ -14,7 +15,7 @@ import { presentedMetric } from './presentation';
 const EST_RANGE_M_PER_WH = 5.5;
 
 interface BatteryPanelProps {
-  metrics: DigestMetrics;
+  metrics: WeeklyDigestMetrics;
   period: StatPeriod;
   isLoading?: boolean;
   isError?: boolean;
@@ -34,6 +35,9 @@ export function BatteryPanel({
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { formatDistance } = useUnits();
   const hasData = (metrics.chargingSessionCount ?? 0) > 0;
+  const batteryGain = metrics.batteryGain !== undefined ? metrics.batteryGain
+    : metrics.batteryEnd != null && metrics.batteryStart != null
+      ? metrics.batteryEnd - metrics.batteryStart : null;
   return (
     <LayoutCard title={t('analytics.weeklyDigest.batteryHealth', 'Battery health')}>
       {isLoading ? (
@@ -52,16 +56,22 @@ export function BatteryPanel({
           {/* Keep the specialist battery gauge's rounding, clamping and color.
               Its original average measurements are not new SOC snapshots. */}
           <div className="flex min-w-0 flex-wrap gap-3">
-            <BatteryPill
+            {metrics.batteryStart == null ? <GlassPanel className="w-full px-4 py-3">
+              <Text color="secondary">{t('analytics.weeklyDigest.avgBatteryStart', 'Avg battery at charge start')}</Text>
+              <Text>—</Text>
+            </GlassPanel> : <BatteryPill
               className="w-full min-w-0"
-              level={Math.round(metrics.batteryStart ?? 0)}
+              level={Math.round(metrics.batteryStart)}
               label={t('analytics.weeklyDigest.avgBatteryStart', 'Avg battery at charge start')}
-            />
-            <BatteryPill
+            />}
+            {metrics.batteryEnd == null ? <GlassPanel className="w-full px-4 py-3">
+              <Text color="secondary">{t('analytics.weeklyDigest.avgBatteryEnd', 'Avg battery at charge end')}</Text>
+              <Text>—</Text>
+            </GlassPanel> : <BatteryPill
               className="w-full min-w-0"
-              level={Math.round(metrics.batteryEnd ?? 0)}
+              level={Math.round(metrics.batteryEnd)}
               label={t('analytics.weeklyDigest.avgBatteryEnd', 'Avg battery at charge end')}
-            />
+            />}
           </div>
           <StatGroup
             period={period}
@@ -69,7 +79,7 @@ export function BatteryPanel({
               presentedMetric(
                 'avg-charge-gain',
                 t('analytics.weeklyDigest.avgChargeGain', 'Avg charge gain'),
-                `${fmtNumber((metrics.batteryEnd ?? 0) - (metrics.batteryStart ?? 0))}%`,
+                batteryGain != null ? `${fmtNumber(batteryGain)}%` : '—',
                 <TrendingUp className="h-4 w-4" aria-hidden="true" />,
               ),
               presentedMetric(
@@ -81,7 +91,8 @@ export function BatteryPanel({
               presentedMetric(
                 'estimated-range-added',
                 t('analytics.weeklyDigest.estRangeAdded', 'Est. range added'),
-                formatDistance((metrics.chargeEnergyAddedWh ?? 0) * EST_RANGE_M_PER_WH),
+                metrics.chargeEnergyAddedWh != null
+                  ? formatDistance(metrics.chargeEnergyAddedWh * EST_RANGE_M_PER_WH) : '—',
                 <MapPin className="h-4 w-4" aria-hidden="true" />,
               ),
             ]}
