@@ -21,9 +21,18 @@ interface UseCostAnalysisDataParams {
 }
 
 interface UseCostAnalysisDataResult {
+  currencySummary: {
+    currency: string | null;
+    status: 'empty' | 'single' | 'mixed' | 'unknown';
+    hasUnknownCurrency: boolean;
+    unknownCostCount: number;
+    totalsByCurrency: { currency: string; cost: number }[];
+    recordedAmounts: { sessionId: number; amount: number | null; currency: string | null }[];
+  };
+  operationalTotals: { count: number; energyKwh: number; durationMinutes: number; distanceM: number };
   coreStats: CoreStats | null;
   monthlyData: MonthlyBucket[];
-  costPerKwhTrend: { date: string; costPerKwh: number }[];
+  costPerKwhTrend: { date: string; costPerKwh: number; currency: string }[];
   chargerTypeData: ChargerTypeData[];
   hourlyData: HourBucket[];
   touInsights: TouInsights | null;
@@ -32,12 +41,52 @@ interface UseCostAnalysisDataResult {
 }
 
 export function useCostAnalysisData({
-  sessions,
+  sessions: sourceSessions,
   gasPrice,
   mpg,
   electricityRate,
   toDistanceDisplay,
 }: UseCostAnalysisDataParams): UseCostAnalysisDataResult {
+  const currencySummary = useMemo<UseCostAnalysisDataResult['currencySummary']>(() => {
+    const supportedCurrencies = new Set((Intl as typeof Intl & {
+      supportedValuesOf(key: 'currency'): string[];
+    }).supportedValuesOf('currency'));
+    const recordedAmounts = (sourceSessions ?? []).map(session => ({
+      sessionId: session.id,
+      amount: session.cost_decimal != null && Number.isFinite(session.cost_decimal)
+        ? session.cost_decimal : null,
+      currency: supportedCurrencies.has(session.cost_currency?.trim().toUpperCase() ?? '')
+        ? session.cost_currency!.trim().toUpperCase() : null,
+    }));
+    const currencies = new Set(recordedAmounts.flatMap(record => record.currency ? [record.currency] : []));
+    const hasUnknownCurrency = recordedAmounts.some(record => record.currency == null);
+    const status = recordedAmounts.length === 0 ? 'empty'
+      : currencies.size > 1 ? 'mixed'
+      : hasUnknownCurrency ? 'unknown' : 'single';
+    const totals = new Map<string, number>();
+    for (const record of recordedAmounts) {
+      if (record.currency != null && record.amount != null) {
+        totals.set(record.currency, (totals.get(record.currency) ?? 0) + record.amount);
+      }
+    }
+    return {
+      currency: status === 'single' ? recordedAmounts[0].currency : null,
+      status,
+      hasUnknownCurrency,
+      unknownCostCount: recordedAmounts.filter(record => record.amount == null).length,
+      totalsByCurrency: [...totals].map(([currency, cost]) => ({ currency, cost })),
+      recordedAmounts,
+    };
+  }, [sourceSessions]);
+  const operationalTotals = useMemo(() => ({
+    count: sourceSessions?.length ?? 0,
+    energyKwh: convertEnergyFromSI((sourceSessions ?? []).reduce((sum, session) => sum + (session.total_energy_added_wh ?? 0), 0), 'kWh'),
+    durationMinutes: (sourceSessions ?? []).reduce((sum, session) => sum + durationMinutes(session.started_at, session.ended_at), 0),
+    distanceM: (sourceSessions ?? []).reduce((sum, session) => sum + (distanceAddedM(session) ?? 0), 0),
+  }), [sourceSessions]);
+  // Existing views and calculator seeds are USD-only. Other denominations
+  // remain in currencySummary, never relabelled or converted into USD.
+  const sessions = currencySummary.currency === 'USD' ? sourceSessions : undefined;
   const coreStats = useMemo(() => {
     if (!sessions || sessions.length === 0) return null;
     const totalCost = sessions.reduce((s, c) => s + (c.cost_decimal ?? 0), 0);
@@ -107,8 +156,9 @@ export function useCostAnalysisData({
       .map((s) => ({
         date: formatDateShort(s.started_at),
         costPerKwh: (s.cost_decimal ?? 0) / ((s.total_energy_added_wh ?? 0) / 1000),
+        currency: currencySummary.currency!,
       }));
-  }, [sessions]);
+  }, [sessions, currencySummary.currency]);
 
   const chargerTypeData = useMemo<ChargerTypeData[]>(() => {
     if (!sessions || sessions.length === 0) return [];
@@ -228,6 +278,7 @@ export function useCostAnalysisData({
   }, [sessions, coreStats]);
 
   return {
+    currencySummary, operationalTotals,
     coreStats, monthlyData, costPerKwhTrend, chargerTypeData,
     hourlyData, touInsights, gasComparison, lifetimeMetrics,
   };

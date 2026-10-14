@@ -155,6 +155,88 @@ describe('useCostAnalysisData — empty & undefined inputs', () => {
   });
 });
 
+describe('useCostAnalysisData — denomination', () => {
+  it('retains a normalized denomination and the existing populated USD results', () => {
+    const result = render({
+      sessions: [makeSession({ cost_currency: ' usd ', cost_decimal: 5 }), makeSession({ cost_decimal: -2 })],
+    }).current;
+    expect(result.currencySummary).toMatchObject({
+      currency: 'USD', status: 'single', hasUnknownCurrency: false, unknownCostCount: 0,
+      totalsByCurrency: [{ currency: 'USD', cost: 3 }],
+    });
+    expect(result.coreStats?.totalCost).toBe(3);
+    expect(result.costPerKwhTrend.map(point => point.currency)).toEqual(['USD', 'USD']);
+  });
+
+  it('never sums unlike denominations or compares their rates, while retaining operational totals', () => {
+    const result = render({
+      sessions: [
+        makeSession({ id: 1, cost_currency: 'USD', cost_decimal: 5 }),
+        makeSession({ id: 2, cost_currency: ' eur ', cost_decimal: -2 }),
+      ],
+    }).current;
+    expect(result.currencySummary).toMatchObject({
+      currency: null, status: 'mixed', hasUnknownCurrency: false,
+      totalsByCurrency: [{ currency: 'USD', cost: 5 }, { currency: 'EUR', cost: -2 }],
+      recordedAmounts: [
+        { sessionId: 1, amount: 5, currency: 'USD' },
+        { sessionId: 2, amount: -2, currency: 'EUR' },
+      ],
+    });
+    expect(result.operationalTotals).toEqual({ count: 2, energyKwh: 20, durationMinutes: 120, distanceM: 0 });
+    expect(result.coreStats).toBeNull();
+    expect(result.gasComparison).toBeNull();
+    expect(result.lifetimeMetrics).toBeNull();
+    expect(result.touInsights).toBeNull();
+    expect(result.monthlyData).toEqual([]);
+    expect(result.chargerTypeData).toEqual([]);
+    expect(result.hourlyData).toEqual([]);
+    expect(result.costPerKwhTrend).toEqual([]);
+  });
+
+  it.each([null, '', '   ', 'XXX', 'invalid'])('does not infer a denomination for %s, even for zero cost', cost_currency => {
+    const result = render({
+      sessions: [makeSession({ cost_currency, cost_decimal: 0 })],
+    }).current;
+    expect(result.currencySummary).toMatchObject({
+      currency: null, status: 'unknown', hasUnknownCurrency: true,
+      totalsByCurrency: [], recordedAmounts: [{ sessionId: 1, amount: 0, currency: null }],
+    });
+    expect(result.coreStats).toBeNull();
+    expect(result.operationalTotals.energyKwh).toBe(10);
+  });
+
+  it('retains known denomination totals without assuming the currency of other recorded amounts', () => {
+    const result = render({
+      sessions: [makeSession({ cost_decimal: 5 }), makeSession({ id: 2, cost_currency: null, cost_decimal: 7 })],
+    }).current;
+    expect(result.currencySummary.status).toBe('unknown');
+    expect(result.currencySummary.totalsByCurrency).toEqual([{ currency: 'USD', cost: 5 }]);
+    expect(result.currencySummary.recordedAmounts[1]).toEqual({ sessionId: 2, amount: 7, currency: null });
+    expect(result.coreStats).toBeNull();
+  });
+
+  it('retains EUR amounts without inventing an exchange rate or comparing against USD calculator seeds', () => {
+    const result = render({ sessions: [makeSession({ cost_currency: 'EUR', cost_decimal: 5 })] }).current;
+    expect(result.currencySummary.currency).toBe('EUR');
+    expect(result.currencySummary.status).toBe('single');
+    expect(result.currencySummary.totalsByCurrency).toEqual([{ currency: 'EUR', cost: 5 }]);
+    expect(result.coreStats).toBeNull();
+    expect(result.gasComparison).toBeNull();
+    expect(result.monthlyData).toEqual([]);
+    expect(result.operationalTotals.count).toBe(1);
+  });
+
+  it('flags missing amounts as partial without counting them as zero-cost observations', () => {
+    const result = render({ sessions: [makeSession({ cost_decimal: null }), makeSession({ id: 2 })] }).current;
+    expect(result.currencySummary.unknownCostCount).toBe(1);
+    expect(result.currencySummary.recordedAmounts[0].amount).toBeNull();
+    expect(result.currencySummary.totalsByCurrency).toEqual([{ currency: 'USD', cost: 5 }]);
+    expect(result.coreStats?.totalCost).toBe(5);
+    expect(result.lifetimeMetrics?.freeCount).toBe(0);
+  });
+});
+
 describe('useCostAnalysisData — coreStats', () => {
   it('aggregates totals and derives averages, savings and CO2', () => {
     const stats = render({ sessions: THREE }).current.coreStats;
