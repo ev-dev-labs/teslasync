@@ -1,0 +1,2277 @@
+{
+  "item": "phase6-qa-telemetry-live-signal-monitor",
+  "pendingContinuation": {
+    "mode": "original-undisposed-finding-and-candidate-queue-mapping-only",
+    "status": "DONE",
+    "originalContractDecision": "NO_CHANGE_NEEDED: original source-only QA contract already completed. Pending queue status records retained delivery awaiting intake, not an incomplete source audit. Only the previously undisposed five findings and six conditional candidates were mapped; no audit, source pass or native acceptance repeated.",
+    "originalReport": {
+      "sha256": "07bc5171a2fe1b77460185136aaa5ea7ea66bfe97b6aee9566104c65d65a1ff0",
+      "bytes": 115167,
+      "status": "DONE",
+      "createdAt": "2026-10-14T02:52:41.472512+00:00",
+      "evidenceTreatment": "All original fields, citations, timestamps, failures, external drift and NOTRUN evidence remain unchanged below. Existing confirmed means confirmed by the original source-only audit, not freshly revalidated production behavior."
+    },
+    "queueSnapshot": {
+      "file": "migration-queue.md",
+      "readAt": "2026-10-14T04:59:35.630052+00:00",
+      "sha256": "c8d3337e02001d790c3b5ed5129c5a148c03180b6220fb0b50db042c643875a5",
+      "line": 323,
+      "rowSha256": "5dc33112174300f78fab9646f4818fd19fa64da6eb2019e1df56d69403822ff7",
+      "row": "| [ ] | 6 | phase6-qa-telemetry-live-signal-monitor | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-telemetry-live-signal-monitor.json; web\\logs\\phase6-qa-telemetry-live-signal-monitor.log | phase5-page-telemetry-live-signal-monitor | 1 | reserved02:37:46.371Z; actor pending | - | LiveSignalMonitorPage/direct supports; no subscriptions/real signals/vehicle access.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot. |",
+      "method": "Read canonical queue rows without line-length exclusions; compare original owner files and exact objectives, then relevant existing shared/caller roots. Broad history keyword matches are not duplicate fixes. Queue remained read-only; status is not a lifecycle census.",
+      "externalDrift": "Queue changed between bounded reads (41721db11d3b206460319ef37b1b9d819061b16a072966bd6a3609febb9f43f5 to this snapshot). Exact target row remained the same. Snapshot is not a guarantee against later parent updates."
+    },
+    "confirmedMapping": [
+      {
+        "id": "LSM-F01",
+        "needId": "LSM-N01",
+        "disposition": "UNREPRESENTED_ORIGINAL_CONFIRMED_NEED",
+        "requirement": "Distinguish frame/receipt time from verified observation time; tail must not promote receipt time into observation freshness. Preserve raw time/value and unknown observation age.",
+        "evidence": "Original confirmedFindings LSM-F01: useLiveSignalStream.ts:182,253 and LiveSignalTail.tsx:126. Inherited citations only; no hook or producer inspection performed in continuation.",
+        "duplicateDecision": "Completed page/tail migrations preserve implementation but do not dispose of this timestamp-provenance objective. No exact queue root or caller repair found.",
+        "ownerScope": "Original LSM-N01 hook/type/test root followed by separately claimed tail caller/test; continuation acquires none of these claims."
+      },
+      {
+        "id": "LSM-F02",
+        "needId": "LSM-N02",
+        "disposition": "UNREPRESENTED_ORIGINAL_CONFIRMED_NEED",
+        "requirement": "Expose actual connecting/retrying/terminal transport state and show truthful page feedback; preserve terminal authentication no-retry behavior.",
+        "evidence": "Original confirmedFindings LSM-F02: LiveSignalMonitorPage.tsx:135, sseManager.ts:153,164 and eventStream.ts:114. No transport/auth/network operation or source revalidation.",
+        "duplicateDecision": "No exact singleton/hook terminal-recovery objective or separate live-monitor caller correction found. Other request/administrative transport scopes are not this SSE state objective.",
+        "ownerScope": "Original LSM-N02 singleton/hook root and separately claimed page/test caller; existing transport tests require explicit parent ownership."
+      },
+      {
+        "id": "LSM-F03",
+        "needId": "LSM-N03",
+        "disposition": "UNREPRESENTED_ORIGINAL_CONFIRMED_NEED",
+        "requirement": "Adopt existing useDateFormat in tail desktop/mobile/detail and throughput axis/tooltip, retaining reactive preference dependencies and unchanged raw UTC.",
+        "evidence": "Original confirmedFindings LSM-F03: LiveSignalTail.tsx:96,223 and LiveThroughputPanel.tsx:42; existing useDateFormat.ts:81,96.",
+        "duplicateDecision": "phase3-date-format [x] at snapshot line1455 establishes helper ownership, not missing telemetry consumer adoption. Other page-specific date repairs have different callers.",
+        "ownerScope": "Original LSM-N03 two support components and their named tests; no shared formatter/catalog changes."
+      },
+      {
+        "id": "LSM-F04",
+        "needId": "LSM-N04",
+        "disposition": "UNREPRESENTED_ORIGINAL_CONFIRMED_NEED",
+        "requirement": "Give each arrival-frequency MetricBar a localized accessible name identifying signal and buffered arrival count; retain latest raw value separately and preserve scale/order.",
+        "evidence": "Original confirmedFindings LSM-F04: TopSignalsPanel.tsx:106,107, MetricBar.tsx:59 and TopSignalsPanel.test.tsx:243.",
+        "duplicateDecision": "Completed shared-Badge fixture repair changes palette assertions, not arrival-count accessible names. No exact caller correction found.",
+        "ownerScope": "Original LSM-N04 TopSignalsPanel and named test; catalog need remains conditional, no missing leaf newly asserted."
+      },
+      {
+        "id": "LSM-F05",
+        "needId": "LSM-N05",
+        "disposition": "UNREPRESENTED_ORIGINAL_CONFIRMED_SHARED_NEED",
+        "requirement": "Provide CSS-valid default gradient composition for functional/variable caller colors at MetricBar, preserving gradient/solid API and supplied palette identity.",
+        "evidence": "Original confirmedFindings LSM-F05: MetricBar.tsx:45,87, tokens.ts:399, SignalTypeBreakdown.tsx:89 and TopSignalsPanel.tsx:109. Actual paint remains NOTRUN.",
+        "duplicateDecision": "phase3-metric-bar [x] line1754 is completed generic migration, not exact functional-color repair. phase6-fix-data-quality-semantic-attestation [~] line741 and phase6-fix-disk-forecast-contracts [~] line751 adopt existing fill=solid in other caller files and do not own MetricBar. phase6-vehicle-access-role-palette [x] line2464 similarly corrects its own caller. These are related symptoms/workarounds, not duplicates disposing of the shared gradient or the live-monitor callers.",
+        "ownerScope": "Original LSM-N05 shared MetricBar and its named test; do not redispatch completed generic migration or unrelated solid-fill callers."
+      }
+    ],
+    "conditionalMapping": [
+      {
+        "id": "LSM-C01",
+        "disposition": "UNCERTAINTY_RETAINED_NOT_A_CONFIRMED_FIX",
+        "basis": "Original null-kind source path cited at useLiveSignalStream.ts:68,273 and page:76; accepted absent-kind/producer meaning remains unverified. No exact queue objective found; never silently drop or zero null."
+      },
+      {
+        "id": "LSM-C02",
+        "disposition": "UNCERTAINTY_RETAINED_NOT_A_CONFIRMED_FIX",
+        "basis": "Original TopSignalsPanel.tsx:103 and test:260 explicitly retain empty-string fallback policy. No exact queue objective found; legitimate-empty versus intentionally-missing display needs a domain decision, not a speculative fix."
+      },
+      {
+        "id": "LSM-C03",
+        "disposition": "UNCERTAINTY_RETAINED_NOT_A_CONFIRMED_FIX",
+        "basis": "Original hook:176,177 and page:54,71 permit unidentified system frames/name-keyed ranking. No exact queue objective found; producer scope/identity semantics remain unverified and no authorization failure is claimed."
+      },
+      {
+        "id": "LSM-C04",
+        "disposition": "UNCERTAINTY_RETAINED_NOT_A_CONFIRMED_FIX",
+        "basis": "Original hook:250 and tail:81 describe a written malformed numeric-name candidate only. No exact queue objective found; real accepted producer shape/occurrence unverified, no hook/filter execution."
+      },
+      {
+        "id": "LSM-C05",
+        "disposition": "UNCERTAINTY_RETAINED_NOT_A_CONFIRMED_FIX",
+        "basis": "Original hook:137,152 describes possible old displayed-rate carryover on selected-scope change. No exact queue objective found; timer/render order unexercised, Clear remains a different operation."
+      },
+      {
+        "id": "LSM-C06",
+        "disposition": "UNCERTAINTY_RETAINED_NOT_A_CONFIRMED_FIX",
+        "basis": "Original tail:119,224 and breakdown:52 describe technical-type identity versus human-label translation policy. No exact queue objective found; no locale/render evidence or new translation campaign."
+      }
+    ],
+    "nativeDisposition": "Original five nativeCandidates stay NOTRUN; not new queue repair needs or fresh native evidence.",
+    "counts": {
+      "originalConfirmedFindingsMapped": 5,
+      "unrepresentedOriginalConfirmedNeeds": 5,
+      "exactDuplicateFixes": 0,
+      "conditionalCandidatesMapped": 6,
+      "candidatesPromoted": 0,
+      "newFindings": 0,
+      "originalNativeCandidatesNOTRUN": 5,
+      "productionFilesReadThisContinuation": 0,
+      "testsExecutedThisContinuation": 0
+    },
+    "needs": "Parent intake original completed report; if corrections are authorized, reserve only original LSM-N01 through LSM-N05 with exact root/caller separation. Retain C01-C06 as uncertainty and native NOTRUN; no candidate campaign, queue change or production fix performed.",
+    "NOTRUN": [
+      "source audit/pass repetition",
+      "browser/native/locks",
+      "tests/lint/compiler/build",
+      "hooks/backend/producer inspection",
+      "network/telemetry/API/MQTT/socket/vehicle actions",
+      "catalog writes or generation",
+      "Git/queue/server/install/Docker/helpers/nested agents"
+    ],
+    "release": "Both exact artifact paths and synchronous inspection ownership released at final return; no production/catalog/queue claims acquired and no background process launched."
+  },
+  "attempt": 1,
+  "status": "DONE",
+  "createdAt": "2026-10-14T02:52:41.472512+00:00",
+  "reservation": {
+    "reservedAt": "2026-10-14T02:37:46.371Z",
+    "returnBy": "2026-10-14T02:57:46.371Z",
+    "hardBy": "2026-10-14T03:02:46.371Z",
+    "actualCreation": "not exposed; earlier actual creation+20/25 wins; reservation retained conservatively, no reset"
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-telemetry-live-signal-monitor.json",
+    "web/logs/phase6-qa-telemetry-live-signal-monitor.log"
+  ],
+  "page": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+  "routes": [
+    "/live-monitor"
+  ],
+  "objective": {
+    "queue": {
+      "file": "migration-queue.md",
+      "line": 257,
+      "status": "[~]",
+      "item": "phase6-qa-telemetry-live-signal-monitor",
+      "sha256": "b4d9b8177471f9d9a5c517505b364cf5a2ac0bde59875610889e0c7f3f9263af",
+      "row": "| [~] | 6 | phase6-qa-telemetry-live-signal-monitor | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-telemetry-live-signal-monitor.json; web\\logs\\phase6-qa-telemetry-live-signal-monitor.log | phase5-page-telemetry-live-signal-monitor | 1 | reserved02:37:46.371Z; actor pending | - | LiveSignalMonitorPage/direct supports; no subscriptions/real signals/vehicle access. |"
+    },
+    "prerequisite": {
+      "file": "migration-queue.md",
+      "line": 2300,
+      "status": "[x]",
+      "item": "phase5-page-telemetry-live-signal-monitor",
+      "sha256": "1e30268c206a1c47e8418a02f3e95ebbf057c866d5d8b30c81e70d0838b8e1f7",
+      "row": "| [x] | 5 | phase5-page-telemetry-live-signal-monitor | original-page-migration | web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx; web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.test.tsx | - | 1 | 2026-10-12T12:23:58.9737776Z | f5177048139e672beb9df00dc75853595a3e5167 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/live-monitor; audit=docs\\frontend-audits\\audit-page-200.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require parent claim. Read session phase5-page-worker-instructions.txt. Actual worker=5605be51-5de3-4962-a905-26404f141c61; lifecycle=awaitingterminalnotification;doNOTpoll/duplicate/rereadownedsource. INTAKEN exact source/test commit pushed; 10 scoped casesPASS; ESLint/style0;202/187 page,888/851 closure,4 bands preserved; all transport/rate/provenance/native limits explicit. Compiler cadence literal npx tsc --noEmit1481 exit0. Source acceptance only; no fullQA/fresh-live acceptance. |"
+    },
+    "initialArtifactsPresent": false,
+    "duplicate": "Completed Phase0 audit and Phase5 migration are distinct from this unfinished Phase6 read-only QA; no duplicate report exists. Do not redispatch completed migrations or reuse old test passes as fresh evidence."
+  },
+  "instructionsRead": {
+    "orchestrator": "full, raw Get-Content output in log",
+    "designContract": "full 1-2539 in bounded view calls",
+    "mission": "1-250;507-869;850-1060;1055-1081;1320-1530; relevant responsive/states/trust/accessibility/motion/QA/DoD",
+    "inventory": "authority/preservation1-50; target251; G098/G204/G205/G213 source rows",
+    "handoff": "recovery1-47; conventions2186-2250; headings/target ledger searches",
+    "applicable": [
+      ".github/copilot-instructions.md full",
+      ".github/instructions/react-frontend.instructions.md full",
+      ".github/instructions/frontend-si-cutover.instructions.md full",
+      ".github/instructions/unit-conversion.instructions.md full; legacy examples superseded by current SI/design contract",
+      "docs/frontend-worker-conventions.md full",
+      "docs/CONTRIBUTING.md1-190"
+    ],
+    "instructionDiscovery": "No AGENTS.md in ancestor/scoped docs/web/.github search, node_modules excluded. Only owned log for heartbeat; no other path permission.",
+    "limits": "Explicit task prohibits tests/compiler/build/lint/native even where generic contributing examples request them."
+  },
+  "dataSources": [
+    {
+      "name": "useLiveSignalStream",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 52,
+          "excerpt": "const live = useLiveSignalStream({"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 285,
+          "excerpt": "const { connected } = useRealtimeEvents({"
+        }
+      ],
+      "options": {
+        "enabled": true,
+        "vehicleId": "workspace selected ID or null",
+        "chartSignals": [],
+        "tailMax": 500
+      },
+      "transport": "useRealtimeEvents -> singleton sseManager -> createEventStream GET /api/v1/events; no actual subscription",
+      "meaning": "accepted unpaused client tail entries/second, not backend all-time ingestion or vehicle health"
+    },
+    {
+      "name": "useThroughputHistory",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 59,
+          "excerpt": "const throughput = useThroughputHistory(live.tailRate, {"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useThroughputHistory.ts",
+          "line": 43,
+          "excerpt": "{ enabled = true, maxPoints = 60, intervalMs = 1000, resetKey }: UseThroughputHistoryOptions = {},"
+        }
+      ],
+      "meaning": "local1Hz/max60 timer sampling; rolling peak; resetKey same vehicle; enabled during pause/disconnect; no server query"
+    },
+    {
+      "name": "useSelectedVehicle/useVehicles",
+      "meaning": "URL vehicle_id > persisted store > first-known fleet vehicle. request(/vehicles,{signal}), queryKey vehicles, FAST staleTime. Loading/error not exposed by selection result; unresolved null can temporarily mean fleet scope. No API call or backend router validation executed."
+    }
+  ],
+  "subscriptionDeclarations": {
+    "count": "one stream hook on page and one shared hook in stream, not a socket per panel",
+    "events": "vehicle_update data; shared hook registers generic connected/disconnected and other event callbacks",
+    "cleanup": "matching effect unsubscribes, singleton closes with zero total listeners",
+    "auth": "same-origin native EventSource or authenticated fetch at existing transport; cancellation/backoff/no terminal-auth retry preserved",
+    "limitations": "raw unknown event cast at legacy hook, not api/sseClient typed envelope; no new subscription/typed-plumbing rewrite authorized"
+  },
+  "workspace": {
+    "sourceIntent": "/live-monitor absent from RANGE_ENABLED_PATHS and vehicle-disabled lists: header vehicle=true/range=false. Intentional local live window, not missing historical range bounds. No duplicate page picker.",
+    "evidence": [
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "line": 165,
+        "excerpt": "range: RANGE_ENABLED_PATHS.has(normalized),"
+      },
+      {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+        "line": 50,
+        "excerpt": "const { vehicleId } = useSelectedVehicle();"
+      }
+    ],
+    "native": "header/mobile selection and actual rerender persistence NOTRUN"
+  },
+  "SIAndPreferences": {
+    "rawSI": "Hooks/page do not scale physical values; String(value) raw inspection evidence. Backend units not verified; do not infer source units or add legacy converter/compatibility layer. Real zero/false become visible strings.",
+    "numeric": "KPI/mix/top use reactive useNumberFormatting; canonical useOperationalMetrics bridge. Local count0 is measured empty buffer, not a backend observation0.",
+    "dates": "F03 bare formatTime omits saved locale/timezone. No independent 12/24h defect claimed without native/settings evidence.",
+    "persistence": "Stable telemetry:live-signal-tail, compact, default page50; density/columns/page size/export remain shared DataTable pipeline. Theme/palette/font IDs not rewritten."
+  },
+  "confirmedFindings": [
+    {
+      "id": "LSM-F01",
+      "rule": "timestamp-provenance",
+      "contract": "MDC-026/044",
+      "priority": "high",
+      "owner": "telemetry hook/type then tail caller",
+      "detail": "Missing frame timestamp replaced by client current time, copied into rows, rendered as specific-data-point freshness. Receipt time can gain Up to date/just now observation meaning without observation evidence. Supplied frame time also is not proven per-signal observation time.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 182,
+          "excerpt": "const ts = data.timestamp ?? new Date().toISOString();"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 253,
+          "excerpt": "newEntries.push({ id: tailIdRef.current, timestamp: ts, name, value: String(value), type: detectType(value) });"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 126,
+          "excerpt": "render: (entry) => <FreshnessIndicator timestamp={entry.timestamp} size=\"sm\" />,"
+        },
+        {
+          "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+          "line": 39,
+          "excerpt": "fresh: { key: 'freshness.fresh', fallback: 'Up to date' },"
+        }
+      ],
+      "sourceOnlyRepro": "Written shape signals={sample:1}, missing timestamp -> client ISO fallback -> row timestamp -> age<120s freshness. No frame emitted, no JS/React/network executed. Literal dataflow confirmed, producer semantics unknown.",
+      "fix": "Distinguish frame/receipt versus verified observation provenance at existing hook/type owner; render truthful frame/receipt age or unknown observation freshness. Preserve raw time/value, never invent field timestamps.",
+      "needId": "LSM-N01",
+      "dedup": "Same Phase0 concern remains, not a duplicate of completed page/tail migrations."
+    },
+    {
+      "id": "LSM-F02",
+      "rule": "truthful-recovery",
+      "contract": "MDC-026",
+      "priority": "high",
+      "owner": "singleton/hook root then page caller",
+      "detail": "Banner always claims attempting to reconnect for disconnected=false-connected state. Authenticated 401/403 closes transport; manager emits disconnected then returns before scheduling retry. Initial connecting also maps to Disconnected.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 135,
+          "excerpt": "'Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals.',"
+        },
+        {
+          "file": "web/src/lib/sseManager.ts",
+          "line": 153,
+          "excerpt": "const authRejected = getAccessToken() != null && es.readyState === EventSource.CLOSED"
+        },
+        {
+          "file": "web/src/lib/sseManager.ts",
+          "line": 164,
+          "excerpt": "if (authRejected) return"
+        },
+        {
+          "file": "web/src/lib/eventStream.ts",
+          "line": 114,
+          "excerpt": "const terminal = res.status === 401 || res.status === 403"
+        }
+      ],
+      "sourceOnlyRepro": "Read stored-token+CLOSED terminal branch -> disconnected emit -> return before backoff -> connected=false page banner. No token used, API request or actual authentication failure executed.",
+      "fix": "Expose actual initial/retrying/terminal state at existing singleton/hook then truthful localized page feedback. Preserve no retry for rejected token, no page reconnect loop or invented diagnostics.",
+      "needId": "LSM-N02",
+      "dedup": "Inventory G205 is proposal/audit evidence, not an existing narrow queue repair."
+    },
+    {
+      "id": "LSM-F03",
+      "rule": "date-preference-bypass",
+      "contract": "MDC-044/046",
+      "priority": "medium",
+      "owner": "tail/throughput consumers",
+      "detail": "Tail desktop/mobile time and throughput axis/tooltip call bare formatTime without locale/tz. Shared helper defaults browser locale/timezone, so saved app locale, tz_display_default and user/vehicle timezone do not reach these paths.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 96,
+          "excerpt": "{formatTime(entry.timestamp)}"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 223,
+          "excerpt": "case 'time': return formatTime(entry.timestamp);"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+          "line": 42,
+          "excerpt": "const formatTs = (v: unknown): string => formatTime(v as string);"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "line": 103,
+          "excerpt": "locale === undefined ? [] : locale,"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 81,
+          "excerpt": "const requestedMode = mode ?? settings.tz_display_default"
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 96,
+          "excerpt": "(value, override) => libFormatTime(value, { ...opts, ...override }),"
+        }
+      ],
+      "sourceOnlyRepro": "Saved locale/timezone differs from browser -> omitted options -> cachedTimeFormatter(undefined) browser defaults. Settings-aware hook already supplies locale/tz. No preference edit/render. 12/24h impact not separately claimed.",
+      "fix": "Adopt existing useDateFormat for both support consumers and all mobile/table/chart paths; keep callbacks/memo dependencies reactive and raw UTC values unchanged.",
+      "needId": "LSM-N03",
+      "dedup": "Completed phase3-date-format root differs from this absent consumer adoption."
+    },
+    {
+      "id": "LSM-F04",
+      "rule": "ranking-accessible-name",
+      "contract": "MDC-040/034",
+      "priority": "medium",
+      "owner": "TopSignalsPanel",
+      "detail": "Arrival-frequency progressbars named Latest while value/max represent buffered count, not latest signal value, and accessible names omit signal identity. MetricBar forwards label as aria-label; existing test locks same mislabeled quantity.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+          "line": 106,
+          "excerpt": "label={t('liveMonitor.latest', 'Latest')}"
+        },
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+          "line": 107,
+          "excerpt": "value={count}"
+        },
+        {
+          "file": "web/src/components/data-display/MetricBar.tsx",
+          "line": 59,
+          "excerpt": "aria-label={ariaLabel ?? label}"
+        },
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.test.tsx",
+          "line": 243,
+          "excerpt": "expect(speedBar).toHaveAttribute('data-label', 'Latest');"
+        }
+      ],
+      "sourceOnlyRepro": "Any nonempty ranking -> count/maxCount progressbar -> Latest accessible name, no ariaLabel override. No render/test executed.",
+      "fix": "Use existing MetricBar.ariaLabel with whole localized signal-name/buffered-arrival-count message. Preserve latest raw reading separately, scale/order and assertion intent. Catalog prerequisite only if exact missing leaf established.",
+      "needId": "LSM-N04",
+      "dedup": "Completed same-variant badge-fixture repair is unrelated; original audit finding remains."
+    },
+    {
+      "id": "LSM-F05",
+      "rule": "functional-color-gradient",
+      "contract": "MDC-034/002",
+      "priority": "high",
+      "owner": "shared MetricBar",
+      "detail": "Default gradient appends hex-alpha suffix99 to functional caller colors. Type/ranking bars omit fill and pass canonical light-dark() strings; light-dark(...)99 is not a CSS color stop. Source string/grammar defect, not a static-inline-style violation or measured paint failure.",
+      "evidence": [
+        {
+          "file": "web/src/components/data-display/MetricBar.tsx",
+          "line": 45,
+          "excerpt": "showHeader = true, showValue = true, size = 'default', fill = 'gradient',"
+        },
+        {
+          "file": "web/src/components/data-display/MetricBar.tsx",
+          "line": 87,
+          "excerpt": "style={{ background: fill === 'solid' ? color : `linear-gradient(90deg, ${color}99, ${color})` }}"
+        },
+        {
+          "file": "web/src/lib/tokens.ts",
+          "line": 399,
+          "excerpt": "series: ['light-dark(#385e7e, #91b4d2)', 'light-dark(#38614f, #91b9a5)', 'light-dark(#745829, #cfb481)', 'light-dark(#83464e, #d6a0a5)', 'light-dark(#625077, #b5a8c9)', 'light-dark(#3f6268, #91bbc0)', 'light-dark(#785568, #c3a2b5)', 'light-dark(#586437, #acba91)'] as const,"
+        },
+        {
+          "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+          "line": 89,
+          "excerpt": "color={row.color}"
+        },
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+          "line": 109,
+          "excerpt": "color={TYPE_COLOR[s.type] ?? chartTokens.series[0]}"
+        }
+      ],
+      "sourceOnlyRepro": "C06 literal expansion: linear-gradient(90deg, light-dark(#3f6268, #91bbc0)99, light-dark(#3f6268, #91bbc0)). Only string inspection/CSS grammar review, no CSS engine or browser executed; actual paint impact NOTRUN.",
+      "fix": "At shared MetricBar support CSS-valid alpha for functional/variable colors, preserving gradient/solid API, supplied palette identity, null/numeric/accessible behavior and original assertions. Do not invent page colors.",
+      "needId": "LSM-N05",
+      "dedup": "phase3-metric-bar complete but not this exact functional-color composition; no third generic migration."
+    }
+  ],
+  "conditionalSourceCandidates": [
+    {
+      "id": "LSM-C01",
+      "rule": "null-value-kind",
+      "condition": "Accepted null/undefined scalar; real producer meaning/occurrence unverified.",
+      "detail": "String(null) retained as raw null text but detectType returns string, feeding string/categorical counts. Raw sentinel may be intentional; absent-kind policy needs exact domain review, never silently zero/drop.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 68,
+          "excerpt": "return 'string';"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 273,
+          "excerpt": "if (typeof value === 'object' && value !== null) continue;"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 76,
+          "excerpt": "else stringCount += 1;"
+        }
+      ],
+      "sourceOnlyRepro": "Written signals={sample:null} passes object guard then string-kind fallback. NOT EMITTED/EXECUTED.",
+      "conditionalOwner": "useLiveSignalStream/types/telemetry plus matching hook tests/callers only after absent-kind decision",
+      "status": "conditional-source-candidate",
+      "queueDedup": "No exact narrow objective found by full queue file/term/objective review; not dispatched or counted as confirmed violation."
+    },
+    {
+      "id": "LSM-C02",
+      "rule": "empty-string-vs-missing",
+      "condition": "Legitimate raw string empty versus intentionally missing-display convention.",
+      "detail": "Hook/page preserve empty string but ranking value||dash hides its distinction; raw tail still retains it. Test explicitly locks empty fallback using number kind. Preserve policy pending domain decision.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+          "line": 103,
+          "excerpt": "<Code className=\"min-w-0 max-w-full break-words [overflow-wrap:anywhere]\">{s.value || '—'}</Code>"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 85,
+          "excerpt": "value: entry.value ?? '—',"
+        },
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.test.tsx",
+          "line": 260,
+          "excerpt": "it('falls back to an em dash when the latest value is an empty string', () => {"
+        }
+      ],
+      "sourceOnlyRepro": "Written string-empty input -> analytics empty -> top falsy fallback. No input emitted.",
+      "conditionalOwner": "TopSignalsPanel+named test; explicit empty-string display only if domain contract requires",
+      "status": "conditional-source-candidate",
+      "queueDedup": "No exact narrow objective found by full queue file/term/objective review; not dispatched or counted as confirmed violation."
+    },
+    {
+      "id": "LSM-C03",
+      "rule": "selected-scope-attribution",
+      "condition": "Unidentified/system frame with selected vehicle, or provisional null selection while vehicle list resolves.",
+      "detail": "Selected positive ID only rejects mismatched numeric/string identity, intentionally accepts missing identity. Entries omit vehicle identity and ranking keys names. Same-name fleet data can merge; no proven backend misrouting or authorization failure.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 176,
+          "excerpt": "if (selected != null && selected > 0) {"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 177,
+          "excerpt": "if (typeof eventVehicleId === 'number' && eventVehicleId !== selected) return;"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 71,
+          "excerpt": "const byName = new Map<string, TopSignal>();"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 54,
+          "excerpt": "vehicleId: vehicleId ?? null,"
+        }
+      ],
+      "sourceOnlyRepro": "Written selected=1 + absent vehicle_id -> allowed by documented system-frame branch. No identity/frame used.",
+      "conditionalOwner": "Telemetry identity/scope contract if verified producer semantics require stronger attribution; preserve system events and workspace owner",
+      "status": "conditional-source-candidate",
+      "queueDedup": "No exact narrow objective found by full queue file/term/objective review; not dispatched or counted as confirmed violation."
+    },
+    {
+      "id": "LSM-C04",
+      "rule": "malformed-cold-name",
+      "condition": "cold entry contains numeric name; real producer occurrence NOTRUN.",
+      "detail": "Presence-only cold guards accept nonstring name, while local filter calls (name??empty).toLowerCase. Numeric name can throw when filtering.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 250,
+          "excerpt": "if (item && typeof item === 'object' && 'name' in item && 'value' in item) {"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 81,
+          "excerpt": "? items.filter((e) => (e.name ?? '').toLowerCase().includes(filter.toLowerCase()))"
+        }
+      ],
+      "sourceOnlyRepro": "Written cold=[{name:7,value:1}], nonempty filter -> missing toLowerCase method. No hook/filter executed.",
+      "conditionalOwner": "useLiveSignalStream+named hook test, validate malformed name without changing real identities",
+      "status": "conditional-source-candidate",
+      "queueDedup": "No exact narrow objective found by full queue file/term/objective review; not dispatched or counted as confirmed violation."
+    },
+    {
+      "id": "LSM-C05",
+      "rule": "scope-change-rate-carryover",
+      "condition": "Vehicle switch while displayed rate nonzero; render/timer order unexercised.",
+      "detail": "Vehicle-change effect clears tail/chart/pending rate ref but not tailRate state; old displayed rate may remain until1Hz publication. Clear intentionally does not reset rate/history and is a different operation.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 137,
+          "excerpt": "tailRateRef.current = [];"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 152,
+          "excerpt": "setTailRate(tailRateRef.current.reduce((a, b) => a + b, 0));"
+        }
+      ],
+      "sourceOnlyRepro": "Written old tailRate nonzero -> vehicle-change effect lacks setTailRate -> next rate timer required. No timings measured.",
+      "conditionalOwner": "useLiveSignalStream+named hook test for displayed-rate scope reset only",
+      "status": "conditional-source-candidate",
+      "queueDedup": "No exact narrow objective found by full queue file/term/objective review; not dispatched or counted as confirmed violation."
+    },
+    {
+      "id": "LSM-C06",
+      "rule": "raw-type-i18n-review",
+      "condition": "number/string/boolean meant as human labels rather than deliberately raw technical metadata.",
+      "detail": "Localized Type header contains raw entry.type desktop/detail/mobile. Existing type label keys available; decide technical-identity exception vs display translation. Never translate real names/values.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 119,
+          "excerpt": "{entry.type}"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 224,
+          "excerpt": "case 'type': return entry.type;"
+        },
+        {
+          "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+          "line": 52,
+          "excerpt": "{ key: 'number', label: t('liveMonitor.typeNumber', 'Numeric'), value: numeric, color: chartTokens.series[5] },"
+        }
+      ],
+      "sourceOnlyRepro": "Read raw number badge output, no locale/render executed.",
+      "conditionalOwner": "LiveSignalTail+named test; reuse existing type keys only after policy",
+      "status": "conditional-source-candidate",
+      "queueDedup": "No exact narrow objective found by full queue file/term/objective review; not dispatched or counted as confirmed violation."
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "LSM-NATIVE01",
+      "status": "NOTRUN",
+      "topic": "viewport/chart geometry",
+      "detail": "All ten mission widths plus narrow allocated cards, short/tall heights, safe areas, 200% text, RTL/long labels. EmbeddedChart fluid sizing without height not measured; no collapse claim."
+    },
+    {
+      "id": "LSM-NATIVE02",
+      "status": "NOTRUN",
+      "topic": "mobile/keyboard accessibility",
+      "detail": "Actual44px/nonoverlap, focus visibility/order, Quick view Escape/Close/restore, contained scrolling and table/chart alternatives. Source min-h-11 and stubbed ResizeObserver declaration not native evidence."
+    },
+    {
+      "id": "LSM-NATIVE03",
+      "status": "NOTRUN",
+      "topic": "themes/contrast/motion",
+      "detail": "Dark/light/saved custom palette, fixed raw-value hues/icons, composed AA text/UI contrast, forced colors, reduced motion/low bandwidth. No class-only neon or contrast failure asserted."
+    },
+    {
+      "id": "LSM-NATIVE04",
+      "status": "NOTRUN",
+      "topic": "live trust/recovery",
+      "detail": "No SSE/API/subscriptions. Actual terminal outcome, reconnect, retained growing age, missed paused frames and zero-sample interpretation remain unexercised. Recording badges separate pause; samples mean accepted local entries, not backend health."
+    },
+    {
+      "id": "LSM-NATIVE05",
+      "status": "NOTRUN",
+      "topic": "saved preferences/i18n/table pipeline",
+      "detail": "Effective locale/timezone/12-24h, density/font/columns/page-size/palette persistence, CSV completeness, RTL/long translation and native table details not exercised. No settings save/catalog generation."
+    }
+  ],
+  "ownerNeeds": [
+    {
+      "id": "LSM-N01",
+      "name": "telemetry-frame-time-provenance",
+      "finding": "LSM-F01",
+      "ownerFiles": [
+        "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+        "web/src/types/telemetry.ts",
+        "web/src/features/telemetry/hooks/useLiveSignalStream.test.ts"
+      ],
+      "separateCallerFiles": [
+        "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "web/src/features/telemetry/components/LiveSignalTail.test.tsx"
+      ],
+      "scope": "domain decision/root then separate tail caller",
+      "queueDisposition": "NOT_FOUND_EXACT_NARROW_OBJECTIVE; parent may reserve fresh lease, no queue edit or redispatch completed generic scope",
+      "requirement": "Distinguish frame/receipt versus verified observation provenance at existing hook/type owner; render truthful frame/receipt age or unknown observation freshness. Preserve raw time/value, never invent field timestamps."
+    },
+    {
+      "id": "LSM-N02",
+      "name": "realtime-terminal-recovery-state",
+      "finding": "LSM-F02",
+      "ownerFiles": [
+        "web/src/lib/sseManager.ts",
+        "web/src/hooks/useRealtimeEvents.ts"
+      ],
+      "separateCallerFiles": [
+        "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+        "web/src/features/telemetry/pages/LiveSignalMonitorPage.test.tsx"
+      ],
+      "scope": "singleton/hook root then separate page caller; existing transport tests must be explicitly leased",
+      "queueDisposition": "NOT_FOUND_EXACT_NARROW_OBJECTIVE; parent may reserve fresh lease, no queue edit or redispatch completed generic scope",
+      "requirement": "Expose actual initial/retrying/terminal state at existing singleton/hook then truthful localized page feedback. Preserve no retry for rejected token, no page reconnect loop or invented diagnostics."
+    },
+    {
+      "id": "LSM-N03",
+      "name": "live-monitor-date-format-preferences",
+      "finding": "LSM-F03",
+      "ownerFiles": [
+        "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+        "web/src/features/telemetry/components/LiveSignalTail.test.tsx",
+        "web/src/features/telemetry/components/LiveThroughputPanel.test.tsx"
+      ],
+      "separateCallerFiles": [],
+      "scope": "tightly coupled existing date-hook adoption, no shared formatter writes",
+      "queueDisposition": "NOT_FOUND_EXACT_NARROW_OBJECTIVE; parent may reserve fresh lease, no queue edit or redispatch completed generic scope",
+      "requirement": "Adopt existing useDateFormat for both support consumers and all mobile/table/chart paths; keep callbacks/memo dependencies reactive and raw UTC values unchanged."
+    },
+    {
+      "id": "LSM-N04",
+      "name": "top-signals-frequency-accessible-name",
+      "finding": "LSM-F04",
+      "ownerFiles": [
+        "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+        "web/src/features/telemetry/components/TopSignalsPanel.test.tsx"
+      ],
+      "separateCallerFiles": [],
+      "scope": "single caller/test; catalog copy only conditional exact missing leaf",
+      "queueDisposition": "NOT_FOUND_EXACT_NARROW_OBJECTIVE; parent may reserve fresh lease, no queue edit or redispatch completed generic scope",
+      "requirement": "Use existing MetricBar.ariaLabel with whole localized signal-name/buffered-arrival-count message. Preserve latest raw reading separately, scale/order and assertion intent. Catalog prerequisite only if exact missing leaf established."
+    },
+    {
+      "id": "LSM-N05",
+      "name": "metric-bar-functional-gradient-color",
+      "finding": "LSM-F05",
+      "ownerFiles": [
+        "web/src/components/data-display/MetricBar.tsx",
+        "web/src/components/data-display/__tests__/MetricBar.test.tsx"
+      ],
+      "separateCallerFiles": [],
+      "scope": "shared root/test, not generic migration retry",
+      "queueDisposition": "NOT_FOUND_EXACT_NARROW_OBJECTIVE; parent may reserve fresh lease, no queue edit or redispatch completed generic scope",
+      "requirement": "At shared MetricBar support CSS-valid alpha for functional/variable colors, preserving gradient/solid API, supplied palette identity, null/numeric/accessible behavior and original assertions. Do not invent page colors."
+    }
+  ],
+  "coverage": [
+    {
+      "section": "page chrome",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 121,
+          "excerpt": "<PageLayout"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 124,
+          "excerpt": "metadataActions={"
+        }
+      ],
+      "content": "Localized title/subtitle, connection and recording badges, nonblocking retained-buffer disconnect notice."
+    },
+    {
+      "section": "KPI band",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 142,
+          "excerpt": "<LiveMonitorKpiBand"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.tsx",
+          "line": 54,
+          "excerpt": "const metrics: readonly StatMetric[] = ["
+        }
+      ],
+      "content": "6 metrics connection/rate/buffer count-cap-fill/unique/numeric/categorical, bounded SSE scope/provenance, retained status; existing OperationalBrief review/details ownership."
+    },
+    {
+      "section": "analytics: throughput",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 157,
+          "excerpt": "<Section"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 166,
+          "excerpt": "<LiveThroughputPanel"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+          "line": 110,
+          "excerpt": "<AreaChart data={points} margin={CHART_MARGIN}>"
+        }
+      ],
+      "content": "Now/rolling peak, max60 local1Hz points, time/rate axes, tooltip, >=2 threshold, accessible dataColumns alternative. Embedded export/fullscreen false, no annotation config."
+    },
+    {
+      "section": "analytics: types",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 173,
+          "excerpt": "<SignalTypeBreakdown"
+        },
+        {
+          "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+          "line": 50,
+          "excerpt": "const rows = useMemo("
+        }
+      ],
+      "content": "3 kinds numeric/boolean/string, counts/percent denominator, labeled passive bars, empty shell, zero kinds retained in nonempty mix."
+    },
+    {
+      "section": "top signals band",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 185,
+          "excerpt": "<TopSignalsPanel signals={analytics.topSignals} />"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 93,
+          "excerpt": ".slice(0, TOP_SIGNAL_COUNT);"
+        }
+      ],
+      "content": "Top12 name-keyed frequency, stable ties/caller order, first encountered newest-buffer value not timestamp-sorted authoritative reading, wrapped raw code, shared-scale bars."
+    },
+    {
+      "section": "raw tail band",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 189,
+          "excerpt": "<LiveSignalTail"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 214,
+          "excerpt": "tableId=\"telemetry:live-signal-tail\""
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 148,
+          "excerpt": "{allColumns.filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => ("
+        }
+      ],
+      "content": "All5 time/name/value/type/freshness fields, 500 bounded newest-first entries, 65vh contained scroll, showStats=false avoids duplicate summary, mobile Quick view renders every original field; no dropped freshness/type."
+    }
+  ],
+  "states": {
+    "initial_loading": {
+      "source": "Empty buffers/local rate0; singleton reconnecting maps to Disconnected and waiting shells. No fake telemetry/skeleton readings. Vehicle query loading/error not exposed by selection result; null may be provisional.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 101,
+          "excerpt": "const [tailEntries, setTailEntries] = useState<SignalEntry[]>([]);"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 103,
+          "excerpt": "const [tailRate, setTailRate] = useState(0);"
+        }
+      ],
+      "findings": [
+        "F02",
+        "C03"
+      ]
+    },
+    "null_unknown": {
+      "source": "Entries/history normalize empty. KPI raw missing metrics flow to operational bridge; malformed-prop missing KPI test expects dash. Invalid/missing freshness timestamp unknown, not offline/zero. Scalar null-kind C01 distinct.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 76,
+          "excerpt": "const items = useMemo(() => entries ?? [], [entries]);"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+          "line": 61,
+          "excerpt": "const points = history ?? [];"
+        },
+        {
+          "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+          "line": 60,
+          "excerpt": "if (age === null) return 'unknown';"
+        }
+      ]
+    },
+    "empty_filtered": {
+      "source": "All panels stay mounted: mix/rank empty buffer, throughput needs2 local samples, tail waiting vs signal-name no-match. Shared DataTable has separate loaded-row search/no-match/clear controls.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+          "line": 69,
+          "excerpt": "{total === 0 ? ("
+        },
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+          "line": 75,
+          "excerpt": "{rows.length === 0 ? ("
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+          "line": 62,
+          "excerpt": "const hasData = points.length >= 2;"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 236,
+          "excerpt": ": t('liveMonitor.noMatch', 'No signals match filter')"
+        }
+      ]
+    },
+    "error_disconnected_retained": {
+      "source": "Automatic shared reconnect/parse boundary; tail retained through disconnect, KPI retained label with nonempty buffer, throughput history still shown. No page manual retry/backfill or fabricated query fatal/refresh API. Terminal distinction F02.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.tsx",
+          "line": 81,
+          "excerpt": "retained={!connected && safeBufferCount > 0}"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 135,
+          "excerpt": "'Live stream disconnected — attempting to reconnect. Figures below reflect the last buffered signals.',"
+        }
+      ],
+      "limits": "No durable replay/Last-Event-ID, actual failure behavior NOTRUN."
+    },
+    "paused_resume": {
+      "source": "Pause gate precedes tail accumulation/rate counting; subscription and throughput sampler stay enabled. Existing ranking/types/buffer persist; resume future frames only, no backend ingestion stop. Recording badge separate from transport; local0 after paused/disconnected window not backend health.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 244,
+          "excerpt": "if (tailPausedRef.current) return;"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 115,
+          "excerpt": "? t('liveMonitor.brief.tailPaused', 'Tail paused')"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useThroughputHistory.ts",
+          "line": 67,
+          "excerpt": "const id = setInterval(() => {"
+        }
+      ],
+      "limits": "Per-point paused/disconnected provenance not encoded; actual native interpretation NOTRUN."
+    },
+    "clear_workspace": {
+      "source": "Clear empties local tail/IDs only, not server/history/transport. Vehicle change clears chart/tail/pending rate counts and resets throughput via same key. Local filter/autoscroll and persisted table identity retained.",
+      "evidence": [
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 128,
+          "excerpt": "const clearTail = useCallback(() => {"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+          "line": 130,
+          "excerpt": "tailIdRef.current = 0;"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+          "line": 61,
+          "excerpt": "resetKey: vehicleId ?? null,"
+        }
+      ],
+      "limits": "C05 displayed rate scope carryover. IDs restart; open detail after Clear/refill not exercised, not a claimed reproduced bug."
+    }
+  },
+  "actions": [
+    {
+      "name": "Signal-name filter",
+      "evidence": {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "line": 81,
+        "excerpt": "? items.filter((e) => (e.name ?? '').toLowerCase().includes(filter.toLowerCase()))"
+      },
+      "semantics": "Case-insensitive local buffer, not ranking/type filter or subscription."
+    },
+    {
+      "name": "Pause/Resume",
+      "evidence": {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+        "line": 193,
+        "excerpt": "onPauseToggle={() => live.setTailPaused((p: boolean) => !p)}"
+      },
+      "semantics": "Functional updater local recording gate; no vehicle command."
+    },
+    {
+      "name": "Auto-scroll",
+      "evidence": {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "line": 87,
+        "excerpt": "if (autoScroll && tableRef.current) tableRef.current.scrollTop = 0;"
+      },
+      "semantics": "Default true, scrollTop0 on items changes, newest-first."
+    },
+    {
+      "name": "Clear",
+      "evidence": {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+        "line": 194,
+        "excerpt": "onClear={live.clearTail}"
+      },
+      "semantics": "Only entries/IDs clear, no backend delete or throughput reset."
+    },
+    {
+      "name": "Inherited table controls",
+      "evidence": [
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 499,
+          "excerpt": "showDensityControl = !toolbarActions,"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 925,
+          "excerpt": "const exportControls = exportable === false ? undefined : controls?.exports"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+          "line": 232,
+          "excerpt": "pagination={{ defaultPageSize: 50 }}"
+        }
+      ],
+      "semantics": "Loaded-row search/clear, density, column visibility/reorder/resize, page size/pagination, mobile Load more, CSV loaded matching/selected pipeline. No claim exported loaded buffer equals durable full history."
+    },
+    {
+      "name": "Mobile Quick view/Close",
+      "evidence": [
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 131,
+          "excerpt": "aria-label={t('common.quickView', 'Quick view')}"
+        },
+        {
+          "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+          "line": 148,
+          "excerpt": "{allColumns.filter(column => presentation.canShowField?.(column.key, detailRow) !== false).map(column => ("
+        }
+      ],
+      "semantics": "Existing full five-field modal via native owner; keyboard/focus/targets NOTRUN."
+    },
+    {
+      "name": "Summary/chart alternatives",
+      "evidence": {
+        "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+        "line": 104,
+        "excerpt": "dataColumns={["
+      },
+      "semantics": "Existing OperationalBrief metric review and throughput tooltip/time-rate accessible data alternative; no new chart export/fullscreen/annotation capability inferred."
+    }
+  ],
+  "duplicateReview": {
+    "method": "C01 objective first; C02 bounded file/term search; C03/C06 all rows without length exclusion; manual compare exact objectives, not keyword absence alone",
+    "relatedRows": [
+      {
+        "file": "migration-queue.md",
+        "line": 1046,
+        "status": "[x]",
+        "item": "audit-page-200",
+        "sha256": "86c3c2049392ae122b8928fdabe1d9ebd3aa64269274ffd16ee0015130693abc",
+        "row": "| [x] | 0 | audit-page-200 | page | web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx; docs\\frontend-audits\\audit-page-200.json | - | 1 | 2026-10-07T06:57:24.663Z | 25f6c457ee | - / 1 / 2026-10-07T06:57:24.663Z / web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx; routes=/live-monitor; read-only audit; report docs\\frontend-audits\\audit-page-200.json; actor=295efe4b-9be4-423d-8723-db6fb91c1fb3; verified source audit; commit=25f6c457ee; runtime unverified |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1675,
+        "status": "[x]",
+        "item": "phase3-live-signal-tail",
+        "sha256": "cfde79e7e40af6a0f3df76842432d5749933653881c5206e289bcfa2f57229a4",
+        "row": "| [x] | 3 | phase3-live-signal-tail | shared | web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx; web\\src\\features\\telemetry\\components\\LiveSignalTail.test.tsx | phase3-data-table,phase3-date-format,phase3-freshness-indicator,phase3-telemetry-summary-brief,primitive-badge,primitive-button,primitive-glass-panel,primitive-input,primitive-typography,phase3-resources-panel-canonical-copy,phase3-bounded-source-catalog-closure | 2 | 2026-10-08T23:04:02.016Z | b6f58831ab | phase3-data-table,phase3-date-format,phase3-freshness-indicator,phase3-telemetry-summary-brief,primitive-badge,primitive-button,primitive-glass-panel,primitive-input,primitive-typography,phase3-resources-panel-canonical-copy,phase3-bounded-source-catalog-closure / 2 / 2026-10-08T23:04:02.016Z / Verified real-owner plan=phase3-live-signal-tail in session frontend-phase3-owner-plan.json; category=domain-shared; sources=web\\src\\features\\telemetry\\components\\LiveSignalTail.tsx; tests=web\\src\\features\\telemetry\\components\\LiveSignalTail.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; Actual serialized current-source/catalog guard barrier: no shipping edits until canonical-copy accepted; genuine original/successor baselines remain immutable.; actor context idle verified 2026-10-08T22:48:39.421Z: Actual fresh lifecycle all26idle/zero running; source lease released pending full reported-result intake, no tests/DONE/stuck claim. Shipping source writes now paused for exact normal generated catalog root.; failure=Actual first normal startup failure same5catalog artifacts, no testscollected. Owned source/test/provenance/checks preserved, sole generatorroot phase3-bounded-source-catalog-closure underway with allsources frozen; no source/runtimepass inferred.; distinct attempt2 heartbeat/receipt required; first startup failures/Stats timeout preserved; parent actual normal currentclosure 1223passed7failed, frozen raw log phase3-bounded-catalog-post-root-owned-tests.log. Fix only precise owned defects/preservation/objective; no shared edits, goldens, catalog generation/bypass, or whole scope clean claims.; actor=b967f42e-ec41-4577-9c6e-e9c1c13d0f5c; actor context idle verified 2026-10-08T23:12:50.633Z: Actual idle notified result read; partial/malformed/validation-pending delivery not accepted, owned background verification receipts awaiting final output; no stuck classification or third implementation; failure=Final2 malformed pending result plus actual normal16 tests15pass1failure: NEW mobile regression global Close query matches multiple real Close buttons. Original15 exact/pass, source partial preserved; bounded new test-only oracle root required, no third generic migration; actor context idle verified 2026-10-08T23:42:44.525Z: Current lifecycle actual idle, previous final2 delivery frozen; separate completed objective review/source inverse verifies intake, not implementation retry; Verified scoped delivery acceptance commit=b6f58831ab; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=Original final2 delivery reconciled through separate readonly objective proof, not third implementation: exact source inverse reconstructs genuine221-line c055 source from243-line e136, public props/defaults/full AST and all15 raw original cases exact. Actual DataTable mobilePresentation exposes all5 original columns via real details; paused/unknown timestamp/raw SI/controls/empty retained. Accepted narrow root normal16/16 reused at same hashes, current pairlint0/ALL3409 diagnostics0 and actual proof EXIT0; initial proof CJS-name failure retained. Commit only retained source delta; narrow test root already committed, strict owned lint0, source0 candidates/4 explicit token reviews and six raw guideline patterns0. No fabricated transport/loading API, no browser/composed/fullTelemetry/application acceptance; original FAILED receipts retained. No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1676,
+        "status": "[x]",
+        "item": "phase3-live-signal-tail-mobile-close-oracle",
+        "sha256": "df71430c30d8b24b735a8e99e24a6ba101ca10c7b132391b912d30e53f04b7a0",
+        "row": "| [x] | 3 | phase3-live-signal-tail-mobile-close-oracle | shared | web\\src\\features\\telemetry\\components\\LiveSignalTail.test.tsx | phase3-bounded-source-catalog-closure,phase3-data-table | 1 | 2026-10-08T23:20:10.866Z | 5ec5891a6a | phase3-bounded-source-catalog-closure,phase3-data-table / 1 / 2026-10-08T23:20:10.866Z / Distinct tightly coupled test-only NEW mobile regression fix after failed original2; actual16normal15pass1fail global getByRole Close matches multiple legitimate real buttons. Target proper accessible detail surface/within query; retain all raw fields/paused/unknown-age/full-row/mobile assertions and original15 bodies exact. No third generic migration/source/shared edits; new atomic named oracle only.; sources=web\\src\\features\\telemetry\\components\\LiveSignalTail.test.tsx; actor=2f0705ee-5405-4727-ba2a-c76060521ab0; actor context idle verified 2026-10-08T23:28:34.626Z: Actual idle DONE notified/read; narrow test-only named dialog Close repair, own16 normal evidence awaiting exact proof intake; Verified scoped delivery acceptance commit=5ec5891a6a; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=16/16 actual own normal, strict1filelint0/ALL3409 diagnostics0. Exactly2 query-only replacements in NEW constrained-host case select actual named detaildialog/aria-labeled header Close instead of ambiguous legitimate header/footerClose; no index/getAll/mock/removed assertions. All15 genuine originals fullraw+AST identical,16assertioncounts and fullfields/paused/unknown age/reachability retained; exact two-line inverse reconstructs357before/after, Source e136 unchanged. Original owner2failure and prior invocation parsererror retained; not wholeLive/source/browser/application acceptance, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1677,
+        "status": "[x]",
+        "item": "phase3-live-signal-tail-objective-review",
+        "sha256": "3b66312633e61570d24f81118c4d9812652d815abb5f1e1748a4c66fe8bcdb0e",
+        "row": "| [x] | 3 | phase3-live-signal-tail-objective-review | integration | - | phase3-live-signal-tail-mobile-close-oracle | 1 | 2026-10-08T23:34:43.853Z | see archived receipts | phase3-live-signal-tail-mobile-close-oracle / 1 / 2026-10-08T23:34:43.853Z / Read-only original full-objective reconciliation ONLY, not implementation3. Old owner2 delivered partial source e1367e6f with15 genuine cases exact; distinct new mobile query-only root5ec5891a6a tests16actualpass and sourceunchanged. Verify final source meets actual owner objective and preserved API/sections/null/loading/empty/longvalues/controls/unknown-age/source ownership, genuine source/15case complete behavior and current16mobile assertions, actual final source lint/ALL sourcegraph/source scan evidence. Passing16 alone not source completion. No source/test/shared/Git edits; original failed2 stays until bounded root reviews actual full objective.; read-only evidence files only; source/public props preserved; own heartbeat and immutable report required; actor=c0f644c7-477a-4aae-aaae-a93314da1f72; actor context idle verified 2026-10-08T23:41:37.229Z: Actual notified read-only DONE read; full source inverse and genuine15 case evidence, no browser claim; Accepted read-only full exact source-byte inverse/genuine15 cases/public default and mobile full-detail source evidence, current e136/4d736 hash-backed normal16 and strict lint/ALL3409 diagnostics0. Original owner reconciled in b6f58831ab, no additional implementation or emptycommit; browser/fullapp unclaimed |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1688,
+        "status": "[x]",
+        "item": "phase3-metric-bar",
+        "sha256": "4de34aa70d493df1f334002fbda4a742060d93afb0aec496a4c6b1cea622d0d4",
+        "row": "| [x] | 3 | phase3-metric-bar | shared | web\\src\\components\\data-display\\MetricBar.tsx; web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx | primitive-typography | 2 | 2026-10-08T13:58:19.147Z | b5d2f450d4 | primitive-typography / 2 / 2026-10-08T13:58:19.147Z / Verified real-owner plan=phase3-metric-bar in session frontend-phase3-owner-plan.json; category=composite-data; sources=web\\src\\components\\data-display\\MetricBar.tsx; tests=web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; actor context idle verified 2026-10-08T05:54:02.907Z: RELEASED acknowledgement; preserved attempt-one deltas; frozen preserved-delta retry baseline=phase3-metric-bar-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=4419f309-0ffd-41a6-a2a7-847322ba768b; actor context idle verified 2026-10-08T14:22:54.403Z: REVIEWED ready;30/30,lint/scan/types0; original/current/final hashes and assertions preserved; actual idle and full result read; no further writes; source/runtime/browser acceptance remains separate; Verified scoped delivery acceptance commit=b5d2f450d4; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=30/30, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1389,
+        "status": "[x]",
+        "item": "phase3-date-format",
+        "sha256": "c8155d482288aebc21785adaa0e8186ebf48e82a72c2b73df697850dce2a1305",
+        "row": "| [x] | 3 | phase3-date-format | integration | web\\src\\lib\\dateFormat.ts; web\\src\\lib\\__tests__\\dateFormat.duration.test.ts; web\\src\\lib\\__tests__\\dateFormat.test.ts | - | 1 | 2026-10-08T04:03:25.784Z | see archived receipts | - / 1 / 2026-10-08T04:03:25.784Z / Verified real-owner plan=phase3-date-format in session frontend-phase3-owner-plan.json; category=date-formatting; sources=web\\src\\lib\\dateFormat.ts; tests=web\\src\\lib\\__tests__\\dateFormat.duration.test.ts,web\\src\\lib\\__tests__\\dateFormat.test.ts; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; actor=ef80c3f5-29b3-472b-b31f-32922bf4e527; Delivered first turn accepted: parent source/test immutable SHA256 verified; normal scoped date91/data-state19 tests and lint/scan0; all exports/semantics retained; no source change or empty commit. Queued health followup context still reports running and continues to consume capacity; no new same-file writer; actor context idle verified 2026-10-08T05:43:25.533Z: RELEASED acknowledgement; no further writes |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1596,
+        "status": "[x]",
+        "item": "phase3-full-test-shared-badge-consumer-token-fixtures",
+        "sha256": "df94ed7d1cfe332007e46f809958252ebd134089b8a5a065b49a244276c44f10",
+        "row": "| [x] | 3 | phase3-full-test-shared-badge-consumer-token-fixtures | integration | web\\src\\features\\dashboard\\widgets\\shared\\WidgetDetailCard.test.tsx; web\\src\\features\\dashboard\\widgets\\shared\\WidgetRankedList.test.tsx; web\\src\\features\\dashboard\\widgets\\shared\\WidgetTipCards.test.tsx; web\\src\\features\\notifications\\components\\QuietHoursGuide.test.tsx; web\\src\\features\\settings\\components\\twofactor\\TotpStatusHero.test.tsx; web\\src\\features\\telemetry\\components\\TopSignalsPanel.test.tsx; web\\src\\features\\vehicles\\components\\vehicle-detail\\TirePressureSection.test.tsx | - | 1 | 2026-10-09T20:04:04.875Z | see archived receipts | - / 1 / 2026-10-09T20:04:04.875Z / ONE atomic identical shared-Badge canonical palette fixture repair for seven still-present legacy expectations, one exact frozen failure per test. tests=web\\src\\features\\dashboard\\widgets\\shared\\WidgetDetailCard.test.tsx;web\\src\\features\\dashboard\\widgets\\shared\\WidgetRankedList.test.tsx;web\\src\\features\\dashboard\\widgets\\shared\\WidgetTipCards.test.tsx;web\\src\\features\\notifications\\components\\QuietHoursGuide.test.tsx;web\\src\\features\\settings\\components\\twofactor\\TotpStatusHero.test.tsx;web\\src\\features\\telemetry\\components\\TopSignalsPanel.test.tsx;web\\src\\features\\vehicles\\components\\vehicle-detail\\TirePressureSection.test.tsx. Own ONLY seven clean unclaimed tests pinned logs phase3-783-remaining-badge-baseline-summary.log. Distinct from accepted six admin badges and all exhausted dashboard battery/charging/backup/AI work; do not edit/retry those. Replace only obsolete asserted/expected same-variant Badge bg-blue/green/yellow/red/gray-100 literals with exact bg-[var(--semantic-info/success/warning/danger-bg)] or neutral bg-[var(--surface-2)]; QuietHoursGuide preserves both original bg and foreground assertions by mapping text-blue/yellow/red-800 to exact text-[var(--semantic-info/warning/danger)]. Preserve all matcher methods/targets/polarity including negative non-info TopSignals assertion, mapping tables/variants/fallbacks/labels/impact/severity/status and activation semantics, numeric data/pressure/SI fields/prefs/fixtures/bar colors/client calls/titles/thresholds and every other byte. Existing BADGE_VARIANTS expectations unchanged; no imports/mocks/helpers/shipping style/API/unit/schema changes. No generic classes, removed/relaxed assertions or restarted exhausted work. Exact per-file substitution operations/inverses plus full AST canonical-role normalization intake; once only owned7selectors Vitest forks/max2 then strict owned7 ESLint, actual sharedFD native and caller/launcher/runner records/hashes with honest deferred final publication hashes. Two-attempt rule. Lastmandatorycompiler780PASS,next795. SystemHealthOverview SKIPPED because its clean current selector already corrects frozen animate-pulse; no revalidation task.; actor=dccba85d-1e9f-42d9-a25a-84fbfbaaa516; actor context idle verified 2026-10-09T20:14:46.041Z: Actualruntimeidle deliveredreport consumed; independentparent-intakeVERIFIED7byteinverses/22assertion-bound literal substitutions/361fullmatcherchains/111actualsource declarationsvs114runtimeTests/1520calls/85hashchecks+3deferredclosedhashes. OriginalTotp it.eachbuilder distinction retained; no rewritten metadata. Quietdualforegroundarguments/TopSignalsnegativepolarity andbarcolors preserved. Owned114PASS/lint0onceeach/nativeFD/fivehosts/eightshippingfilesunchanged; allsourceprocessesReleased/noActiveOwnedProcesses.; Attempt1 scoped7files114PASS/lint0onceeach accepted. Parentindependent7wholebyteinverses/22originalassertion-bound tokenchanges(19bg+3Quietforeground)/361completeoriginalmatcherchains/111actualtestdeclarations+originalTotp4inputeach=114runtime/1520callparity/alltitles-caseinputs-linecounts preserved. Originalproofbuilderovercount disclosedandimmutable; no fake rowcounts. Eightshippingfiles unchanged;0scopedviolations,actualsharedFD-native/fivecaller-launcher-runnerstages/85hashchecks+3closeddeferredhashes verified. Allsourcecontexts releasedbeforecommit786; no shipping/SI/helper/exhausted/globalchanges. Lastcompiler780PASS,next795. |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 2300,
+        "status": "[x]",
+        "item": "phase5-page-telemetry-live-signal-monitor",
+        "sha256": "1e30268c206a1c47e8418a02f3e95ebbf057c866d5d8b30c81e70d0838b8e1f7",
+        "row": "| [x] | 5 | phase5-page-telemetry-live-signal-monitor | original-page-migration | web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.tsx; web\\src\\features\\telemetry\\pages\\LiveSignalMonitorPage.test.tsx | - | 1 | 2026-10-12T12:23:58.9737776Z | f5177048139e672beb9df00dc75853595a3e5167 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/live-monitor; audit=docs\\frontend-audits\\audit-page-200.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. First real original Phase5 source worker reserved; explicit exclusive page+namedcolocatedtest, shared-owner changes require parent claim. Read session phase5-page-worker-instructions.txt. Actual worker=5605be51-5de3-4962-a905-26404f141c61; lifecycle=awaitingterminalnotification;doNOTpoll/duplicate/rereadownedsource. INTAKEN exact source/test commit pushed; 10 scoped casesPASS; ESLint/style0;202/187 page,888/851 closure,4 bands preserved; all transport/rate/provenance/native limits explicit. Compiler cadence literal npx tsc --noEmit1481 exit0. Source acceptance only; no fullQA/fresh-live acceptance. |"
+      }
+    ],
+    "resolvedHistorical": [
+      "Current mobilePresentation + full allColumns Quick view restores Time/Signal/Value/Type/Freshness; old missing-mobile-field need not repeated.",
+      "No ambient pulse in current tail/freshness; removed pulse not requeued.",
+      "Phase5 recording/transport badges and local-tail-rate scope retained; generic migration not repeated."
+    ],
+    "queueEdits": false,
+    "finalCurrentQueueCandidates": [
+      {
+        "item": "repair-live-tail-namespace",
+        "status": "[x]",
+        "line": 1178,
+        "sha256": "622173c6c14029ba1c234c3c292caff937395ccc0f93ba729bba2e3e01a1fac0"
+      },
+      {
+        "item": "phase3-live-signal-tail",
+        "status": "[x]",
+        "line": 1695,
+        "sha256": "cfde79e7e40af6a0f3df76842432d5749933653881c5206e289bcfa2f57229a4"
+      },
+      {
+        "item": "phase3-metric-bar",
+        "status": "[x]",
+        "line": 1708,
+        "sha256": "4de34aa70d493df1f334002fbda4a742060d93afb0aec496a4c6b1cea622d0d4"
+      }
+    ]
+  },
+  "checks": {
+    "sourcePatterns": {
+      "command": "C02",
+      "files": 9,
+      "matches": {
+        "static-inline-style": 0,
+        "raw-html": 0,
+        "direct-library-import": 0,
+        "old-api-import": 0,
+        "double-prefix": 0,
+        "camelcase-param": 0,
+        "hidden-section": 0,
+        "hardcoded-string-literal-candidate": 0,
+        "hardcoded-string-dynamic-review": 2,
+        "missing-page-container-literal-presence": 0,
+        "fetch": 0,
+        "useEffect-review": 6,
+        "style-any-review": 1
+      },
+      "meaning": "Raw case-sensitive candidate counts, not a whole-app zero-defects verdict. Page-container delegation manually confirmed."
+    },
+    "catalog": {
+      "command": "C02",
+      "literalCalls": 91,
+      "uniqueKeys": 67,
+      "missing": 0,
+      "fallbackMismatch": 0,
+      "meaning": "Canonical English lookup only; generated catalog/guards/translations NOTRUN"
+    },
+    "tests": {
+      "status": "NOTRUN",
+      "files": [
+        {
+          "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.test.tsx",
+          "literalDeclarations": 12,
+          "sha256": "9a757c4f9940d9dbd169d60a2d818da3a67ecca37292aa32b4d02c43645a746f"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveSignalTail.test.tsx",
+          "literalDeclarations": 16,
+          "sha256": "4d736a649e6b5292c9878f7ec1ee6259eb573b08038ca32d2471ed137a9a98ee"
+        },
+        {
+          "file": "web/src/features/telemetry/components/LiveThroughputPanel.test.tsx",
+          "literalDeclarations": 11,
+          "sha256": "497bc577523d36dd2fc31759f9d069c6145848d8d17655c9aa3ae64cda9971ec"
+        },
+        {
+          "file": "web/src/features/telemetry/components/SignalTypeBreakdown.test.tsx",
+          "literalDeclarations": 11,
+          "sha256": "959100d99f83fb8490f93c8a89002fea2c8f11bf297a0c5f7160f848328b6291"
+        },
+        {
+          "file": "web/src/features/telemetry/components/TopSignalsPanel.test.tsx",
+          "literalDeclarations": 16,
+          "sha256": "12a01f71eb4520b684ad1bc3c1a8547fd186d50482a3e1b578ccb02326a41ad4"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useLiveSignalStream.test.ts",
+          "literalDeclarations": 17,
+          "sha256": "3a007eb1fb1b673af0560c5aeb6277c75f098390d721c990df6b8efde0316410"
+        },
+        {
+          "file": "web/src/features/telemetry/hooks/useThroughputHistory.test.ts",
+          "literalDeclarations": 13,
+          "sha256": "b335788a834d08434ed53dced2c16ef01cc899125a20cc593742ad03b14f6380"
+        },
+        {
+          "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.test.tsx",
+          "literalDeclarations": 10,
+          "sha256": "79947f1efda42471464b2bf8bded8e0d4886a9fee4b49c20566fc0b407994c4a"
+        }
+      ],
+      "literalDeclarations": 106,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "limitations": "8files/106 literal it/test declarations, not runtime discovery or expanded cases. Page mocks stream/throughput/selection; chart tests mock charts; mobile test stubs ResizeObserver. No test function invoked."
+    },
+    "failures": [
+      {
+        "command": "exploratory rg",
+        "exit": 1,
+        "reason": "rg unavailable, Python text searches substituted; no install"
+      },
+      {
+        "command": "exploratory Python headings",
+        "exit": 1,
+        "reason": "cp1252 UnicodeEncodeError U+2192, retried UTF-8"
+      },
+      {
+        "command": "C05 source anchors",
+        "exit": 1,
+        "reason": "3 guessed stale line numbers; corrected to164/59/87, C06 exit0; checker failure not app failure"
+      },
+      {
+        "command": "C07 oversized artifact command",
+        "exit": 1,
+        "reason": "host os error206 filename/extension too long before launch; split artifact-only writes, no clock reset"
+      },
+      {
+        "command": "C09 whole-input pin validation",
+        "exit": 1,
+        "reason": "Concurrent handoff/queue/catalog byte drift. Citation/count checks passed. C10 re-read relevant handoff/current queue and compared all67 cited leaves; full drift remains explicit."
+      }
+    ],
+    "commandExits": {
+      "C01": 0,
+      "C02": 0,
+      "C03": 0,
+      "C04": 0,
+      "C05": 1,
+      "C06": 0,
+      "C07-host": 1,
+      "C07a": 0,
+      "C08": 0,
+      "C09": 1,
+      "C10": 0
+    },
+    "NOTRUN": [
+      "tests",
+      "lint",
+      "build",
+      "compiler/npx tsc --noEmit",
+      "server/browser/native",
+      "network/API/subscriptions/real signals/vehicle actions",
+      "installs/agents/helpers"
+    ],
+    "scope": "Temporary inline standard-library source/JSON/hash inspection only; no helper files or application/test module imports"
+  },
+  "inputPins": {
+    "before": [
+      {
+        "file": ".github/copilot-instructions.md",
+        "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+        "bytes": 37483,
+        "lines": 707
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+        "bytes": 3585,
+        "lines": 94
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "bytes": 22645,
+        "lines": 629
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+        "bytes": 6501,
+        "lines": 221
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "bytes": 182554,
+        "lines": 2539
+      },
+      {
+        "file": "docs/frontend-inventory.md",
+        "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+        "bytes": 1743758,
+        "lines": 1460
+      },
+      {
+        "file": "docs/frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "bytes": 31079,
+        "lines": 1593
+      },
+      {
+        "file": "docs/frontend-worker-conventions.md",
+        "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+        "bytes": 8608,
+        "lines": 152
+      },
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+        "bytes": 16978,
+        "lines": 296
+      },
+      {
+        "file": "docs/session-handoff.md",
+        "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+        "bytes": 163930,
+        "lines": 2460
+      },
+      {
+        "file": "migration-queue.md",
+        "sha256": "b99617a253dbc607c066727a63da9a4d09d03ffecf3ce8bd4476dedea6a90948",
+        "bytes": 2607992,
+        "lines": 2354
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "bytes": 68125,
+        "lines": 919
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "bytes": 17825,
+        "lines": 458
+      },
+      {
+        "file": "web/src/api/sseClient.ts",
+        "sha256": "c81cfcbd1c2ed8d5f8b086892b82772a5a212a8444d9cb28cd158c8d53017137",
+        "bytes": 10175,
+        "lines": 297
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "bytes": 10783,
+        "lines": 259
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "bytes": 658,
+        "lines": 17
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.test.tsx",
+        "sha256": "9a757c4f9940d9dbd169d60a2d818da3a67ecca37292aa32b4d02c43645a746f",
+        "bytes": 11069,
+        "lines": 249
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.tsx",
+        "sha256": "e226ea0585d05d69302dd33f2e02f480e343d514163a42edfb45f9d191aa637e",
+        "bytes": 4509,
+        "lines": 87
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.test.tsx",
+        "sha256": "4d736a649e6b5292c9878f7ec1ee6259eb573b08038ca32d2471ed137a9a98ee",
+        "bytes": 15484,
+        "lines": 356
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "sha256": "e1367e6f2bf8854a85a8a20c3199cab0f5906211a3d0fc145a2db49396fbef8e",
+        "bytes": 9633,
+        "lines": 243
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveThroughputPanel.test.tsx",
+        "sha256": "497bc577523d36dd2fc31759f9d069c6145848d8d17655c9aa3ae64cda9971ec",
+        "bytes": 8131,
+        "lines": 194
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+        "sha256": "77f8c5877c031ebd17443827154fe978ccd03c6b85b5503a1d0c2466b18c99e5",
+        "bytes": 4969,
+        "lines": 139
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalTypeBreakdown.test.tsx",
+        "sha256": "959100d99f83fb8490f93c8a89002fea2c8f11bf297a0c5f7160f848328b6291",
+        "bytes": 10986,
+        "lines": 245
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+        "sha256": "79e3425b4e585bed8be2f7e482b37fbf450cdbe0f63b7097ff6309e5854fe124",
+        "bytes": 4117,
+        "lines": 98
+      },
+      {
+        "file": "web/src/features/telemetry/components/TopSignalsPanel.test.tsx",
+        "sha256": "12a01f71eb4520b684ad1bc3c1a8547fd186d50482a3e1b578ccb02326a41ad4",
+        "bytes": 14760,
+        "lines": 336
+      },
+      {
+        "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+        "sha256": "34c73f416cc9f5cd994744cc7036e3324a781eb1002b9671dd521ed2ca8dd9e9",
+        "bytes": 4389,
+        "lines": 119
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useLiveSignalStream.test.ts",
+        "sha256": "3a007eb1fb1b673af0560c5aeb6277c75f098390d721c990df6b8efde0316410",
+        "bytes": 16171,
+        "lines": 420
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+        "sha256": "c81f1ba0ca0adba94ab91bcdc78d1fa4f9a504c114de63548b272649c3ccb203",
+        "bytes": 11196,
+        "lines": 302
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useThroughputHistory.test.ts",
+        "sha256": "b335788a834d08434ed53dced2c16ef01cc899125a20cc593742ad03b14f6380",
+        "bytes": 8525,
+        "lines": 245
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useThroughputHistory.ts",
+        "sha256": "756a7f2adb4710120461f6ded4dc3028c152bdd9fb3f041d6701294e3b316059",
+        "bytes": 3339,
+        "lines": 81
+      },
+      {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.test.tsx",
+        "sha256": "79947f1efda42471464b2bf8bded8e0d4886a9fee4b49c20566fc0b407994c4a",
+        "bytes": 19374,
+        "lines": 429
+      },
+      {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+        "sha256": "026d17c703e90ba8a370f607109c8fe0a1e7038af8c3c0be5c25c1d850cf7a59",
+        "bytes": 7137,
+        "lines": 202
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "bytes": 6593,
+        "lines": 174
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "bytes": 1843667,
+        "lines": 39002
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "bytes": 4411,
+        "lines": 168
+      },
+      {
+        "file": "web/src/hooks/useRealtimeEvents.ts",
+        "sha256": "b2eef18a8ce3ae4109004125543adc2f493c81bbba67420d6e961ded9266530a",
+        "lines": 102
+      },
+      {
+        "file": "web/src/lib/sseManager.ts",
+        "sha256": "1b962851417b3bb8925d70206d661ea71e14846168a460462922463e7fb19a52",
+        "lines": 228
+      },
+      {
+        "file": "web/src/lib/eventStream.ts",
+        "sha256": "201aa0994a42322ba252b59a0413a169763ede33d140de8536e0e01ed07eec43",
+        "lines": 183
+      },
+      {
+        "file": "web/src/types/telemetry.ts",
+        "sha256": "15af5c9c884e582b7b79c19c97e21583f38e48f2b69bfdbda0f3bdab74989ce4",
+        "lines": 159
+      },
+      {
+        "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+        "sha256": "09a9fb9b7ed9b9a0fa220a8d648f1613a20b99bb43d3fa9bb221494d93272aad",
+        "lines": 54
+      },
+      {
+        "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+        "sha256": "c57bd7e07bf477ad09706e27e1c583095ebd3245be2aaa626a152884846a1295",
+        "lines": 168
+      },
+      {
+        "file": "web/src/components/charts/EmbeddedChart.tsx",
+        "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "lines": 42
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "lines": 93
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "lines": 1707
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+        "lines": 165
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "lines": 47
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "lines": 462
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "lines": 24
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "lines": 1898
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-200.json",
+        "sha256": "9c7835f3c187df96907a6e6e0290d33f8cc66035bdbbcf9f2f92b3f9e98b14dd",
+        "lines": 425
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "lines": 148
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "lines": 439
+      },
+      {
+        "file": "web/src/lib/timezone.ts",
+        "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+        "lines": 51
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "lines": 39
+      }
+    ],
+    "after": [
+      {
+        "file": ".github/copilot-instructions.md",
+        "sha256": "94beb0665de9713161388a18c26eeb8d739602984bd10c4ee29558e76880df75",
+        "bytes": 37483,
+        "lines": 707
+      },
+      {
+        "file": ".github/instructions/frontend-si-cutover.instructions.md",
+        "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+        "bytes": 3585,
+        "lines": 94
+      },
+      {
+        "file": ".github/instructions/react-frontend.instructions.md",
+        "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+        "bytes": 22645,
+        "lines": 629
+      },
+      {
+        "file": ".github/instructions/unit-conversion.instructions.md",
+        "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+        "bytes": 6501,
+        "lines": 221
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "bytes": 182554,
+        "lines": 2539
+      },
+      {
+        "file": "docs/frontend-inventory.md",
+        "sha256": "29d2ce86d2fbc387edf978b97f3b27e2f493db408e25de90271d9be5f61097ea",
+        "bytes": 1743758,
+        "lines": 1460
+      },
+      {
+        "file": "docs/frontend-mission.md",
+        "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+        "bytes": 31079,
+        "lines": 1593
+      },
+      {
+        "file": "docs/frontend-worker-conventions.md",
+        "sha256": "98850e87f927cc2dd09088183906b5343c1883e6ba6f14ea6e55a328be485871",
+        "bytes": 8608,
+        "lines": 152
+      },
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+        "bytes": 16978,
+        "lines": 296
+      },
+      {
+        "file": "docs/session-handoff.md",
+        "sha256": "09fa66582fceaceb709073d64299b2ca24842837d7c8ed43ef6f3af40c80bfeb",
+        "bytes": 170173,
+        "lines": 2561
+      },
+      {
+        "file": "migration-queue.md",
+        "sha256": "01b3676f9d5b25b6ddd31f246b5a59deb053dcb0055ead33ab6f825befe7b9c7",
+        "bytes": 2613693,
+        "lines": 2418
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+        "bytes": 68125,
+        "lines": 919
+      },
+      {
+        "file": "web/src/api/client.ts",
+        "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+        "bytes": 17825,
+        "lines": 458
+      },
+      {
+        "file": "web/src/api/sseClient.ts",
+        "sha256": "c81cfcbd1c2ed8d5f8b086892b82772a5a212a8444d9cb28cd158c8d53017137",
+        "bytes": 10175,
+        "lines": 297
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "bytes": 10783,
+        "lines": 259
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "bytes": 658,
+        "lines": 17
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.test.tsx",
+        "sha256": "9a757c4f9940d9dbd169d60a2d818da3a67ecca37292aa32b4d02c43645a746f",
+        "bytes": 11069,
+        "lines": 249
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.tsx",
+        "sha256": "e226ea0585d05d69302dd33f2e02f480e343d514163a42edfb45f9d191aa637e",
+        "bytes": 4509,
+        "lines": 87
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.test.tsx",
+        "sha256": "4d736a649e6b5292c9878f7ec1ee6259eb573b08038ca32d2471ed137a9a98ee",
+        "bytes": 15484,
+        "lines": 356
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "sha256": "e1367e6f2bf8854a85a8a20c3199cab0f5906211a3d0fc145a2db49396fbef8e",
+        "bytes": 9633,
+        "lines": 243
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveThroughputPanel.test.tsx",
+        "sha256": "497bc577523d36dd2fc31759f9d069c6145848d8d17655c9aa3ae64cda9971ec",
+        "bytes": 8131,
+        "lines": 194
+      },
+      {
+        "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+        "sha256": "77f8c5877c031ebd17443827154fe978ccd03c6b85b5503a1d0c2466b18c99e5",
+        "bytes": 4969,
+        "lines": 139
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalTypeBreakdown.test.tsx",
+        "sha256": "959100d99f83fb8490f93c8a89002fea2c8f11bf297a0c5f7160f848328b6291",
+        "bytes": 10986,
+        "lines": 245
+      },
+      {
+        "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+        "sha256": "79e3425b4e585bed8be2f7e482b37fbf450cdbe0f63b7097ff6309e5854fe124",
+        "bytes": 4117,
+        "lines": 98
+      },
+      {
+        "file": "web/src/features/telemetry/components/TopSignalsPanel.test.tsx",
+        "sha256": "12a01f71eb4520b684ad1bc3c1a8547fd186d50482a3e1b578ccb02326a41ad4",
+        "bytes": 14760,
+        "lines": 336
+      },
+      {
+        "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+        "sha256": "34c73f416cc9f5cd994744cc7036e3324a781eb1002b9671dd521ed2ca8dd9e9",
+        "bytes": 4389,
+        "lines": 119
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useLiveSignalStream.test.ts",
+        "sha256": "3a007eb1fb1b673af0560c5aeb6277c75f098390d721c990df6b8efde0316410",
+        "bytes": 16171,
+        "lines": 420
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+        "sha256": "c81f1ba0ca0adba94ab91bcdc78d1fa4f9a504c114de63548b272649c3ccb203",
+        "bytes": 11196,
+        "lines": 302
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useThroughputHistory.test.ts",
+        "sha256": "b335788a834d08434ed53dced2c16ef01cc899125a20cc593742ad03b14f6380",
+        "bytes": 8525,
+        "lines": 245
+      },
+      {
+        "file": "web/src/features/telemetry/hooks/useThroughputHistory.ts",
+        "sha256": "756a7f2adb4710120461f6ded4dc3028c152bdd9fb3f041d6701294e3b316059",
+        "bytes": 3339,
+        "lines": 81
+      },
+      {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.test.tsx",
+        "sha256": "79947f1efda42471464b2bf8bded8e0d4886a9fee4b49c20566fc0b407994c4a",
+        "bytes": 19374,
+        "lines": 429
+      },
+      {
+        "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+        "sha256": "026d17c703e90ba8a370f607109c8fe0a1e7038af8c3c0be5c25c1d850cf7a59",
+        "bytes": 7137,
+        "lines": 202
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+        "bytes": 6593,
+        "lines": 174
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+        "bytes": 1846735,
+        "lines": 39035
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "bytes": 4411,
+        "lines": 168
+      },
+      {
+        "file": "web/src/hooks/useRealtimeEvents.ts",
+        "sha256": "b2eef18a8ce3ae4109004125543adc2f493c81bbba67420d6e961ded9266530a",
+        "bytes": 3817,
+        "lines": 102
+      },
+      {
+        "file": "web/src/lib/sseManager.ts",
+        "sha256": "1b962851417b3bb8925d70206d661ea71e14846168a460462922463e7fb19a52",
+        "bytes": 7205,
+        "lines": 228
+      },
+      {
+        "file": "web/src/lib/eventStream.ts",
+        "sha256": "201aa0994a42322ba252b59a0413a169763ede33d140de8536e0e01ed07eec43",
+        "bytes": 6725,
+        "lines": 183
+      },
+      {
+        "file": "web/src/types/telemetry.ts",
+        "sha256": "15af5c9c884e582b7b79c19c97e21583f38e48f2b69bfdbda0f3bdab74989ce4",
+        "bytes": 5083,
+        "lines": 159
+      },
+      {
+        "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+        "sha256": "09a9fb9b7ed9b9a0fa220a8d648f1613a20b99bb43d3fa9bb221494d93272aad",
+        "bytes": 2595,
+        "lines": 54
+      },
+      {
+        "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+        "sha256": "c57bd7e07bf477ad09706e27e1c583095ebd3245be2aaa626a152884846a1295",
+        "bytes": 6249,
+        "lines": 168
+      },
+      {
+        "file": "web/src/components/charts/EmbeddedChart.tsx",
+        "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+        "bytes": 1225,
+        "lines": 42
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "bytes": 4359,
+        "lines": 93
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "bytes": 77157,
+        "lines": 1707
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "sha256": "fe665076a69ba80ca5500cd62ecd2fba8ccde216c0a704964d236c01327d0e21",
+        "bytes": 9039,
+        "lines": 165
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "bytes": 2095,
+        "lines": 47
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "bytes": 18863,
+        "lines": 462
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "bytes": 1161,
+        "lines": 24
+      },
+      {
+        "file": "web/src/api/hooks/useVehicles.ts",
+        "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+        "bytes": 70205,
+        "lines": 1898
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-200.json",
+        "sha256": "9c7835f3c187df96907a6e6e0290d33f8cc66035bdbbcf9f2f92b3f9e98b14dd",
+        "bytes": 36478,
+        "lines": 425
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "bytes": 5230,
+        "lines": 148
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "bytes": 20093,
+        "lines": 439
+      },
+      {
+        "file": "web/src/lib/timezone.ts",
+        "sha256": "4de9f4981d65173697e16db705ca06b279e9ccb700ac6c98d0d27439f25d5f02",
+        "bytes": 1863,
+        "lines": 51
+      },
+      {
+        "file": "web/src/components/motion/FadeIn.tsx",
+        "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+        "bytes": 1493,
+        "lines": 39
+      }
+    ],
+    "validation": "SCOPED_PASS_WITH_EXTERNAL_DRIFT",
+    "captureLimits": "C01 before primary scans; C02/C04 supplemental closure pins after some initial views but before mechanism checks, not claimed before first-ever read.",
+    "drift": [
+      {
+        "file": "docs/session-handoff.md",
+        "before": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+        "after": "09fa66582fceaceb709073d64299b2ca24842837d7c8ed43ef6f3af40c80bfeb",
+        "classification": "external mutable document/catalog drift"
+      },
+      {
+        "file": "migration-queue.md",
+        "before": "b99617a253dbc607c066727a63da9a4d09d03ffecf3ce8bd4476dedea6a90948",
+        "after": "01b3676f9d5b25b6ddd31f246b5a59deb053dcb0055ead33ab6f825befe7b9c7",
+        "classification": "external mutable document/catalog drift"
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "before": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "after": "dc87a2c46dd3f82d84746b042d0c42d41e8a6d5b64487e543485f4aaaea35886",
+        "classification": "external mutable document/catalog drift"
+      }
+    ],
+    "checkedAt": "2026-10-14T02:56:10.973136+00:00",
+    "reconciliation": {
+      "codeAndTestDrift": [],
+      "catalogReferencedKeys": 67,
+      "catalogLeafChanges": [],
+      "exactQueueRowChanges": [],
+      "handoff": "Relevant recovery/conventions re-read; full historical document drift not claimed unchanged."
+    }
+  },
+  "filesRead": [
+    {
+      "file": ".github/copilot-instructions.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "migration-queue.md",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "scope": "Hash/byte pin only; no complete implementation audit or execution."
+    },
+    {
+      "file": "web/src/api/sseClient.ts",
+      "scope": "Hash/byte pin only; no complete implementation audit or execution."
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.test.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/LiveMonitorKpiBand.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/LiveSignalTail.test.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/LiveThroughputPanel.test.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/SignalTypeBreakdown.test.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/SignalTypeBreakdown.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/TopSignalsPanel.test.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/TopSignalsPanel.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/hooks/useLiveSignalStream.test.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/hooks/useLiveSignalStream.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/hooks/useThroughputHistory.test.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/hooks/useThroughputHistory.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.test.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/hooks/useRealtimeEvents.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/lib/sseManager.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/lib/eventStream.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/types/telemetry.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/data-display/FreshnessIndicator.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-200.json",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/lib/timezone.ts",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "scope": "pin + full primary page/supports/hooks; other large shared/docs and tests bounded/declaration reads as cited, not a full transitive audit"
+    }
+  ],
+  "evidenceLimits": [
+    "Source-only QA: native/runtime/visual/keyboard/contrast/viewports NOTRUN.",
+    "No real VIN/identity/location/credential/server request, synthetic repro shapes written only, not emitted.",
+    "No source/test/catalog/queue/Git edits; initial Git status read only before operating contract, no later Git command.",
+    "No backend router/producer/auth/unit/timestamp operation audit; endpoints from source declarations.",
+    "No original source-history diff/baseline regeneration; historical counts are accepted report context, not new behavior-equivalence proof."
+  ],
+  "summary": {
+    "confirmedFindings": 5,
+    "byRule": {
+      "timestamp-provenance": 1,
+      "truthful-recovery": 1,
+      "date-preference-bypass": 1,
+      "ranking-accessible-name": 1,
+      "functional-color-gradient": 1
+    },
+    "byPriority": {
+      "high": 3,
+      "medium": 2
+    },
+    "conditionalCandidates": 6,
+    "nativeCandidatesNOTRUN": 5,
+    "distinctConfirmedNarrowNeeds": 5,
+    "priorityFixes": [
+      "F01 timestamp provenance",
+      "F02 truthful terminal recovery",
+      "F05 functional palette gradient",
+      "F03 date preferences",
+      "F04 accessible count name"
+    ],
+    "byPrimaryFile": {
+      "web/src/features/telemetry/hooks/useLiveSignalStream.ts": 1,
+      "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx": 1,
+      "web/src/features/telemetry/components/LiveSignalTail.tsx": 1,
+      "web/src/features/telemetry/components/TopSignalsPanel.tsx": 1,
+      "web/src/components/data-display/MetricBar.tsx": 1
+    }
+  },
+  "release": {
+    "artifactWrites": "RELEASE both exact report/log paths after this final synchronous readback exits",
+    "commandOwnership": "RELEASE all owned inspection commands; no application/helper/native/network/subscription process launched",
+    "sourceTestCatalogQueueGit": "READONLY; no write claims acquired",
+    "returnedBeforeReservationDeadline": true
+  },
+  "preservation": {
+    "pageLines": 202,
+    "pagePlusFiveDirectComponentsLines": 888,
+    "breakdown": {
+      "web/src/features/telemetry/pages/LiveSignalMonitorPage.tsx": 202,
+      "web/src/features/telemetry/components/LiveMonitorKpiBand.tsx": 87,
+      "web/src/features/telemetry/components/LiveThroughputPanel.tsx": 139,
+      "web/src/features/telemetry/components/SignalTypeBreakdown.tsx": 98,
+      "web/src/features/telemetry/components/TopSignalsPanel.tsx": 119,
+      "web/src/features/telemetry/components/LiveSignalTail.tsx": 243
+    },
+    "historicalContext": {
+      "pageLines": 187,
+      "closureLines": 851,
+      "currentRatio": 1.0434782608695652,
+      "meaning": "Phase0 report counts only, not original-source diff"
+    },
+    "sourceSha256": "026d17c703e90ba8a370f607109c8fe0a1e7038af8c3c0be5c25c1d850cf7a59",
+    "counts": {
+      "bodyBands": 4,
+      "contentPanelsIncludingSummary": 5,
+      "kpiMetrics": 6,
+      "typeCategories": 3,
+      "tailColumns": 5,
+      "tailLocalControls": 4,
+      "topLimit": 12,
+      "tailCap": 500,
+      "historyCap": 60,
+      "GlassPanelTags": 4,
+      "SectionTags": 1,
+      "EmbeddedChartTags": 1,
+      "tailButtons": 3,
+      "tailInput": 1
+    },
+    "alwaysMounted": "Body bands unconditional across null/empty/paused/disconnected; showStats/title are optional API slots not data section gates."
+  },
+  "acceptableExceptions": [
+    {
+      "rule": "static-inline-style",
+      "evidence": {
+        "file": "web/src/features/telemetry/components/LiveSignalTail.tsx",
+        "line": 212,
+        "excerpt": "<div ref={tableRef} className=\"overflow-auto rounded-lg border border-[var(--border-subtle)]\" style={{ maxHeight }}>"
+      },
+      "reason": "Caller-computed geometry, not static var."
+    },
+    {
+      "rule": "static-inline-style",
+      "evidence": {
+        "file": "web/src/features/telemetry/components/LiveThroughputPanel.tsx",
+        "line": 116,
+        "excerpt": "tick={{ fill: 'var(--text-muted)', fontSize: 10 }}"
+      },
+      "reason": "Recharts API props, not DOM inline style."
+    },
+    {
+      "rule": "missing-page-container",
+      "evidence": {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "line": 11,
+        "excerpt": "<PageContainer {...props} className={cn('min-w-0', className)}>"
+      },
+      "reason": "PageLayout delegates actual PageContainer."
+    },
+    {
+      "rule": "fetch-useeffect",
+      "reason": "6 effects local scroll/reset/sampler, not data-loading fetch; existing singleton subscription integration expected."
+    },
+    {
+      "rule": "double-prefix",
+      "reason": "/api/v1/events transport URL is not request() path; request(/vehicles) remains unprefixed."
+    },
+    {
+      "rule": "building-blocks",
+      "reason": "Native table/direct motion in shared building blocks expected; not feature scan violations."
+    },
+    {
+      "rule": "hardcoded-string",
+      "reason": "Raw names/values/unit strings and punctuation not auto-translated; technical type policy separated C06."
+    }
+  ],
+  "completionMeaning": "Owned source-only QA DONE with external mutable handoff/queue/catalog drift explicitly retained; exact claims, referenced67 catalog leaves and source/test inputs unchanged. Native/application acceptance NOTRUN.",
+  "citationValidation": {
+    "status": "PASS",
+    "citationObjects": 90,
+    "distinctExactFileLineExcerpts": 87,
+    "failures": []
+  },
+  "countValidation": {
+    "status": "PASS",
+    "findings": 5,
+    "conditional": 6,
+    "nativeNOTRUN": 5,
+    "distinctNeeds": 5,
+    "testDeclarationFiles": 8,
+    "literalTestDeclarations": 106,
+    "testsExecuted": 0,
+    "pagePlusFiveComponentsLines": 888
+  }
+}
