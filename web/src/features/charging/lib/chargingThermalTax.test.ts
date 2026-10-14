@@ -84,7 +84,7 @@ describe('analyzeChargingThermalTax', () => {
       sample(0, { battery_heater_power_w: 1000, ac_charging_energy_in_wh: 0 }),
       sample(3600, { battery_heater_power_w: 1000, ac_charging_energy_in_wh: 10_000 }), // 1h @1000W = 1000Wh heater
     ];
-    const summary = analyzeChargingThermalTax(samples);
+    const summary = analyzeChargingThermalTax(samples, { maxGapS: 3600 });
     expect(summary.heaterWh).toBe(1000);
     expect(summary.deliveredEnergyWh).toBe(10_000);
     expect(summary.heaterSharePct).toBeCloseTo(10, 5);
@@ -138,12 +138,184 @@ describe('analyzeChargingThermalTax', () => {
     expect(summary.sampleCount).toBe(2);
   });
 
-  it('treats negative/garbage heater readings as zero rather than subtracting energy', () => {
+  it('preserves valid signed heater readings', () => {
     const samples = [
       sample(0, { battery_heater_power_w: -500 }),
       sample(600, { battery_heater_power_w: -500 }),
     ];
     const summary = analyzeChargingThermalTax(samples);
-    expect(summary.heaterWh).toBe(0);
+    expect(summary.heaterWh).toBeCloseTo(-500 / 6);
+    expect(summary.peakHeaterW).toBe(-500);
+  });
+
+  it.each(['first', 'last'] as const)('matches only the counter window with the %s counter absent', (missing) => {
+    const rows = [0, 60, 120].map((offset, i) => sample(offset, {
+      battery_heater_power_w: i === 1 ? 60 : 180,
+      ac_charging_energy_in_wh: i * 100,
+    }));
+    rows[missing === 'first' ? 0 : 2]!.ac_charging_energy_in_wh = null;
+    const s = analyzeChargingThermalTax(rows);
+    expect(s.heaterWh).toBe(4);
+    expect(s.deliveredEnergyWh).toBe(100);
+    expect(s.matchedHeaterWh).toBe(2);
+    expect(s.matchedDeliveredEnergyWh).toBe(100);
+    expect(s.heaterSharePct).toBe(2);
+    expect(s.matchedCoveragePct).toBe(50);
+    expect(s.sourceCoveragePct).toBe(50);
+    expect(s.sourceIntervals).toEqual([{
+      startMs: T0 + (missing === 'first' ? 60_000 : 0),
+      endMs: T0 + (missing === 'first' ? 120_000 : 60_000),
+      heaterWh: 2,
+      deliveredEnergyWh: 100,
+    }]);
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])('does not treat invalid heater %s as measured zero', (value) => {
+    const rows = [
+      sample(0, { battery_heater_power_w: 0, ac_charging_energy_in_wh: 0 }),
+      sample(60, { ac_charging_energy_in_wh: 100 }),
+      sample(120, { battery_heater_power_w: 0, ac_charging_energy_in_wh: 200 }),
+    ];
+    Object.assign(rows[1]!, { battery_heater_power_w: value });
+    const s = analyzeChargingThermalTax(rows);
+    expect(s.heaterSharePct).toBeNull();
+    expect(s.matchedHeaterWh).toBeNull();
+    expect(s.matchedDeliveredEnergyWh).toBeNull();
+    expect(s.matchedCoveragePct).toBe(0);
+    expect(s.sourceIntervals.every((p) => p.heaterWh === null)).toBe(true);
+  });
+
+  it('reports measured zero heater share with fully observed readings', () => {
+    const s = analyzeChargingThermalTax([
+      sample(0, { battery_heater_power_w: 0, ac_charging_energy_in_wh: 0 }),
+      sample(60, { battery_heater_power_w: 0, ac_charging_energy_in_wh: 100 }),
+    ]);
+    expect(s.heaterSharePct).toBe(0);
+    expect(s.matchedHeaterWh).toBe(0);
+    expect(s.matchedCoveragePct).toBe(100);
+  });
+
+  it.each(['cumulative', 'power_integral'] as const)('preserves measured zero delivered energy from %s', (method) => {
+    const s = analyzeChargingThermalTax([0, 60].map((offset) => sample(offset, {
+      battery_heater_power_w: 10,
+      ...(method === 'cumulative'
+        ? { ac_charging_energy_in_wh: 123, ac_charging_power_w: 1000 }
+        : { ac_charging_power_w: 0 }),
+    })));
+    expect(s.energySource).toBe(method);
+    expect(s.deliveredEnergyWh).toBe(0);
+    expect(s.matchedDeliveredEnergyWh).toBe(0);
+    expect(s.heaterSharePct).toBeNull();
+  });
+
+  it('preserves fractional signed values and does not mutate or reorder raw samples', () => {
+    const rows = [
+      sample(60, { battery_heater_power_w: -0.75, ac_charging_power_w: 15.5 }),
+      sample(0, { battery_heater_power_w: -0.75, ac_charging_power_w: 15.5 }),
+    ];
+    const before = structuredClone(rows);
+    const s = analyzeChargingThermalTax(rows);
+    expect(s.heaterWh).toBeCloseTo(-0.0125);
+    expect(s.deliveredEnergyWh).toBeCloseTo(15.5 / 60);
+    expect(s.heaterSharePct).toBeCloseTo(-0.75 / 15.5 * 100);
+    expect(s.phases[0]!.avgHeaterW).toBe(-0.75);
+    expect(rows).toEqual(before);
+  });
+
+  it('retains signed charging power without calling it missing', () => {
+    const s = analyzeChargingThermalTax([0, 60].map((offset) => sample(offset, {
+      battery_heater_power_w: 0.5, dc_charging_power_w: -15.5,
+    })));
+    expect(s.energySource).toBe('power_integral');
+    expect(s.deliveredEnergyWh).toBeCloseTo(-15.5 / 60);
+    expect(s.heaterSharePct).toBeNull();
+  });
+
+  it('exposes unmatched source energy across a heater coverage gap', () => {
+    const s = analyzeChargingThermalTax([0, 600].map((offset) => sample(offset, {
+      battery_heater_power_w: 60, ac_charging_energy_in_wh: offset,
+    })));
+    expect(s.heaterWh).toBe(10);
+    expect(s.deliveredEnergyWh).toBe(600);
+    expect(s.sourceIntervals[0]!.heaterWh).toBeNull();
+    expect(s.sourceCoveragePct).toBe(100);
+    expect(s.matchedCoveragePct).toBe(0);
+    expect(s.heaterSharePct).toBeNull();
+  });
+
+  it('matches a sparse cumulative interval using dense heater samples', () => {
+    const s = analyzeChargingThermalTax([0, 60, 120].map((offset) => sample(offset, {
+      battery_heater_power_w: 60,
+      ac_charging_energy_in_wh: offset === 60 ? null : offset,
+    })));
+    expect(s.matchedHeaterWh).toBe(2);
+    expect(s.matchedDeliveredEnergyWh).toBe(120);
+    expect(s.matchedCoveragePct).toBe(100);
+  });
+
+  it('does not infer a total by switching between AC and DC counters', () => {
+    const s = analyzeChargingThermalTax([
+      sample(0, { ac_charging_energy_in_wh: 100 }),
+      sample(60, { dc_charging_energy_in_wh: 200 }),
+    ]);
+    expect(s.energySource).toBe('none');
+    expect(s.deliveredEnergyWh).toBeNull();
+    expect(s.heaterSharePct).toBeNull();
+  });
+
+  it.each([null, NaN, Infinity])('reports invalid delivered input %s as unknown, not zero', (value) => {
+    const s = analyzeChargingThermalTax([0, 60].map((offset) => sample(offset, {
+      battery_heater_power_w: 0,
+      ac_charging_energy_in_wh: value,
+      ac_charging_power_w: value,
+    })));
+    expect(s.deliveredEnergyWh).toBeNull();
+    expect(s.energySource).toBe('none');
+    expect(s.sourceIntervals).toEqual([]);
+  });
+
+  it('cannot establish energy scope from only duplicate timestamps', () => {
+    const s = analyzeChargingThermalTax([
+      sample(0, { battery_heater_power_w: 60, ac_charging_energy_in_wh: 0, ac_charging_power_w: 60 }),
+      sample(0, { battery_heater_power_w: 60, ac_charging_energy_in_wh: 100, ac_charging_power_w: 60 }),
+    ]);
+    expect(s.deliveredEnergyWh).toBeNull();
+    expect(s.heaterSharePct).toBeNull();
+  });
+
+  it('compares only matched intervals when heater coverage is partial', () => {
+    const s = analyzeChargingThermalTax([0, 60, 120, 180].map((offset) => sample(offset, {
+      battery_heater_power_w: offset === 180 ? null : 60,
+      ac_charging_energy_in_wh: offset,
+    })));
+    expect(s.deliveredEnergyWh).toBe(180);
+    expect(s.matchedDeliveredEnergyWh).toBe(120);
+    expect(s.matchedHeaterWh).toBe(2);
+    expect(s.heaterSharePct).toBeCloseTo(100 / 60);
+    expect(s.sourceCoveragePct).toBe(100);
+    expect(s.matchedCoveragePct).toBeCloseTo(200 / 3);
+  });
+
+  it('matches a partial fallback power window rather than the whole heater span', () => {
+    const s = analyzeChargingThermalTax([0, 60, 120].map((offset) => sample(offset, {
+      battery_heater_power_w: offset === 0 ? 600 : 60,
+      ac_charging_power_w: offset === 0 ? null : 600,
+    })));
+    expect(s.energySource).toBe('power_integral');
+    expect(s.heaterWh).toBe(6.5);
+    expect(s.deliveredEnergyWh).toBe(10);
+    expect(s.matchedHeaterWh).toBe(1);
+    expect(s.heaterSharePct).toBe(10);
+    expect(s.matchedCoveragePct).toBe(50);
+  });
+
+  it('preserves fractional cumulative differences including signed counter baselines', () => {
+    const s = analyzeChargingThermalTax([
+      sample(0, { battery_heater_power_w: 0.75, ac_charging_energy_in_wh: -0.25 }),
+      sample(60, { battery_heater_power_w: 0.75, ac_charging_energy_in_wh: 0.125 }),
+    ]);
+    expect(s.deliveredEnergyWh).toBe(0.375);
+    expect(s.heaterWh).toBe(0.0125);
+    expect(s.heaterSharePct).toBeCloseTo(10 / 3);
   });
 });
