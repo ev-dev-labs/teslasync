@@ -264,6 +264,52 @@ describe('normalizeChargingHistory', () => {
     const evidence = normalizeChargingHistory(sessions, 'day')!;
     expect(evidence.avg_peak_power_w).toBeCloseTo((120000 + 7000) / 2);
   });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '', '0', false])(
+    'keeps missing or invalid measurements (%s) unknown rather than zero or partial totals',
+    (value) => {
+      const unknown = Object.assign({}, sessions[0]!, {
+        total_energy_added_wh: value, peak_power_w: value, cost: value, cost_decimal: value,
+      });
+      for (const input of [[unknown], [sessions[1]!, unknown]]) {
+        expect(normalizeChargingHistory(input, 'day')).toMatchObject({
+          total_energy_added_wh: null, avg_peak_power_w: null, total_cost: null,
+          observed_session_count: input.length,
+        });
+      }
+    },
+  );
+
+  it('retains measured zero even when the legacy cost alias is absent', () => {
+    const zero = { ...sessions[0]!, total_energy_added_wh: 0, peak_power_w: 0, cost: undefined, cost_decimal: 0 };
+    expect(normalizeChargingHistory([zero], 'day')).toMatchObject({
+      total_energy_added_wh: 0, avg_peak_power_w: 0, total_cost: 0,
+    });
+  });
+
+  it('preserves signed and fractional measurements without assuming currency or rounding', () => {
+    const input = [
+      { ...sessions[0]!, total_energy_added_wh: 10.75, peak_power_w: 2.5, cost: -2.25 },
+      { ...sessions[1]!, total_energy_added_wh: -0.25, peak_power_w: -0.5, cost: undefined, cost_decimal: 0.125 },
+    ];
+    const evidence = normalizeChargingHistory(input, 'day')!;
+    expect(evidence).toMatchObject({
+      total_energy_added_wh: 10.5, avg_peak_power_w: 1, total_cost: -2.125,
+    });
+    expect(evidence).not.toHaveProperty('currency');
+    expect(evidence).not.toHaveProperty('cost_currency');
+  });
+
+  it('preserves a measured zero cost alias instead of replacing it with another cost', () => {
+    expect(normalizeChargingHistory([{ ...sessions[0]!, cost: 0, cost_decimal: 12.5 }], 'day')?.total_cost).toBe(0);
+  });
+
+  it('keeps aggregate overflow unknown', () => {
+    const large = { ...sessions[0]!, total_energy_added_wh: Number.MAX_VALUE, peak_power_w: Number.MAX_VALUE, cost: Number.MAX_VALUE };
+    expect(normalizeChargingHistory([large, large], 'day')).toMatchObject({
+      total_energy_added_wh: null, avg_peak_power_w: null, total_cost: null,
+    });
+  });
 });
 
 const guardEvents: GuardEvent[] = [

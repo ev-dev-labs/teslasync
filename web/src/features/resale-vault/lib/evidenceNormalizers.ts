@@ -23,6 +23,7 @@ import type { MaintenanceItem, ServiceRecord, SoftwareUpdate } from '@/types/veh
 import type { Drive, DriveScore, DrivingStats } from '@/types/driving';
 import type { ChargingSession } from '@/types/charging';
 import type { GuardEvent } from '@/api/hooks/useGuard';
+import { asFiniteNumber } from '@/lib/typeGuards';
 import { applyDatePrecision, resolveVinDisclosure, scrubSensitiveRecord } from './redaction';
 import type {
   BatteryEvidence,
@@ -51,9 +52,16 @@ function isDcFastChargeSession(chargerType: string | null): boolean {
   return t.includes('dc') || t.includes('super') || t.includes('fast') || t.includes('ccs');
 }
 
-function avg(values: number[]): number | null {
+/** Without coverage fields, a partial aggregate must remain unknown. */
+function completeTotal(values: unknown[]): number | null {
   if (values.length === 0) return null;
-  return values.reduce((sum, v) => sum + v, 0) / values.length;
+  let total = 0;
+  for (const value of values) {
+    const measured = asFiniteNumber(value);
+    if (measured == null) return null;
+    total += measured;
+  }
+  return asFiniteNumber(total);
 }
 
 function minMaxDates(dates: string[]): { earliest: string | null; latest: string | null } {
@@ -187,17 +195,17 @@ export function normalizeDrivingHistory(
   };
 }
 
-/** Charging history — summed/averaged directly from `ChargingSession[]`'s already-SI (Wh/W) fields; no unit conversion needed at all. */
+/** Charging history — complete finite measurements only, in already-SI Wh/W. Cost remains an unconverted amount with unknown denomination; missing measurements never become zero. */
 export function normalizeChargingHistory(
   sessions: ChargingSession[] | undefined,
   precision: DatePrecision,
 ): ChargingHistoryEvidence | null {
   if (!sessions || sessions.length === 0) return null;
 
-  const totalEnergyWh = sessions.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0);
-  const peakPowers = sessions.map((s) => s.peak_power_w).filter((v): v is number => v != null);
+  const totalEnergyWh = completeTotal(sessions.map((s) => s.total_energy_added_wh));
+  const totalPeakPower = completeTotal(sessions.map((s) => s.peak_power_w));
   const fastChargeCount = sessions.filter((s) => isDcFastChargeSession(s.charger_type)).length;
-  const totalCost = sessions.reduce((sum, s) => sum + (s.cost ?? s.cost_decimal ?? 0), 0);
+  const totalCost = completeTotal(sessions.map((s) => s.cost ?? s.cost_decimal));
   const timestamps = sessions.map((s) => s.started_at ?? s.start_ts).filter(Boolean);
   const { earliest, latest } = minMaxDates(timestamps);
 
@@ -205,7 +213,7 @@ export function normalizeChargingHistory(
     observed_session_count: sessions.length,
     total_energy_added_wh: totalEnergyWh,
     fast_charge_session_count: fastChargeCount,
-    avg_peak_power_w: avg(peakPowers),
+    avg_peak_power_w: totalPeakPower == null ? null : totalPeakPower / sessions.length,
     total_cost: totalCost,
     earliest_session_at: applyDatePrecision(earliest, precision),
     latest_session_at: applyDatePrecision(latest, precision),
