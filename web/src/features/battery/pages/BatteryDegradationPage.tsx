@@ -28,6 +28,7 @@ import { FadeIn } from '@/components/motion';
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useUnits } from '@/hooks/useUnits';
@@ -117,7 +118,11 @@ export default function BatteryDegradationPage() {
   const activeIdStr = activeId != null ? String(activeId) : null;
 
   /* Battery health analytics (overview stats, range chart, history table). */
-  const healthQuery = useBatteryHealthAnalytics(activeIdStr);
+  const range = useRangeState();
+  const healthQuery = useBatteryHealthAnalytics(activeIdStr, {
+    start: range.startInstant,
+    end: range.endInstantExclusive,
+  });
   const healthState = useDataState(healthQuery, {
     provenance: 'inferred',
     maxAgeMs: 24 * 60 * 60 * 1000,
@@ -358,7 +363,7 @@ export default function BatteryDegradationPage() {
           ) : unavailableMessage ? (
             <EmptyState message={unavailableMessage} />
           ) : (
-            <BatteryDegradationStats data={data} loading={initialLoading} retained={healthState.status === 'stale'} />
+            <BatteryDegradationStats data={data} loading={initialLoading} retained={healthState.status === 'stale'} range={range} />
           )}
         </section>
       </FadeIn>
@@ -573,7 +578,7 @@ export default function BatteryDegradationPage() {
                         : t('battery.degradation.crossingUnavailable', 'The 80% crossing estimate is unavailable.')}
                   </Text>
                 </div>
-                <BatteryDegradationStats data={data} retained={healthState.status === 'stale'} prediction />
+                <BatteryDegradationStats data={data} retained={healthState.status === 'stale'} prediction range={range} />
               </div>
             ) : (
               <EmptyState /* no-action: prediction needs a minimum snapshot count that isn't met yet */

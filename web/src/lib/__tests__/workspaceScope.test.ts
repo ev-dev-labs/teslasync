@@ -27,6 +27,13 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns battery degradation analysis on the actual route, not the API path', () => {
+    for (const path of ['/battery-degradation', '/battery-degradation/',
+      '/battery-degradation?from=2024-03-10&to=2024-03-11', '/battery-degradation#history']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/analytics/battery-degradation').range).toBe(false);
+  });
   it('owns comfort consistency range and vehicle on its normalized route', () => {
     for (const path of [
       '/comfort-consistency', '/comfort-consistency/',

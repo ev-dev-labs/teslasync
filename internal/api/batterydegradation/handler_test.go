@@ -899,7 +899,7 @@ func TestBatteryHealthCoalescesConcurrentColdLoads(t *testing.T) {
 	fixedNow := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
 	h := &Handler{
 		now:         func() time.Time { return fixedNow },
-		healthCache: make(map[int64]batteryHealthCacheEntry),
+		healthCache: make(map[batteryHealthScope]batteryHealthCacheEntry),
 	}
 	var loadCount atomic.Int32
 	h.healthLoader = func(context.Context, int64) (*batteryHealthResponse, batteryHealthTimings, error) {
@@ -951,7 +951,7 @@ func TestBatteryHealthResponseUsesCanonicalSIFields(t *testing.T) {
 	odometer, rangeM := 20_000.0, 410_000.0
 	h := &Handler{
 		now:         time.Now,
-		healthCache: make(map[int64]batteryHealthCacheEntry),
+		healthCache: make(map[batteryHealthScope]batteryHealthCacheEntry),
 	}
 	h.healthLoader = func(context.Context, int64) (*batteryHealthResponse, batteryHealthTimings, error) {
 		return &batteryHealthResponse{
@@ -1180,12 +1180,128 @@ func TestBatteryHealthCacheIsBounded(t *testing.T) {
 	fixedNow := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
 	h := &Handler{
 		now:         func() time.Time { return fixedNow },
-		healthCache: make(map[int64]batteryHealthCacheEntry),
+		healthCache: make(map[batteryHealthScope]batteryHealthCacheEntry),
 	}
+
 	for vehicleID := int64(1); vehicleID <= batteryHealthCacheMaxSize+10; vehicleID++ {
-		h.cacheBatteryHealth(vehicleID, &batteryHealthResponse{VehicleID: vehicleID})
+		h.cacheBatteryHealth(batteryHealthScope{vehicleID: vehicleID}, &batteryHealthResponse{VehicleID: vehicleID})
 	}
 	if got := len(h.healthCache); got != batteryHealthCacheMaxSize {
 		t.Fatalf("cache size = %d, want %d", got, batteryHealthCacheMaxSize)
+	}
+}
+
+func TestBatteryHealthExactRangeValidationAndCache(t *testing.T) {
+	h := NewHandler(nil, nil)
+	var scopes []batteryHealthScope
+	h.healthRangeLoader = func(_ context.Context, scope batteryHealthScope) (*batteryHealthResponse, batteryHealthTimings, error) {
+		scopes = append(scopes, scope)
+		return &batteryHealthResponse{VehicleID: scope.vehicleID}, batteryHealthTimings{}, nil
+	}
+	h.healthLoader = func(ctx context.Context, vehicleID int64) (*batteryHealthResponse, batteryHealthTimings, error) {
+		return h.healthRangeLoader(ctx, batteryHealthScope{vehicleID: vehicleID})
+	}
+	request := func(query string, want int) {
+		t.Helper()
+		rec := httptest.NewRecorder()
+		h.Health(rec, httptest.NewRequest(http.MethodGet, "/analytics/battery-health?vehicle_id=42"+query, nil))
+		if rec.Code != want {
+			t.Fatalf("query %q: status %d, want %d: %s", query, rec.Code, want, rec.Body.String())
+		}
+	}
+	start := "&start=2024-03-10T15:42:19.125Z"
+	end := "&end=2024-03-11T15:42:19.125Z"
+	for _, query := range []string{
+		start, end, "&start=invalid" + end, start + "&end=invalid",
+		start + "&end=2024-03-10T15:42:19.125Z",
+		start + "&end=2024-03-09T15:42:19.125Z",
+		"&start=2024-03-10" + end,
+		"&start=0001-01-01T00:00:00Z" + end,
+	} {
+		request(query, http.StatusBadRequest)
+	}
+	if len(scopes) != 0 {
+		t.Fatal("invalid range reached loader")
+	}
+	request(start+end, http.StatusOK)
+	request(start+end, http.StatusOK)
+	request("&start=2024-03-10T08:42:19.125-07:00"+end, http.StatusOK)
+	request(start+"&end=2024-03-12T15:42:19.125Z", http.StatusOK)
+	request("&start=2024-03-09T15:42:19.125Z"+end, http.StatusOK)
+	request("", http.StatusOK)
+	if len(scopes) != 4 {
+		t.Fatalf("load count %d, want 4 independently cached scopes", len(scopes))
+	}
+	if scopes[0].start.Format(time.RFC3339Nano) != "2024-03-10T15:42:19.125Z" ||
+		scopes[0].end.Format(time.RFC3339Nano) != "2024-03-11T15:42:19.125Z" {
+		t.Fatalf("precise bounds changed: %+v", scopes[0])
+	}
+}
+
+func TestBatteryHealthRangeQueriesPreserveWholeWindow(t *testing.T) {
+	start, _ := time.Parse(time.RFC3339Nano, "2024-03-10T15:42:19.125Z")
+	end := start.Add(24 * time.Hour)
+	scope := batteryHealthScope{vehicleID: 42, start: start, end: end}
+	query, args := batteryHistoryRequest(scope)
+	for _, clause := range []string{
+		"FROM signal_log", "ts >= $3 AND ts < $4", "FROM ranged_days",
+		"LEAST(d.bucket + INTERVAL '1 day', $4::timestamptz)",
+	} {
+		if !strings.Contains(query, clause) {
+			t.Fatalf("range query missing %q", clause)
+		}
+	}
+	if strings.Contains(query, "LIMIT $3") || len(args) != 4 || args[2] != start || args[3] != end {
+		t.Fatalf("bounded history truncated or bounds lost: %v", args)
+	}
+	for _, clause := range []string{"started_at >= $2", "started_at < $3",
+		"ts >= COALESCE($2::timestamptz", "ts < $3"} {
+		if !strings.Contains(batteryHealthSummaryQuery, clause) {
+			t.Fatalf("summary query missing %q", clause)
+		}
+	}
+	if !strings.Contains(recentChargingSessionsQuery, "started_at >= $3") ||
+		!strings.Contains(recentChargingSessionsQuery, "started_at < $4") {
+		t.Fatal("charging analysis missing range")
+	}
+	legacy, legacyArgs := batteryHistoryRequest(batteryHealthScope{vehicleID: 42})
+	if legacy != batteryHealthHistoryQuery || legacyArgs[2] != batteryHistoryLimit {
+		t.Fatal("unscoped certificate/history behavior changed")
+	}
+}
+
+func TestBatteryHealthRangeDoesNotSubstituteCurrentLiveState(t *testing.T) {
+	h := NewHandler(nil, &fakeStateReader{
+		signalAtFn: func(context.Context, int64, string, time.Time) (signal.SignalValue, error) {
+			t.Fatal("bounded historical health read current live state")
+			return nil, nil
+		},
+	})
+	start := time.Date(2024, 3, 10, 15, 42, 19, 125000000, time.UTC)
+	end := start.Add(24 * time.Hour)
+	response, _, err := h.buildBatteryHealthInRange(context.Background(), batteryHealthScope{
+		vehicleID: 42, start: start, end: end,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if response.EstimatedCapacityAvailable || response.CurrentSohAvailable ||
+		response.AnalysisStart == nil || *response.AnalysisStart != start ||
+		response.AnalysisEndExclusive == nil || *response.AnalysisEndExclusive != end {
+		t.Fatalf("missing range evidence or invented capacity: %+v", response)
+	}
+}
+
+func TestBatteryHealthHistoricalProjectionAnchorsAtRangeEnd(t *testing.T) {
+	h := &Handler{now: func() time.Time { return time.Date(2026, 10, 14, 0, 0, 0, 0, time.UTC) }}
+	end := time.Date(2024, 4, 1, 15, 42, 19, 125000000, time.UTC)
+	result := h.predictDegradationAt([]batterySnapshotData{
+		{CreatedAt: time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC), HealthScore: 95},
+		{CreatedAt: time.Date(2024, 2, 1, 0, 0, 0, 0, time.UTC), HealthScore: 94},
+		{CreatedAt: time.Date(2024, 3, 1, 0, 0, 0, 0, time.UTC), HealthScore: 93},
+	}, end)
+	if !result.Prediction.FitValid || len(result.Projections) != 61 || result.Projections[0].Date != "2024-04" {
+		t.Fatalf("projection ignored historical analysis end: %+v", result)
 	}
 }

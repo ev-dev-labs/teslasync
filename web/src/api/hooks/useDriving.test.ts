@@ -3,9 +3,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
-import { drivingKeys, useDrives, useDrivingStats, useDriveHistory, useDriveCalendarHistory, useDriveScore } from './useDriving';
+import { drivingKeys, useDrives, useDrivingStats, useDriveHistory, useDriveCalendarHistory, useDriveScore, useSpeedProfile } from './useDriving';
 import { chargingKeys, useChargingHistory } from './useCharging';
-import { useEnergyStats, useVampireDrainHistory, useVampireDrainStats } from './useEnergy';
+import { useMediaHistory, vehicleSystemsKeys } from './useVehicleSystems';
+import { useBatteryHealthAnalytics, useEnergyStats, useVampireDrainHistory, useVampireDrainStats } from './useEnergy';
 import { useDriveScorePage } from '@/features/driving/hooks/useDriveScorePage';
 
 vi.mock('react-i18next', () => ({
@@ -53,7 +54,7 @@ function wrapper() {
   };
 }
 
-beforeEach(() => mockedRequest.mockReset());
+beforeEach(() => { mockedRequest.mockReset(); });
 afterEach(() => {
   for (const client of clients) client.clear();
   clients.length = 0;
@@ -109,6 +110,166 @@ describe('vampire-drain history extraction', () => {
 describe('driving exact-range integration', () => {
   const start = '2024-03-10T15:42:19.125Z';
   const end = '2024-03-11T15:42:19.125Z';
+
+  it('scopes battery health requests and cache by both precise bounds without converting raw data', async () => {
+    const data = { vehicle_id: 42, current_soh: 91.125, history: [{ capacity_wh: 72500 }] };
+    mockedRequest.mockResolvedValue(data);
+    const context = wrapper();
+    const { result, rerender } = renderHook(
+      (range: { start: string; end: string }) => useBatteryHealthAnalytics('42', range),
+      { wrapper: context.wrapper, initialProps: { start, end } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const ranges = [
+      { start, end },
+      { start: '2024-03-09T00:00:00-08:00', end },
+      { start: '2024-03-09T00:00:00-08:00', end: '2024-03-11T00:00:00-07:00' },
+    ];
+    for (const range of ranges.slice(1)) {
+      rerender(range);
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    }
+    expect(mockedRequest).toHaveBeenCalledTimes(3);
+    mockedRequest.mock.calls.forEach(([path, options], i) => {
+      const url = new URL(path, 'http://fixture.test');
+      expect(url.pathname).toBe('/analytics/battery-health');
+      expect([...url.searchParams.entries()]).toEqual([
+        ['vehicle_id', '42'], ['start', ranges[i].start], ['end', ranges[i].end],
+      ]);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+      expect(context.client.getQueryData([
+        'battery-health-analytics', '42', ranges[i].start, ranges[i].end,
+      ])).toBe(data);
+    });
+  });
+
+  it('disables scoped battery health without a vehicle and cancels superseded range requests', async () => {
+    mockedRequest.mockImplementation(() => new Promise(() => {}));
+    const context = wrapper();
+    const { rerender, unmount } = renderHook(
+      (props: { vehicleId: string | null; start: string; end: string }) =>
+        useBatteryHealthAnalytics(props.vehicleId, { start: props.start, end: props.end }),
+      { wrapper: context.wrapper, initialProps: { vehicleId: null as string | null, start, end } },
+    );
+    expect(mockedRequest).not.toHaveBeenCalled();
+    rerender({ vehicleId: '42', start, end });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const firstSignal = mockedRequest.mock.calls[0][1]?.signal;
+    rerender({ vehicleId: '42', start, end: '2024-03-12T15:42:19.125Z' });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(firstSignal?.aborted).toBe(true);
+    unmount();
+    expect(mockedRequest.mock.calls[1][1]?.signal?.aborted).toBe(true);
+  });
+
+  it('isolates media history by both exact bounds and preserves non-UTC custom instants', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const context = wrapper();
+    const { result, rerender } = renderHook(
+      (range: { start: string; end: string }) => useMediaHistory('42', range),
+      { wrapper: context.wrapper, initialProps: { start, end } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const customStart = '2024-03-09T00:00:00-08:00';
+    rerender({ start: customStart, end });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    const customEnd = '2024-03-11T00:00:00-07:00';
+    rerender({ start: customStart, end: customEnd });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const ranges = [
+      { start, end }, { start: customStart, end }, { start: customStart, end: customEnd },
+    ];
+    mockedRequest.mock.calls.forEach(([path, options], index) => {
+      const url = new URL(path, 'http://fixture.test');
+      expect(url.pathname).toBe('/media');
+      expect([...url.searchParams.entries()]).toEqual([
+        ['vehicle_id', '42'], ['start', ranges[index].start], ['end', ranges[index].end],
+      ]);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+      expect(context.client.getQueryData(vehicleSystemsKeys.mediaHistory(
+        '42', ranges[index].start, ranges[index].end,
+      ))).toEqual([]);
+    });
+  });
+
+  it.each([
+    ['invalid', end], [start, 'invalid'], ['2024-02-30', end], [end, start],
+  ])('rejects invalid drive-evidence bounds %s / %s without requesting unscoped history', async (lower, upper) => {
+    const context = wrapper();
+    const { result } = renderHook(() => useDriveCalendarHistory('42', lower, upper), {
+      wrapper: context.wrapper,
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Drive calendar requires a valid start and end date range');
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('preserves both exact drive-evidence options and an authoritative empty response', async () => {
+    mockedRequest.mockResolvedValue([]);
+    const context = wrapper();
+    const { result } = renderHook(() => useDriveCalendarHistory('42', start, end), {
+      wrapper: context.wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [path, options] = mockedRequest.mock.calls[0];
+    const url = new URL(path, 'http://fixture.test');
+    expect(url.pathname).toBe('/drives');
+    expect([...url.searchParams.entries()]).toEqual([
+      ['vehicle_id', '42'], ['start', start], ['end', end], ['limit', '1000'], ['offset', '0'],
+    ]);
+    expect(options?.signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data).toEqual([]);
+    expect(context.client.getQueryData(drivingKeys.calendar('42', start, end))).toEqual([]);
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves profile exact exclusive bounds, raw payload, cache isolation and cancellation', async () => {
+    const data = { distribution: [], avg_speed_mps: 12.5 };
+    mockedRequest.mockResolvedValue(data);
+    const context = wrapper();
+    const { result, rerender } = renderHook(
+      (window: { start: string; end: string }) => useSpeedProfile('42', window.start, window.end),
+      { wrapper: context.wrapper, initialProps: { start, end } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toBe(data);
+    const nextEnd = '2024-03-12T07:00:00.000Z';
+    rerender({ start, end: nextEnd });
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    mockedRequest.mock.calls.forEach(([path, options], index) => {
+      const url = new URL(path, 'http://fixture.test');
+      expect(url.pathname).toBe('/analytics/speed-profile');
+      expect([...url.searchParams.entries()]).toEqual([
+        ['vehicle_id', '42'], ['start', start], ['end', index === 0 ? end : nextEnd],
+      ]);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+    });
+    expect(context.client.getQueryData(['speed-profile', '42', start, end])).toBe(data);
+  });
+
+  it.each([
+    ['invalid', end], [start, 'invalid'], ['2024-02-30', end], ['2024', end],
+    [start, undefined], [undefined, end], [end, start],
+  ])('rejects invalid or one-sided profile bounds %s / %s instead of fetching full history', async (lower, upper) => {
+    const context = wrapper();
+    const { result } = renderHook(() => useSpeedProfile('42', lower, upper), { wrapper: context.wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.error?.message).toBe('Speed profile requires a valid start and end date range');
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('retains full-history profile queries when both dates are missing and disables missing vehicles', async () => {
+    mockedRequest.mockResolvedValue({ distribution: [] });
+    const context = wrapper();
+    const { result, rerender } = renderHook((vehicleId?: string) => useSpeedProfile(vehicleId), {
+      wrapper: context.wrapper, initialProps: undefined as string | undefined,
+    });
+    expect(mockedRequest).not.toHaveBeenCalled();
+    rerender('42');
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedRequest.mock.calls[0][0]).toBe('/analytics/speed-profile?vehicle_id=42');
+  });
 
   it.each([
     { start: '2026-10-13T20:15:39.843Z', end: '2026-10-14T20:15:39.843Z' },

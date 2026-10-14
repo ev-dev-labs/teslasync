@@ -5,6 +5,7 @@ import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBri
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useDateFormat, type DateFormatter } from '@/hooks/useDateFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
+import type { UseRangeStateReturn } from '@/hooks/useRangeState';
 
 export function ageLabel(
   months: number,
@@ -81,6 +82,7 @@ interface Props {
   loading?: boolean;
   retained?: boolean;
   prediction?: boolean;
+  range?: Pick<UseRangeStateReturn, 'startInstant' | 'endInstantExclusive' | 'timezone'>;
 }
 
 export function batteryNumber(value: unknown, min = -Infinity, max = Infinity): number | null {
@@ -165,10 +167,10 @@ export function predictionIntervalEvidence(
 }
 
 /** SI values enter the shared renderer here; rate and duration retain specialist formatting. */
-export function BatteryDegradationStats({ data, loading = false, retained = false, prediction = false }: Props) {
+export function BatteryDegradationStats({ data, loading = false, retained = false, prediction = false, range }: Props) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
-  const { formatDate } = useDateFormat();
+  const { formatDate, formatDateTime } = useDateFormat();
   const capacityHelp = capacityEvidence(data, t);
   const cycleHelp = t('battery.degradation.chargeEquivalentEvidence',
     'Estimated charge equivalents: recorded energy added across {{count}} valid charging sessions divided by nominal original capacity. Partial equivalents add up; zero-energy sessions are included. This is not a measured lifetime count of full discharge/recharge cycles. The nominal capacity is an assumption.')
@@ -247,7 +249,16 @@ export function BatteryDegradationStats({ data, loading = false, retained = fals
       secondary={loading ? undefined : `${capacityHelp} ${observationEvidence(data, t, formatDate)}${prediction ? ` ${cycleHelp} ${driveHelp} ${predictionIntervalEvidence(data, t)}` : ''}`}
       loading={loading}
       retained={retained}
-      period={{
+      period={range ? {
+        kind: 'analysis',
+        label: `${t('workspace.analysis.range', 'Date range')}: ${formatDateTime(range.startInstant)} – ${formatDateTime(range.endInstantExclusive)}`,
+        start: range.startInstant,
+        endExclusive: range.endInstantExclusive,
+        timezone: range.timezone,
+        completeness: 'unknown',
+        provenance: t('battery.degradation.estimateEvidence',
+          'Health, capacity, range and forecasts are estimates derived from available telemetry snapshots, not direct pack-capacity measurements.'),
+      } : {
         kind: 'unknown',
         label: t('battery.degradation.sampleWindow', 'Available battery history'),
         reason: t('battery.degradation.estimateEvidence',

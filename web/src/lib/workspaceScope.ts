@@ -27,6 +27,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/analytics/carbon',
   '/api-logs',
   '/automations/history',
+  '/battery-degradation',
   '/cabin-thermal',
   '/charging',
   '/charge-advisor',

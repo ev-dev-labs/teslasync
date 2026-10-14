@@ -196,11 +196,13 @@ type batteryChargingAnalysis struct {
 }
 
 type batteryHealthResponse struct {
-	VehicleID                  int64   `json:"vehicle_id"`
-	CurrentSoh                 float64 `json:"current_soh"`
-	CurrentSohAvailable        bool    `json:"current_soh_available"`
-	EstimatedCapacityWh        float64 `json:"estimated_capacity_wh"`
-	EstimatedCapacityAvailable bool    `json:"estimated_capacity_wh_available"`
+	AnalysisStart              *time.Time `json:"analysis_start,omitempty"`
+	AnalysisEndExclusive       *time.Time `json:"analysis_end_exclusive,omitempty"`
+	VehicleID                  int64      `json:"vehicle_id"`
+	CurrentSoh                 float64    `json:"current_soh"`
+	CurrentSohAvailable        bool       `json:"current_soh_available"`
+	EstimatedCapacityWh        float64    `json:"estimated_capacity_wh"`
+	EstimatedCapacityAvailable bool       `json:"estimated_capacity_wh_available"`
 	// Nominal VIN/model/default assumption, not a measured new-pack capacity.
 	OriginalCapacityWh        float64 `json:"original_capacity_wh"`
 	DegradationRatePctPerYear float64 `json:"degradation_rate_pct_per_year"`

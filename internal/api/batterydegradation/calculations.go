@@ -113,6 +113,10 @@ func recentCapacityEvidence(history []batteryHealthHistoryPoint, sampleCount int
 }
 
 func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
+	return h.predictDegradationAt(snapshots, h.currentTime())
+}
+
+func (h *Handler) predictDegradationAt(snapshots []batterySnapshotData, now time.Time) regressionResult {
 	res := regressionResult{Projections: []predictiveProjection{}}
 	pred := &res.Prediction
 	pred.CrossingStatus = "insufficient_fit"
@@ -189,7 +193,6 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 		EmpiricalCoverage: "unmeasured",
 	}
 
-	now := h.currentTime()
 	monthStart := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location())
 	currentYears := now.Sub(firstTime).Hours() / (24 * 365.25)
 	pred.CrossingStatus = "no_future_crossing"

@@ -146,6 +146,12 @@ vi.mock('@/api/hooks/useEnergy', () => ({
   useBatteryHealthAnalytics: vi.fn(),
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
+const analysisRange = vi.hoisted(() => ({
+  startInstant: '2024-03-10T15:42:19.125Z',
+  endInstantExclusive: '2024-03-11T15:42:19.125Z',
+  timezone: 'America/Los_Angeles',
+}));
+vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => analysisRange }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useChartPalette', () => ({
   useChartPalette: () => ['var(--series-0)', 'var(--series-1)', 'var(--series-2)', 'var(--series-3)', 'var(--series-4)'],
@@ -315,6 +321,8 @@ function metricValue(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  analysisRange.startInstant = '2024-03-10T15:42:19.125Z';
+  analysisRange.endInstantExclusive = '2024-03-11T15:42:19.125Z';
   savedDatePreferences.locale = 'en-US';
   savedDatePreferences.timezone = 'UTC';
   vi.mocked(downloadCSV).mockClear();
@@ -329,6 +337,25 @@ beforeEach(() => {
 });
 
 describe('BatteryDegradationPage — date-preference boundary', () => {
+  it('uses the header range for health analysis and follows changes without a second picker', () => {
+    const view = renderPage();
+    expect(mockHealth).toHaveBeenLastCalledWith('7', {
+      start: analysisRange.startInstant, end: analysisRange.endInstantExclusive,
+    });
+    expect(screen.queryByRole('combobox', { name: /vehicle|date range/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/start date|end date/i)).not.toBeInTheDocument();
+    analysisRange.startInstant = '2024-03-09T00:00:00-08:00';
+    analysisRange.endInstantExclusive = '2024-03-11T00:00:00-07:00';
+    view.rerender(
+      <MemoryRouter><QueryClientProvider client={new QueryClient()}>
+        <BatteryDegradationPage />
+      </QueryClientProvider></MemoryRouter>,
+    );
+    expect(mockHealth).toHaveBeenLastCalledWith('7', {
+      start: analysisRange.startInstant, end: analysisRange.endInstantExclusive,
+    });
+    expect(metricValue(kpiRegion(), 'Current SOH')).toContain('91');
+  });
   it('preserves populated counts and SI capacity with the canonical session-energy contract', () => {
     const source = structuredClone(HEALTH);
     source.charging_habits.avg_energy_per_session_wh = 38_125.5;
@@ -812,7 +839,9 @@ describe('BatteryDegradationPage — populated (km)', () => {
     // Capacity 75,000 Wh → 75.0 kWh (precision 1).
     expect(within(table).getByText('75.0 kWh')).toBeInTheDocument();
 
-    expect(mockHealth).toHaveBeenCalledWith('7');
+    expect(mockHealth).toHaveBeenCalledWith('7', {
+      start: analysisRange.startInstant, end: analysisRange.endInstantExclusive,
+    });
     expect(mockHealth).toHaveBeenCalledTimes(1);
   });
 });
