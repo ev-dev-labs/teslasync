@@ -2,6 +2,37 @@
 
 ## Current phase
 
+### New-machine recovery, 2026-10-14T00:44Z
+
+Continue `fix/dashboard-followups`; Phases 0-5 stay closed, Phase 6 remains
+unfinished and Phase 7 has not started. Startup HEAD `705b61a847` already
+contains the previous session's QA reports and partial test/source work; actual
+upstream comparison is 0 behind / 0 ahead. No completed uncommitted source
+was found. The only inherited dirty file is `web\package.json`, adding
+`allowScripts.esbuild@0.25.12=true`; it is unattributed, preserved and unstaged.
+
+Actual built-in inventory contains no background agents and no inherited live
+shells. All 87 interrupted `[~]` rows are reset to pending with every attempt
+column unchanged and retained notes, WIP, reports and old clocks intact.
+Historical API errors in APIKeys and PeriodCompare do not explain their final
+real assertion failures; those exhausted failed rows are not reset.
+Phase 6 now has 99 done / 144 pending / 23 failed / 1 blocked.
+
+The installed runtime reports Node v26.8.1. One shared source-preview process
+was launched with `npm run dev -- --host 127.0.0.1 --port 5173 --strictPort`,
+shell `modernization-dev-new-machine`; readiness is still pending at this
+receipt. No Docker rebuild, browser download or fixture reseed is authorized.
+All future browser checks must use the installed Edge, `channel: "msedge"`.
+
+This host exposes no built-in recurring scheduler and no agent cancellation
+tool. The historical schedule 3 belongs to the previous session, not this
+machine. A requested ten-minute schedule cannot be created with the exposed
+tools; do not invent one or build extensions/helpers. Health checks are
+performed within the active orchestration loop, with a session SQL overlap
+flag. Cooperative stop messages are not cancellation; unconfirmed source
+writers retain their claims. Existing partial acceptance and exhausted native
+helper budgets remain unchanged.
+
 ### Scheduled census, actual catalog closure and twelve rolling refills,22:54Z
 
 Phases4/5 remainclosed at a63bd78e6/58f1a657c; actual15:20build0/literalTSC0
