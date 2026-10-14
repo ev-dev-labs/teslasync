@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowUpRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { ErrorStats } from '@/api/types';
 import type { DataState } from '@/api/dataState';
-import { Badge, Caption, Text } from '@/components/ui';
+import { Badge, Button, Caption, Text } from '@/components/ui';
 import { DateTime } from '@/components/data-display';
 import { PrefetchLink } from '@/components/layout';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
@@ -45,6 +45,19 @@ export function ApiLogsBackendErrors({ data, state, loading, onRetry }: ApiLogsB
         </div>
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={onRetry} />
+      ) : state.status === 'initial' ? (
+        <div className="space-y-2">
+          <Text as="p" variant="bodySm" role="status">
+            {state.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('dataSources.status.pending', 'Pending')}
+          </Text>
+          {state.isRefreshBlocked && (
+            <Button variant="secondary" size="sm" onClick={() => { onRetry(); }}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          )}
+        </div>
       ) : !data ? (
         <Text as="p" variant="bodySm">{t('apiLogs.runtimeUnavailable', 'Backend runtime error summary unavailable.')}</Text>
       ) : rows.length > 0 ? (

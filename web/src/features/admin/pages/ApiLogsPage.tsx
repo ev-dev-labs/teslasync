@@ -110,6 +110,7 @@ export default function ApiLogsPage() {
   }, [requestedPage, page, setUrl]);
 
   const previousRange = useRef(`${startInstant}:${endInstantExclusive}`);
+  const rangeChanged = previousRange.current !== `${startInstant}:${endInstantExclusive}`;
   useEffect(() => {
     const currentRange = `${startInstant}:${endInstantExclusive}`;
     if (previousRange.current === currentRange) return;
@@ -153,7 +154,18 @@ export default function ApiLogsPage() {
   const runtimeState = useDataState(runtimeQuery);
 
   const logs = data?.data ?? [];
-  const total = data?.total ?? 0;
+  const totalIsKnown = typeof data?.total === 'number'
+    && Number.isSafeInteger(data.total) && data.total >= 0;
+  const total = totalIsKnown ? data.total : 0;
+  const lastPage = Math.max(0, Math.ceil(total / limit) - 1);
+  const reconcilePage = totalIsKnown && logsQuery.isSuccess
+    && !logsQuery.isFetching && !logsQuery.isPlaceholderData
+    && !rangeChanged && logsState.status === 'ok' && page > lastPage;
+
+  useEffect(() => {
+    if (reconcilePage) setPage(lastPage);
+  }, [reconcilePage, lastPage, setPage]);
+
   const hasFilters = !!(method || status || endpoint || service || client || key);
   const serverFilters = useMemo<ApiLogsServerFilters>(
     () => ({ method, status, endpoint, service, client, key }),
@@ -300,6 +312,19 @@ export default function ApiLogsPage() {
                 </div>
               ) : statsState.fatalError ? (
                 <QueryError error={statsState.fatalError} onRetry={() => refetchStats()} />
+              ) : statsState.status === 'initial' ? (
+                <div className="space-y-2">
+                  <Text as="p" variant="bodySm" role="status">
+                    {statsState.isRefreshBlocked
+                      ? t('dataSources.status.paused', 'Refresh paused')
+                      : t('dataSources.status.pending', 'Pending')}
+                  </Text>
+                  {statsState.isRefreshBlocked && (
+                    <Button variant="secondary" size="sm" onClick={() => { void refetchStats(); }}>
+                      {t('common.retry', 'Retry')}
+                    </Button>
+                  )}
+                </div>
               ) : serviceRows.length === 0 ? (
                 // no-action: the header's View settings controls this window; no service rows exist yet.
                 <EmptyState
@@ -353,14 +378,14 @@ export default function ApiLogsPage() {
               <div className="min-w-0">
                 <PanelTitle>{t('apiLogs.logTitle', 'API call log')}</PanelTitle>
                 <Caption className="mt-0.5 block">
-                  {total > 0
+                  {total > 0 && page <= lastPage
                     ? t('apiLogs.showing', {
                         from: page * limit + 1,
                         to: Math.min((page + 1) * limit, total),
                         total: fmtInt(total),
                         defaultValue: `Showing ${page * limit + 1}–${Math.min((page + 1) * limit, total)} of ${fmtInt(total)}`,
                       })
-                    : data ? t('apiLogs.totalCount', '{{count}} total', { count: 0 }) : '—'}
+                    : totalIsKnown && total === 0 ? t('apiLogs.totalCount', '{{count}} total', { count: 0 }) : '—'}
                 </Caption>
                 <Caption className="mt-1 block">
                   {t('apiLogs.loadedPageScope', 'Newest first. Filters query all matching requests; exports include only this loaded page.')}
@@ -375,7 +400,7 @@ export default function ApiLogsPage() {
                 page: page + 1,
                 pageSize: limit,
                 total,
-                totalKind: data ? 'exact' : 'unknown',
+                totalKind: totalIsKnown ? 'exact' : 'unknown',
                 onPageChange: (next) => setPage(next - 1),
                 onPageSizeChange: (size) => setUrl({ size: String(size), page: null }),
               }}
@@ -416,6 +441,19 @@ export default function ApiLogsPage() {
             ) : logsState.fatalError ? (
               <div className="p-6">
                 <QueryError error={logsState.fatalError} onRetry={() => refetchLogs()} />
+              </div>
+            ) : logsState.status === 'initial' || reconcilePage ? (
+              <div className="space-y-2 p-6">
+                <Text as="p" variant="bodySm" role="status">
+                  {logsState.isRefreshBlocked
+                    ? t('dataSources.status.paused', 'Refresh paused')
+                    : t('dataSources.status.pending', 'Pending')}
+                </Text>
+                {logsState.isRefreshBlocked && (
+                  <Button variant="secondary" size="sm" onClick={() => { void refetchLogs(); }}>
+                    {t('common.retry', 'Retry')}
+                  </Button>
+                )}
               </div>
             ) : logs.length === 0 ? (
               <EmptyState

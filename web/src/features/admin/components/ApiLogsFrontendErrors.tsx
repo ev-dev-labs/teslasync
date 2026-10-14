@@ -1,7 +1,7 @@
 import { Bug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useWebErrorsSummary } from '@/api/hooks/useAdmin';
-import { Badge, Caption, Text } from '@/components/ui';
+import { Badge, Button, Caption, Text } from '@/components/ui';
 import { DateTime } from '@/components/data-display';
 import { QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
@@ -47,6 +47,19 @@ export function ApiLogsFrontendErrors() {
         </div>
       ) : state.fatalError ? (
         <QueryError error={state.fatalError} onRetry={() => query.refetch()} />
+      ) : state.status === 'initial' ? (
+        <div className="space-y-2">
+          <Text as="p" variant="bodySm" role="status">
+            {state.isRefreshBlocked
+              ? t('dataSources.status.paused', 'Refresh paused')
+              : t('dataSources.status.pending', 'Pending')}
+          </Text>
+          {state.isRefreshBlocked && (
+            <Button variant="secondary" size="sm" onClick={() => { void query.refetch(); }}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          )}
+        </div>
       ) : !data ? (
         <Text as="p" variant="bodySm">{t('apiLogs.frontendErrors.loadError', 'Unable to load frontend error summary.')}</Text>
       ) : rows.length > 0 ? (
