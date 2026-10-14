@@ -9,9 +9,10 @@ import type { ForecastQuality, ForecastResult } from '../lib/forecastAdapters';
 interface AssumptionsQualityPanelProps {
   solarForecast: ForecastResult;
   loadForecast: ForecastResult;
-  hasEnergySite: boolean;
+  hasEnergySite: boolean | null;
   siteName: string | null;
   historyState?: DataState<unknown>;
+  sitesState?: DataState<unknown>;
 }
 
 const QUALITY_VARIANT: Record<ForecastQuality, 'success' | 'info' | 'warning' | 'neutral'> = {
@@ -22,8 +23,10 @@ const QUALITY_VARIANT: Record<ForecastQuality, 'success' | 'info' | 'warning' | 
 };
 
 /** Forecast confidence/quality plus an explicit measured-vs-assumed data-provenance disclosure. */
-export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergySite, siteName, historyState }: AssumptionsQualityPanelProps) {
+export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergySite, siteName, historyState, sitesState }: AssumptionsQualityPanelProps) {
   const { t } = useTranslation();
+  const evidenceState = sitesState && !sitesState.hasData ? sitesState : historyState;
+  const evidenceUnknown = hasEnergySite == null || (evidenceState != null && !evidenceState.hasData);
 
   const qualityLabel: Record<ForecastQuality, string> = {
     high: t('homeEnergy.quality.high', 'High'),
@@ -40,16 +43,16 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
     metricId: 'percent',
     occurrenceId,
     label,
-    rawValue: forecast.confidence * 100,
+    rawValue: evidenceUnknown ? null : forecast.confidence * 100,
     display: { formatter: raw => ({ value: String(Math.round(raw)), unit: '%' }) },
-    description: t('homeEnergy.quality.confidence', '{{pct}}% confidence from {{count}} history sample(s)', {
+    description: evidenceUnknown ? undefined : t('homeEnergy.quality.confidence', '{{pct}}% confidence from {{count}} history sample(s)', {
       pct: Math.round(forecast.confidence * 100),
       count: forecast.sourceSampleCount,
     }),
     context: <>
       <span className="inline-flex items-center gap-2">
         <Icon className="h-4 w-4" aria-hidden="true" />
-        <Badge variant={QUALITY_VARIANT[forecast.quality]} size="sm">{qualityLabel[forecast.quality]}</Badge>
+        {!evidenceUnknown && <Badge variant={QUALITY_VARIANT[forecast.quality]} size="sm">{qualityLabel[forecast.quality]}</Badge>}
       </span>
       <div>{forecast.latestSampleIso
         ? t('homeEnergy.quality.latestSample', 'Latest source history sample: {{time}}', { time: forecast.latestSampleIso })
@@ -57,14 +60,14 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
     </>,
   }));
   const operationalMetrics = useOperationalMetrics(metrics);
-  const loading = historyState?.status === 'initial';
-  const statusLabel = loading
-    ? t('homeEnergy.brief.loading', 'Loading source inputs')
-    : historyState?.isRefreshBlocked
+  const loading = evidenceState?.status === 'initial' && !evidenceState.isRefreshBlocked;
+  const statusLabel = evidenceState?.isRefreshBlocked
       ? t('homeEnergy.brief.paused', 'Source refresh paused')
-      : historyState?.status === 'stale'
+      : loading
+        ? t('homeEnergy.brief.loading', 'Loading source inputs')
+      : evidenceState?.status === 'stale'
         ? t('homeEnergy.brief.retained', 'Retained source inputs')
-        : historyState?.status === 'initialFailure' || historyState?.status === 'partial'
+        : evidenceUnknown || evidenceState?.status === 'initialFailure' || evidenceState?.status === 'partial'
           ? t('homeEnergy.brief.partial', 'Incomplete source inputs')
           : solarForecast.quality === 'none' && loadForecast.quality === 'none'
             ? t('homeEnergy.quality.none', 'No history')
@@ -77,8 +80,8 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
         title={t('homeEnergy.quality.title', 'Assumptions & forecast quality')}
         description={t('homeEnergy.quality.briefDescription', 'Review the separate solar and household-load history behind this modeled recommendation. Confidence applies to forecasts only.')}
         statusLabel={statusLabel}
-        statusTone={historyState?.isRefreshBlocked || historyState?.status === 'stale'
-          || historyState?.status === 'initialFailure' || historyState?.status === 'partial' ? 'warning' : 'neutral'}
+        statusTone={evidenceState?.isRefreshBlocked || evidenceState?.status === 'stale'
+          || evidenceState?.status === 'initialFailure' || evidenceState?.status === 'partial' ? 'warning' : 'neutral'}
         scope={t('homeEnergy.quality.coverageUnknown', 'Historical sample coverage is not established; solar and load evidence remain separate.')}
         provenance={t('homeEnergy.quality.historyProvenance', 'Forecast-adapter confidence is derived from available energy history, not confidence in measured vehicle or battery state.')}
       />
@@ -87,7 +90,9 @@ export function AssumptionsQualityPanel({ solarForecast, loadForecast, hasEnergy
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <div className="space-y-1">
           <Text as="p" variant="caption">
-            {hasEnergySite
+            {hasEnergySite == null
+              ? statusLabel
+              : hasEnergySite
               ? t('homeEnergy.quality.availableSiteInputs', 'Source inputs when available: vehicle SoC and solar/load history from {{site}}.', {
                   site: siteName ?? t('homeEnergy.quality.unnamedSite', 'your Tesla energy site'),
                 })

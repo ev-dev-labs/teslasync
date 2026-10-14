@@ -4,6 +4,7 @@ import { Accordion, Slider, Toggle, Select, Badge, Text } from '@/components/ui'
 import { FormSection } from '@/components/forms';
 import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
+import type { DataState } from '@/api/dataState';
 import { updateVehicleAssumption } from '../hooks/useOrchestrationScenario';
 import { DEFAULT_VEHICLE_ASSUMPTION, type VehicleAssumption } from '../lib/scenarioDefaults';
 import type { VehicleInput } from '../lib/types';
@@ -11,10 +12,11 @@ import type { VehicleInput } from '../lib/types';
 interface VehicleAssumptionsPanelProps {
   vehicleInputs: VehicleInput[];
   assumptions: Record<string, VehicleAssumption>;
+  sourceState?: DataState<unknown>;
 }
 
 /** Per-vehicle editable assumptions: target SoC, usable capacity, charge power, departure deadline, priority. */
-export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleAssumptionsPanelProps) {
+export function VehicleAssumptionsPanel({ vehicleInputs, assumptions, sourceState }: VehicleAssumptionsPanelProps) {
   const { t } = useTranslation();
   const { formatPower, formatEnergy } = useUnits();
 
@@ -26,7 +28,15 @@ export function VehicleAssumptionsPanel({ vehicleInputs, assumptions }: VehicleA
 
   return (
     <FormSection title={t('homeEnergy.vehicle.title', 'Vehicle assumptions')}>
-      {vehicleInputs.length === 0 ? (
+      {sourceState && !sourceState.hasData ? (
+        <Text role="status" variant="bodySm" color="secondary">
+          {sourceState.isRefreshBlocked
+            ? t('homeEnergy.brief.paused', 'Source refresh paused')
+            : sourceState.fatalError
+              ? t('homeEnergy.brief.unavailable', 'Essential source unavailable')
+              : t('homeEnergy.brief.loading', 'Loading source inputs')}
+        </Text>
+      ) : vehicleInputs.length === 0 ? (
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}
           message={t('homeEnergy.vehicle.empty', 'No vehicles found on this account to orchestrate.')}

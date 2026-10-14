@@ -50,6 +50,8 @@ export default function WholeHomeEnergyPage() {
     refreshNow,
     commitAsBaseline,
   } = useHomeEnergyOrchestration();
+  const vehiclesState = sourceStates.find(({ id }) => id === 'vehicles')?.state;
+  const sitesState = sourceStates.find(({ id }) => id === 'sites')?.state;
   const sourceLabels: Record<string, string> = {
     vehicles: t('homeEnergy.sources.vehicles', 'Vehicles'),
     fleet: t('homeEnergy.sources.fleet', 'Vehicle live state'),
@@ -98,7 +100,8 @@ export default function WholeHomeEnergyPage() {
 
       {/* 3 — per-vehicle editable assumptions */}
       <FadeIn delay={0.1}>
-        <VehicleAssumptionsPanel vehicleInputs={input.vehicles} assumptions={scenario.vehicleAssumptions} />
+        <VehicleAssumptionsPanel vehicleInputs={input.vehicles} assumptions={scenario.vehicleAssumptions}
+          sourceState={vehiclesState} />
       </FadeIn>
 
       {/* 4 — multi-series energy flow schedule */}
@@ -108,17 +111,17 @@ export default function WholeHomeEnergyPage() {
 
       {/* 5 — per-vehicle readiness */}
       <FadeIn delay={0.2}>
-        <VehicleReadinessPanel vehicles={result.vehicles} />
+        <VehicleReadinessPanel vehicles={result.vehicles} sourceState={vehiclesState} />
       </FadeIn>
 
       {/* 6 — Powerwall trajectory */}
       <FadeIn delay={0.25}>
-        <PowerwallTrajectoryChart slots={result.slots} powerwall={input.powerwall} />
+        <PowerwallTrajectoryChart slots={result.slots} powerwall={input.powerwall} slotMinutes={result.meta.slotMinutes} />
       </FadeIn>
 
       {/* 7 — tariff / constraint heatmap */}
       <FadeIn delay={0.3}>
-        <TariffConstraintHeatmap slots={result.slots} grid={input.grid} hasPowerwall={!!input.powerwall} />
+        <TariffConstraintHeatmap slots={result.slots} grid={input.grid} hasPowerwall={!!input.powerwall} slotMinutes={result.meta.slotMinutes} />
       </FadeIn>
 
       {/* 8 — constraint violations / infeasibility report */}
@@ -133,6 +136,7 @@ export default function WholeHomeEnergyPage() {
           loadForecast={loadForecast}
           hasEnergySite={hasEnergySite}
           siteName={siteName}
+          sitesState={sitesState}
           historyState={sourceStates.find(({ id }) => id === 'history')?.state}
         />
       </FadeIn>

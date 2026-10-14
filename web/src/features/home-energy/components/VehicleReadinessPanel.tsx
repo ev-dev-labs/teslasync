@@ -7,19 +7,29 @@ import { EmptyState } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
 import { gaugeTone, neonColorMap } from '@/lib/tokens';
 import type { VehiclePlanResult } from '../lib/types';
+import type { DataState } from '@/api/dataState';
 
 interface VehicleReadinessPanelProps {
   vehicles: VehiclePlanResult[];
+  sourceState?: DataState<unknown>;
 }
 
 /** Per-vehicle readiness: progress toward target SoC, delivered/unmet energy, and deadline outcome. */
-export function VehicleReadinessPanel({ vehicles }: VehicleReadinessPanelProps) {
+export function VehicleReadinessPanel({ vehicles, sourceState }: VehicleReadinessPanelProps) {
   const { t } = useTranslation();
   const { formatEnergy } = useUnits();
 
   return (
     <LayoutCard title={t('homeEnergy.readiness.title', 'Per-vehicle readiness')}>
-      {vehicles.length === 0 ? (
+      {sourceState && !sourceState.hasData ? (
+        <Text role="status" variant="bodySm" color="secondary">
+          {sourceState.isRefreshBlocked
+            ? t('homeEnergy.brief.paused', 'Source refresh paused')
+            : sourceState.fatalError
+              ? t('homeEnergy.brief.unavailable', 'Essential source unavailable')
+              : t('homeEnergy.brief.loading', 'Loading source inputs')}
+        </Text>
+      ) : vehicles.length === 0 ? (
         <EmptyState
           icon={<CarFront className="h-8 w-8" />}
           message={t('homeEnergy.readiness.empty', 'No vehicles are part of this plan.')}

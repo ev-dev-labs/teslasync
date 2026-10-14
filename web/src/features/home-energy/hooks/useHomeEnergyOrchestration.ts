@@ -14,7 +14,7 @@
 import { useMemo, useState } from 'react';
 import type { FreshnessQuery } from '@/components/data-display';
 import { useDataState } from '@/hooks/useDataState';
-import { deriveDataState, type DataState } from '@/api/dataState';
+import { combineDataStates, deriveDataState, type DataState } from '@/api/dataState';
 import { useVehicles, useFleetStates, summariseFleetStates, type FleetStateEntry } from '@/api/hooks/useVehicles';
 import {
   useTeslaEnergySites,
@@ -37,10 +37,40 @@ function vehicleDisplayName(v: Vehicle): string {
   return (v.display_name && v.display_name.trim()) || v.vin || `#${v.id}`;
 }
 
-function resolveCurrentSocPct(vehicle: Vehicle, fleetEntry: FleetStateEntry | undefined): number {  const fromState = fleetEntry?.state?.battery_level;
-  if (typeof fromState === 'number' && Number.isFinite(fromState)) return fromState;
+export interface VehicleSocObservation {
+  vehicleId: string;
+  currentSocPct: number;
+  origin: 'fleet-state' | 'vehicle-battery' | 'default';
+  /** Source observation time, never the successful wrapper-query refresh time. */
+  observedAt: number | null;
+  ageMs: number | null;
+}
+
+function resolveObservedSoc(
+  vehicle: Vehicle,
+  fleetEntry: FleetStateEntry | undefined,
+): Omit<VehicleSocObservation, 'vehicleId' | 'ageMs'> | null {
+  const fromState = fleetEntry?.state?.battery_level;
+  if (typeof fromState === 'number' && Number.isFinite(fromState)) {
+    const timestamp = fleetEntry?.observedAt;
+    return {
+      currentSocPct: fromState,
+      origin: 'fleet-state',
+      observedAt: typeof timestamp === 'number' && Number.isFinite(timestamp) && timestamp > 0
+        ? timestamp : null,
+    };
+  }
   const fromList = vehicle.battery_level ?? vehicle.batteryLevel;
-  if (typeof fromList === 'number' && Number.isFinite(fromList)) return fromList;
+  if (typeof fromList === 'number' && Number.isFinite(fromList)) {
+    // The vehicle list has no battery observation timestamp; updated_at is record metadata.
+    return { currentSocPct: fromList, origin: 'vehicle-battery', observedAt: null };
+  }
+  return null;
+}
+
+function resolveCurrentSocPct(vehicle: Vehicle, fleetEntry: FleetStateEntry | undefined): number {
+  const observed = resolveObservedSoc(vehicle, fleetEntry);
+  if (observed) return observed.currentSocPct;
   return 50;
 }
 
@@ -84,7 +114,10 @@ export interface HomeEnergyOrchestration {
   queries: FreshnessQuery[];
   sourceStates: ReadonlyArray<{ id: string; state: DataState<unknown> }>;
   vehicles: Vehicle[];
-  hasEnergySite: boolean;
+  /** SOC trust metadata kept separate from the optimizer's numeric assumptions. */
+  vehicleSocObservations: VehicleSocObservation[];
+  /** Unknown until the account's energy-site list has resolved. */
+  hasEnergySite: boolean | null;
   siteName: string | null;
   scenario: OrchestrationScenario;
   startTimeIso: string;
@@ -193,11 +226,24 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
   );
 
   const result = useMemo(() => optimizeHomeEnergy(input), [input]);
+  const now = Date.now();
+  const vehicleSocObservations = vehicles.map((vehicle): VehicleSocObservation => {
+    const entry = fleetStatesQuery.data?.find((member) => member.vehicle.id === vehicle.id);
+    const observed = resolveObservedSoc(vehicle, entry);
+    const observedAt = observed?.observedAt ?? null;
+    return {
+      vehicleId: String(vehicle.id),
+      currentSocPct: observed?.currentSocPct ?? 50,
+      origin: observed?.origin ?? 'default',
+      observedAt,
+      ageMs: observedAt == null ? null : Math.max(0, now - observedAt),
+    };
+  });
 
   /* `useFleetStates` resolves successfully even when every per-vehicle request
    * failed, so its own `dataUpdatedAt` / `isError` describe the WRAPPER, not
-   * the readings. Substituting the observation-based model keeps this page's
-   * freshness chips from reporting "just now" over data that has not moved. */
+   * the readings. Member-level trust preserves missing/unverified outcomes
+   * and retained failures; observation times keep freshness chips honest. */
   const fleetSummary = useMemo(
     () => summariseFleetStates(fleetStatesQuery.data ?? []),
     [fleetStatesQuery.data],
@@ -207,14 +253,47 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
   const siteInfoState = useDataState(siteInfoQuery, { provenance: 'cached' });
   const liveStatusState = useDataState(liveStatusQuery, { provenance: 'live' });
   const historyState = useDataState(historyQuery, { provenance: 'historical' });
-  const fleetState = deriveDataState(fleetStatesQuery, {
-    provenance: 'live',
-    partial: fleetSummary.failedCount > 0,
+  const fleetMemberStates = vehicles.map((vehicle) => {
+    const entry = fleetStatesQuery.data?.find((member) => member.vehicle.id === vehicle.id);
+    return {
+      id: `fleet:${vehicle.id}`,
+      state: deriveDataState({
+        ...fleetStatesQuery,
+        data: entry?.outcome === 'missing' ? null : entry?.state ?? undefined,
+        error: entry?.error ?? fleetStatesQuery.error,
+        isError: entry?.outcome === 'failed' || fleetStatesQuery.isError,
+        dataUpdatedAt: entry?.observedAt ?? 0,
+      }, {
+        provenance: entry?.stale || entry?.freshness !== 'fresh' ||
+          !entry?.verifiedFields.includes('state') ? 'cached' : 'live',
+        unavailable: entry?.outcome === 'missing',
+        partial: entry?.outcome === 'resolved' &&
+          (entry.stale || entry.freshness !== 'fresh' || !entry.verifiedFields.includes('state')),
+      }),
+    };
   });
+  const fleetWrapperState = deriveDataState(fleetStatesQuery, {
+    provenance: 'live',
+    partial: fleetSummary.failedCount > 0 || fleetSummary.missingCount > 0 ||
+      fleetSummary.unverifiedCount > 0,
+  });
+  const fleetHasData = fleetMemberStates.some((member) => member.state.hasData);
+  const fleetCombinedState = combineDataStates(fleetMemberStates.map((member) => member.state));
+  const fleetState = fleetMemberStates.length > 0 ? {
+    ...fleetWrapperState,
+    ...fleetCombinedState,
+    status: fleetSummary.status === 'partial' && fleetCombinedState.status === 'unavailable'
+      ? 'partial' as const
+      : fleetCombinedState.status,
+    data: fleetHasData ? fleetStatesQuery.data : undefined,
+    hasData: fleetHasData,
+  } : fleetWrapperState;
   const fleetFreshness = useMemo(() => ({
     isFetching: fleetStatesQuery.isFetching,
-    isError: fleetSummary.failedCount > 0,
-    isStale: fleetStatesQuery.isStale || fleetSummary.retainedCount > 0,
+    isError: fleetStatesQuery.isError || fleetSummary.failedCount > 0,
+    isStale: fleetStatesQuery.isStale || fleetSummary.retainedCount > 0 ||
+      fleetSummary.missingCount > 0 || fleetSummary.unverifiedCount > 0 ||
+      (fleetStatesQuery.data ?? []).some((entry) => entry.stale),
     dataUpdatedAt: fleetSummary.oldestObservedAt ?? 0,
     refetch: fleetStatesQuery.refetch,
   }), [fleetStatesQuery, fleetSummary]);
@@ -237,6 +316,7 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
     sourceStates: [
       { id: 'vehicles', state: vehiclesState },
       { id: 'fleet', state: fleetState },
+      ...fleetMemberStates,
       { id: 'sites', state: sitesState },
       ...(siteId != null ? [
         { id: 'siteInfo', state: siteInfoState },
@@ -245,7 +325,8 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
       ] : []),
     ],
     vehicles,
-    hasEnergySite: !!primarySite,
+    vehicleSocObservations,
+    hasEnergySite: sitesState.hasData ? !!primarySite : null,
     siteName: primarySite?.site_name ?? null,
     scenario,
     startTimeIso,

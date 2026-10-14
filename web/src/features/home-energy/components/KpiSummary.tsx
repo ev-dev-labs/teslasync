@@ -21,7 +21,7 @@ interface KpiSummaryProps {
 
 /** Top-of-page KPI band: overall recommendation quality plus the headline physical/financial outcomes. */
 export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavailable, sourceStates, slotMinutes }: KpiSummaryProps) {
-  const { fmtPercent } = useNumberFormatting();
+  const { fmtInt, fmtPercent, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatEnergy, formatPower } = useUnits();
   const { formatCurrency } = useFormatting();
@@ -34,13 +34,16 @@ export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavai
     start: formatDateTime(startTimeIso), end: formatDateTime(endInstantExclusive),
   });
 
-  const available = !loading && !unavailable;
+  const accountSourcesKnown = sourceStates
+    .filter(({ id }) => id === 'vehicles' || id === 'sites')
+    .every(({ state }) => state.hasData);
+  const available = !loading && !unavailable && accountSourcesKnown;
   const metrics: StatMetric[] = [
     {
       metricId: 'score', occurrenceId: 'overall',
       label: t('homeEnergy.kpi.overall', 'Overall score'),
       rawValue: available ? result.scores.overall : null,
-      display: { formatter: raw => ({ value: String(Math.round(raw)), unit: '' }) },
+      display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) },
       description: t('homeEnergy.kpi.scoreDescription', 'Modeled recommendation score, not source confidence'),
       context: result.feasible
         ? t('homeEnergy.kpi.feasible', 'Plan is feasible')
@@ -74,7 +77,10 @@ export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavai
       metricId: 'count', occurrenceId: 'vehicles-ready',
       label: t('homeEnergy.kpi.vehiclesReady', 'Vehicles ready'),
       rawValue: available ? readyCount : null,
-      display: { countTotal: result.vehicles.length },
+      display: {
+        countTotal: available ? result.vehicles.length : undefined,
+        formatter: raw => ({ value: `${fmtInt(raw)} / ${fmtInt(result.vehicles.length)}`, unit: '' }),
+      },
       description: t('homeEnergy.kpi.vehiclesReadyDescription', 'Ready vehicles / all vehicles in this modeled plan'),
       context: t('homeEnergy.kpi.vehiclesReadyHint', 'meet their target by deadline'),
     },
@@ -113,7 +119,9 @@ export function KpiSummary({ result, startTimeIso, horizonHours, loading, unavai
     statusLabel={statusLabel}
     statusTone={unavailable ? 'danger' : paused || stale || incomplete ? 'warning' : 'neutral'}
     scope={periodLabel}
-    freshness={t('homeEnergy.brief.interval', '{{minutes}}-minute modeled slots · UTC · source coverage not established', { minutes: slotMinutes })}
+    freshness={t('homeEnergy.brief.interval', '{{minutes}}-minute modeled slots · UTC · source coverage not established', {
+      minutes: Number.isFinite(slotMinutes) ? fmtNumber(slotMinutes) : '—',
+    })}
     provenance={t('homeEnergy.quality.provenanceAssumed', 'Assumed (user-editable): tariff rates, grid/panel import-export limits, Powerwall specification, and per-vehicle target SoC, capacity, charge power, and departure time. TeslaSync has no endpoint that reports these as measured fact.')}
   />;
 }
