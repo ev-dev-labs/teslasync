@@ -4,6 +4,8 @@
  * Renders the recent flag-change log, optionally scoped to a single
  * flag key. Always rendered in its own panel shell so the loading + empty
  * states surface in-place rather than gating the whole page.
+ * Read-only row disclosure retains every mobile field and full historical
+ * values; export accessors preserve raw values independently of previews.
  */
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,11 +14,13 @@ import {
   Badge,
   DataTable,
   Text,
+  useTableExpansion,
   type Column,
   type PaginationConfig,
 } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
-import { EmptyState } from '@/components/feedback';
+import { EmptyState, TableSkeleton } from '@/components/feedback';
+import type { CsvCellValue } from '@/lib/csvExport';
 import type {
   FeatureFlagChange,
   FeatureFlagOperation,
@@ -42,19 +46,28 @@ const PAGINATION: PaginationConfig = {
 };
 const MOBILE_COLUMNS = ['changed_at', 'actor', 'operation'];
 
-function compact(value: unknown): string {
+function fullValue(value: unknown): string {
   if (value == null) return '—';
   try {
-    const s = JSON.stringify(value);
-    if (s && s.length > 60) return `${s.slice(0, 57)}…`;
-    return s ?? '—';
+    return JSON.stringify(value) ?? '—';
   } catch {
     return '—';
   }
 }
 
+function compact(value: unknown): string {
+  const valueText = fullValue(value);
+  return valueText.length > 60 ? `${valueText.slice(0, 57)}…` : valueText;
+}
+
+function rawExportValue(value: unknown): CsvCellValue {
+  return value == null || typeof value === 'string' || typeof value === 'number'
+    || typeof value === 'boolean' || typeof value === 'object' ? value : '—';
+}
+
 export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
   const { t } = useTranslation();
+  const { expandedKeys, setExpandedKeys } = useTableExpansion<number>();
 
   // Null-guard: the parent always resolves `rows` to an array, but a
   // mid-flight or accidentally-undefined prop must never crash the panel —
@@ -103,6 +116,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       {
         key: 'old_value',
         header: t('admin.flags.audit.cols.oldValue', 'Old'),
+        exportValue: (row) => rawExportValue(row.old_value),
         render: (row) => (
           <Text as="span" mono size="xs" color="muted">
             {compact(row.old_value)}
@@ -112,6 +126,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       {
         key: 'new_value',
         header: t('admin.flags.audit.cols.newValue', 'New'),
+        exportValue: (row) => rawExportValue(row.new_value),
         render: (row) => (
           <Text as="span" mono size="xs" color="muted">
             {compact(row.new_value)}
@@ -131,6 +146,19 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
     ],
     [t],
   );
+
+  if (loading && safeRows.length === 0) {
+    return (
+      <div role="region" aria-busy="true" aria-label={t('admin.flags.audit.loading', 'Loading audit log…')}>
+        <Text as="span" className="sr-only" aria-live="polite">
+          {t('admin.flags.audit.loading', 'Loading audit log…')}
+        </Text>
+        <div aria-hidden="true">
+          <TableSkeleton rows={5} cols={7} />
+        </div>
+      </div>
+    );
+  }
 
   if (!loading && safeRows.length === 0) {
     return (
@@ -154,6 +182,7 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
   }
 
   return (
+    <div aria-busy={loading || undefined}>
     <DataTable<FeatureFlagChange>
       tableId={scopedKey ? 'admin:flag-changes-scoped' : 'admin:flag-changes'}
       name="flag-changes"
@@ -168,6 +197,27 @@ export function ChangesPanel({ rows, loading, scopedKey }: ChangesPanelProps) {
       }
       pagination={PAGINATION}
       mobileColumns={MOBILE_COLUMNS}
+      expandable
+      expandedKeys={expandedKeys}
+      onExpandedChange={(keys) => setExpandedKeys(keys.filter((key): key is number => typeof key === 'number'))}
+      rowLabel={(row) => row.flag_key ?? ''}
+      renderExpanded={(row) => (
+        <dl className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2">
+          {columns.map((column) => (
+            <div key={column.key} className="min-w-0">
+              <Text as="dt" size="xs" color="muted">{column.header}</Text>
+              <Text as="dd" size="sm" className="whitespace-pre-wrap break-all">
+                {column.key === 'old_value'
+                  ? fullValue(row.old_value)
+                  : column.key === 'new_value'
+                    ? fullValue(row.new_value)
+                    : column.render(row)}
+              </Text>
+            </div>
+          ))}
+        </dl>
+      )}
     />
+    </div>
   );
 }
