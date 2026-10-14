@@ -3,6 +3,8 @@ import {
   ChartTooltip, renderAnnotationLines, AREA_DEFAULTS, areaGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
+import { chartTokens } from '@/lib/tokens';
 import { EfficiencyChart } from './EfficiencyChart';
 import type { DrivesPresentation } from './types';
 
@@ -10,6 +12,11 @@ export function EfficiencyTrend({ model, source, units, selectedVehicleId }: Dri
   const { t } = useTranslation();
   const efficiencyUnit = units.unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
   const { dailyTrend } = model;
+  const chartText = {
+    fill: chartTokens.axisStroke,
+    fontFamily: getChartFontFamily(),
+    fontSize: getChartFontSize(12),
+  };
   return <EfficiencyChart source={source}
     title={t('efficiency.dailyTrend', { unit: efficiencyUnit, defaultValue: 'Daily Efficiency ({{unit}})' })}
     ariaLabel={t('efficiency.dailyTrendAria', 'Daily efficiency trend area chart')}
@@ -24,13 +31,13 @@ export function EfficiencyTrend({ model, source, units, selectedVehicleId }: Dri
     {({ annotations: chartAnnotations }) => (
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart data={dailyTrend}>
-          {areaGradient('effGrad', '#00f0ff')}
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-          <XAxis dataKey="date" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} />
-          <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+          {areaGradient('effGrad', chartTokens.series[0], 0.08)}
+          <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
+          <XAxis dataKey="date" tick={chartText} />
+          <YAxis tick={chartText} />
           <Tooltip content={<ChartTooltip />} />
           {renderAnnotationLines(chartAnnotations, ts => ts)}
-          <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke="#00f0ff" fill="url(#effGrad)" name={efficiencyUnit} />
+          <Area {...AREA_DEFAULTS} dataKey="efficiency" stroke={chartTokens.series[0]} fill="url(#effGrad)" name={efficiencyUnit} />
         </AreaChart>
       </ResponsiveContainer>
     )}
