@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -40,11 +40,25 @@ export function RepairQuarantinePanel({
     limit: 50,
   });
   const [history, setHistory] = useState<QuarantineCursor[]>([]);
-  const [restoreTarget, setRestoreTarget] = useState<RepairQuarantine | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<{
+    quarantine: RepairQuarantine;
+    vehicleId: number | undefined;
+    revision: number;
+  } | null>(null);
   const [restoreReason, setRestoreReason] = useState('');
+  const scope = useRef({ vehicleId, revision: 0 });
+  if (scope.current.vehicleId !== vehicleId) {
+    scope.current = { vehicleId, revision: scope.current.revision + 1 };
+  }
   const query = useRepairQuarantines(filters);
   const state = useDataState(query, { provenance: 'historical' });
   const restore = useRestoreQuarantine();
+  const inFlight = useRef(false);
+  const current = useRef({ canWrite, restoreTarget, restoreReason, pending: restore.isPending });
+  current.current = { canWrite, restoreTarget, restoreReason, pending: restore.isPending };
+  const targetIsCurrent = restoreTarget?.vehicleId === vehicleId
+    && restoreTarget?.revision === scope.current.revision;
+  const restoreDisabled = !canWrite || !targetIsCurrent || restore.isPending;
   const records = query.data?.quarantines ?? [];
   const hasData = state.hasData;
   const busy = query.isFetching && !query.isLoading;
@@ -52,14 +66,23 @@ export function RepairQuarantinePanel({
     { value: '', label: t('dataRepair.quarantine.all', 'All records') },
     { value: 'false', label: t('dataRepair.quarantine.active', 'Awaiting restore') },
     { value: 'true', label: t('dataRepair.quarantine.restored', 'Restored') },
-  ], [canWrite, t, writeBlockReason]);
+  ], [t]);
 
   useEffect(() => {
     setFilters({ vehicle_id: vehicleId, limit: 50 });
     setHistory([]);
+    setRestoreTarget(null);
+    setRestoreReason('');
   }, [vehicleId]);
 
-  const columns = useRepairQuarantineColumns(canWrite, writeBlockReason, setRestoreTarget);
+  const columns = useRepairQuarantineColumns(canWrite, writeBlockReason, (quarantine) => {
+    if (!current.current.canWrite || current.current.pending || inFlight.current
+      || filters.vehicle_id !== scope.current.vehicleId
+      || (scope.current.vehicleId != null && quarantine.vehicle_id !== scope.current.vehicleId)
+      || quarantine.restored_at) return;
+    setRestoreTarget({ quarantine, ...scope.current });
+    setRestoreReason('');
+  });
 
   const moveNext = () => {
     const cursor = query.data?.next_cursor;
@@ -157,6 +180,17 @@ export function RepairQuarantinePanel({
               data={records}
               keyExtractor={(item) => item.id}
               mobileColumns={['session', 'actions']}
+              expandable
+              renderExpanded={(item) => (
+                <dl className="grid min-w-0 gap-3 sm:grid-cols-2">
+                  {columns.filter((column) => !['session', 'actions'].includes(column.key)).map((column) => (
+                    <div key={column.key} className="min-w-0 break-words">
+                      <Text as="dt" variant="caption">{column.header}</Text>
+                      <dd className="mt-1">{column.render(item)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
               emptyMessage={t('dataRepair.quarantine.empty', 'No quarantine records match this filter.')}
               maxHeight={620}
               stickyHeader
@@ -192,10 +226,23 @@ export function RepairQuarantinePanel({
         open={restoreTarget != null}
         onCancel={() => { setRestoreTarget(null); setRestoreReason(''); }}
         onConfirm={() => {
-          if (!restoreTarget || !restoreReason.trim()) return;
+          const active = current.current;
+          const target = active.restoreTarget;
+          if (!active.canWrite || active.pending || inFlight.current || !target || target !== restoreTarget
+            || target.vehicleId !== scope.current.vehicleId
+            || target.revision !== scope.current.revision || !active.restoreReason.trim()) return;
+          inFlight.current = true;
           restore.mutate(
-            { quarantine_id: restoreTarget.id, reason: restoreReason.trim() },
-            { onSuccess: () => { setRestoreTarget(null); setRestoreReason(''); } },
+            { quarantine_id: target.quarantine.id, reason: active.restoreReason.trim() },
+            {
+              onSuccess: () => {
+                if (current.current.restoreTarget !== target
+                  || target.revision !== scope.current.revision) return;
+                setRestoreTarget(null);
+                setRestoreReason('');
+              },
+              onSettled: () => { inFlight.current = false; },
+            },
           );
         }}
         title={t('dataRepair.quarantine.confirmRestore', 'Restore quarantined session?')}
@@ -206,17 +253,29 @@ export function RepairQuarantinePanel({
         confirmLabel={t('dataRepair.cases.restoreAction', 'Restore session')}
         variant="warning"
         loading={restore.isPending}
-        confirmDisabled={!restoreReason.trim()}
+        confirmDisabled={restoreDisabled || !restoreReason.trim()}
         details={
-          <Textarea
-            id="quarantine-restore-reason"
-            label={t('dataRepair.cases.reasonLabel', 'Operator note')}
-            value={restoreReason}
-            onChange={(event) => setRestoreReason(event.target.value)}
-            rows={3}
-            maxLength={1000}
-            placeholder={t('dataRepair.quarantine.restoreReasonPlaceholder', 'Explain why this session should be restored')}
-          />
+          <>
+            {!canWrite && writeBlockReason ? (
+              <Text as="p" variant="bodySm" role="status" className="mb-3 break-words">
+                {writeBlockReason}
+              </Text>
+            ) : null}
+            <Textarea
+              id="quarantine-restore-reason"
+              label={t('dataRepair.cases.reasonLabel', 'Operator note')}
+              value={restoreReason}
+              onChange={(event) => {
+                if (!current.current.canWrite || current.current.pending || inFlight.current
+                  || current.current.restoreTarget?.revision !== scope.current.revision) return;
+                setRestoreReason(event.target.value);
+              }}
+              disabled={restoreDisabled}
+              rows={3}
+              maxLength={1000}
+              placeholder={t('dataRepair.quarantine.restoreReasonPlaceholder', 'Explain why this session should be restored')}
+            />
+          </>
         }
       />
     </>

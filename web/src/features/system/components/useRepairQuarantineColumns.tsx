@@ -57,7 +57,7 @@ export function useRepairQuarantineColumns(
     {
       key: 'reason',
       header: t('dataRepair.quarantine.columns.reason', 'Reason'),
-      render: (item) => <Text as="span" size="sm" className="block max-w-xs">{item.reason}</Text>,
+      render: (item) => <Text as="span" size="sm" className="block max-w-xs break-words">{item.reason ?? '—'}</Text>,
     },
     {
       key: 'quarantined_at',
@@ -67,7 +67,7 @@ export function useRepairQuarantineColumns(
     {
       key: 'actor',
       header: t('dataRepair.quarantine.columns.operator', 'Operator'),
-      render: (item) => <Text as="span" size="sm">{item.quarantined_by}</Text>,
+      render: (item) => <Text as="span" size="sm" className="break-words">{item.quarantined_by ?? '—'}</Text>,
     },
     {
       key: 'actions',
@@ -80,7 +80,7 @@ export function useRepairQuarantineColumns(
           variant="secondary"
           size="sm"
           icon={<RotateCcw className="h-4 w-4" aria-hidden="true" />}
-          onClick={() => onRestore(item)}
+          onClick={() => { if (canWrite) onRestore(item); }}
           disabled={!canWrite}
           title={!canWrite ? writeBlockReason : undefined}
         >
