@@ -72,7 +72,7 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
     expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('0/3');
     expect(metric('vehicles').querySelector('[data-operational-value]')).toHaveTextContent('0');
     expect(within(metric('tesla')).getByText('Not connected')).toBeInTheDocument();
-    expect(within(metric('telemetry')).getByText('Waiting')).toBeInTheDocument();
+    expect(within(metric('telemetry')).getByText('Unknown')).toBeInTheDocument();
     expect(screen.getByText('Waiting for the first sync')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'Setup progress: 0/3' })).toBeInTheDocument();
     expect(vi.mocked(formatMetric)).toHaveBeenCalledWith(
@@ -81,6 +81,91 @@ describe('OnboardingSetupStatusBand — real compact Brief and raw metric bridge
     expect(vi.mocked(formatMetric)).toHaveBeenCalledWith(
       'count', 0, expect.any(Object), expect.any(String), undefined,
     );
+  });
+
+  describe('OnboardingSetupStatusBand — source-backed trust details', () => {
+    it.each([null, '2026-01-01T00:00:00Z'])(
+      'keeps explicit unknown neutral without claiming no signals when last telemetry is %s',
+      (lastTelemetryAt) => {
+        renderBand({ telemetryHealth: 'unknown', lastTelemetryAt });
+        expect(within(metric('telemetry')).getByText('Unknown')).toBeInTheDocument();
+        expect(screen.queryByText('No signals received yet')).toBeNull();
+        const icon = metric('telemetry').querySelector('svg.lucide-clock');
+        expect(icon).toHaveClass('text-[var(--text-secondary)]');
+        expect(icon).not.toHaveClass('text-[var(--semantic-warning)]');
+        expect(screen.getByText(lastTelemetryAt
+          ? `Last telemetry: formatted ${lastTelemetryAt}`
+          : 'Last telemetry time not supplied')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+        const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+        expect(within(drawer).getAllByText('Fleet Telemetry connection unknown').length).toBeGreaterThan(0);
+        expect(within(drawer).queryByText('No current attention items.')).toBeNull();
+        expect(within(drawer).getByText('Cause is not established by the available evidence.'))
+          .toBeInTheDocument();
+        expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
+        expect(within(drawer).getByText('No action is recommended from this evidence alone.'))
+          .toBeInTheDocument();
+      },
+    );
+
+    it.each([null, '2026-01-01T00:00:00Z'])(
+      'exposes stale telemetry attention and narrative without undoing completion at %s',
+      (lastTelemetryAt) => {
+        renderBand({
+          setupComplete: true, teslaConnected: true, vehicleCount: 2,
+          telemetryHealth: 'stale', lastTelemetryAt,
+        });
+        expect(metric('setup-progress').querySelector('[data-operational-value]')).toHaveTextContent('3/3');
+        expect(metric('tesla').querySelector('svg.lucide-check'))
+          .toHaveClass('text-[var(--semantic-success)]');
+        expect(metric('telemetry').querySelector('svg.lucide-clock'))
+          .toHaveClass('text-[var(--semantic-warning)]');
+        fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+        const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+        const staleMessage = lastTelemetryAt
+          ? `Fleet Telemetry is stale. The last signal arrived formatted ${lastTelemetryAt}.`
+          : 'Fleet Telemetry is stale and live values may be out of date.';
+        expect(within(drawer).getAllByText(staleMessage)).toHaveLength(2);
+        expect(within(drawer).getByText('View system status')).toBeInTheDocument();
+        expect(within(drawer).queryByText('No current attention items.')).toBeNull();
+        expect(within(drawer).getByRole('img', { name: 'Setup progress: 3/3' })).toBeInTheDocument();
+      },
+    );
+
+    it('reports unavailable authorization independently of healthy telemetry after durable completion', () => {
+      renderBand({ setupComplete: true, telemetryHealth: 'healthy', vehicleCount: 2 });
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+      expect(within(drawer).getAllByText(
+        'Your Tesla account authorization is unavailable and may need to be renewed.',
+      )).toHaveLength(2);
+      expect(within(drawer).getByText('Reconnect Tesla account')).toBeInTheDocument();
+      expect(within(drawer).queryByText('No current attention items.')).toBeNull();
+      expect(within(metric('telemetry')).getByText('Flowing')).toBeInTheDocument();
+    });
+
+    it('does not infer a live-service failure from an absent response with supplied fallback props', () => {
+      renderBand({ hasData: false, setupComplete: true, telemetryHealth: 'stale' });
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+      expect(within(drawer).queryByText(/Fleet Telemetry is stale/)).toBeNull();
+      expect(within(drawer).queryByText(/authorization is unavailable/)).toBeNull();
+      expect(within(drawer).getAllByText(
+        'Setup status has not been received; no completed-step or vehicle count is known.',
+      ).length).toBeGreaterThan(0);
+      expect(within(drawer).queryByText('No current attention items.')).toBeNull();
+      expect(within(drawer).getByText('Check again')).toBeInTheDocument();
+    });
+
+    it('qualifies retained healthy-looking source data without inventing a current outage', () => {
+      renderBand({ retained: true, setupComplete: true, teslaConnected: true, telemetryHealth: 'healthy' });
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const drawer = screen.getByRole('dialog', { name: 'Setup status details' });
+      expect(within(drawer).getByText('Retained setup status')).toBeInTheDocument();
+      expect(within(drawer).queryByText('No current attention items.')).toBeNull();
+      expect(within(drawer).queryByText(/Fleet Telemetry is stale/)).toBeNull();
+      expect(within(drawer).getByText('Check again')).toBeInTheDocument();
+    });
   });
 
   it('does not turn an absent response into disconnected statuses or measured zero', () => {

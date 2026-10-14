@@ -2,12 +2,12 @@ import { Activity, Car, Check, Clock, Plug } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import type { TelemetryHealth } from '@/api/hooks/useOnboarding';
-import { OperationalBrief, ProgressRing, type StatMetric } from '@/components/data-display';
+import { OperationalBrief, ProgressRing, type OperationalAttention, type StatMetric } from '@/components/data-display';
 import { QueryError } from '@/components/feedback';
 import { GlassPanel, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import { gaugeTone } from '@/lib/tokens';
+import { gaugeTone, neonColorMap } from '@/lib/tokens';
 
 interface OnboardingSetupStatusBandProps {
   teslaConnected: boolean;
@@ -73,14 +73,14 @@ export function OnboardingSetupStatusBand({
           ? t('onboarding.status.telemetry.flowing', 'Flowing')
           : telemetryHealth === 'stale'
             ? t('onboarding.status.telemetry.stale', 'Interrupted')
-            : t('onboarding.status.telemetry.waiting', 'Waiting'),
+            : t('common.unknown', 'Unknown'),
       done: dataFlowing,
       hint:
         telemetryHealth === 'healthy'
           ? t('onboarding.status.telemetry.hintDone', 'Live signals arriving')
           : telemetryHealth === 'stale'
             ? t('onboarding.status.telemetry.hintStale', 'Stored history remains available')
-            : t('onboarding.status.telemetry.hint', 'No signals received yet'),
+            : t('systemStatus.telemetrySources.streamUnknown', 'Fleet Telemetry connection unknown'),
     },
   ];
   const progressLabel = t('onboarding.progress.label', 'Setup progress');
@@ -92,6 +92,41 @@ export function OnboardingSetupStatusBand({
     'onboarding.brief.missing',
     'Setup status has not been received; no completed-step or vehicle count is known.',
   );
+  const provenance = t(
+    'onboarding.brief.provenance',
+    'Existing onboarding status response; completed setup remains complete during a live-service outage. Telemetry health is not a status-fetch timestamp.',
+  );
+  const attention: OperationalAttention[] = [];
+  if (error || retained || !hasData) {
+    attention.push({
+      key: 'setup-source',
+      title: t('onboarding.status.sectionLabel', 'Setup status'),
+      description: hasData
+        ? t('onboarding.brief.description', 'Account authorization, synced vehicles, and telemetry readiness from the existing setup check.')
+        : missingReason,
+      tone: error || retained ? 'warning' : 'neutral',
+    });
+  }
+  if (hasData && telemetryHealth !== 'healthy') {
+    attention.push({
+      key: 'telemetry-health',
+      title: cards[2].label,
+      description: telemetryHealth === 'stale'
+        ? lastTelemetryAt
+          ? t('onboarding.runtimeHealth.telemetryLastSeen', 'Fleet Telemetry is stale. The last signal arrived {{time}}.', { time: formatDateTime(lastTelemetryAt) })
+          : t('onboarding.runtimeHealth.telemetryStale', 'Fleet Telemetry is stale and live values may be out of date.')
+        : cards[2].hint,
+      tone: telemetryHealth === 'stale' ? 'warning' : 'neutral',
+    });
+  }
+  if (hasData && setupComplete && !teslaConnected) {
+    attention.push({
+      key: 'tesla-authorization',
+      title: cards[0].label,
+      description: t('onboarding.runtimeHealth.teslaAuth', 'Your Tesla account authorization is unavailable and may need to be renewed.'),
+      tone: 'warning',
+    });
+  }
   const metrics: readonly StatMetric[] = [
     {
       occurrenceId: 'setup-progress',
@@ -129,7 +164,7 @@ export function OnboardingSetupStatusBand({
             {card.icon}
             <StatusIcon
               aria-hidden="true"
-              className={card.done ? 'h-4 w-4 text-emerald-300' : 'h-4 w-4 text-amber-300'}
+              className={`h-4 w-4 ${card.done ? neonColorMap.green.text : card.id === 'telemetry' && telemetryHealth === 'stale' ? neonColorMap.amber.text : neonColorMap.neutral.text}`}
             />
           </span>
         ) : undefined,
@@ -170,6 +205,28 @@ export function OnboardingSetupStatusBand({
                   : t('onboarding.stepper.status.current', 'In progress')}
         statusTone={error || retained ? 'warning' : setupComplete && hasData ? 'success' : 'neutral'}
         metrics={operationalMetrics}
+        attention={attention}
+        narrative={{
+          whatChanged: hasData
+            ? setupComplete
+              ? t('onboarding.subtitleComplete', 'Your setup stays complete even when a live service is temporarily unavailable.')
+              : t('onboarding.brief.description', 'Account authorization, synced vehicles, and telemetry readiness from the existing setup check.')
+            : missingReason,
+          whyItMatters: attention.find((item) => item.key === 'telemetry-health')?.description
+            ?? attention[0]?.description ?? null,
+          confidence: { label: 'not_scored', score: null, basis: [] },
+          likelyCause: null,
+          recommendedResponse: !hasData || error || retained
+            ? t('onboarding.checkAgain', 'Check again')
+            : setupComplete && !teslaConnected
+              ? t('onboarding.runtimeHealth.reconnect', 'Reconnect Tesla account')
+              : telemetryHealth === 'stale'
+                ? t('onboarding.runtimeHealth.systemStatus', 'View system status')
+                : null,
+          limitations: [provenance],
+          evidence: [],
+          provenance: [{ source: t('onboarding.brief.description', 'Account authorization, synced vehicles, and telemetry readiness from the existing setup check.') }],
+        }}
         loading={isLoading && !hasData}
         scope={<Text as="span" variant="caption">
           {t('onboarding.brief.scope', 'This installation · 3 setup anchors')}
@@ -181,10 +238,7 @@ export function OnboardingSetupStatusBand({
             })
             : t('onboarding.brief.noTelemetryTime', 'Last telemetry time not supplied')}
         </Text>}
-        provenance={t(
-          'onboarding.brief.provenance',
-          'Existing onboarding status response; completed setup remains complete during a live-service outage. Telemetry health is not a status-fetch timestamp.',
-        )}
+        provenance={provenance}
       />
     </section>
   );
