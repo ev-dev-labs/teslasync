@@ -27,6 +27,16 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns comfort consistency range and vehicle on its normalized route', () => {
+    for (const path of [
+      '/comfort-consistency', '/comfort-consistency/',
+      '/comfort-consistency?from=2026-03-08&to=2026-03-08',
+      '/comfort-consistency#methodology', 'comfort-consistency',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/comfort-consistency')).toEqual(['24h', '7d', '30d', '90d']);
+  });
   it('owns the shared range and vehicle on both climate-control aliases', () => {
     for (const alias of ['/climate-control', '/climate']) {
       for (const path of [alias, `${alias}/`, `${alias}?from=2026-10-10&to=2026-10-13`, `${alias}#history`, alias.slice(1)]) {

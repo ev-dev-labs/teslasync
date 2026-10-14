@@ -25,6 +25,7 @@ import {
   type TemperatureDeltaFormatter,
 } from '../components/comfort-consistency';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -42,9 +43,13 @@ export default function ComfortConsistencyPage() {
   const { t } = useTranslation();
   usePageTitle(t('comfortConsistency.title', 'Comfort consistency'));
   const { vehicleId } = useSelectedVehicle();
+  const { startInstant, endInstantExclusive } = useRangeState();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
   const { unitPrefs, formatDuration } = useUnits();
-  const climateQuery = useClimateHistory(vehicleIdStr);
+  const climateQuery = useClimateHistory(vehicleIdStr, {
+    start: startInstant,
+    end: endInstantExclusive,
+  });
   const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
   const summary = useMemo(
     () => summarizeComfortConsistency(climateQuery.data ?? []),
@@ -189,7 +194,7 @@ export default function ComfortConsistencyPage() {
         <ComfortConsistencyDataAvailability summary={summary} state={queryState} />
       </FadeIn>
       <FadeIn delay={0.16}>
-        <ComfortConsistencyMethodology summary={summary} />
+        <ComfortConsistencyMethodology summary={summary} state={queryState} />
       </FadeIn>
     </PageLayout>
   );

@@ -37,6 +37,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/climate',
   '/climate-control',
   '/cold-start',
+  '/comfort-consistency',
   '/command-history',
   '/command-reliability',
   '/cost-analysis',
