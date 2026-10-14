@@ -26,7 +26,7 @@ function MqttTestTool() {
       icon={Radio}
       color="amber"
       title={t('devtools.infra.mqtt', 'MQTT')}
-      description={t('devtools.infra.mqttDesc', 'Publish a test message to the MQTT broker')}
+      description={t('devtools.infra.mqttPingDesc', 'Run the fixed MQTT connectivity ping. The server publishes to teslasync/dev-tools/ping with a generated timestamp/source payload; topic and message inputs are ignored.')}
     >
       <div className="space-y-3">
         <Input
