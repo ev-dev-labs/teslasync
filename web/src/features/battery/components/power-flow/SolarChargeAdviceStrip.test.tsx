@@ -2,7 +2,8 @@
  * SolarChargeAdviceStrip — independent query feedback and retained model output.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render as testingRender, screen } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -40,6 +41,13 @@ import { SolarChargeAdviceStrip } from './SolarChargeAdviceStrip';
 
 const mockAdvice = vi.mocked(useSolarChargeAdvice);
 const refetch = vi.fn();
+let queryClient: QueryClient;
+
+function render(ui: ReactNode) {
+  return testingRender(ui, {
+    wrapper: ({ children }) => <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>,
+  });
+}
 
 function query(over: Record<string, unknown> = {}) {
   return {
@@ -65,10 +73,56 @@ function advice(over: Partial<SolarChargeAdvice> = {}): SolarChargeAdvice {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   mockAdvice.mockReturnValue(query());
 });
 
 describe('SolarChargeAdviceStrip', () => {
+  it.each([0, 60, 86400])('shows returned snapshot age %s and model provenance without a validity cutoff', (age) => {
+    mockAdvice.mockReturnValue(query({ data: advice({ snapshot_age_s: age }) }));
+    render(<SolarChargeAdviceStrip siteId={7} />);
+    expect(screen.getByLabelText('Estimated')).toHaveAttribute('data-provenance', 'inferred');
+    expect(screen.getByLabelText('Estimated')).toHaveAttribute('data-data-status', 'ok');
+    expect(screen.getByText(/^age:/)).toHaveTextContent(
+      `age: ${age.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}s`,
+    );
+    expect(screen.getByText('Charge the car.')).toBeTruthy();
+    expect(screen.getByText('Charge now on solar')).toBeTruthy();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it.each([NaN, Infinity, -1])('does not invent a snapshot age for %s', (age) => {
+    mockAdvice.mockReturnValue(query({ data: advice({ snapshot_age_s: age }) }));
+    render(<SolarChargeAdviceStrip siteId={7} />);
+    expect(screen.queryByText(/^age:/)).toBeNull();
+    expect(screen.getByLabelText('Estimated')).toBeTruthy();
+    expect(screen.getByText('Charge now on solar')).toBeTruthy();
+  });
+
+  it('invalidates only this site advice after successful live snapshot updates and releases its subscription', () => {
+    queryClient.setQueryData(['tesla-charge-advice', 7], advice());
+    queryClient.setQueryData(['tesla-charge-advice', 8], advice());
+    const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+    const { rerender, unmount } = render(<SolarChargeAdviceStrip siteId={7} />);
+    act(() => { queryClient.setQueryData(['tesla-live-status', 8], { timestamp: 'other' }); });
+    expect(invalidate).not.toHaveBeenCalled();
+    act(() => { queryClient.setQueryData(['tesla-live-status', 7], { timestamp: 'updated' }); });
+    expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['tesla-charge-advice', 7], exact: true });
+    expect(queryClient.getQueryState(['tesla-charge-advice', 7])?.isInvalidated).toBe(true);
+    expect(queryClient.getQueryState(['tesla-charge-advice', 8])?.isInvalidated).toBe(false);
+    invalidate.mockClear();
+    rerender(<SolarChargeAdviceStrip siteId={8} />);
+    act(() => { queryClient.setQueryData(['tesla-live-status', 7], { timestamp: 'old site' }); });
+    expect(invalidate).not.toHaveBeenCalled();
+    act(() => { queryClient.setQueryData(['tesla-live-status', 8], { timestamp: 'new site' }); });
+    expect(invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: ['tesla-charge-advice', 8], exact: true });
+    invalidate.mockClear();
+    unmount();
+    act(() => { queryClient.setQueryData(['tesla-live-status', 8], { timestamp: 'unmounted' }); });
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
   it('renders the charge-now badge with surplus copy', () => {
     render(<SolarChargeAdviceStrip siteId={7} />);
     expect(screen.getByText('Charge now on solar')).toBeTruthy();
@@ -87,6 +141,8 @@ describe('SolarChargeAdviceStrip', () => {
     render(<SolarChargeAdviceStrip siteId={7} />);
     expect(screen.getByRole('region', { name: 'Solar charging advice' })).toBeTruthy();
     expect(screen.getByText('No snapshot yet.')).toBeTruthy();
+    expect(screen.getByLabelText('Estimated')).toBeTruthy();
+    expect(screen.getByText('age: 60.00s')).toBeTruthy();
     expect(screen.queryByText('Charge now on solar')).toBeNull();
   });
 
@@ -125,6 +181,8 @@ describe('SolarChargeAdviceStrip', () => {
     const { rerender } = render(view());
     expect(screen.getByText('Charge now on solar')).toBeTruthy();
     expect(screen.getByText('Charge the car.')).toBeTruthy();
+    expect(screen.getByLabelText('Estimated')).toHaveAttribute('data-data-status', 'stale');
+    expect(screen.getByText('age: 60.00s')).toBeTruthy();
     expect(screen.getByTestId('stale-refresh-warning')).toBeTruthy();
     expect(screen.getByText('Neighboring live status')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
