@@ -23,9 +23,9 @@ import { ShieldAlert, Globe, MonitorSmartphone, Network } from 'lucide-react'
 
 import { PageLayout } from '@/components/layout'
 import { deriveDataState } from '@/api/dataState'
-import { Button, ConfirmDialog, SectionTitle } from '@/components/ui'
+import { Button, ConfirmDialog, SectionTitle, Text } from '@/components/ui'
 import { FadeIn } from '@/components/motion'
-import { DataStateNotice } from '@/components/feedback'
+import { AlertBanner, StaleRefreshWarning } from '@/components/feedback'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import {
   useSessions,
@@ -45,6 +45,7 @@ import {
 
 export default function ActiveSessionsPage() {
   const { t } = useTranslation('settings')
+  const { t: tt } = useTranslation()
   usePageTitle(t('account.sessions.title', 'Active sessions'))
 
   const sessionsQuery = useSessions()
@@ -104,7 +105,30 @@ export default function ActiveSessionsPage() {
       query={sessionsQuery}
       copyLink
     >
-      {sessionsState.status === 'stale' && <DataStateNotice state="stale" preserveSeverity />}
+      <StaleRefreshWarning state={sessionsState} />
+      {sessionsState.status === 'initial' && sessionsState.isRefreshBlocked && (
+        <AlertBanner
+          variant="info"
+          title={t('account.sessions.title', 'Active sessions')}
+          role="status"
+          aria-live="polite"
+          data-testid="active-sessions-paused"
+        >
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
+            <Text as="p" variant="bodySm" color="secondary">{tt('Paused', 'Paused')}</Text>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              wrapLabel
+              className="min-h-11 md:min-h-9"
+              onClick={refetch}
+            >
+              {tt('common.retry', 'Retry')}
+            </Button>
+          </div>
+        </AlertBanner>
+      )}
       {isOpenMode ? (
         <FadeIn>
           <SessionsOpenModeNotice />

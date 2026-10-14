@@ -379,3 +379,76 @@ describe('ActiveSessionsPage — retained source', () => {
     expect(mockedRequest.mock.calls.some(call => call[1]?.method === 'DELETE')).toBe(false)
   })
 })
+
+describe('ActiveSessionsPage — deferred loading', () => {
+  it('distinguishes a paused first load from an active request while preserving shells', async () => {
+    const response = {
+      mode: 'session',
+      sessions: [
+        { id: 'resumed-current', user_agent: 'Firefox', ip: '10.0.0.1', current: true,
+          created_at: '2026-05-05T10:00:00Z', last_seen_at: '2026-05-05T12:00:00Z' },
+      ],
+    }
+    let resolveSessions!: (value: typeof response) => void
+    mockedRequest.mockImplementation(() => new Promise<typeof response>((resolve) => {
+      resolveSessions = resolve
+    }))
+    const { client } = renderPage()
+
+    await waitFor(() => expect(client.getQueryState(sessionKeys.list)?.fetchStatus).toBe('fetching'))
+    expect(screen.queryByTestId('active-sessions-paused')).not.toBeInTheDocument()
+    act(() => {
+      client.getQueryCache().find({ queryKey: sessionKeys.list })?.setState({ fetchStatus: 'paused' })
+    })
+
+    const notice = await screen.findByTestId('active-sessions-paused')
+    expect(notice).toHaveTextContent('Paused')
+    expect(within(notice).getByRole('button', { name: 'Retry' })).toBeEnabled()
+    expect(notice).not.toHaveTextContent(/offline|server error/i)
+    expect(screen.getByRole('region', { name: 'Session summary' })).toBeInTheDocument()
+    expect(screen.getByText('By browser')).toBeInTheDocument()
+    expect(screen.getByText('By platform')).toBeInTheDocument()
+    expect(screen.getByText('By network')).toBeInTheDocument()
+    expect(screen.getByTestId('active-sessions-section')).toBeInTheDocument()
+    expect(screen.queryByText('No active sessions for this account.')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('active-sessions-revoke-all-others')).not.toBeInTheDocument()
+    expect(client.getQueryState(sessionKeys.list)?.error).toBeNull()
+
+    act(() => {
+      client.getQueryCache().find({ queryKey: sessionKeys.list })?.setState({ fetchStatus: 'fetching' })
+    })
+    await waitFor(() => expect(screen.queryByTestId('active-sessions-paused')).not.toBeInTheDocument())
+    await act(async () => resolveSessions(response))
+    expect(await screen.findByTestId('active-sessions-current-pill-resumed-current')).toBeInTheDocument()
+  })
+
+  it('keeps retained devices and offers source recovery when refresh is paused', async () => {
+    mockedRequest.mockResolvedValue({
+      mode: 'session',
+      sessions: [
+        { id: 'paused-other', user_agent: 'Chrome', ip: '10.0.0.2', current: false,
+          created_at: '2026-05-05T10:00:00Z', last_seen_at: '2026-05-05T12:00:00Z' },
+      ],
+    })
+    const { client } = renderPage()
+    await screen.findByTestId('active-sessions-revoke-paused-other')
+    act(() => {
+      client.getQueryCache().find({ queryKey: sessionKeys.list })?.setState({ fetchStatus: 'paused' })
+    })
+
+    const warning = await screen.findByTestId('stale-refresh-warning')
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true')
+    expect(warning).not.toHaveTextContent(/offline|server error/i)
+    expect(screen.queryByTestId('active-sessions-paused')).not.toBeInTheDocument()
+    expect(screen.getByTestId('active-sessions-revoke-paused-other')).toBeInTheDocument()
+    expect(screen.getByTestId('active-sessions-revoke-all-others')).toBeInTheDocument()
+    expect(screen.getByText('By browser')).toBeInTheDocument()
+    expect(screen.getByText('By platform')).toBeInTheDocument()
+    expect(screen.getByText('By network')).toBeInTheDocument()
+    expect(client.getQueryState(sessionKeys.list)?.error).toBeNull()
+
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(screen.getByTestId('active-sessions-revoke-paused-other')).toBeInTheDocument()
+  })
+})
