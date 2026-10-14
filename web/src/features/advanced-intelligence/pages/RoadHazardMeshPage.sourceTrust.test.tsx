@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
@@ -12,12 +12,22 @@ const state = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   query: {} as DataStateSource<HazardPage>,
   read: vi.fn(), retry: vi.fn(),
+  realQuery: false, request: vi.fn(),
 }));
 const clients: QueryClient[] = [];
 
-vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
-  useRoadHazards: (...args: unknown[]) => { state.read(...args); return state.query; },
-}));
+vi.mock('@/api/client', () => ({ request: state.request }));
+vi.mock('@/api/hooks/useAdvancedIntelligence', async () => {
+  const actual = await vi.importActual<typeof import('@/api/hooks/useAdvancedIntelligence')>(
+    '@/api/hooks/useAdvancedIntelligence',
+  );
+  return {
+    useRoadHazards: (vehicleId: number | null, limit?: number, offset?: number) => {
+      state.read(vehicleId, limit, offset);
+      return state.realQuery ? actual.useRoadHazards(vehicleId, limit, offset) : state.query;
+    },
+  };
+});
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: state.vehicleId }),
 }));
@@ -27,6 +37,8 @@ vi.mock('@/hooks/useMotionPreference', () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  state.realQuery = false;
+  onlineManager.setOnline(true);
   state.vehicleId = 7;
   state.query = { data: hazards, isSuccess: true, fetchStatus: 'idle',
     dataUpdatedAt: Date.parse(hazards.generated_at), refetch: state.retry };
@@ -35,6 +47,7 @@ afterEach(() => {
   cleanup();
   clients.forEach(client => client.clear());
   clients.length = 0;
+  onlineManager.setOnline(true);
 });
 
 function renderPage() {
@@ -66,6 +79,62 @@ function expectNoResultClaims() {
 }
 
 describe('RoadHazardMeshPage evidence source trust', () => {
+  it('uses the real scoped hook across offline initial load retry retained failure and recovery', async () => {
+    state.realQuery = true;
+    onlineManager.setOnline(false);
+    let fail = true;
+    state.request.mockImplementation(async () => {
+      if (fail) throw new Error('Synthetic hazard request failure');
+      return hazards;
+    });
+    const view = renderPage();
+    expectShells();
+    expectNoResultClaims();
+    expect(screen.getAllByText('The initial evidence query is paused; no empty result is inferred.')).toHaveLength(1);
+    expect(state.request).not.toHaveBeenCalled();
+    const client = clients[0];
+    const key = ['advanced-intelligence', 'road-hazards', 7, 18, 0];
+    await act(async () => { onlineManager.setOnline(true); });
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retry' })).toBeVisible());
+    expectNoResultClaims();
+    expect(client.getQueryData(key)).toBeUndefined();
+    expect(screen.getAllByText('Intelligence evidence could not be loaded.')).toHaveLength(1);
+    fail = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Evidence sources' }))
+      .toHaveTextContent('recorded-session-ledger'));
+    expect(client.getQueryData(key)).toBe(hazards);
+    const successfulAt = client.getQueryState(key)?.dataUpdatedAt;
+    expect(successfulAt).toBeGreaterThan(0);
+    expect(state.request).toHaveBeenLastCalledWith(
+      '/advanced-intelligence/road-hazards?vehicle_id=7&limit=18&offset=0',
+      { signal: expect.any(AbortSignal) },
+    );
+    fail = true;
+    await act(async () => { await client.refetchQueries({ queryKey: key }); });
+    await waitFor(() => expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1));
+    expectShells();
+    expect(screen.getByRole('table', { name: 'Road hazard mesh' })).toHaveTextContent('coarse-cell-only');
+    expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent('recorded-session-ledger');
+    expect(client.getQueryData(key)).toBe(hazards);
+    expect(client.getQueryState(key)?.dataUpdatedAt).toBe(successfulAt);
+    fail = false;
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+    expect(state.request).toHaveBeenCalledTimes(4);
+    expect(client.getQueryData(key)).toBe(hazards);
+    expect(hazards.items[0].confidence_pct).toBe(0);
+    expect(hazards.items[0].last_seen).toBe('2026-08-02T00:00:00Z');
+    onlineManager.setOnline(false);
+    state.vehicleId = 8;
+    view.rerender(<RoadHazardMeshPage />);
+    expectShells();
+    expectNoResultClaims();
+    expect(client.getQueryState(['advanced-intelligence', 'road-hazards', 8, 18, 0])?.fetchStatus).toBe('paused');
+    expect(client.getQueryData(key)).toBe(hazards);
+    expect(state.request).toHaveBeenCalledTimes(4);
+  });
+
   it.each([
     { phase: 'initial fetching', query: { isLoading: true, fetchStatus: 'fetching' as const }, message: null },
     { phase: 'initial paused', query: { isPending: true, fetchStatus: 'paused' as const },

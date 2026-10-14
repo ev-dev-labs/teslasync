@@ -140,21 +140,40 @@ describe('EvidencePanel source trust', () => {
         limitations={query.data?.limitations} unsupported={['No identity attribution.']} />;
     }
     render(<QueryClientProvider client={client}><Subject /></QueryClientProvider>);
+    const sourceRoot = screen.getByRole('region', { name: 'Data quality' }).parentElement;
     await waitFor(() => expect(client.getQueryState(['synthetic-evidence-trust'])?.status).toBe('error'));
+    await waitFor(() => expect(sourceRoot).toHaveAttribute('data-source-status', 'initialFailure'));
     expectShells();
     expect(screen.getAllByText('Unknown')).toHaveLength(3);
+    expect(client.getQueryData(['synthetic-evidence-trust'])).toBeUndefined();
     rejectRequest = false;
     await act(async () => { await client.refetchQueries({ queryKey: ['synthetic-evidence-trust'] }); });
-    expect(screen.getByText('synthetic-ledger')).toBeVisible();
+    expect(client.getQueryState(['synthetic-evidence-trust'])?.status).toBe('success');
+    expect(client.getQueryData(['synthetic-evidence-trust'])).toBe(payload);
+    // The cache settles before its batched observer notification reaches React.
+    await waitFor(() => {
+      expect(screen.getByText('synthetic-ledger')).toBeVisible();
+      expect(sourceRoot).toHaveAttribute('data-source-status', 'ok');
+    });
     const successfulAt = client.getQueryState(['synthetic-evidence-trust'])?.dataUpdatedAt;
+    expect(successfulAt).toBeGreaterThan(0);
     rejectRequest = true;
     await act(async () => { await client.refetchQueries({ queryKey: ['synthetic-evidence-trust'] }); });
-    expect(screen.getByText('synthetic-ledger')).toBeVisible();
+    expect(client.getQueryState(['synthetic-evidence-trust'])?.status).toBe('error');
+    await waitFor(() => {
+      expect(screen.getByText('synthetic-ledger')).toBeVisible();
+      expect(sourceRoot).toHaveAttribute('data-source-status', 'stale');
+    });
     expect(client.getQueryData(['synthetic-evidence-trust'])).toBe(payload);
     expect(client.getQueryState(['synthetic-evidence-trust'])?.dataUpdatedAt).toBe(successfulAt);
     rejectRequest = false;
     await act(async () => { await client.refetchQueries({ queryKey: ['synthetic-evidence-trust'] }); });
     expect(read).toHaveBeenCalledTimes(4);
-    expect(screen.getByText('• Synthetic uncertainty.')).toBeVisible();
+    expect(client.getQueryState(['synthetic-evidence-trust'])?.status).toBe('success');
+    expect(client.getQueryData(['synthetic-evidence-trust'])).toBe(payload);
+    await waitFor(() => {
+      expect(screen.getByText('• Synthetic uncertainty.')).toBeVisible();
+      expect(sourceRoot).toHaveAttribute('data-source-status', 'ok');
+    });
   });
 });
