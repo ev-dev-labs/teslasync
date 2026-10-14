@@ -9,19 +9,23 @@ import { CardGrid, ChartCard } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { useMotorEvidence } from './useMotorEvidence';
 import { DynamicsPlacement } from './DynamicsPlacement';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
 
 interface MotorHistoryChartsProps {
   vehicleId: number | null | undefined;
   historyQuery?: MotorHistoryQuery;
+  showSourceNotice?: boolean;
 }
 
 /** Preserve all three chart identities and series in the shared chart frame. */
-export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHistoryChartsProps) {
+export default function MotorHistoryCharts({ vehicleId, historyQuery, showSourceNotice = true }: MotorHistoryChartsProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const { formatTime } = useDateFormat();
   const { query, state } = useMotorEvidence(vehicleId, historyQuery);
   const motorHistory = state.data;
@@ -45,7 +49,7 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
     rpmChartData.some(d => Number.isFinite(d.front) || Number.isFinite(d.rear)), [rpmChartData]);
   const noData = query.isLoading && !state.hasData ? <Skeleton className="h-48" /> : state.fatalError ? (
     <QueryError error={state.fatalError} onRetry={() => void query.refetch()} />
-  ) : (
+  ) : state.isRefreshBlocked && !state.hasData ? null : (
     // no-action: Disabled history awaits a valid trip selection in the trip toolbar.
     <EmptyState message={t('dynamics.awaitingData', 'Awaiting motor telemetry data...')}
       action={vehicleId && historyQuery?.enabled !== false
@@ -53,7 +57,8 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
   );
   return (
     <div className="min-w-0 space-y-3">
-      <StaleRefreshWarning state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} />
+      {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
+      {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
       <CardGrid label={t('dynamics.review.evidence', 'Inside this ride')} items={[
         {
           id: 'motor-power-history', size: 'full',
@@ -79,16 +84,16 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
                     <ResponsiveContainer width="100%" height={280}>
                       <AreaChart data={powerChartData}>
                         <defs>
-                          <ChartGradient id="powerAreaGrad" color="#06b6d4" />
-                          <ChartGradient id="regenAreaGrad" color="#22c55e" />
+                          <ChartGradient id="powerAreaGrad" color={palette[0]} opacity={0.08} />
+                          <ChartGradient id="regenAreaGrad" color={palette[1]} opacity={0.08} />
                         </defs>
                         {chartGrid}
                         <XAxis dataKey="time" tick={axisTick} />
                         <YAxis tick={axisTick} unit=" kW" />
                         <Tooltip content={<ChartTooltip />} />
                         <ChartLegend state={powerHidden} />
-                        <Area {...AREA_DEFAULTS} dataKey="power" stroke="#06b6d4" fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} hide={powerHidden.isHidden('power')} />
-                        <Area {...AREA_DEFAULTS} dataKey="regen" stroke="#22c55e" fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} hide={powerHidden.isHidden('regen')} />
+                        <Area {...AREA_DEFAULTS} dataKey="power" stroke={palette[0]} fill="url(#powerAreaGrad)" name={t('dynamics.power', 'Power')} hide={powerHidden.isHidden('power')} />
+                        <Area {...AREA_DEFAULTS} dataKey="regen" stroke={palette[1]} fill="url(#regenAreaGrad)" name={t('dynamics.regen', 'Regen')} hide={powerHidden.isHidden('regen')} />
                       </AreaChart>
                     </ResponsiveContainer>
                   ) : noData}
@@ -125,8 +130,8 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
                         <YAxis tick={axisTick} unit=" Nm" />
                         <Tooltip content={<ChartTooltip />} />
                         <ChartLegend state={torqueHidden} />
-                        <Line {...AREA_DEFAULTS} dataKey="front" stroke="#3b82f6" name={t('dynamics.torqueFront', 'Front Torque')} hide={torqueHidden.isHidden('front')} />
-                        <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.torqueRear', 'Rear Torque')} hide={torqueHidden.isHidden('rear')} />
+                        <Line {...AREA_DEFAULTS} dataKey="front" stroke={palette[0]} name={t('dynamics.torqueFront', 'Front Torque')} hide={torqueHidden.isHidden('front')} />
+                        <Line {...AREA_DEFAULTS} dataKey="rear" stroke={palette[1]} name={t('dynamics.torqueRear', 'Rear Torque')} hide={torqueHidden.isHidden('rear')} />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : noData}
@@ -163,8 +168,8 @@ export default function MotorHistoryCharts({ vehicleId, historyQuery }: MotorHis
                         <YAxis tick={axisTick} unit=" rpm" />
                         <Tooltip content={<ChartTooltip />} />
                         <ChartLegend state={rpmHidden} />
-                        <Line {...AREA_DEFAULTS} dataKey="front" stroke="#06b6d4" name={t('dynamics.rpmFront', 'Front RPM')} hide={rpmHidden.isHidden('front')} />
-                        <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.rpmRear', 'Rear RPM')} hide={rpmHidden.isHidden('rear')} />
+                        <Line {...AREA_DEFAULTS} dataKey="front" stroke={palette[0]} name={t('dynamics.rpmFront', 'Front RPM')} hide={rpmHidden.isHidden('front')} />
+                        <Line {...AREA_DEFAULTS} dataKey="rear" stroke={palette[1]} name={t('dynamics.rpmRear', 'Rear RPM')} hide={rpmHidden.isHidden('rear')} />
                       </LineChart>
                     </ResponsiveContainer>
                   ) : noData}

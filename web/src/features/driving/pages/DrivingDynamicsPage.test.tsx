@@ -34,6 +34,37 @@ import type { Drive, DrivingCoachData } from '@/types/driving';
 import type { Vehicle } from '@/types/vehicle';
 import i18n from 'i18next';
 
+const paletteState = vi.hoisted(() => ({
+  colors: ['var(--semantic-info)', 'var(--semantic-purple)'],
+}));
+vi.mock('@/hooks/useChartPalette', () => ({
+  useChartPalette: () => paletteState.colors,
+}));
+vi.mock('@/components/charts', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+    AreaChart: ({ children, data }: { children: ReactNode; data: unknown[] }) =>
+      <div data-testid="palette-area-chart" data-points={JSON.stringify(data)}>{children}</div>,
+    LineChart: ({ children, data }: { children: ReactNode; data: unknown[] }) =>
+      <div data-testid="palette-line-chart" data-points={JSON.stringify(data)}>{children}</div>,
+    Area: ({ dataKey, stroke, fill, connectNulls, hide }: {
+      dataKey: string; stroke: string; fill: string; connectNulls: boolean; hide: boolean;
+    }) => <div data-testid={`palette-area-${dataKey}`} data-stroke={stroke}
+      data-fill={fill} data-connect-nulls={String(connectNulls)} data-hidden={String(hide)} />,
+    Line: ({ dataKey, stroke, connectNulls, hide }: {
+      dataKey: string; stroke: string; connectNulls: boolean; hide: boolean;
+    }) => <div data-testid={`palette-line-${dataKey}`} data-stroke={stroke}
+      data-connect-nulls={String(connectNulls)} data-hidden={String(hide)} />,
+    XAxis: ({ dataKey }: { dataKey: string }) => <div data-axis-key={dataKey} />,
+    YAxis: ({ unit }: { unit: string }) => <div data-axis-unit={unit} />,
+    Tooltip: () => null,
+    ChartLegend: ({ state }: { state: { toggle: (key: string) => void } }) =>
+      <Button onClick={() => state.toggle('front')}>Toggle front series</Button>,
+  };
+});
+
 describe('Driving dynamics layout import boundary', () => {
   it.each([
     'components/driving-dynamics-modernization/DrivingTips.tsx',
@@ -151,6 +182,16 @@ vi.mock('@/api/hooks/useVehicles', async (importActual) => {
 vi.mock('@/api/hooks/useDriving', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useDriving')>();
   return { ...actual, useDrives: vi.fn(), useDrivingCoach: vi.fn() };
+});
+vi.mock('@/api/hooks/useAnnotations', async (importActual) => {
+  const actual = await importActual<typeof import('@/api/hooks/useAnnotations')>();
+  return {
+    ...actual,
+    useChartAnnotations: () => qr({ data: [] }),
+    useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+    useUpdateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+    useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  };
 });
 vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   const actual = await importActual<typeof import('@/hooks/useSelectedVehicle')>();
@@ -360,6 +401,51 @@ const AGGRESSIVE_HISTORY = [
   motorSnap({ power_kw: 110, torque_nm_front: 120, torque_nm_rear: 180, motor_temp_c_front: 60, motor_temp_c_rear: 70, regen_kw: -30 }),
 ];
 
+describe('Driving dynamics motor chart palette adoption', () => {
+  it('changes colors without changing points, signs, gaps, axes, or persisted series visibility', async () => {
+    const { default: MotorHistoryCharts } = await vi.importActual<
+      typeof import('../components/driving-dynamics-modernization/MotorHistoryCharts')
+    >('../components/driving-dynamics-modernization/MotorHistoryCharts');
+    const samples = [
+      motorSnap({ power_kw: -0.5, regen_kw: 0, torque_nm_front: -25, torque_nm_rear: 75, motor_rpm_front: -120, motor_rpm_rear: 400 }),
+      motorSnap({ power_kw: null, regen_kw: -2, torque_nm_front: null, torque_nm_rear: 0, motor_rpm_front: null, motor_rpm_rear: 0 }),
+    ];
+    mockMotorHistory.mockReturnValue(qr({ data: samples }));
+    const client = new QueryClient();
+    const ui = () => <MemoryRouter><QueryClientProvider client={client}>
+      <MotorHistoryCharts vehicleId={1} historyQuery={{ enabled: true }} />
+    </QueryClientProvider></MemoryRouter>;
+    const view = render(ui());
+    const points = screen.getAllByTestId(/palette-(area|line)-chart/).map(chart => chart.getAttribute('data-points'));
+    expect(points).toHaveLength(3);
+    expect(JSON.parse(points[0]!)).toEqual([
+      expect.objectContaining({ power: -0.5, regen: 0 }),
+      expect.objectContaining({ power: null, regen: -2 }),
+    ]);
+    expect(screen.getByTestId('palette-area-power')).toHaveAttribute('data-stroke', paletteState.colors[0]);
+    expect(screen.getByTestId('palette-area-regen')).toHaveAttribute('data-stroke', paletteState.colors[1]);
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(3);
+    fireEvent.click(screen.getAllByRole('button', { name: 'Toggle front series' })[1]);
+    expect(screen.getAllByTestId('palette-line-front')[0]).toHaveAttribute('data-hidden', 'true');
+    paletteState.colors = ['var(--semantic-purple)', 'var(--semantic-info)'];
+    view.rerender(ui());
+    expect(screen.getAllByTestId(/palette-(area|line)-chart/).map(chart => chart.getAttribute('data-points'))).toEqual(points);
+    expect(screen.getByTestId('palette-area-power')).toHaveAttribute('data-stroke', paletteState.colors[0]);
+    expect(screen.getByTestId('palette-area-power')).toHaveAttribute('data-fill', 'url(#powerAreaGrad)');
+    expect(screen.getAllByTestId('palette-line-front')[0]).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getAllByRole('button', { name: 'Export chart' })).toHaveLength(3);
+    expect(view.container.querySelector('#powerAreaGrad stop')).toHaveAttribute('stop-color', paletteState.colors[0]);
+    expect(view.container.querySelector('#regenAreaGrad stop')).toHaveAttribute('stop-color', paletteState.colors[1]);
+    expect(view.container.querySelector('#powerAreaGrad stop')).toHaveAttribute('stop-opacity', '0.08');
+    for (const line of screen.getAllByTestId(/palette-(area|line)-(power|regen|front|rear)$/)) {
+      expect(line).toHaveAttribute('data-connect-nulls', 'false');
+    }
+    expect(view.container.querySelectorAll('[data-axis-key="time"]')).toHaveLength(3);
+    expect(Array.from(view.container.querySelectorAll('[data-axis-unit]'), axis => axis.getAttribute('data-axis-unit')))
+      .toEqual([' kW', ' Nm', ' rpm']);
+  });
+});
+
 function drive(over: Partial<Drive> = {}): Drive {
   return {
     id: 1,
@@ -464,9 +550,14 @@ function renderPage(route = '/') {
 const num = (testId: string) => Number(screen.getByTestId(testId).textContent);
 
 async function renderRealUnitPresenters() {
-  const { SummaryStats, SpeedGearPanel } = await vi.importActual<ModernPanels>(
-    '../components/driving-dynamics-modernization',
-  );
+  const [{ default: SummaryStats }, { default: SpeedGearPanel }] = await Promise.all([
+    vi.importActual<typeof import('../components/driving-dynamics-modernization/SummaryStats')>(
+      '../components/driving-dynamics-modernization/SummaryStats',
+    ),
+    vi.importActual<typeof import('../components/driving-dynamics-modernization/SpeedGearPanel')>(
+      '../components/driving-dynamics-modernization/SpeedGearPanel',
+    ),
+  ]);
   mockMotorHistory.mockReturnValue(qr({ data: [
     motorSnap({ motor_temp_c_front: 100, motor_temp_c_rear: 100 }),
   ] }));
@@ -552,8 +643,8 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
 
   it('wires the page-owned data hooks with SI/snake_case-correct arguments', () => {
     renderPage();
-    // Only the range and latest drives queries stay at page level. Motor
-    // history, current motor state and coaching remain panel-owned.
+    // The history observer owns one source notice with the same panel key.
+    // Current motor state and coaching remain independently panel-owned.
     expect(mockMotorLatest).not.toHaveBeenCalled();
     expect(mockDrives).toHaveBeenCalledWith(
       '1',
@@ -563,8 +654,9 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
       '1',
       expect.objectContaining({ limit: 5, refetchInterval: 30000 }),
     );
-    // History stays in the trip panels (shared drive window), not the page.
-    expect(mockMotorHistory).not.toHaveBeenCalled();
+    expect(mockMotorHistory).toHaveBeenCalledWith(1, expect.objectContaining({
+      limit: 200, enabled: true, refetchInterval: false,
+    }));
     expect(mockCoach).not.toHaveBeenCalled();
   });
 
@@ -701,6 +793,87 @@ describe('DrivingDynamicsPage — drive date filtering', () => {
 });
 
 describe('DrivingDynamicsPage — unit conversion boundary', () => {
+  it('lets one history owner annotate retained data while every real evidence panel keeps its content', async () => {
+    const [
+      { default: PowertrainSummary },
+      { default: MotorHistoryCharts },
+      { default: DrivingTips },
+      { MotorSamplesBrief },
+    ] = await Promise.all([
+      vi.importActual<typeof import('../components/driving-dynamics-modernization/PowertrainSummary')>(
+        '../components/driving-dynamics-modernization/PowertrainSummary',
+      ),
+      vi.importActual<typeof import('../components/driving-dynamics-modernization/MotorHistoryCharts')>(
+        '../components/driving-dynamics-modernization/MotorHistoryCharts',
+      ),
+      vi.importActual<typeof import('../components/driving-dynamics-modernization/DrivingTips')>(
+        '../components/driving-dynamics-modernization/DrivingTips',
+      ),
+      vi.importActual<typeof import('../components/operationalbrief-a-m/MotorSamplesBrief')>(
+        '../components/operationalbrief-a-m/MotorSamplesBrief',
+      ),
+    ]);
+    mockMotorHistory.mockReturnValue(qr({
+      data: [motorSnap({ power_kw: 0, torque_nm_front: 0, motor_rpm_front: 0 })],
+      error: new Error('Retained history failure'), isError: true,
+    }));
+    const props = { vehicleId: 1, historyQuery: { enabled: true }, showSourceNotice: false };
+    render(<QueryClientProvider client={new QueryClient()}><MemoryRouter>
+      <PowertrainSummary {...props} />
+      <MotorSamplesBrief {...props} />
+      <MotorHistoryCharts {...props} />
+      <DrivingTips {...props} />
+    </MemoryRouter></QueryClientProvider>);
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByText('Power & regeneration')).toBeInTheDocument();
+    expect(screen.getByText('How to read this ride')).toBeInTheDocument();
+    expect(screen.getAllByTestId(/palette-(area|line)-chart/)).toHaveLength(3);
+    const count = screen.getByText('Total Readings').closest('[data-operational-metric]');
+    expect(count?.querySelector('[data-operational-value]')).toHaveTextContent('1');
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
+  it.each([
+    { name: 'unresolved', result: qr<MotorSnapshot[]>({ data: undefined }), expected: 'missing' },
+    { name: 'loading', result: qr<MotorSnapshot[]>({ isLoading: true }), expected: 'missing' },
+    { name: 'fatal', result: qr<MotorSnapshot[]>({ isError: true, error: new Error('history failed') }), expected: 'missing' },
+    { name: 'resolved empty', result: qr<MotorSnapshot[]>({ data: [] }), expected: 'value' },
+    { name: 'resolved samples', result: qr<MotorSnapshot[]>({ data: [motorSnap({ power_kw: 0 })] }), expected: 'value' },
+  ])('keeps the motor sample count honest for $name evidence', async ({ result, expected }) => {
+    const { MotorSamplesBrief } = await vi.importActual<typeof import('../components/operationalbrief-a-m/MotorSamplesBrief')>(
+      '../components/operationalbrief-a-m/MotorSamplesBrief',
+    );
+    mockMotorHistory.mockReturnValue(result);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(<QueryClientProvider client={client}><MemoryRouter>
+      <MotorSamplesBrief vehicleId={1} historyQuery={{ enabled: true }} />
+    </MemoryRouter></QueryClientProvider>);
+    const metric = screen.getByText('Total Readings').closest('[data-operational-metric]');
+    expect(metric).toHaveAttribute('data-value-state', expected);
+    if (expected === 'value') {
+      expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent(String(result.data?.length));
+    } else {
+      expect(metric?.querySelector('[data-operational-value]')?.textContent ?? '').not.toBe('0');
+    }
+  });
+
+  it('excludes missing and invalid speeds without changing the measured-sample denominator', async () => {
+    const { default: SpeedGearPanel } = await vi.importActual<typeof import('../components/driving-dynamics-modernization/SpeedGearPanel')>(
+      '../components/driving-dynamics-modernization/SpeedGearPanel',
+    );
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><MemoryRouter>
+      <SpeedGearPanel vehicleId={1} filteredDrives={[
+        drive({ avgSpeedMps: 0, maxSpeedMps: 0 }),
+        drive({ avgSpeedMps: -0.5, maxSpeedMps: 1.25 }),
+        drive({ avgSpeedMps: null, maxSpeedMps: null }),
+        drive({ avgSpeedMps: NaN, maxSpeedMps: Infinity }),
+      ]} />
+    </MemoryRouter></QueryClientProvider>);
+    expect(screen.getByText('Avg Drive Speed').closest('[data-operational-metric]')).toHaveTextContent('-0.90 km/h');
+    expect(screen.getByText('Top Drive Speed').closest('[data-operational-metric]')).toHaveTextContent('4.50 km/h');
+  });
+
   it('threads metric SI→display converters and units to children', async () => {
     renderPage();
     const metric = await renderRealUnitPresenters();
@@ -779,6 +952,26 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
 });
 
 describe('DrivingDynamicsPage — independent source recovery', () => {
+  it('shows an initial paused range source, retains the independent ride, and retries only the paused source', () => {
+    const range = qr<Drive[]>({ fetchStatus: 'paused' });
+    const latest = qr({ data: [drive({ id: 7, endTs: null })] });
+    mockDrives.mockImplementation((_vehicleId, options) =>
+      typeof options !== 'number' && options?.limit === 1000 ? range : latest,
+    );
+    const view = renderPage('/driving-dynamics');
+    expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
+    expect(screen.queryByText(/device is offline/i)).toBeNull();
+    expect(screen.getByTestId('ride-overview')).toHaveTextContent('7');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(range.refetch).toHaveBeenCalledTimes(1);
+    expect(latest.refetch).not.toHaveBeenCalled();
+    mockDrives.mockReturnValue(qr({ data: [] }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><DrivingDynamicsPage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByText(/initial evidence query is paused/)).toBeNull();
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
   it('keeps all four groups mounted during initial range loading', () => {
     const range = qr<Drive[]>({ isLoading: true, isFetching: true });
     mockDrives.mockImplementation((_vehicleId, options) =>
@@ -792,6 +985,55 @@ describe('DrivingDynamicsPage — independent source recovery', () => {
     expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
     expect(screen.getByTestId('coach')).toHaveTextContent('1');
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+  });
+
+  it('shows one history pause notice without hiding independent live panels and recovers to empty', () => {
+    const history = qr<MotorSnapshot[]>({ fetchStatus: 'paused' });
+    mockMotorHistory.mockReturnValue(history);
+    const view = renderPage('/driving-dynamics');
+    expect(screen.getAllByText('The initial evidence query is paused; no empty result is inferred.')).toHaveLength(1);
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('pedal')).toBeInTheDocument();
+    expect(screen.getByTestId('gforce')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(history.refetch).toHaveBeenCalledTimes(1);
+    mockMotorHistory.mockReturnValue(qr({ data: [] }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><DrivingDynamicsPage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByText(/initial evidence query is paused/)).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByTestId('summary')).toBeInTheDocument();
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+  });
+
+  it('keeps active history loading distinct from a pause or measured zero', () => {
+    mockMotorHistory.mockReturnValue(qr<MotorSnapshot[]>({ isLoading: true, isFetching: true }));
+    renderPage('/driving-dynamics');
+    expect(screen.queryByText(/initial evidence query is paused/)).toBeNull();
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByTestId('summary')).toBeInTheDocument();
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
+  it('offers exactly one retained history refresh and clears it on recovery without retrying live sources', () => {
+    const history = qr({
+      data: [motorSnap({ power_kw: 0 })],
+      error: new Error('Synthetic history refresh failure'), isError: true,
+    });
+    const live = qr({ data: motorSnap() });
+    mockMotorHistory.mockReturnValue(history);
+    mockMotorLatest.mockReturnValue(live);
+    const view = renderPage('/driving-dynamics');
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+    expect(history.refetch).toHaveBeenCalledTimes(1);
+    expect(live.refetch).not.toHaveBeenCalled();
+    expect(screen.getByTestId('live-vid')).toHaveTextContent('1');
+    expect(screen.getByTestId('powertrain-summary')).toBeInTheDocument();
+    mockMotorHistory.mockReturnValue(qr({ data: [motorSnap({ power_kw: 0 })] }));
+    view.rerender(<MemoryRouter><QueryClientProvider client={new QueryClient()}><DrivingDynamicsPage /></QueryClientProvider></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
+    expect(screen.getByTestId('motor-history')).toBeInTheDocument();
   });
 
   it('recovers the failed range source without discarding an independently returned open drive', () => {

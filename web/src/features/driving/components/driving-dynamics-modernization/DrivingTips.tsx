@@ -5,14 +5,16 @@ import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/compone
 import { Text } from '@/components/ui';
 import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { useMotorEvidence } from './useMotorEvidence';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
 
 interface DrivingTipsProps {
   vehicleId: number | null | undefined;
   historyQuery?: MotorHistoryQuery;
+  showSourceNotice?: boolean;
 }
 
 /** Preserve each evidence condition and specialist explanation. */
-export default function DrivingTips({ vehicleId, historyQuery }: DrivingTipsProps) {
+export default function DrivingTips({ vehicleId, historyQuery, showSourceNotice = true }: DrivingTipsProps) {
   const { t } = useTranslation();
   const { query, state, motorStats } = useMotorEvidence(vehicleId, historyQuery);
   const tips = useMemo(() => {
@@ -39,7 +41,8 @@ export default function DrivingTips({ vehicleId, historyQuery }: DrivingTipsProp
 
   return (
     <LayoutCard title={t('dynamics.guidance.title', 'How to read this ride')}>
-      <StaleRefreshWarning state={state} label={t('dynamics.guidance.title', 'How to read this ride')} />
+      {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.guidance.title', 'How to read this ride')} /> : null}
+      {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.guidance.title', 'How to read this ride')} /> : null}
       {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
       {query.isLoading && !state.hasData ? <Skeleton className="h-20" /> : tips.length > 0 ? (
         <ul className="grid min-w-0 grid-cols-1 gap-3 @xl:grid-cols-2 @5xl:grid-cols-3">
@@ -50,7 +53,7 @@ export default function DrivingTips({ vehicleId, historyQuery }: DrivingTipsProp
             </li>
           ))}
         </ul>
-      ) : state.fatalError ? null : (
+      ) : state.fatalError || state.isRefreshBlocked && !state.hasData ? null : (
         // no-action: Disabled history awaits a valid trip selection in the trip toolbar.
         <EmptyState message={t('dynamics.guidance.empty', 'No measured motor evidence available for trip-specific guidance.')}
           action={vehicleId && historyQuery?.enabled !== false

@@ -7,14 +7,16 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { MOTOR_HISTORY_LIMIT } from '../driving-dynamics/useMotorStats';
 import { useMotorEvidence } from './useMotorEvidence';
+import { DynamicsPausedNotice } from './DynamicsPausedNotice';
 
 interface PowertrainSummaryProps {
   vehicleId: number | null | undefined;
   historyQuery: MotorHistoryQuery;
+  showSourceNotice?: boolean;
 }
 
 /** Measured evidence, never inferred style, health, or pedal inputs. */
-export default function PowertrainSummary({ vehicleId, historyQuery }: PowertrainSummaryProps) {
+export default function PowertrainSummary({ vehicleId, historyQuery, showSourceNotice = true }: PowertrainSummaryProps) {
   const { t } = useTranslation();
   const { formatPower, formatTemperature } = useUnits();
   const { fmtNumber } = useNumberFormatting();
@@ -47,7 +49,8 @@ export default function PowertrainSummary({ vehicleId, historyQuery }: Powertrai
         <Text as="p" variant="caption">
           {t('dynamics.powertrain.coverage', 'Up to {{limit}} motor samples inside the selected drive. Averages describe reported samples, not a time-weighted or complete-trip assessment.', { limit: MOTOR_HISTORY_LIMIT })}
         </Text>
-        <StaleRefreshWarning state={state} label={t('dynamics.powertrain.title', 'Powertrain summary')} />
+        {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.powertrain.title', 'Powertrain summary')} /> : null}
+        {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.powertrain.title', 'Powertrain summary')} /> : null}
         {state.fatalError ? <QueryError error={state.fatalError} onRetry={() => void query.refetch()} /> : null}
         {query.isLoading && !state.hasData ? (
           <div role="status" aria-label={t('dynamics.powertrain.loading', 'Loading selected-drive evidence')}>
@@ -62,7 +65,7 @@ export default function PowertrainSummary({ vehicleId, historyQuery }: Powertrai
               </div>
             ))}
           </div>
-        ) : state.fatalError ? null : (
+        ) : state.fatalError || state.isRefreshBlocked && !state.hasData ? null : (
           // no-action: Disabled history awaits a valid trip selection in the trip toolbar.
           <EmptyState message={t('dynamics.powertrain.empty', 'No motor samples in this drive window. Trip totals remain available above; current readings are kept separate below.')}
             action={vehicleId && historyQuery.enabled !== false

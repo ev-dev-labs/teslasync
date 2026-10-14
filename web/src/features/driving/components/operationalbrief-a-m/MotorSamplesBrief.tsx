@@ -9,16 +9,18 @@ import type SummaryStats from '../driving-dynamics-modernization/SummaryStats';
 import { useMotorEvidence } from '../driving-dynamics-modernization/useMotorEvidence';
 import { MOTOR_HISTORY_LIMIT } from '../driving-dynamics/useMotorStats';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
+import { DynamicsPausedNotice } from '../driving-dynamics-modernization/DynamicsPausedNotice';
 
-type Props = ComponentProps<typeof SummaryStats>;
+type Props = ComponentProps<typeof SummaryStats> & { showSourceNotice?: boolean };
 
-export function MotorSamplesBrief({ vehicleId, historyQuery }: Props) {
+export function MotorSamplesBrief({ vehicleId, historyQuery, showSourceNotice = true }: Props) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { precision, locale } = useNumberFormatting();
   const { state, motorStats, query } = useMotorEvidence(vehicleId, historyQuery);
   const metrics: readonly StatMetric[] = [
-    { metricId: 'count', occurrenceId: 'motor-total-readings', rawValue: motorStats?.totalReadings,
+    { metricId: 'count', occurrenceId: 'motor-total-readings',
+      rawValue: Array.isArray(state.data) ? state.data.length : null,
       label: t('dynamics.totalReadings', 'Total Readings'), display: { precision: 0, units: { locale } } },
     { metricId: 'number', occurrenceId: 'motor-average-torque', rawValue: motorStats?.avgTorque,
       label: t('dynamics.avgTorque', 'Avg Torque'),
@@ -38,7 +40,8 @@ export function MotorSamplesBrief({ vehicleId, historyQuery }: Props) {
       label: t('dynamics.avgMotorTemp', 'Avg Motor Temp'), display: { precision, units: { locale } } },
   ];
   return <FadeIn delay={0.05} className="min-w-0 space-y-3">
-    <StaleRefreshWarning state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} />
+    {showSourceNotice ? <DynamicsPausedNotice state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
+    {showSourceNotice ? <StaleRefreshWarning state={state} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} /> : null}
     <DrivingSummaryBrief metrics={metrics}
       title={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')}
       description={t('dynamics.powertrain.coverage', 'Up to {{limit}} motor samples inside the selected drive. Averages describe reported samples, not a time-weighted or complete-trip assessment.', { limit: MOTOR_HISTORY_LIMIT })}
@@ -46,6 +49,8 @@ export function MotorSamplesBrief({ vehicleId, historyQuery }: Props) {
       provenance={t('dynamics.brief.source', 'Returned motor-history samples inside the existing selected-drive query bounds.')}
       loading={query.isLoading && !state.hasData}
       error={state.fatalError} retained={state.status === 'stale' || state.refreshError != null}
+      statusLabel={!state.hasData && !query.isLoading && !state.fatalError
+        ? t('dynamics.awaiting', 'Awaiting data') : undefined}
       preferences={{ units: unitPrefs, currency: { kind: 'symbol', value: '' } }}
       onRetry={() => void query.refetch()} />
   </FadeIn>;

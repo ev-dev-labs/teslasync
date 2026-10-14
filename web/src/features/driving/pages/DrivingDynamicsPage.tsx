@@ -40,6 +40,8 @@ import {
   SpeedGearPanel,
 } from '../components/driving-dynamics-modernization';
 import { MotorSamplesBrief } from '../components/operationalbrief-a-m/MotorSamplesBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
+import { useMotorEvidence } from '../components/driving-dynamics-modernization/useMotorEvidence';
 import {
   isOpenDrive,
   mergeOpenDrives,
@@ -153,6 +155,10 @@ export default function DrivingDynamicsPage() {
   });
   const rangeDrivesState = useDataState(rangeDrivesQuery, { provenance: 'historical' });
   const latestDrivesState = useDataState(latestDrivesQuery, { provenance: 'historical' });
+  const drivesUnresolved = !rangeDrivesState.hasData || !latestDrivesState.hasData;
+  const drivesLoading = !rangeDrivesState.hasData && rangeDrivesQuery.isLoading
+    || !latestDrivesState.hasData && latestDrivesQuery.isLoading;
+  const drivesUnavailable = rangeDrivesState.fatalError != null || latestDrivesState.fatalError != null;
 
   const filteredDrives = useMemo(() => {
     // The server owns timezone-aware, instant-bounded range filtering.
@@ -177,6 +183,7 @@ export default function DrivingDynamicsPage() {
       refetchInterval: isOpenDrive(selectedDrive) ? INTERVALS.STANDARD : false,
     };
   }, [selectedDrive]);
+  const { state: historyState } = useMotorEvidence(vehicleId, historyQuery);
 
   /* ================================================================ */
   /* Ride first → sampled evidence → current vehicle → wider context. */
@@ -199,6 +206,7 @@ export default function DrivingDynamicsPage() {
               drives={filteredDrives}
               selectedDriveId={selectedDriveId}
               onSelectDrive={(id) => setDriveParam(id)}
+              unresolved={drivesUnresolved}
             />
           </SectionErrorBoundary>
           {rangeDrivesQuery.isLoading && !rangeDrivesState.hasData ? (
@@ -211,6 +219,10 @@ export default function DrivingDynamicsPage() {
           ) : null}
           <StaleRefreshWarning state={rangeDrivesState} label={t('dynamics.review.rangeAnalytics', 'Date-range trip context')} />
           <StaleRefreshWarning state={latestDrivesState} label={t('dynamics.trip.liveDrive', 'Current drive')} />
+          <DynamicsPausedNotice state={rangeDrivesState} label={t('dynamics.review.rangeAnalytics', 'Date-range trip context')} />
+          <DynamicsPausedNotice state={latestDrivesState} label={t('dynamics.trip.liveDrive', 'Current drive')} />
+          <StaleRefreshWarning state={historyState} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} />
+          <DynamicsPausedNotice state={historyState} label={t('dynamics.modernization.sampleMetrics', 'Selected-drive motor samples')} />
           <CardGrid label={t('dynamics.section.trip', 'Trip review')} items={[
             {
               id: 'dynamics-ride-overview', size: 'full',
@@ -218,7 +230,7 @@ export default function DrivingDynamicsPage() {
                 <DynamicsPlacement>
                   <FadeIn>
                     <SectionErrorBoundary name="DynamicsRideOverview">
-                      <RideOverview drive={selectedDrive} />
+                      <RideOverview drive={selectedDrive} loading={drivesLoading} unresolved={drivesUnresolved} />
                     </SectionErrorBoundary>
                   </FadeIn>
                 </DynamicsPlacement>
@@ -230,7 +242,7 @@ export default function DrivingDynamicsPage() {
                 <DynamicsPlacement>
                   <FadeIn delay={0.05}>
                     <SectionErrorBoundary name="DynamicsPowertrainSummary">
-                      <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} />
+                      <PowertrainSummary vehicleId={vehicleId} historyQuery={historyQuery} showSourceNotice={false} />
                     </SectionErrorBoundary>
                   </FadeIn>
                 </DynamicsPlacement>
@@ -253,6 +265,7 @@ export default function DrivingDynamicsPage() {
             <MotorSamplesBrief
               vehicleId={vehicleId}
               historyQuery={historyQuery}
+              showSourceNotice={false}
             />
           </SectionErrorBoundary>
           <SectionErrorBoundary name="DynamicsMotorEfficiency">
@@ -267,10 +280,11 @@ export default function DrivingDynamicsPage() {
             <MotorHistoryCharts
               vehicleId={vehicleId}
               historyQuery={historyQuery}
+              showSourceNotice={false}
             />
           </SectionErrorBoundary>
           <SectionErrorBoundary name="DynamicsDrivingTips">
-            <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
+            <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} showSourceNotice={false} />
           </SectionErrorBoundary>
         </section>
 
@@ -333,6 +347,8 @@ export default function DrivingDynamicsPage() {
                       <SpeedGearPanel
                         vehicleId={vehicleId}
                         filteredDrives={filteredDrives}
+                        drivesLoading={filteredDrives.length === 0 && drivesLoading}
+                        drivesUnavailable={drivesUnavailable}
                       />
                     </SectionErrorBoundary>
                   </DynamicsPlacement>
