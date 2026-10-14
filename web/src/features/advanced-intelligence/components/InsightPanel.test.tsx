@@ -61,7 +61,7 @@ describe('InsightPanel empty source recovery', () => {
       renderQueryPanel({
         data: { value: 0 }, error: new Error('Refresh failed'), isError: true,
         dataUpdatedAt: Date.now(), refetch,
-      }, true, onRetry);
+      }, false, onRetry);
       expect(screen.getByText('Retained observation: 0')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Inspect evidence' })).toBeInTheDocument();
       expect(screen.getByText('The refresh failed; the most recently loaded evidence remains visible.')).toBeInTheDocument();
@@ -75,7 +75,7 @@ describe('InsightPanel empty source recovery', () => {
 
     it('distinguishes a paused refresh without inventing a server failure or offline diagnosis', () => {
       const refetch = vi.fn();
-      renderQueryPanel({ data: [0], fetchStatus: 'paused', dataUpdatedAt: Date.now(), refetch }, true);
+      renderQueryPanel({ data: [0], fetchStatus: 'paused', dataUpdatedAt: Date.now(), refetch }, false);
       expect(screen.getByText('Retained observation: 0')).toBeInTheDocument();
       expect(screen.getByText('Cached evidence remains visible while its refresh is paused.')).toBeInTheDocument();
       expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
