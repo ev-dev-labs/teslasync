@@ -4,10 +4,10 @@ import { RotateCw, Pencil, Check, X } from 'lucide-react';
 import { Button, CopyButton, Text, Textarea } from '@/components/ui';
 import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
-import { formatTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ChatLink, ChatMessage } from '@/api/types';
 import { HelixEvidenceTrail } from '@/components/ai';
-import type { AiToolActivity, AiUsage } from '@/hooks/useAiStream';
+import type { AiStreamState, AiToolActivity, AiUsage } from '@/hooks/useAiStream';
 import { MarkdownRenderer } from './MarkdownRenderer';
 import { KnowledgeCitations } from './KnowledgeCitations';
 import type { KnowledgeEvidence } from './knowledgeEvidence';
@@ -30,6 +30,8 @@ export interface UIChatMessage extends ChatMessage {
   aiUsage?: AiUsage;
   /** Verified retrieval chunks from this response, not model-generated citations. */
   knowledgeEvidence?: KnowledgeEvidence[];
+  aiState?: AiStreamState;
+  outcome?: 'empty' | 'canceled' | 'error';
 }
 
 interface ChatMessageItemProps {
@@ -55,7 +57,7 @@ interface ChatMessageItemProps {
   /** Hide all action-row buttons (used while another reply is streaming). */
   actionsDisabled?: boolean;
   onRegenerate?: (message: UIChatMessage) => void;
-  onEditAndResend?: (message: UIChatMessage, newText: string) => void;
+  onEditAndResend?: (message: UIChatMessage, newText: string) => void | boolean | Promise<void | boolean>;
 }
 
 /**
@@ -74,12 +76,14 @@ export function ChatMessageItem({
   onEditAndResend,
 }: ChatMessageItemProps) {
   const { t } = useTranslation();
+  const { formatTime } = useDateFormat();
   const isUser = message.role === 'user';
   // Guard against a malformed payload where `content` is null/undefined —
   // several paths below call `.trim()` on it, which would otherwise throw.
   const content = message.content ?? '';
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(content);
+  const [saving, setSaving] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -100,14 +104,22 @@ export function ChatMessageItem({
     setDraft(content);
   };
 
-  const submitEdit = () => {
+  const submitEdit = async () => {
+    if (saving || actionsDisabled || !onEditAndResend) return;
     const trimmed = draft.trim();
     if (!trimmed || trimmed === content.trim()) {
       cancelEdit();
       return;
     }
-    onEditAndResend?.(message, trimmed);
-    setEditing(false);
+    setSaving(true);
+    try {
+      const accepted = await onEditAndResend(message, trimmed);
+      if (accepted !== false) setEditing(false);
+    } catch {
+      // The caller owns error feedback; keep the raw revision recoverable.
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -158,11 +170,13 @@ export function ChatMessageItem({
               rows={3}
               aria-label={t('chatbot.aria.editMessage', 'Edit message')}
             />
-            <div className="flex items-center justify-end gap-2">
+            <div className="flex flex-wrap items-center justify-end gap-2">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={cancelEdit}
+                wrapLabel
+                className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
                 icon={<X className="h-3.5 w-3.5" />}
               >
                 {t('chatbot.actions.cancel', 'Cancel')}
@@ -170,8 +184,10 @@ export function ChatMessageItem({
               <Button
                 variant="primary"
                 size="sm"
-                onClick={submitEdit}
-                disabled={!draft.trim() || draft.trim() === content.trim()}
+                onClick={() => void submitEdit()}
+                disabled={saving || actionsDisabled || !draft.trim() || draft.trim() === content.trim()}
+                className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
+                wrapLabel
                 icon={<Check className="h-3.5 w-3.5" />}
               >
                 {t('chatbot.actions.saveAndResend', 'Save & resend')}
@@ -187,15 +203,24 @@ export function ChatMessageItem({
             <MarkdownRenderer>{visibleText}</MarkdownRenderer>
             {message.isStreaming && (
               <span
-                className="inline-block w-1.5 h-4 ml-0.5 align-text-bottom bg-purple-300/80 motion-safe:animate-pulse"
+                className="inline-block w-1.5 h-4 ml-0.5 align-text-bottom bg-[var(--text-muted)]"
                 aria-hidden="true"
               />
             )}
             <HelixEvidenceTrail
               activity={message.aiActivity ?? []}
-              state={message.isStreaming ? 'streaming' : 'done'}
+              state={message.isStreaming ? 'streaming' : message.aiState ?? 'done'}
               usage={message.aiUsage}
             />
+            {message.outcome && (
+              <Text as="p" variant="bodySm" color="secondary" role="status">
+                {message.outcome === 'empty'
+                  ? t('chatbot.noOutput', 'No response text was returned. You can retry or edit your message.')
+                  : message.outcome === 'canceled'
+                    ? t('chatbot.canceled', 'Response stopped. Any partial text is incomplete.')
+                    : t('chatbot.responseFailed', 'Response failed. You can retry or edit your message.')}
+              </Text>
+            )}
             {!message.isStreaming && (
               <KnowledgeCitations evidence={message.knowledgeEvidence ?? []} answer={content} />
             )}
@@ -222,7 +247,7 @@ export function ChatMessageItem({
         )}
 
         {showActions && (
-          <div className="mt-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
+          <div className="mt-2 flex flex-wrap items-center gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100 [@media(pointer:coarse)]:opacity-100 transition-opacity">
             <CopyButton
               text={content}
               iconOnly
@@ -235,6 +260,8 @@ export function ChatMessageItem({
                 variant="ghost"
                 size="sm"
                 onClick={() => onRegenerate(message)}
+                className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
+                wrapLabel
                 icon={<RotateCw className="h-3.5 w-3.5" />}
                 aria-label={t('chatbot.aria.regenerate', 'Regenerate response')}
               >
@@ -246,6 +273,8 @@ export function ChatMessageItem({
                 variant="ghost"
                 size="sm"
                 onClick={startEdit}
+                className="min-h-11 min-w-11 md:min-h-8 md:min-w-0"
+                wrapLabel
                 icon={<Pencil className="h-3.5 w-3.5" />}
                 aria-label={t('chatbot.aria.edit', 'Edit and resend')}
               >
