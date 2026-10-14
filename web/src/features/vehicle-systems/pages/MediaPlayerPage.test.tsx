@@ -44,7 +44,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 
 import type { MediaSnapshot } from '@/api/types';
 import { setGlobalPrecision } from '@/lib/numberFormat';
@@ -88,10 +88,13 @@ vi.mock('@/components/motion', () => ({
 //    data constants the page relies on are real-shaped. ───────────────────────
 vi.mock('@/components/charts', async () => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const { LinearGauge } = await import('@/components/charts/LinearGauge');
+  const { EmbeddedChart } = await import('@/components/charts/EmbeddedChart');
   const Passthrough = ({ children }: { children?: ReactNode }) => <>{children}</>;
   const Null = () => null;
   return {
     ...chartTestDoubles,
+    EmbeddedChart,
     CHART_COLORS: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
     chartGrid: {},
     axisTickSm: {},
@@ -100,8 +103,9 @@ vi.mock('@/components/charts', async () => {
     ResponsiveContainer: Passthrough,
     // Real <svg> so the page's <defs> gradient node is valid markup (no
     // "unrecognized tag" warning) while children still mount.
-    AreaChart: ({ children, data }: { children?: ReactNode; data?: unknown[] }) => (
-      <svg data-testid="volume-chart" data-points={String(Array.isArray(data) ? data.length : -1)}>
+    AreaChart: ({ children, data }: { children?: ReactNode; data?: { volume: number }[] }) => (
+      <svg data-testid="volume-chart" data-points={String(Array.isArray(data) ? data.length : -1)}
+        data-values={JSON.stringify(data?.map(point => point.volume))}>
         {children}
       </svg>
     ),
@@ -115,8 +119,10 @@ vi.mock('@/components/charts', async () => {
     YAxis: ({ domain }: { domain?: unknown }) => (
       <g data-testid="volume-yaxis" data-domain={JSON.stringify(domain ?? null)} />
     ),
-    LinearGauge: ({ value, max, label }: { value?: number; max?: number; label?: string }) => (
-      <div data-testid="linear-gauge" data-value={String(value)} data-max={String(max)} aria-label={label} />
+    LinearGauge: (props: ComponentProps<typeof LinearGauge>) => (
+      <div data-testid="linear-gauge" data-value={String(props.value)} data-max={String(props.max)}>
+        <LinearGauge {...props} />
+      </div>
     ),
   };
 });
@@ -167,7 +173,11 @@ const mockHistory = useMediaHistory as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockRange = useRangeState as unknown as ReturnType<typeof vi.fn>;
 
-const RANGE = { start: '2026-06-01', end: '2026-06-30' };
+const RANGE = {
+  start: '2026-06-01', end: '2026-06-30',
+  startInstant: '2026-06-01T00:00:00.000Z',
+  endInstantExclusive: '2026-07-01T00:00:00.000Z',
+};
 
  
 function makeQuery(over: Record<string, unknown> = {}): any {
@@ -264,7 +274,7 @@ function kpiValue(label: string): string {
 
 /** Non-spacer <tbody> rows of the playback-history table. */
 function bodyRows(): HTMLElement[] {
-  const table = screen.getByRole('table');
+  const table = screen.getByRole('table', { name: 'Playback history' });
   return Array.from(table.querySelectorAll('tbody tr')).filter(
     (r) => !r.hasAttribute('aria-hidden'),
   ) as HTMLElement[];
@@ -277,7 +287,7 @@ beforeEach(() => {
   mockRange.mockReset();
   setGlobalPrecision(2);
 
-  mockRange.mockReturnValue({ start: RANGE.start, end: RANGE.end, setRange: vi.fn() });
+  mockRange.mockReturnValue({ ...RANGE, setRange: vi.fn() });
   mockSelected.mockReturnValue(selected(7));
   mockMedia.mockReturnValue(makeQuery({ data: LATEST }));
   mockHistory.mockReturnValue(makeQuery({ data: HISTORY }));
@@ -321,8 +331,10 @@ describe('MediaPlayerPage — loading', () => {
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     expect(screen.queryByText('No volume data for this period')).not.toBeInTheDocument();
     expect(screen.queryByText('No playback history for this period')).not.toBeInTheDocument();
-    // Aggregates are withheld while the first load is in flight (no data yet).
-    expect(kpiValue('Unique tracks')).toBe('—');
+    expect(statsRegion()).toHaveAttribute('aria-busy', 'true');
+    expect(within(statsRegion()).getByText('Loading source')).toBeInTheDocument();
+    expect(statsRegion().querySelectorAll('[data-operational-metric]')).toHaveLength(4);
+    expect(statsRegion().querySelector('[data-operational-value]')).not.toBeInTheDocument();
   });
 });
 
@@ -347,6 +359,232 @@ describe('MediaPlayerPage — missing live snapshot', () => {
   });
 });
 
+describe('MediaPlayerPage — retrieval versus measurement time', () => {
+  const measurementNotice = 'Measurement time unavailable; the latest media response does not include observation timestamps.';
+
+  it.each([
+    {},
+    { error: new Error('Refresh failed'), isError: true },
+    { fetchStatus: 'paused' },
+  ])('discloses retrieval time without claiming measurement freshness for retained media (%j)', queryState => {
+    const retrievedAt = Date.parse('2026-06-15T15:45:00Z');
+    mockMedia.mockReturnValue(makeQuery({
+      data: LATEST, dataUpdatedAt: retrievedAt, ...queryState,
+    }));
+    const view = renderPage();
+
+    const notice = within(nowPlayingRegion()).getByText(/Media retrieved at:/);
+    const initialNotice = notice.textContent;
+    expect(notice).toHaveTextContent(measurementNotice);
+    expect(notice).not.toHaveTextContent('—');
+    expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', '5');
+    expect(bodyRows()).toHaveLength(HISTORY.length);
+
+    mockMedia.mockReturnValue(makeQuery({
+      data: LATEST, dataUpdatedAt: retrievedAt + 86_400_000, ...queryState,
+    }));
+    view.rerender(
+      <MemoryRouter initialEntries={['/media']}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <MediaPlayerPage />
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+    const refreshedNotice = within(nowPlayingRegion()).getByText(/Media retrieved at:/);
+    expect(refreshedNotice.textContent).not.toBe(initialNotice);
+    expect(refreshedNotice).toHaveTextContent(measurementNotice);
+  });
+
+  it.each([0, undefined])('keeps unknown retrieval time unknown (%s), even with populated history', dataUpdatedAt => {
+    mockMedia.mockReturnValue(makeQuery({
+      data: { ...LATEST, created_at: undefined, ts: undefined }, dataUpdatedAt,
+    }));
+    renderPage();
+    const notice = within(nowPlayingRegion()).getByText(/Media retrieved at:/);
+    expect(notice).toHaveTextContent('Media retrieved at: —');
+    expect(notice).toHaveTextContent(measurementNotice);
+    expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
+  });
+
+  it.each([null, undefined])('does not disclose a retrieval time for an absent latest payload (%s)', data => {
+    mockMedia.mockReturnValue(makeQuery({ data }));
+    renderPage();
+    expect(within(nowPlayingRegion()).queryByText(/Media retrieved at:/)).not.toBeInTheDocument();
+  });
+});
+
+describe('MediaPlayerPage — paused initial sources', () => {
+  it.each([false, true])('shows pause instead of empty or loading (isLoading=%s), retries each source, and recovers', isLoading => {
+    const liveRetry = vi.fn();
+    const historyRetry = vi.fn();
+    mockMedia.mockReturnValue(makeQuery({
+      data: undefined, fetchStatus: 'paused', isPending: true, isLoading, refetch: liveRetry,
+    }));
+    mockHistory.mockReturnValue(makeQuery({
+      data: undefined, fetchStatus: 'paused', isPending: true, isLoading, refetch: historyRetry,
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <MemoryRouter initialEntries={['/media-player']}>
+      <QueryClientProvider client={client}><MediaPlayerPage /></QueryClientProvider>
+    </MemoryRouter>;
+    const view = render(ui());
+
+    expect(screen.getAllByText('Paused offline')).toHaveLength(5);
+    expect(view.container.querySelector('[class*="--skeleton-bg"]')).toBeNull();
+    for (const message of [
+      'No media snapshot available', 'No volume data for this period',
+      'No source data available', 'No playback history for this period',
+    ]) {
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    }
+    expect(kpiValue('Unique tracks')).toBe('—');
+    expect(kpiValue('Avg volume')).toBe('—');
+    expect(statsRegion()).not.toHaveAttribute('aria-busy');
+    expect(within(statsRegion()).getByText('Evidence unresolved')).toBeInTheDocument();
+    expect(within(statsRegion()).queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('linear-gauge')).not.toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+
+    for (const button of within(nowPlayingRegion()).getAllByRole('button', { name: 'Retry' })) {
+      fireEvent.click(button);
+    }
+    expect(liveRetry).toHaveBeenCalledTimes(2);
+    expect(historyRetry).not.toHaveBeenCalled();
+    const historyButtons = screen.getAllByRole('button', { name: 'Retry' })
+      .filter(button => !nowPlayingRegion().contains(button));
+    expect(historyButtons).toHaveLength(3);
+    for (const button of historyButtons) fireEvent.click(button);
+    expect(historyRetry).toHaveBeenCalledTimes(3);
+    expect(liveRetry).toHaveBeenCalledTimes(2);
+
+    mockMedia.mockReturnValue(makeQuery({ data: LATEST, refetch: liveRetry }));
+    view.rerender(ui());
+    expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
+    expect(screen.getAllByText('Paused offline')).toHaveLength(3);
+    expect(screen.queryByText('No playback history for this period')).not.toBeInTheDocument();
+
+    mockHistory.mockReturnValue(makeQuery({ data: [], refetch: historyRetry }));
+    view.rerender(ui());
+    expect(screen.queryByText('Paused offline')).not.toBeInTheDocument();
+    expect(screen.getByText('No volume data for this period')).toBeInTheDocument();
+    expect(screen.getByText('No source data available')).toBeInTheDocument();
+    expect(screen.getByText('No playback history for this period')).toBeInTheDocument();
+    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(statsRegion()).not.toHaveAttribute('aria-busy');
+    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
+  });
+});
+
+describe('MediaPlayerPage — unreported title and authoritative playback status', () => {
+  it.each([undefined, null, '', '   ', 0, false])(
+    'keeps an unreported or invalid title (%s) unknown without inferring no playback',
+    title => {
+      mockMedia.mockReturnValue(makeQuery({
+        data: { ...LATEST, now_playing_title: title, playback_status: null },
+      }));
+      renderPage();
+
+      expect(within(nowPlayingRegion()).getByText('No reading reported')).toBeInTheDocument();
+      expect(within(nowPlayingRegion()).getByText('Unknown status')).toBeInTheDocument();
+      expect(screen.queryByText('No track')).not.toBeInTheDocument();
+      expect(within(nowPlayingRegion()).queryByText('Stopped')).not.toBeInTheDocument();
+      for (const name of ['Now playing', 'Volume', 'Volume over time', 'Source distribution', 'Playback history']) {
+        expect(screen.getByRole('heading', { name, level: 3 })).toBeInTheDocument();
+      }
+      expect(statsRegion()).toBeInTheDocument();
+      expect(bodyRows()).toHaveLength(3);
+    },
+  );
+
+  it.each([
+    ['Stopped', 'Stopped'],
+    [' stopped ', 'Stopped'],
+    ['Playing', 'Playing'],
+    ['Paused', 'Paused'],
+    ['not playing', 'not playing'],
+    ['not stopped', 'not stopped'],
+    ['   ', 'Unknown status'],
+    [false, 'Unknown status'],
+  ])('uses only a reported exact playback state (%s)', (status, label) => {
+    mockMedia.mockReturnValue(makeQuery({
+      data: { ...LATEST, now_playing_title: null, playback_status: status },
+    }));
+    renderPage();
+
+    expect(within(nowPlayingRegion()).getByText('No reading reported')).toBeInTheDocument();
+    expect(within(nowPlayingRegion()).getByText(label)).toBeInTheDocument();
+    if (label !== 'Stopped') expect(within(nowPlayingRegion()).queryByText('Stopped')).not.toBeInTheDocument();
+    if (label !== 'Playing') expect(within(nowPlayingRegion()).queryByText('Playing')).not.toBeInTheDocument();
+  });
+});
+
+describe('MediaPlayerPage — missing, invalid and measured audio readings', () => {
+  it.each([undefined, null, NaN, Infinity, -Infinity, '', '0', false])(
+    'does not turn a missing or invalid reading (%s) into measured zero',
+    reading => {
+      const data = { ...LATEST, audio_volume: reading, audio_volume_max: reading, audio_volume_increment: reading };
+      mockMedia.mockReturnValue(makeQuery({ data }));
+      mockHistory.mockReturnValue(makeQuery({ data: [data] }));
+      renderPage();
+
+      expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', 'null');
+      expect(kpiValue('Volume step')).toBe('—');
+      expect(kpiValue('Avg volume')).toBe('—');
+      expect(screen.getByText('—/—')).toBeInTheDocument();
+      expect(screen.getByText('No volume data for this period')).toBeInTheDocument();
+      expect(screen.queryByTestId('volume-chart')).not.toBeInTheDocument();
+      expect(screen.queryByRole('table', { name: 'Volume over time — data table' })).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([0, -2.5, 0.25])('preserves the measured audio scalar %s', reading => {
+    const data = snapshot({ audio_volume: reading, audio_volume_increment: reading });
+    mockMedia.mockReturnValue(makeQuery({ data }));
+    mockHistory.mockReturnValue(makeQuery({ data: [data] }));
+    renderPage();
+
+    expect(screen.getByTestId('linear-gauge')).toHaveAttribute('data-value', String(reading));
+    expect(within(screen.getByTestId('linear-gauge')).getByText(reading === 0 ? '0' : reading.toFixed(2)))
+      .toBeInTheDocument();
+    expect(kpiValue('Volume step')).toBe(reading.toFixed(2));
+    expect(screen.getByText(`${reading.toFixed(2)}/10.00`)).toBeInTheDocument();
+    expect(screen.getByTestId('volume-chart')).toHaveAttribute('data-values', JSON.stringify([reading]));
+    const fallback = screen.getByRole('table', { name: 'Volume over time — data table' });
+    expect(within(fallback).getByRole('columnheader', { name: 'Time' })).toBeInTheDocument();
+    expect(within(fallback).getByRole('columnheader', { name: 'Volume' })).toBeInTheDocument();
+    expect(within(fallback).getByRole('cell', { name: String(reading), exact: true })).toBeInTheDocument();
+    const figure = fallback.closest('figure');
+    expect(figure).toHaveAttribute('aria-describedby', fallback.parentElement?.id);
+    expect(JSON.parse(screen.getByTestId('volume-yaxis').getAttribute('data-domain') ?? 'null'))
+      .toEqual([Math.min(0, reading), 10]);
+    expect(screen.queryByText('No volume data for this period')).not.toBeInTheDocument();
+  });
+
+  it('keeps every finite point in the chronological fallback without sampling or rounding', () => {
+    const values = Array.from({ length: 260 }, (_, index) => (index - 130) / 1000);
+    const history = values.map((audio_volume, index) => snapshot({
+      id: index + 1,
+      audio_volume,
+      created_at: new Date(Date.parse(RANGE.startInstant) + index * 1000).toISOString(),
+    }));
+    mockHistory.mockReturnValue(makeQuery({ data: [
+      snapshot({ id: 300, audio_volume: undefined }),
+      snapshot({ id: 301, audio_volume: NaN }),
+      ...history.reverse(),
+    ] }));
+    renderPage();
+
+    const fallback = screen.getByRole('table', { name: 'Volume over time — data table' });
+    const rows = Array.from(fallback.querySelectorAll('tbody tr'));
+    expect(rows).toHaveLength(values.length);
+    expect(rows.map(row => row.querySelectorAll('td')[1]?.textContent)).toEqual(values.map(String));
+    expect(rows.every(row => row.querySelectorAll('td')[0]?.textContent)).toBe(true);
+    expect(screen.getByTestId('volume-chart')).toHaveAttribute('data-values', JSON.stringify(values));
+  });
+});
+
 describe('MediaPlayerPage — error with no data', () => {
   it('surfaces the page-level banner and a retryable error wired to each refetch', () => {
     const mediaRefetch = vi.fn();
@@ -361,6 +599,9 @@ describe('MediaPlayerPage — error with no data', () => {
 
     // Page-level banner shows the first (media) error message.
     expect(screen.getByText('Failed to load data: boom')).toBeInTheDocument();
+    expect(statsRegion()).not.toHaveAttribute('aria-busy');
+    expect(within(statsRegion()).getByText('Source unavailable')).toBeInTheDocument();
+    expect(within(statsRegion()).getByRole('alert')).toHaveTextContent('This source is unavailable');
 
     // Now-playing + volume + source + history each render a Retry CTA.
     const retries = screen.getAllByRole('button', { name: 'Retry' });
@@ -427,9 +668,11 @@ describe('MediaPlayerPage — populated happy path', () => {
     renderPage();
 
     expect(mockMedia).toHaveBeenCalledWith('7');
-    expect(mockHistory).toHaveBeenCalledWith('7', { start: RANGE.start, end: RANGE.end });
+    expect(mockHistory).toHaveBeenCalledWith('7', {
+      start: RANGE.startInstant, end: RANGE.endInstantExclusive,
+    });
 
-    const table = screen.getByRole('table');
+    const table = screen.getByRole('table', { name: 'Playback history' });
     expect(within(table).getByText('Zeta Track')).toBeInTheDocument();
     expect(within(table).getByText('Alpha Track')).toBeInTheDocument();
     expect(within(table).getByText('Mid Track')).toBeInTheDocument();
@@ -526,6 +769,29 @@ describe('MediaPlayerPage — volume chart excludes missing readings (bug fix)',
 });
 
 describe('MediaPlayerPage — playback progress hardening (bug fix)', () => {
+  it.each([
+    [250, 125, '0.25', '0.125'],
+    [1499, 749, '1.499', '0.749'],
+  ])('keeps positive fractional ARIA bounds for %sms duration despite visual rounding', (duration, elapsed, max, now) => {
+    mockMedia.mockReturnValue(makeQuery({
+      data: snapshot({
+        now_playing_duration: duration,
+        now_playing_elapsed: elapsed,
+        playback_status: 'Playing',
+      }),
+    }));
+    renderPage();
+
+    const bar = within(nowPlayingRegion()).getByRole('progressbar', { name: 'Playback progress' });
+    expect(bar).toHaveAttribute('aria-valuemin', '0');
+    expect(bar).toHaveAttribute('aria-valuemax', max);
+    expect(bar).toHaveAttribute('aria-valuenow', now);
+    expect(bar).toHaveTextContent('0:00');
+    expect(bar).toHaveTextContent(duration < 1000 ? '0:00' : '0:01');
+    expect(screen.queryByText('Playback progress is unavailable without a reported elapsed time and positive duration.'))
+      .not.toBeInTheDocument();
+  });
+
   it('clamps a negative elapsed to 0:00 and reports aria-valuenow 0 instead of a negative value', () => {
     mockMedia.mockReturnValue(
       makeQuery({
@@ -581,7 +847,7 @@ describe('MediaPlayerPage — source icon and status branches', () => {
     );
     renderPage();
 
-    const table = screen.getByRole('table');
+    const table = screen.getByRole('table', { name: 'Playback history' });
     expect(within(table).getByText('FM Radio')).toBeInTheDocument();
     expect(within(table).getByText('Podcast App')).toBeInTheDocument();
     expect(within(table).getByText('AUX')).toBeInTheDocument();
@@ -593,9 +859,50 @@ describe('MediaPlayerPage — source icon and status branches', () => {
 });
 
 describe('MediaPlayerPage — interactions', () => {
+  it.each([
+    {
+      startInstant: '2026-06-10T15:42:19.125Z',
+      endInstantExclusive: '2026-06-11T15:42:19.125Z',
+    },
+    {
+      startInstant: '2026-06-10T00:00:00-07:00',
+      endInstantExclusive: '2026-06-12T00:00:00-07:00',
+    },
+    {
+      startInstant: '2024-03-09T00:00:00-08:00',
+      endInstantExclusive: '2024-03-11T00:00:00-07:00',
+    },
+  ])('uses identical half-open bounds in every history surface: $startInstant', (range) => {
+    mockRange.mockReturnValue({ ...RANGE, ...range, setRange: vi.fn() });
+    const startMs = Date.parse(range.startInstant);
+    const endMs = Date.parse(range.endInstantExclusive);
+    mockHistory.mockReturnValue(makeQuery({ data: [
+      snapshot({ id: 1, created_at: new Date(startMs - 1).toISOString(), now_playing_title: 'Before range', audio_volume: 99, playback_source: 'Excluded source' }),
+      snapshot({ id: 2, created_at: new Date(startMs).toISOString(), now_playing_title: 'At lower bound', audio_volume: 4 }),
+      snapshot({ id: 3, created_at: new Date(endMs - 1).toISOString(), now_playing_title: 'Before upper bound', audio_volume: 8 }),
+      snapshot({ id: 4, created_at: range.endInstantExclusive, now_playing_title: 'At upper bound', audio_volume: 99, playback_source: 'Excluded source' }),
+      snapshot({ id: 5, created_at: 'invalid', now_playing_title: 'Unknown timestamp', audio_volume: 99, playback_source: 'Excluded source' }),
+    ] }));
+    renderPage();
+    expect(mockHistory).toHaveBeenCalledWith('7', {
+      start: range.startInstant, end: range.endInstantExclusive,
+    });
+    expect(bodyRows()).toHaveLength(2);
+    expect(screen.getByText(/2 records/)).toBeInTheDocument();
+    expect(screen.queryByText('Before range')).not.toBeInTheDocument();
+    expect(screen.queryByText('At upper bound')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unknown timestamp')).not.toBeInTheDocument();
+    expect(screen.queryByText('Excluded source')).not.toBeInTheDocument();
+    expect(kpiValue('Unique tracks')).toBe('2');
+    expect(kpiValue('Avg volume')).toBe('6');
+    expect(kpiValue('Top source')).toBe('Spotify');
+    expect(screen.getByTestId('volume-chart')).toHaveAttribute('data-values', '[4,8]');
+    expect(screen.getByText('(2)')).toBeInTheDocument();
+  });
+
   it('reads the shared range without rendering a second range trigger', () => {
     const setRange = vi.fn();
-    mockRange.mockReturnValue({ start: RANGE.start, end: RANGE.end, setRange });
+    mockRange.mockReturnValue({ ...RANGE, setRange });
     renderPage();
 
     expect(screen.queryByTestId('media-player-range')).not.toBeInTheDocument();
@@ -619,6 +926,76 @@ describe('MediaPlayerPage — interactions', () => {
 });
 
 describe('MediaPlayerPage — independent retained source recovery', () => {
+  it.each(['history', 'latest'] as const)('does not hide returned metrics while %s initially loads', loadingSource => {
+    const loadingQuery = makeQuery({ data: undefined, isLoading: true, isPending: true, fetchStatus: 'fetching' });
+    if (loadingSource === 'history') mockHistory.mockReturnValue(loadingQuery);
+    else mockMedia.mockReturnValue(loadingQuery);
+    renderPage();
+
+    expect(statsRegion()).not.toHaveAttribute('aria-busy');
+    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(kpiValue('Unique tracks')).toBe(loadingSource === 'history' ? '—' : '3');
+    expect(kpiValue('Avg volume')).toBe(loadingSource === 'history' ? '—' : '6');
+    expect(kpiValue('Volume step')).toBe(loadingSource === 'latest' ? '—' : '0.50');
+  });
+
+  it('retains successful empty history and a zero live step through refresh failure and recovery', () => {
+    const zero = { ...LATEST, audio_volume_increment: 0 };
+    mockMedia.mockReturnValue(makeQuery({ data: zero }));
+    mockHistory.mockReturnValue(makeQuery({ data: [] }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const ui = () => <MemoryRouter initialEntries={['/media-player']}>
+      <QueryClientProvider client={client}><MediaPlayerPage /></QueryClientProvider>
+    </MemoryRouter>;
+    const view = render(ui());
+    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(kpiValue('Volume step')).toBe('0.00');
+    expect(kpiValue('Top source')).toBe('—');
+    expect(kpiValue('Avg volume')).toBe('—');
+
+    mockMedia.mockReturnValue(makeQuery({ data: zero, error: new Error('Live refresh failed'), isError: true }));
+    mockHistory.mockReturnValue(makeQuery({ data: [], error: new Error('History refresh failed'), isError: true }));
+    view.rerender(ui());
+    expect(statsRegion()).not.toHaveAttribute('aria-busy');
+    expect(within(statsRegion()).getAllByText('Retained evidence').length).toBeGreaterThan(0);
+    expect(within(statsRegion()).queryByRole('alert')).not.toBeInTheDocument();
+    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(kpiValue('Volume step')).toBe('0.00');
+    expect(statsRegion().parentElement).toHaveAttribute('data-source-retained', 'true');
+
+    mockMedia.mockReturnValue(makeQuery({ data: zero }));
+    mockHistory.mockReturnValue(makeQuery({ data: [] }));
+    view.rerender(ui());
+    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(statsRegion().parentElement).not.toHaveAttribute('data-source-retained');
+    expect(kpiValue('Unique tracks')).toBe('0');
+    expect(kpiValue('Volume step')).toBe('0.00');
+  });
+
+  it.each(['history', 'latest'] as const)('keeps returned metrics when only %s is unavailable', (unavailableSource) => {
+    const failed = makeQuery({ isError: true, error: new Error('Independent source failed') });
+    if (unavailableSource === 'history') mockHistory.mockReturnValue(failed);
+    else mockMedia.mockReturnValue(failed);
+    renderPage();
+
+    expect(within(statsRegion()).getByText('Returned evidence')).toBeInTheDocument();
+    expect(within(statsRegion()).getByText('Not a live-state observation')).toBeInTheDocument();
+    expect(kpiValue('Unique tracks')).toBe(unavailableSource === 'history' ? '—' : '3');
+    expect(kpiValue('Top source')).toBe(unavailableSource === 'history' ? '—' : 'Spotify');
+    expect(kpiValue('Avg volume')).toBe(unavailableSource === 'history' ? '—' : '6');
+    expect(kpiValue('Volume step')).toBe(unavailableSource === 'latest' ? '—' : '0.50');
+    for (const id of ['media-unique-tracks', 'media-top-source', 'media-average-volume']) {
+      const metric = statsRegion().querySelector(`[data-operational-metric="${id}"]`);
+      expect(metric).toHaveTextContent(unavailableSource === 'history' ? 'This source is unavailable' : 'Partial evidence');
+      expect(metric).not.toHaveTextContent('Latest media snapshot');
+    }
+    const step = statsRegion().querySelector('[data-operational-metric="media-volume-step"]');
+    expect(step).toHaveTextContent('Latest media snapshot');
+    expect(step).not.toHaveTextContent('Partial evidence');
+    if (unavailableSource === 'latest') expect(step).toHaveTextContent('This source is unavailable');
+    else expect(step).not.toHaveTextContent('This source is unavailable');
+  });
+
   it('preserves the user sort and every retained history row when live metadata alone recovers', () => {
     const liveRetry = vi.fn();
     const historyRetry = vi.fn();

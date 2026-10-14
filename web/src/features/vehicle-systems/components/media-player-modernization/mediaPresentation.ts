@@ -21,16 +21,17 @@ export function listeningStats(snapshots: readonly MediaSnapshot[]) {
   };
 }
 
-/** Preserve source milliseconds and m:ss display; clamp only the rendered meter. */
+/** Source milliseconds become unrounded ARIA seconds; m:ss display formats separately. */
 export function playbackProgress(snapshot: MediaSnapshot | null) {
   const duration = snapshot?.now_playing_duration;
   const elapsed = snapshot?.now_playing_elapsed;
   if (!finiteReading(duration) || duration <= 0 || !finiteReading(elapsed)) return null;
-  const durationSec = Math.round(duration / 1000);
+  const durationSec = duration / 1000;
+  if (durationSec <= 0) return null;
   return {
     percent: Math.max(0, Math.min(100, elapsed / duration * 100)),
     durationSec,
-    elapsedSec: Math.min(durationSec, Math.max(0, Math.round(elapsed / 1000))),
+    elapsedSec: Math.min(durationSec, Math.max(0, elapsed / 1000)),
   };
 }
 
