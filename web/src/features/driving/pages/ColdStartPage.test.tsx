@@ -26,7 +26,7 @@ timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, formatC
   nestedBriefPropsMock: vi.fn(),
   comparisonPropsMock: vi.fn(),
   formatCurrencyMock: vi.fn(),
-  formatting: { costPerKwh: 0.2 as number | null },
+  formatting: { costPerKwh: 0.2 as number | null | undefined },
 }));
 
 vi.mock('react-i18next', () => ({
@@ -613,9 +613,11 @@ describe('ColdStartPage', () => {
 
   it.each([
     { name: 'missing rate', rate: null },
-    { name: 'zero rate', rate: 0 },
+    { name: 'absent rate', rate: undefined },
     { name: 'negative rate', rate: -1 },
+    { name: 'negative fractional rate', rate: -0.25 },
     { name: 'nonfinite rate', rate: Number.POSITIVE_INFINITY },
+    { name: 'negative infinite rate', rate: Number.NEGATIVE_INFINITY },
     { name: 'invalid rate', rate: Number.NaN },
   ])('withholds monetary estimates for $name without hiding evidence', ({ rate }) => {
     formatting.costPerKwh = rate;
@@ -627,6 +629,33 @@ describe('ColdStartPage', () => {
       penaltyCostLabel: null,
       summary: { sampleSufficient: true, totalPenaltyWh: 500 },
     });
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+  });
+
+  it.each([
+    { name: 'zero rate', rate: 0, coldEnergyWh: 300, penaltyWhPerKm: 100, totalPenaltyWh: 500, cost: 0 },
+    { name: 'fractional rate', rate: 0.125, coldEnergyWh: 300, penaltyWhPerKm: 100, totalPenaltyWh: 500, cost: 0.0625 },
+    { name: 'measured zero penalty', rate: 0.2, coldEnergyWh: 200, penaltyWhPerKm: 0, totalPenaltyWh: 0, cost: 0 },
+    { name: 'negative signed fractional penalty', rate: 0.2, coldEnergyWh: 174.5, penaltyWhPerKm: -25.5, totalPenaltyWh: 0, cost: 0 },
+    { name: 'positive fractional penalty', rate: 0.2, coldEnergyWh: 200.5, penaltyWhPerKm: 0.5, totalPenaltyWh: 3, cost: 0.0006 },
+  ])('prices $name without discarding measured evidence', ({
+    rate, coldEnergyWh, penaltyWhPerKm, totalPenaltyWh, cost,
+  }) => {
+    formatting.costPerKwh = rate;
+    const drives = supportedDrives().map((drive, index) =>
+      index > 5 ? { ...drive, energyUsedWh: coldEnergyWh } : drive,
+    );
+    useDrivesMock.mockReturnValue(query({ data: drives }));
+    render(<ColdStartPage />);
+
+    expect(formatCurrencyMock).toHaveBeenCalledOnce();
+    expect(formatCurrencyMock.mock.lastCall?.[0]).toBeCloseTo(cost, 10);
+    const expected = {
+      penaltyCostLabel: `$${cost.toFixed(2)}`,
+      summary: { sampleSufficient: true, penaltyWhPerKm, totalPenaltyWh },
+    };
+    expect(briefPropsMock.mock.lastCall?.[0]).toMatchObject(expected);
+    expect(comparisonPropsMock.mock.lastCall?.[0]).toMatchObject(expected);
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
   });
 

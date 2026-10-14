@@ -59,7 +59,7 @@ export default function ColdStartPage() {
     Number.isFinite(summary.totalPenaltyWh) &&
     costPerKwh != null &&
     Number.isFinite(costPerKwh) &&
-    costPerKwh > 0
+    costPerKwh >= 0
       ? (summary.totalPenaltyWh / 1_000) * costPerKwh
       : null;
   const penaltyCostLabel =
