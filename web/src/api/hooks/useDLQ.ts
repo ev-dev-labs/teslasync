@@ -34,6 +34,9 @@ import type {
 
 export { SudoCanceledError };
 
+// DLQReplayAuditRepo.Recent caps this endpoint at 500, unlike general pagination.
+const DLQ_AUDIT_MAX_LIMIT = 500;
+
 export const dlqKeys = {
   list: ['system', 'dlq', 'list'] as const,
   entry: (id: string | null | undefined) => ['system', 'dlq', 'entry', id] as const,
@@ -45,8 +48,8 @@ export const dlqKeys = {
 /**
  * Clamp a caller-supplied audit `limit` into the server-accepted window.
  * `useDLQAudit`'s contract promises the cap, so enforce it in one place:
- * a fat-fingered `limit={100000}` must not translate into an unbounded
- * audit scan on the read path. Fractional inputs are floored; sub-1
+ * a fat-fingered `limit={100000}` must not exceed the DLQ-specific
+ * 500-row cap. Fractional inputs are floored; sub-1
  * values are lifted to 1; non-finite input (NaN / ±Infinity) falls back
  * to the default page size. Exported so the clamp is unit-testable
  * independently of React Query wiring.
@@ -55,7 +58,7 @@ export function clampAuditLimit(limit: number): number {
   if (!Number.isFinite(limit)) return PAGINATION.DEFAULT_LIMIT;
   const floored = Math.floor(limit);
   if (floored < 1) return 1;
-  if (floored > PAGINATION.MAX_LIMIT) return PAGINATION.MAX_LIMIT;
+  if (floored > DLQ_AUDIT_MAX_LIMIT) return DLQ_AUDIT_MAX_LIMIT;
   return floored;
 }
 
@@ -103,7 +106,7 @@ export function useDLQEntry(id: string | null | undefined, enabled = true) {
  * Recent replay-audit rows. Pass `dlqId` to scope to a single entry's
  * replay history; omit it (or pass null) for the global feed. A requested
  * empty/blank ID stays disabled, never silently becomes global. `limit` mirrors
- * the server-side query param and caps at PAGINATION.MAX_LIMIT.
+ * the server-side query param and caps at 500 rows.
  */
 export function useDLQAudit(
   dlqId?: string | null,

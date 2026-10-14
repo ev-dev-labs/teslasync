@@ -274,6 +274,23 @@ describe('DLQ string ID contract', () => {
       });
   });
 
+  it.each([
+    { name: 'general_pagination_maximum', limit: PAGINATION.MAX_LIMIT },
+    { name: 'very_large', limit: 1_000_000 },
+  ])('caps $name audit limit at the backend-specific maximum rather than general pagination', async ({ limit }) => {
+    mocks.request.mockResolvedValue({ ...audit, limit: 500 });
+    const { client, Wrapper } = fixture();
+    const { result } = renderHook(() => useDLQAudit(ID, limit), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(clampAuditLimit(limit)).toBe(500);
+    expect(mocks.request).toHaveBeenCalledWith(`/system/dlq/${ID}/audit?limit=500`, {
+      signal: expect.any(AbortSignal),
+    });
+    expect(client.getQueryCache().getAll().map((query) => query.queryKey))
+      .toEqual([dlqKeys.entryAudit(ID, 500)]);
+    expect(client.getQueryData(dlqKeys.entryAudit(ID, limit))).toBeUndefined();
+  });
+
   it('retains scoped audit data through refresh failure and recovers on explicit refetch', async () => {
     const failure = new Error('synthetic refresh failure');
     mocks.request.mockResolvedValueOnce(audit).mockRejectedValue(failure);
