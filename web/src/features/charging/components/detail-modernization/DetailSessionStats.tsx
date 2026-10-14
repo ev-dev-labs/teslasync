@@ -8,12 +8,13 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDurationFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import type { StatPeriod } from '@/lib/metric-reference';
+import { asFiniteNumber } from '@/lib/typeGuards';
 
 export interface DetailSessionStatsProps {
   session: ChargingSession;
-  energy: number;
-  duration: number;
-  vehicleEnergy: number;
+  energy: number | null;
+  duration: number | null;
+  vehicleEnergy: number | null;
   billedEnergy: number | null;
   cost: number | null;
   billedCost: number | null;
@@ -49,11 +50,29 @@ export function DetailSessionStats({
     label: `${t('charging.detail.title', 'Charge Session')} #${session.id} · ${formatDate(session.started_at)}`,
     provenance: t('charging.detail.resource', 'Charge session'),
   };
-  const hasBilledEnergy = billedEnergy != null && billedEnergy > 0;
+  const measuredBilledEnergy = asFiniteNumber(billedEnergy);
+  const hasBilledEnergy = measuredBilledEnergy != null && measuredBilledEnergy > 0;
+  const measuredEnergy = hasBilledEnergy || asFiniteNumber(session.total_energy_added_wh) != null
+    ? asFiniteNumber(energy) : null;
+  const measuredVehicleEnergy = asFiniteNumber(session.total_energy_added_wh) == null
+    ? null : asFiniteNumber(vehicleEnergy);
+  const start = Date.parse(session.started_at);
+  const end = session.ended_at == null ? null : Date.parse(session.ended_at);
+  const measuredDuration = Number.isFinite(start) && end != null && Number.isFinite(end) && end >= start
+    ? asFiniteNumber(duration) : null;
+  const measuredCost = asFiniteNumber(cost);
+  const settingsRate = asFiniteNumber(configuredRate);
+  const measuredRate = asFiniteNumber(calculatedRate) ?? settingsRate;
+  const estimatedCost = measuredEnergy != null && settingsRate != null
+    ? measuredEnergy / 1000 * settingsRate : null;
+  const socEndpoint = (value: number | null) => {
+    const reading = asFiniteNumber(value);
+    return reading == null ? '—' : fmtNumber(reading);
+  };
   const energyContext = (
     <>
-      {hasBilledEnergy && vehicleEnergy > 0 && t('charging.detail.vehicleMeasured', {
-        energy: fmtNumber(convertEnergyFromSI(vehicleEnergy, unitPrefs.energy)),
+      {hasBilledEnergy && measuredVehicleEnergy != null && t('charging.detail.vehicleMeasured', {
+        energy: fmtNumber(convertEnergyFromSI(measuredVehicleEnergy, unitPrefs.energy)),
         unit: unitPrefs.energy,
         defaultValue: 'Vehicle measured {{energy}} {{unit}}',
       })}
@@ -71,38 +90,38 @@ export function DetailSessionStats({
   );
   const metrics: readonly StatMetric[] = [
     {
-      metricId: 'energy', occurrenceId: 'jsx-17201', rawValue: energy,
+      metricId: 'energy', occurrenceId: 'jsx-17201', rawValue: measuredEnergy,
       label: t('charging.detail.energy', 'Energy'),
       display: { precision, units: { energy: unitPrefs.energy, locale } },
       context: hasBilledEnergy ? energyContext : undefined,
     },
     {
       metricId: 'duration', occurrenceId: 'jsx-17203',
-      rawValue: duration / convertDurationFromSI(1, 'min'),
+      rawValue: measuredDuration == null ? null : measuredDuration / convertDurationFromSI(1, 'min'),
       label: t('charging.detail.duration', 'Duration'),
       display: { precision, units: { duration: 'min', locale } },
+      context: session.ended_at == null ? t('charging.detail.ongoing', 'now') : undefined,
     },
     {
       metricId: 'charge.peakPower', occurrenceId: 'jsx-17205',
-      rawValue: session.peak_power_w ?? 0,
+      rawValue: session.peak_power_w,
       label: t('charging.detail.peakPower', 'Peak Power'),
       display: { precision, units: { power: 'kW', locale } },
-      // Preserve original zero fallback and fixed kW display; gauges share it.
-      context: undefined,
     },
     {
       metricId: 'text', occurrenceId: 'jsx-17207',
-      rawValue: `${fmtNumber(session.start_soc_pct ?? 0)}–${fmtNumber(session.end_soc_pct ?? 0)}%`,
+      rawValue: asFiniteNumber(session.start_soc_pct) == null && asFiniteNumber(session.end_soc_pct) == null
+        ? null : `${socEndpoint(session.start_soc_pct)}–${socEndpoint(session.end_soc_pct)}%`,
       label: t('charging.detail.socRange', 'SoC Range'),
     },
     {
       metricId: 'currency', occurrenceId: 'jsx-17209',
-      rawValue: cost ?? (energy > 0 && configuredRate != null ? energy / 1000 * configuredRate : null),
+      rawValue: measuredCost ?? estimatedCost,
       display: { formatter: () => ({ value: costText, unit: '' }) },
-      label: cost != null ? t('charging.detail.totalCost', 'Total Cost') : t('charging.detail.estCost', 'Est. Cost'),
-      context: billedCost != null
+      label: measuredCost != null ? t('charging.detail.totalCost', 'Total Cost') : t('charging.detail.estCost', 'Est. Cost'),
+      context: asFiniteNumber(billedCost) != null
         ? t('charging.detail.teslaInvoice', 'Tesla invoice')
-        : session.cost_decimal == null && energy > 0 && configuredRate != null
+        : session.cost_decimal == null && estimatedCost != null
           ? t('charging.detail.atRate', {
               currencySymbol, costPerKwh: configuredRate,
               defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh',
@@ -110,10 +129,11 @@ export function DetailSessionStats({
           : undefined,
     },
     {
-      metricId: 'currency', occurrenceId: 'jsx-17211', rawValue: calculatedRate ?? configuredRate,
+      metricId: 'currency', occurrenceId: 'jsx-17211', rawValue: measuredRate,
       display: { formatter: () => ({ value: rateText, unit: '' }) },
       label: t('charging.detail.perKwh', 'Per kWh'),
-      context: calculatedRate == null ? t('charging.detail.fromSettings', 'from settings') : undefined,
+      context: asFiniteNumber(calculatedRate) == null && measuredRate != null
+        ? t('charging.detail.fromSettings', 'from settings') : undefined,
     },
     {
       metricId: 'distance', occurrenceId: 'jsx-17213', rawValue: distanceM,
@@ -122,7 +142,8 @@ export function DetailSessionStats({
     },
     {
       metricId: 'power', occurrenceId: 'jsx-17215',
-      rawValue: averageRate != null ? averageRate * 1000 : null,
+      rawValue: measuredEnergy != null && measuredDuration != null && averageRate != null
+        ? averageRate * 1000 : null,
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh/h' }) },
       label: t('charging.detail.avgRate', 'kWh/h Avg'),
     },

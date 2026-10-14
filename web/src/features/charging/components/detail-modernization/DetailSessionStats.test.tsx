@@ -79,13 +79,97 @@ describe('detail stats bind real canonical formatting without changing specialis
       energy={50000} duration={0} billedEnergy={null} cost={null} billedCost={null}
       costText="$6.00" calculatedRate={null} rateText="$0.12/kWh" averageRate={null} />);
     expect(text(container, 'Est. Cost')).toBe('$6.00');
-    expect(text(container, 'Duration')).toBe('0.00 min');
-    expect(text(container, 'Peak Power')).toBe('0.00 kW'); // Original fallback, not a new assumption.
-    expect(text(container, 'SoC Range')).toBe('20.00–0.00%');
+    expect(text(container, 'Duration')).toBe('—');
+    expect(metric(container, 'Duration')).toHaveAttribute('data-value-state', 'missing');
+    expect(text(container, 'Peak Power')).toBe('—');
+    expect(text(container, 'SoC Range')).toBe('20.00–—%');
     expect(text(container, 'kWh/h Avg')).toBe('—');
     expect(screen.getByText('at $0.12/kWh')).toBeInTheDocument();
     expect(screen.getByText('from settings')).toBeInTheDocument();
+    expect(metric(container, 'Duration')).toHaveTextContent('now');
     expect(container.textContent).not.toMatch(/all time|lifetime|complete window/i);
+  });
+  it.each([null, NaN, Infinity, -Infinity])('keeps missing/invalid measurements unavailable (%s)', value => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, total_energy_added_wh: value, peak_power_w: value,
+        start_soc_pct: value, end_soc_pct: value }}
+      energy={value} duration={value} vehicleEnergy={value} billedEnergy={null}
+      cost={value} billedCost={null} configuredRate={null} calculatedRate={value}
+      costText="$0.00" rateText="$0.00/kWh" distanceM={value} distanceText="0 km"
+      averageRate={value} />);
+    expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(8);
+    for (const label of ['Energy', 'Duration', 'Peak Power', 'SoC Range', 'Est. Cost',
+      'Per kWh', 'Miles Added', 'kWh/h Avg']) {
+      expect(text(container, label)).toBe('—');
+      expect(metric(container, label)).not.toHaveAttribute('data-value-state', 'value');
+    }
+    expect(container.textContent).not.toMatch(/NaN|Infinity/);
+  });
+  it.each([
+    ['invalid', 'not-a-date', session.ended_at],
+    ['invalid end', session.started_at, 'not-a-date'],
+    ['reversed', session.ended_at!, session.started_at],
+  ])('does not present %s timestamps as a zero duration', (_name, started_at, ended_at) => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, started_at, ended_at }} duration={0} />);
+    expect(text(container, 'Duration')).toBe('—');
+    expect(text(container, 'kWh/h Avg')).toBe('—');
+  });
+  it('preserves measured zero including completed zero duration and both SoC endpoints', () => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, ended_at: session.started_at, total_energy_added_wh: 0,
+        peak_power_w: 0, start_soc_pct: 0, end_soc_pct: 0 }}
+      energy={0} duration={0} vehicleEnergy={0} cost={0} billedCost={0}
+      calculatedRate={0} costText="$0.00" rateText="$0.00/kWh"
+      distanceM={0} distanceText="0 km" averageRate={0} />);
+    for (const label of ['Energy', 'Duration', 'Peak Power', 'SoC Range', 'Total Cost',
+      'Per kWh', 'Miles Added', 'kWh/h Avg']) {
+      expect(metric(container, label)).toHaveAttribute('data-value-state', 'value');
+    }
+    expect(text(container, 'Energy')).toBe('0.00 kWh');
+    expect(text(container, 'Duration')).toBe('0.00 min');
+    expect(text(container, 'Peak Power')).toBe('0.00 kW');
+    expect(text(container, 'SoC Range')).toBe('0.00–0.00%');
+    expect(text(container, 'Total Cost')).toBe('$0.00');
+    expect(screen.getByText('Vehicle measured 0.00 kWh')).toBeInTheDocument();
+  });
+  it('retains signed and fractional measurements without positive-only filtering', () => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, peak_power_w: -1250, start_soc_pct: 0, end_soc_pct: 0.25 }}
+      energy={-1250} duration={0.25} vehicleEnergy={-250} cost={-0.125}
+      calculatedRate={-0.5} costText="-$0.125" rateText="-$0.50/kWh"
+      distanceM={-125.5} distanceText="-0.1255 km" averageRate={-0.125} />);
+    expect(text(container, 'Energy')).toBe('-1.25 kWh');
+    expect(text(container, 'Duration')).toBe('0.25 min');
+    expect(text(container, 'Peak Power')).toBe('-1.25 kW');
+    expect(text(container, 'SoC Range')).toBe('0.00–0.25%');
+    expect(text(container, 'Total Cost')).toBe('-$0.125');
+    expect(text(container, 'Per kWh')).toBe('-$0.50/kWh');
+    expect(text(container, 'Miles Added')).toBe('-0.1255 km');
+    expect(text(container, 'kWh/h Avg')).toBe('-0.13 kWh/h');
+    expect(screen.getByText('Vehicle measured -0.25 kWh')).toBeInTheDocument();
+  });
+  it('keeps the known end SoC when the starting endpoint is unknown', () => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, start_soc_pct: null, end_soc_pct: 0 }} />);
+    expect(text(container, 'SoC Range')).toBe('—–0.00%');
+  });
+  it('does not mistake upstream zero fallbacks for recorded energy or derived statistics', () => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, total_energy_added_wh: null, cost_decimal: null }}
+      energy={0} vehicleEnergy={0} billedEnergy={null} cost={null} billedCost={null}
+      costText="$0.00" averageRate={0} />);
+    expect(text(container, 'Energy')).toBe('—');
+    expect(text(container, 'Est. Cost')).toBe('—');
+    expect(text(container, 'kWh/h Avg')).toBe('—');
+    expect(text(container, 'Per kWh')).toBe('$0.49/kWh');
+  });
+  it('retains cabinet energy without inventing a zero pack reading', () => {
+    const { container } = render(<DetailSessionStats {...props}
+      session={{ ...session, total_energy_added_wh: null }} vehicleEnergy={0} />);
+    expect(text(container, 'Energy')).toBe('44.49 kWh');
+    expect(container.textContent).not.toContain('Vehicle measured');
+    expect(container.querySelector('[data-help-key]')).toBeInTheDocument();
   });
   it('updates chosen energy units and precision while fixed source power/duration and supplied currency text survive', () => {
     const { container, rerender } = render(<DetailSessionStats {...props} />);
