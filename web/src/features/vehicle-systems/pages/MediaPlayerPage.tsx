@@ -13,7 +13,7 @@ import {
   Badge, DataTable, Text, Caption, Icon, type Column,
 } from '@/components/ui';
 
-import { TimeStamp } from '@/components/data-display';
+import { KVList, TimeStamp } from '@/components/data-display';
 import { EmptyState, AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -117,6 +117,7 @@ export default function MediaPlayerPage() {
 
   const [tableSortKey, setTableSortKey] = useState<string>('created_at');
   const [tableSortDir, setTableSortDir] = useState<'asc' | 'desc'>('desc');
+  const [expandedHistoryKeys, setExpandedHistoryKeys] = useState<(string | number)[]>([]);
 
   /* ── Queries (via @/api/hooks) ────────────────────────────── */
 
@@ -693,6 +694,23 @@ export default function MediaPlayerPage() {
               enableValueFilters
               filterData={filtered}
               columns={columns}
+              expandable
+              expandedKeys={expandedHistoryKeys}
+              onExpandedChange={setExpandedHistoryKeys}
+              rowLabel={(row) => reportedTitle(row.now_playing_title) ?? formatDateTime(row.created_at)}
+              renderExpanded={(row) => (
+                <KVList
+                  layout="responsive"
+                  items={[
+                    { id: 'created_at', label: t('media.col.time', 'Time'), value: <TimeStamp value={row.created_at} format="absolute" /> },
+                    { id: 'now_playing_title', label: t('media.col.track', 'Track'), value: reportedTitle(row.now_playing_title) ?? '—' },
+                    { id: 'now_playing_artist', label: t('media.col.artist', 'Artist'), value: row.now_playing_artist || '—' },
+                    { id: 'playback_source', label: t('media.col.source', 'Source'), value: row.playback_source || '—' },
+                    { id: 'audio_volume', label: t('media.col.volume', 'Volume'), value: `${formatVolumeLevel(row.audio_volume)}/${formatVolumeLevel(row.audio_volume_max)}` },
+                    { id: 'playback_status', label: t('media.col.status', 'Status'), value: statusLabel(row.playback_status ?? '', t) },
+                  ]}
+                />
+              )}
               mobileColumns={['now_playing_title', 'playback_status', 'created_at']}
               mobilePresentation={{
                 variant: 'cards',

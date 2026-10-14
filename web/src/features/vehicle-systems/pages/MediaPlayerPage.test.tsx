@@ -41,7 +41,7 @@
  *     the Track column reorders the table and toggles direction.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { act, render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
@@ -165,6 +165,13 @@ vi.mock('@/api/hooks/useVehicleSystems', () => ({
   useMedia: vi.fn(),
   useMediaHistory: vi.fn(),
 }));
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isLoading: false, isError: false, error: null }),
+  useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false, isError: false, error: null }),
+  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+}));
 
 import { useMedia, useMediaHistory } from '@/api/hooks/useVehicleSystems';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -284,6 +291,85 @@ describe('MediaPlayerPage media slot placement', () => {
     expect(slots[2]).toContainElement(screen.getByTestId('volume-chart'));
     expect(slots[3]).toHaveTextContent('Spotify');
     expect(bodyRows()).toHaveLength(3);
+  });
+});
+
+describe('MediaPlayerPage full-value history disclosure', () => {
+  it('keeps full track and artist values reachable in the allocated mobile card', () => {
+    const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(element: Element) { observers.push({ element, callback: this.callback }); }
+      unobserve() {}
+      disconnect() {}
+    });
+    try {
+      const title = `Track ${'long-title-'.repeat(30)}`;
+      const artist = `Artist ${'long-artist-'.repeat(30)}`;
+      mockHistory.mockReturnValue(makeQuery({ data: [
+        snapshot({ now_playing_title: title, now_playing_artist: artist }),
+      ] }));
+      const view = renderPage();
+      act(() => observers.forEach(({ element, callback }) => callback(
+        [{ target: element, contentRect: { width: 375 } } as ResizeObserverEntry],
+        {} as ResizeObserver,
+      )));
+      expect(screen.queryByRole('table', { name: 'Playback history' })).not.toBeInTheDocument();
+      const expand = screen.getByRole('button', { name: 'Expand row' });
+      fireEvent.click(expand);
+      expect(expand).toHaveAttribute('aria-expanded', 'true');
+      const detail = view.container.querySelector('dl');
+      if (!(detail instanceof HTMLElement)) throw new Error('Missing mobile history detail');
+      expect(detail.querySelectorAll('dt')).toHaveLength(6);
+      for (const value of [title, artist]) {
+        expect(within(detail).getByText(value)).toHaveClass('[overflow-wrap:anywhere]');
+      }
+      fireEvent.click(screen.getByRole('button', { name: 'Collapse row' }));
+      expect(view.container.querySelector('dl')).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('reveals every history column without truncating long values and preserves independent row expansion', () => {
+    const title = `Track ${'long-title-'.repeat(30)}`;
+    const artist = `Artist ${'long-artist-'.repeat(30)}`;
+    const source = `Source ${'long-source-'.repeat(30)}`;
+    const status = `Status ${'long-status-'.repeat(30)}`;
+    mockHistory.mockReturnValue(makeQuery({ data: [
+      snapshot({ id: 1, now_playing_title: title, now_playing_artist: artist,
+        playback_source: source, playback_status: status, audio_volume: 0, audio_volume_max: 0 }),
+      snapshot({ id: 2, now_playing_title: 'Second track', now_playing_artist: null,
+        playback_source: null, playback_status: null, audio_volume: null, audio_volume_max: null }),
+    ] }));
+    const view = renderPage();
+    const expand = screen.getByRole('button', { name: `Expand row: ${title}` });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    expand.focus();
+    fireEvent.click(expand);
+    expect(expand).toHaveAttribute('aria-expanded', 'true');
+    expect(expand).toHaveFocus();
+
+    const detail = view.container.querySelector('[data-expanded-content] dl');
+    if (!(detail instanceof HTMLElement)) throw new Error('Missing history full-value detail');
+    expect(Array.from(detail.querySelectorAll('dt')).map(label => label.textContent))
+      .toEqual(['Time', 'Track', 'Artist', 'Source', 'Volume', 'Status']);
+    for (const value of [title, artist, source, status, '0.00/0.00']) {
+      const field = within(detail).getByText(value, { exact: true });
+      expect(field).toHaveClass('[overflow-wrap:anywhere]');
+      expect(field).not.toHaveClass('truncate');
+    }
+    expect(detail).toHaveTextContent('Jun 10, 2026, 10:00 AM');
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row: Second track' }));
+    const details = view.container.querySelectorAll('[data-expanded-content] dl');
+    expect(details).toHaveLength(2);
+    expect(details[1]).toHaveTextContent('—/—');
+    expect(details[1]).toHaveTextContent('Unknown status');
+    fireEvent.click(screen.getByRole('button', { name: `Collapse row: ${title}` }));
+    expect(view.container.querySelectorAll('[data-expanded-content] dl')).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Collapse row: Second track' }))
+      .toHaveAttribute('aria-expanded', 'true');
+    expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
   });
 });
 
