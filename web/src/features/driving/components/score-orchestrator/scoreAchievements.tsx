@@ -8,7 +8,7 @@ interface Achievement {
   label: string;
   description: string;
   icon: ReactNode;
-  check: (scores: ComputedScore[], drives: Drive[]) => boolean;
+  check: (scores: ComputedScore[], scoredDrives: Drive[]) => boolean;
 }
 
 export function buildAchievements(
@@ -23,7 +23,7 @@ export function buildAchievements(
         'Complete your first scored drive.',
       ),
       icon: <Icons.drive className="h-5 w-5" aria-hidden="true" />,
-      check: (_scores, drives) => drives.length >= 1,
+      check: (_scores, scoredDrives) => scoredDrives.length >= 1,
     },
     {
       id: 'ten-drives',
@@ -33,7 +33,7 @@ export function buildAchievements(
         'Complete 10 scored drives.',
       ),
       icon: <Icons.star className="h-5 w-5" aria-hidden="true" />,
-      check: (_scores, drives) => drives.length >= 10,
+      check: (_scores, scoredDrives) => scoredDrives.length >= 10,
     },
     {
       id: 'fifty-drives',
@@ -43,7 +43,7 @@ export function buildAchievements(
         'Complete 50 scored drives.',
       ),
       icon: <Icons.trophy className="h-5 w-5 text-amber-300" aria-hidden="true" />,
-      check: (_scores, drives) => drives.length >= 50,
+      check: (_scores, scoredDrives) => scoredDrives.length >= 50,
     },
     {
       id: 'perfect-score',

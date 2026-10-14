@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSortToggle } from '@/components/ui';
-import { useDriveScore, useDrives } from '@/api/hooks/useDriving';
+import { useDriveScore, useDriveCalendarHistory } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -30,13 +30,18 @@ export function useDriveScorePage() {
   /* ---- vehicle selector: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
+  const { startInstant, endInstantExclusive } = useRangeState({
+    persistKey: 'drive-score.range',
+  });
 
   /* ---- queries ---- */
+  // The server score covers all completed drives; it does not accept range bounds.
+  const apiScoreCoverage = { scope: 'all-completed-drives' } as const;
   const scoreQuery = useDriveScore(vehicleIdStr);
   const apiScoreState = useDataState(scoreQuery, { provenance: 'historical' });
   const apiScore = scoreQuery.data;
 
-  const drivesQuery = useDrives(vehicleIdStr);
+  const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
   const {
     data: drives,
     refetch,
@@ -54,24 +59,19 @@ export function useDriveScorePage() {
   const formatEfficiency = (whPerKm: number) =>
     `${fmtInt(efficiencyDisplay(whPerKm))} ${efficiencyUnit}`;
 
-  /* ---- date filter ---- */
-  const { start: startDate, end: endDate } = useRangeState({
-    persistKey: 'drive-score.range',
-  });
-
   /* ---- table sort (shared DataTable controlled sort) ---- */
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('date', 'desc');
 
   /* ---- filtered & scored drives ---- */
   const filteredDrives = useMemo(() => {
     const list = drives ?? [];
-    const start = new Date(startDate).getTime();
-    const end = new Date(endDate).getTime() + 86_400_000;
+    const start = new Date(startInstant).getTime();
+    const end = new Date(endInstantExclusive).getTime();
     return list.filter((d) => {
       const ts = new Date(d.startTs).getTime();
-      return ts >= start && ts <= end;
+      return ts >= start && ts < end;
     });
-  }, [drives, startDate, endDate]);
+  }, [drives, startInstant, endInstantExclusive]);
 
   const scoredDrives = useMemo<ScoredDrive[]>(
     () => filteredDrives.flatMap((drive) => {
@@ -245,12 +245,14 @@ export function useDriveScorePage() {
   /* ---- achievements ---- */
   const achievements = useMemo(() => buildAchievements(t), [t]);
   const unlockedAchievements = useMemo(
-    () =>
-      achievements.map((a) => ({
+    () => {
+      const achievementDrives = scoredDrives.map(({ drive }) => drive);
+      return achievements.map((a) => ({
         ...a,
-        unlocked: a.check(allScores, filteredDrives),
-      })),
-    [achievements, allScores, filteredDrives],
+        unlocked: a.check(allScores, achievementDrives),
+      }));
+    },
+    [achievements, allScores, scoredDrives],
   );
 
   /* ---- best & worst drives ---- */
@@ -354,7 +356,9 @@ export function useDriveScorePage() {
 
   return {
     t, fmtInt, fmtNumber, vehicleId, vehicleIdStr,
-    scoreQuery, apiScoreState, apiScore, drivesQuery, refetch, drivesSource,
+    scoreQuery, apiScoreState, apiScore, apiScoreCoverage,
+    driveHistoryCoverage: { scope: 'selected-range' as const, start: startInstant, end: endInstantExclusive },
+    drivesQuery, refetch, drivesSource,
     drivesLoading, drivesError, drivesIsError,
     formatDistance, formatSpeed, formatPower, efficiencyUnit, efficiencyDisplay, formatEfficiency,
     sortKey, sortDir, onSort, filteredDrives, scoredDrives, unscoredDriveCount, allScores,
