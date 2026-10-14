@@ -7,10 +7,11 @@ import {
   within,
 } from '@testing-library/react';
 import type { ComponentProps, ReactNode } from 'react';
+import i18n from 'i18next';
 import english from '@/i18n/en.json';
 import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
 import type { SleepEfficiencyData } from '@/types/energy';
@@ -279,7 +280,7 @@ function renderPage(
       mutations: { retry: false },
     },
   });
-  return render(
+  const page = () => (
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
@@ -287,8 +288,10 @@ function renderPage(
           <HeaderRangeControl />
         </ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const rendered = render(page());
+  return { ...rendered, rerenderPage: () => rendered.rerender(page()) };
 }
 
 const SECTION_TEST_IDS = [
@@ -307,6 +310,13 @@ const SECTION_TEST_IDS = [
   'sleep-efficiency-range-source-coverage',
   'sleep-efficiency-methodology',
 ] as const;
+
+beforeAll(async () => {
+  await i18n.init({
+    lng: 'en',
+    resources: { en: { translation: english } },
+  });
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -381,6 +391,8 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeGreaterThan(0);
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
   it('keeps every shell mounted while the initial query loads', () => {
@@ -400,6 +412,8 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(container.querySelectorAll('[role="status"] [aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]').length).toBeGreaterThan(
       0,
     );
+    expect(screen.getByText('Loading source evidence')).toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
   it('shows exactly one retry surface for an initial query error', () => {
@@ -471,6 +485,8 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     ).toBeInTheDocument();
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
   });
 
   it('renders transition-only backend evidence as counts, never time or cost results', () => {
@@ -617,6 +633,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
       expect(screen.getByTestId(testId)).toBeInTheDocument();
     }
     const paused = screen.getByTestId('sleep-initial-paused');
+    expect(screen.getByText('Source readings unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
+    expect(screen.queryByText('Available source readings')).not.toBeInTheDocument();
     expect(paused).toHaveTextContent('No drain or sleep-health conclusion is available.');
     const refresh = within(paused).getByRole('button', { name: 'Refresh' });
     expect(refresh).toHaveClass('min-h-11', 'md:min-h-9');
@@ -626,6 +645,10 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
     expect(screen.queryByText('$0.00')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('sleep-efficiency-kpi-evidence'))
+      .getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getAllByText(/request is paused/).length).toBeGreaterThan(0);
+    expect(within(screen.getByRole('dialog')).getAllByText(/2026-06-17 to 2026-07-16 UTC/).length).toBeGreaterThan(0);
   });
 
   it('retains duration and energy during a paused refresh without inventing a fetch error', () => {
@@ -640,6 +663,7 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
     expect(warning).toHaveTextContent('Previously loaded data remains visible.');
+    expect(screen.getByText('Retained source evidence')).toBeInTheDocument();
     expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
     expect(screen.queryByTestId('sleep-initial-paused')).not.toBeInTheDocument();
     expect(screen.getAllByText('75.00%').length).toBeGreaterThan(0);
@@ -680,7 +704,9 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.getByText('4 on · 5 off')).toBeInTheDocument();
     expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
     expect(screen.getByText('$6.57')).toBeInTheDocument();
-    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    for (const testId of ['sleep-efficiency-kpi-evidence', 'sleep-efficiency-diagnostics']) {
+      expect(within(screen.getByTestId(testId)).queryByText('0.00%')).not.toBeInTheDocument();
+    }
   });
 
   it('preserves count-bearing measured zero without promoting missing Sentry evidence to zero', () => {
@@ -698,6 +724,29 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(within(projection).getByText('0.00%/hr')).toBeInTheDocument();
     expect(within(projection).getByText('4 on · 5 off')).toBeInTheDocument();
     expect(screen.queryByText('Sentry comparison unavailable')).not.toBeInTheDocument();
+    expect(screen.getByText('Available source readings')).toBeInTheDocument();
+  });
+
+  it('clears retained status after refresh recovery without losing source evidence or scope', () => {
+    const data = fullyPopulatedData();
+    mockSleep.mockReturnValue(queryResult({ data, isError: true, isSuccess: false, error: new Error('refresh failed') }));
+    const rendered = renderPage();
+    expect(screen.getByText('Retained source evidence')).toBeInTheDocument();
+    expect(screen.getByTestId('sleep-refresh-error')).toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+
+    mockSleep.mockReturnValue(queryResult({ data, isFetching: true, fetchStatus: 'fetching' }));
+    rendered.rerenderPage();
+    expect(screen.queryByText('Loading source evidence')).not.toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+
+    mockSleep.mockReturnValue(queryResult({ data }));
+    rendered.rerenderPage();
+    expect(screen.getByText('Available source readings')).toBeInTheDocument();
+    expect(screen.queryByText('Retained source evidence')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sleep-refresh-error')).not.toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+    expect(screen.getByText('2026-06-17 to 2026-07-16 UTC', { selector: '[data-battery-period]' })).toBeInTheDocument();
   });
 
   it('preserves dwell ratios, duplicate policy, and exact state exclusion accounting', () => {
