@@ -7115,7 +7115,6 @@
       "dataRepair.cases.columns.status",
       "dataRepair.cases.commentLabel",
       "dataRepair.cases.confidence",
-      "dataRepair.cases.confidenceBadge",
       "dataRepair.cases.confirmDismiss",
       "dataRepair.cases.confirmQuarantine",
       "dataRepair.cases.confirmResolve",

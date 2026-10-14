@@ -1118,7 +1118,7 @@
     },
     "overview": {
       "title": "Overview",
-      "body": "All endpoints are mounted under the base path and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth — otherwise pass an API key in the standard Authorization header. Every response is JSON over HTTP.",
+      "body": "All endpoints are mounted under the base path and inherit the same authentication as the rest of the API. If you proxy this with ForwardAuth (Authelia, Authentik, Tinyauth, etc.), the proxy handles auth — otherwise pass an API key in the standard Authorization header. REST responses use application/json over HTTP. The /status/live endpoint uses text/event-stream, with JSON data in status and heartbeat events.",
       "additive": "The shape is additive-only — new fields may appear, but existing field types and names won't change without a major version bump."
     },
     "facts": {
@@ -1153,7 +1153,7 @@
         "desc": "Uptime percentage over the requested window. Until per-component heartbeat history is wired, the percentage is derived from the current snapshot — the historical_source field signals which is in play."
       },
       "incidents": {
-        "desc": "Active incidents list. Pass active=1 to filter to incidents whose resolved_at is NULL."
+        "desc": "Incidents list, including resolved incidents by default, ordered by started_at descending. Pass active=1 or active=true (case-insensitive) to include only incidents whose resolved_at is NULL. Combine active and limit with &: for example, active=1&limit=50. The default limit is 50; limits from 1 to 200 are accepted. Missing, invalid, non-positive, or greater-than-200 limits fall back to 50, not 200."
       },
       "live": {
         "desc": "Server-Sent Events stream. Pushes a `status` event with the full snapshot every 30 seconds. Heartbeat events emitted every 25s so reverse proxies don't garbage-collect the connection mid-flight. Browsers consume this via EventSource(). For curl: -N --no-buffer."
