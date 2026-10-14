@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { STALE_TIMES } from '@/lib/constants';
 import type { GDPRExportArtifact } from '@/types/admin-operator-confidence';
@@ -42,7 +42,9 @@ const clients: QueryClient[] = [];
 
 function setup() {
   const client = new QueryClient({
-    defaultOptions: { queries: { retryDelay: 0, gcTime: Infinity } },
+    defaultOptions: {
+      queries: { retryDelay: 0, gcTime: Infinity, notifyOnChangeProps: 'all' },
+    },
   });
   clients.push(client);
   function Wrapper({ children }: { children: ReactNode }) {
@@ -56,6 +58,8 @@ afterEach(() => {
   cleanup();
   clients.forEach(client => client.clear());
   clients.length = 0;
+  onlineManager.setOnline(true);
+  vi.useRealTimers();
 });
 
 describe('GDPR manifest contract', () => {
@@ -229,6 +233,7 @@ describe('GDPR manifest contract', () => {
     const { result } = renderHook(() => useGDPRExport(manifest.id), setup());
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.data).toEqual(downloaded));
     expect(result.current.data).toEqual(downloaded);
     expect(result.current.data?.byte_count).toBe(0);
     expect(requestMock).toHaveBeenCalledTimes(2);
@@ -265,5 +270,91 @@ describe('GDPR manifest contract', () => {
     expect(result.current.data?.download_count).toBe(2);
     expect(result.current.data?.storage_kind).toBe('local_fs');
     expect(requestMock).toHaveBeenCalledTimes(4);
+  });
+
+  it('keeps initial loading unknown until the real manifest resolves', async () => {
+    let resolve: (payload: { data: GDPRExportArtifact }) => void = () => {};
+    requestMock.mockImplementationOnce(() => new Promise<{ data: GDPRExportArtifact }>(done => {
+      resolve = done;
+    }));
+    const { result } = renderHook(() => useGDPRExport(manifest.id), setup());
+    expect(result.current.isLoading).toBe(true);
+    expect(result.current.fetchStatus).toBe('fetching');
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.error).toBeNull();
+    await act(async () => { resolve({ data: manifest }); });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.data).toEqual(manifest);
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('pauses a cold lookup without inventing an artifact failure and resumes', async () => {
+    onlineManager.setOnline(false);
+    requestMock.mockResolvedValue({ data: manifest });
+    const { result } = renderHook(() => useGDPRExport(manifest.id), setup());
+    expect(result.current.fetchStatus).toBe('paused');
+    expect(result.current.isPending).toBe(true);
+    expect(result.current.isLoading).toBe(false);
+    expect(result.current.isError).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(result.current.data).toBeUndefined();
+    expect(requestMock).not.toHaveBeenCalled();
+    act(() => { onlineManager.setOnline(true); });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(manifest);
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains the manifest during paused refresh and recovers without failure', async () => {
+    requestMock.mockResolvedValueOnce({ data: manifest })
+      .mockResolvedValueOnce({ data: { ...manifest, download_count: 1 } });
+    const { result } = renderHook(() => useGDPRExport(manifest.id), setup());
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    onlineManager.setOnline(false);
+    act(() => { void result.current.refetch(); });
+    await waitFor(() => expect(result.current.fetchStatus).toBe('paused'));
+    expect(result.current.data).toEqual(manifest);
+    expect(result.current.isError).toBe(false);
+    expect(result.current.error).toBeNull();
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    act(() => { onlineManager.setOnline(true); });
+    await waitFor(() => expect(result.current.data?.download_count).toBe(1));
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it.each([
+    { label: 'before', now: '2026-10-14T23:59:59Z' },
+    { label: 'at', now: '2026-10-15T00:00:00Z' },
+    { label: 'after', now: '2026-10-15T00:00:01Z' },
+  ])('preserves raw expiry $label the boundary without fabricating availability', async ({ now }) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(now));
+    requestMock.mockResolvedValue({ data: manifest });
+    const { client, wrapper } = setup();
+    const { result } = renderHook(() => useGDPRExport(manifest.id), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(manifest);
+    expect(result.current.data?.expires_at).toBe('2026-10-15T00:00:00Z');
+    expect(result.current.data).not.toHaveProperty('status');
+    expect(result.current.data).not.toHaveProperty('download_url');
+    expect(client.getQueryCache().find({
+      queryKey: operatorConfidenceKeys.gdprExport(manifest.id),
+    })?.options).toMatchObject({ refetchInterval: false });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('aborts an in-flight manifest lookup when its observer unmounts', () => {
+    let signal: AbortSignal | undefined;
+    requestMock.mockImplementationOnce((_path: string, options: { signal: AbortSignal }) => {
+      signal = options.signal;
+      return new Promise<never>(() => {});
+    });
+    const { unmount } = renderHook(() => useGDPRExport(manifest.id), setup());
+    expect(signal?.aborted).toBe(false);
+    unmount();
+    expect(signal?.aborted).toBe(true);
+    expect(requestMock).toHaveBeenCalledTimes(1);
   });
 });
