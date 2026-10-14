@@ -1,0 +1,429 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-selection-prerequisite-trust",
+  "status": "EXTERNAL_CATALOG_STARTUP_FAILURE",
+  "requestUTC": "2026-10-14T07:40:55.342Z",
+  "deadlineUTC": "2026-10-14T08:00:55.342Z",
+  "releaseUTC": "2026-10-14T07:49:33.6268378Z",
+  "cwd": "D:\\repos\\teslasync\\web",
+  "sourceReference": {
+    "suppliedCommit": "2b1e39931d6780ccb2c067dfddf2b7b7a57f04d6",
+    "verification": "User/root-queue reference only; no Git command executed.",
+    "sourceWorkerNormalExecuted": 0,
+    "sourceWorkerOriginalBodiesRetained": 14,
+    "sourceWorkerLog": "web\\logs\\phase6-fix-selection-prerequisite-trust.log",
+    "priorFailuresRetained": "Both earlier catalog startup failures, initial ambient-root type probe failure, and generic hook-identity preservation exit 1 remain in the original immutable log; none relabelled as PASS."
+  },
+  "authority": {
+    "queue": "migration-queue.md",
+    "queueType": "actual-unexecuted-covering-proof",
+    "dependsOn": "phase6-fix-selection-prerequisite-trust",
+    "workerContract": "docs\\orchestrator-loop.md: Worker contract",
+    "readOnlySource": [
+      "web\\src\\hooks\\useSelectedVehicle.ts",
+      "web\\src\\hooks\\__tests__\\useSelectedVehicle.test.tsx"
+    ],
+    "writableOutputs": [
+      "docs\\frontend-audits\\phase6-proof-selection-prerequisite-trust.json",
+      "web\\logs\\phase6-proof-selection-prerequisite-trust.log"
+    ],
+    "activityPageAdoption": "Separate active owner phase6-fix-activity-page-preferences; not edited, tested, or accepted here."
+  },
+  "selection": {
+    "rationale": "Only the 12 added/expanded vehiclesState prerequisite cases cover the changed DataState composition: unresolved, fatal, retained refresh failure, retry/recovery, resolved empty, paused, refresh identity, cancellation and sticky selected-ID persistence. Original 14 unchanged selection-only bodies are preserved, not rerun.",
+    "selectedExpandedCases": 12,
+    "staticExpandedFileCases": 26,
+    "originalBodiesNotSelected": 14,
+    "runtimeDiscoveredNames": [],
+    "staticIntendedCases": [
+      {
+        "declarationName": "exposes an unresolved prerequisite without inventing a confirmed empty fleet",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "keeps a persisted id while the fleet is unknown and repairs it only after resolution",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "preserves an unresolved URL selection through fatal failure until a known fleet can repair it",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "marks a successful empty fleet unavailable without erasing sticky selection",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "retains the fleet record selection timestamp and retry on background failure",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "exposes background fetching while retaining selected records and stable trust identity",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "does not relabel a retained empty fleet with refresh failure as a successful empty response",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "forwards actual useVehicles loading failure retry and recovery with cancellation intact",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "forwards actual useVehicles retained refresh failure and successful retry without dropping the selection",
+        "parameter": null,
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "keeps paused trust cause-neutral for retained payload %j",
+        "parameter": "undefined",
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "keeps paused trust cause-neutral for retained payload %j",
+        "parameter": "FLEET",
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      },
+      {
+        "declarationName": "keeps paused trust cause-neutral for retained payload %j",
+        "parameter": "[]",
+        "runtimeStatus": "NOTRUN_CATALOG_STARTUP"
+      }
+    ]
+  },
+  "runs": [
+    {
+      "kind": "normal-scoped-vitest",
+      "startUTC": "2026-10-14T07:43:01.2318489Z",
+      "endUTC": "2026-10-14T07:46:44.4032643Z",
+      "command": "$env:VITE_GIT_SHA='dev'; node .\\node_modules\\vitest\\vitest.mjs run src\\hooks\\__tests__\\useSelectedVehicle.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --no-cache --testNamePattern \"exposes an unresolved prerequisite|keeps a persisted id while the fleet is unknown|preserves an unresolved URL selection through fatal failure|marks a successful empty fleet unavailable|retains the fleet record selection timestamp and retry|exposes background fetching while retaining selected records|keeps paused trust cause-neutral|does not relabel a retained empty fleet|forwards actual useVehicles\"",
+      "pool": "forks",
+      "maxWorkers": 2,
+      "normalConfiguration": "web\\vite.config.ts; existing test setup and catalog startup guards remain enabled",
+      "processIdentityInput": "VITE_GIT_SHA=dev prevents existing build-identity resolver from invoking prohibited Git. It is not a verified checkout identity or a catalog guard bypass; no .env/config file changed.",
+      "cache": "Disabled by ordinary Vitest --no-cache; no test runner configuration modified.",
+      "exit": 1,
+      "startupErrors": 1,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "unexecutedSelectedCases": 12,
+      "result": "NOTRUN: catalog guard failed before collection; zero discovery is not PASS.",
+      "rawOutput": "web\\logs\\phase6-proof-selection-prerequisite-trust.log"
+    }
+  ],
+  "failure": {
+    "classification": "EXTERNAL_ONLY_CATALOG_STARTUP",
+    "command": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+    "exit": 1,
+    "message": "[i18n-split] generated locale files are invalid",
+    "invalidGeneratedFiles": [
+      "locale-detail-errorBoundary.json",
+      "locale-system.json",
+      "locale-notifications.json",
+      "locale-telemetry.json",
+      "locale-unreferenced.json",
+      "locale-battery.json",
+      "locale-driving.json",
+      "locale-analytics.json",
+      "locale-sharing.json",
+      "locale-vehicles.json",
+      "locale-automations.json",
+      "locale-charging.json",
+      "locale-dashboard.json",
+      "locale-settings.json",
+      "locale-admin.json",
+      "locale-vehicle-systems.json",
+      "locale-diagnostics.json",
+      "locale-maps.json",
+      "locale-trips.json",
+      "locale-exports.json",
+      "locale-power-user.json",
+      "locale-driving-route-efficiency.json",
+      "locale-driving-trip-planner.json",
+      "runtime-manifest.json",
+      "usage-manifest.json"
+    ],
+    "attemptCharge": 0,
+    "neededFix": "Existing serialized catalog owner must close canonical/generated projection coherence against the actual released source cohort using the normal generator/check. This worker must not edit catalogs or bypass the guard. The same 12 unexecuted cases then need their first actual normal runtime proof.",
+    "ownSourceOrFixtureFailures": [],
+    "mockRepairs": 0,
+    "invalidGeneratedFileCount": 25
+  },
+  "evidenceTooling": {
+    "failedProbeUTC": "2026-10-14T07:46:37.7990166Z",
+    "failedProbe": "Inline TypeScript AST preservation probe attempted appendFileSync while the test process held this worker's log open.",
+    "error": "EBUSY: resource busy or locked, open D:\\repos\\teslasync\\web\\logs\\phase6-proof-selection-prerequisite-trust.log",
+    "nodeExit": 1,
+    "wrapperExit": 0,
+    "neededFix": "Wait for the bounded test command to release its log handle; repeat only the failed evidence append after the handle is released. No source, fixtures, mocks, or runner settings need repair.",
+    "correctedProbeUTC": "2026-10-14T07:48:49.47Z",
+    "correctedProbeExit": 0
+  },
+  "preservation": {
+    "utc": "2026-10-14T07:48:49.459Z",
+    "command": "Inline installed TypeScript AST; decode retained ORIGINAL_B64 in memory; compare original named it callback body bytes and SHA256; no source emitted",
+    "exit": 0,
+    "originalFixtureSha256": "622F23BBD4ED9A77A9EA9D8E7445D20D959D015B4FA3787EDC251C87EA105F39",
+    "currentFixtureSha256": "CE7EDC19B847656D65288F4B79AA9827501CBA52A5E0C9F3CB68E1412362DFE5",
+    "originalBodies": 14,
+    "preservedBodies": 14,
+    "changedOrMissingBodies": [],
+    "originalCases": [
+      {
+        "name": "defaults to the first vehicle when nothing is selected",
+        "beforeBodySha256": "CDCC26354B8EAE335B1A1391FF4EB3F826DEDA2ECAB284790572A5E1DA81D257",
+        "afterBodySha256": "CDCC26354B8EAE335B1A1391FF4EB3F826DEDA2ECAB284790572A5E1DA81D257",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "honors a previously persisted selection",
+        "beforeBodySha256": "030E0001F5A95414596C56C72E6257887A548F33DEED69C608004115C9C92AFB",
+        "afterBodySha256": "030E0001F5A95414596C56C72E6257887A548F33DEED69C608004115C9C92AFB",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "lets the /vehicles/:id path override and sync the store",
+        "beforeBodySha256": "5F11AF3EEDA3F74E11414D42425D717BB281F985C8E2BC999E51B9F434274001",
+        "afterBodySha256": "5F11AF3EEDA3F74E11414D42425D717BB281F985C8E2BC999E51B9F434274001",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "lets ?vehicle_id=N override and sync the store (alert drillthrough)",
+        "beforeBodySha256": "428D0566CE6C889EE0AA59A8EBB477DA0FDF603B032D3EB530ED30452819B8B4",
+        "afterBodySha256": "428D0566CE6C889EE0AA59A8EBB477DA0FDF603B032D3EB530ED30452819B8B4",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "setVehicleId updates both state and persistence",
+        "beforeBodySha256": "864E4116B5A8DBC5B4375A29E15C480A209B3A257A9A1F95DE7D06B52A8240D9",
+        "afterBodySha256": "864E4116B5A8DBC5B4375A29E15C480A209B3A257A9A1F95DE7D06B52A8240D9",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "repairs a persisted id that is no longer in the fleet",
+        "beforeBodySha256": "94E27112E706388869367D436DA7947F5CE196876506D6676B9147DE217AD205",
+        "afterBodySha256": "94E27112E706388869367D436DA7947F5CE196876506D6676B9147DE217AD205",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "ignores malformed ?vehicle_id values",
+        "beforeBodySha256": "2766A27B676BD66F0ACC03D5B4396D2D0B2146D44CA8493437EB5F7E76647246",
+        "afterBodySha256": "2766A27B676BD66F0ACC03D5B4396D2D0B2146D44CA8493437EB5F7E76647246",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "preserves unrelated query params when a global selection changes",
+        "beforeBodySha256": "E2CD994955F31F45D73AA2A4CF459C3A681E4640885E460F9FAD0F5BB7068879",
+        "afterBodySha256": "E2CD994955F31F45D73AA2A4CF459C3A681E4640885E460F9FAD0F5BB7068879",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "preserves the global time scope when the vehicle changes",
+        "beforeBodySha256": "002EB4B28F07AEBE2BDEDD317E281E99E10AADCA5A1C28525188C0DB1FF591F8",
+        "afterBodySha256": "002EB4B28F07AEBE2BDEDD317E281E99E10AADCA5A1C28525188C0DB1FF591F8",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "updates an existing URL-backed vehicle filter instead of being overwritten by it",
+        "beforeBodySha256": "8F7CFF03C0045E2BE0D4F477E145A171DF9D8752C0E28399B4C99CE11B94B820",
+        "afterBodySha256": "8F7CFF03C0045E2BE0D4F477E145A171DF9D8752C0E28399B4C99CE11B94B820",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "rewrites vehicle detail paths when the global selection changes",
+        "beforeBodySha256": "A019B8B7000E80FBFD9F327F9435070ECA3E1597C48A232988287CEF3AE74C49",
+        "afterBodySha256": "A019B8B7000E80FBFD9F327F9435070ECA3E1597C48A232988287CEF3AE74C49",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "repairs a deleted vehicle id in the URL while retaining the rest of the query",
+        "beforeBodySha256": "674CA9FBAD74FE26853FE6541A3EF0120B3B5C2A546B84507D0BFB8EE85C7170",
+        "afterBodySha256": "674CA9FBAD74FE26853FE6541A3EF0120B3B5C2A546B84507D0BFB8EE85C7170",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "repairs a deleted vehicle detail path while retaining its query",
+        "beforeBodySha256": "C94516E3D6422EB0AD8E9A345F99558B32BDAA0B43497D99290640D58C02DA34",
+        "afterBodySha256": "C94516E3D6422EB0AD8E9A345F99558B32BDAA0B43497D99290640D58C02DA34",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      },
+      {
+        "name": "does not reinterpret multi-vehicle URL filters as the global selection",
+        "beforeBodySha256": "4A1013F63D72F1840298974F318CF1FCCDC9F5E2C3AFA661157D5055DA59E6A7",
+        "afterBodySha256": "4A1013F63D72F1840298974F318CF1FCCDC9F5E2C3AFA661157D5055DA59E6A7",
+        "preserved": true,
+        "runtimeStatus": "NOT_SELECTED_UNCHANGED"
+      }
+    ],
+    "addedPlainDeclarations": 9,
+    "addedEachRows": 3,
+    "selectedExpandedCases": 12,
+    "staticExpandedTotal": 26,
+    "originalHookLines": 174,
+    "currentHookLines": 183,
+    "sourceWorkerHookSha256": "D20A3E544FCEFA23F461E783A665BC6A5B21FD69819D45D995E39E807AFFED21",
+    "currentHookSha256": "D20A3E544FCEFA23F461E783A665BC6A5B21FD69819D45D995E39E807AFFED21",
+    "runtimeAcceptance": false
+  },
+  "hashPins": [
+    {
+      "file": ".\\src\\hooks\\useSelectedVehicle.ts",
+      "beforeSha256": "D20A3E544FCEFA23F461E783A665BC6A5B21FD69819D45D995E39E807AFFED21",
+      "afterSha256": "D20A3E544FCEFA23F461E783A665BC6A5B21FD69819D45D995E39E807AFFED21",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.461Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\hooks\\__tests__\\useSelectedVehicle.test.tsx",
+      "beforeSha256": "CE7EDC19B847656D65288F4B79AA9827501CBA52A5E0C9F3CB68E1412362DFE5",
+      "afterSha256": "CE7EDC19B847656D65288F4B79AA9827501CBA52A5E0C9F3CB68E1412362DFE5",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\api\\dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\hooks\\useDataState.ts",
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\api\\hooks\\useVehicles.ts",
+      "beforeSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "afterSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\store\\selectedVehicle.tsx",
+      "beforeSha256": "16A06DE51289FA7DAC032932EC135E4822D24841BC8E42FAF5D6EDD1BCF3102B",
+      "afterSha256": "16A06DE51289FA7DAC032932EC135E4822D24841BC8E42FAF5D6EDD1BCF3102B",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\vite.config.ts",
+      "beforeSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "afterSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\test-setup.ts",
+      "beforeSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "afterSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\package.json",
+      "beforeSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "afterSha256": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.462Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\i18n\\en.json",
+      "beforeSha256": "4F3772FDB879F420E513CA411442D48D85B7CA2501F16F6113736E6DD89B8202",
+      "afterSha256": "20B99693EA4207275A05D693DDFB1D4E7E6EA21F0DFA8891FE2D9749B5A9EB61",
+      "unchanged": false,
+      "comparisonUTC": "2026-10-14T07:48:49.464Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\i18n\\en\\usage-manifest.json",
+      "beforeSha256": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820",
+      "afterSha256": "F675DFEF6EE4F812A664FC41A6F27277D93F2EF3F805A91147CB96EC76A0B820",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.469Z",
+      "ownership": "READ_ONLY"
+    },
+    {
+      "file": ".\\src\\i18n\\en\\locale-system.json",
+      "beforeSha256": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636",
+      "afterSha256": "A46AC7A78BD89A0311831628B566D434C7A6AD77E0C7C90DE7C94090222F8636",
+      "unchanged": true,
+      "comparisonUTC": "2026-10-14T07:48:49.47Z",
+      "ownership": "READ_ONLY"
+    }
+  ],
+  "verificationLimits": {
+    "freshTypecheck": "NOTRUN: proof-only unchanged source; original worker's tsc exit 0 retained, not repeated or claimed as fresh.",
+    "freshViolationsAudit": "NOTRUN: no production or fixture edits; original nine zero-count scans retained, not new audit acceptance.",
+    "pageLineCountAndSections": "NOT_APPLICABLE: hook-only proof; Activity page belongs another owner.",
+    "hookRoutes": "No hook URL changes. Original source receipt records useVehicles /vehicles against router.go grouped /vehicles GET /. No additional API hook audit or backend modification.",
+    "native": "NOTRUN",
+    "browser": "NOTRUN",
+    "applicationOrPhaseGate": "NOTRUN",
+    "runtimeAcceptance": false,
+    "publicHookChanges": false,
+    "fixtureChanges": false,
+    "catalogChangesByThisWorker": false,
+    "queueChangesByThisWorker": false,
+    "GitCommands": 0,
+    "installs": 0,
+    "nestedAgents": 0,
+    "serversStarted": 0,
+    "DockerCommands": 0,
+    "guardBypasses": 0,
+    "unchangedGenuinePassingCasesRepeated": 0,
+    "runtimeRetries": 0,
+    "processClaim": "Bounded Vitest shell completed exit 1; no ongoing worker-owned process."
+  },
+  "externalConcurrentDrift": [
+    {
+      "file": ".\\src\\i18n\\en.json",
+      "beforeSha256": "4F3772FDB879F420E513CA411442D48D85B7CA2501F16F6113736E6DD89B8202",
+      "afterSha256": "20B99693EA4207275A05D693DDFB1D4E7E6EA21F0DFA8891FE2D9749B5A9EB61",
+      "unchanged": false,
+      "comparisonUTC": "2026-10-14T07:48:49.464Z",
+      "ownership": "READ_ONLY"
+    }
+  ],
+  "externalConcurrentDriftNote": "Canonical en.json changed by an external writer during this bounded normal command; this worker never wrote canonical/generated catalogs. Baseline/final hashes retained without inspecting or attributing its delta. Source and fixture pins match the released source-worker hashes and remain unchanged.",
+  "needs": [
+    "Serialized external catalog owner to close actual generated projection drift without guard bypass.",
+    "First normal execution of the same 12 selected prerequisite trust cases; all remain NOTRUN.",
+    "ActivityTimelinePage adoption remains its separate active owner; no page acceptance follows from this receipt."
+  ],
+  "rawLogSha256": "F1AD1E25BA49737362BC1A5FE3648D1D7BE27758536F4B6BCFEF1B98DBDAD5CC"
+}
