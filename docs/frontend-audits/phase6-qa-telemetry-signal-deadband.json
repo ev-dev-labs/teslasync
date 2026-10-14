@@ -1,0 +1,1439 @@
+{
+  "item": "phase6-qa-telemetry-signal-deadband",
+  "attempt": 1,
+  "deliveryStatus": "COMPLETE_ORIGINAL_FINDING_DISPOSITIONS_ONLY",
+  "qaMode": "READONLY_SOURCE_QA",
+  "pageAcceptance": "NOT_ACCEPTED_NATIVE_NOTRUN",
+  "page": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+  "routes": [
+    "/signal-deadband"
+  ],
+  "purpose": "Select vehicle-scoped signal; estimate redundant emissions and candidate deadbands without changing telemetry configuration.",
+  "clock": {
+    "reservation": "2026-10-14T02:37:46.371Z",
+    "firstObservedCommand": "2026-10-14T02:39:56.8436857Z",
+    "returnBy": "2026-10-14T02:57:46.371Z",
+    "hardLimit": "2026-10-14T03:02:46.371Z",
+    "reset": false,
+    "actualReleaseBeforeReturn": true
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-telemetry-signal-deadband.json",
+    "web/logs/phase6-qa-telemetry-signal-deadband.log"
+  ],
+  "objectiveCheck": {
+    "queueItem": "phase6-qa-telemetry-signal-deadband",
+    "statusObserved": "[~]",
+    "attempt": 1,
+    "initialQueueLine": 217,
+    "laterQueueLine": 242,
+    "dependency": "phase5-page-telemetry-signal-deadband",
+    "dependencyStatus": "[x] SOURCE ONLY",
+    "recordedCommit": "84b58236ab3361c23e460f4beca20151c6a15240",
+    "disposition": "Distinct Phase6 QA; not duplicate/no-change-needed. Historical audit-page-204, namespace, primitive and Phase3 shared objectives are completed distinct work. No redispatch or Git verification. Queue changed concurrently; item identity/scope remained unchanged.",
+    "finalQueueLine": 259,
+    "finalQueueRow": "| phase6-qa-telemetry-signal-deadband | 6de534cc-2e7f-42a8-aee6-07cfd9c9c97b |",
+    "finalQueueCheckedAtUtc": "2026-10-14T02:55:24.9570068Z"
+  },
+  "instructionsRead": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "scope": "entire file"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "scope": "core1-654; unrelated later addenda indexed, not claimed fully reviewed"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "scope": "1-270,507-1081,1416-1518 relevant principles/layout/mobile/states/charts/a11y/extremes/DoD"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "scope": "255,562,1390-1391 SignalDeadband/G207/competing APIs"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "scope": "current recovery1-47, shared/conventions2186-2250; relevant gate searches"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "scope": "entire file; user restricts writes/execution"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "scope": "applicable integrity/SI/frontend/security/performance/testing1-166,218-396,508-629"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "scope": "applicable frontend1-480"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "scope": "entire file"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "scope": "entire file; historical two-unit advice superseded by current SI contract"
+    }
+  ],
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle",
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "line": 49,
+      "semantics": "URL/store/fleet fallback; null prerequisite uses NoVehicleSelected, no duplicate picker"
+    },
+    {
+      "hook": "useSignals",
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "line": 98,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/available",
+      "semantics": "proto descriptors reduced to names, identity preserved, AbortSignal/positive vehicle enablement; all kinds selectable"
+    },
+    {
+      "hook": "useSignalHistory",
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "line": 176,
+      "endpoint": "GET /api/v1/signals/{vehicleID}/{signalName}/history?hours=24",
+      "semantics": "vehicle/name/hours key, AbortSignal, selected-name enablement and polling; no bounds/limit; backend requested bounds echoed, default1000/max10000 rows ascending inclusive BETWEEN",
+      "routeEvidence": "internal/api/router.go:554,557 registration helper; no request executed"
+    },
+    {
+      "hook": "analyzeSignalDeadband",
+      "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+      "line": 179,
+      "semantics": "pure local inference, at least3 valid numeric unique-timestamp points; never configuration write"
+    }
+  ],
+  "components": [
+    {
+      "name": "PageLayout",
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "line": 11,
+      "contract": "PageContainer delegation, full-width shell and named sources"
+    },
+    {
+      "name": "TelemetrySummaryBrief",
+      "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "line": 25,
+      "contract": "validated OperationalBrief metrics, trust/provenance/bounds"
+    },
+    {
+      "name": "ChartContainer",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 289,
+      "contract": "titled states, default image export, six-column SR/forced-colors table; no pageCSV/fullscreen"
+    },
+    {
+      "name": "Select",
+      "file": "web/src/components/ui/Select.tsx",
+      "line": 41,
+      "contract": "shared native field, explicit ID and hint,44px base min height"
+    },
+    {
+      "name": "OperationalBrief",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 174,
+      "contract": "Review details drawers retain captions/loading suppression"
+    },
+    {
+      "name": "DataSourceNotice",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 124,
+      "contract": "independent source warnings/pause/per-source and all retry"
+    }
+  ],
+  "preservation": {
+    "currentPageLines": 270,
+    "sectionCount": 4,
+    "sections": [
+      {
+        "name": "Signal under test",
+        "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+        "line": 151,
+        "fields": [
+          "Numeric signal",
+          "literal option identities",
+          "placeholder",
+          "canonicalSI hint"
+        ],
+        "actions": [
+          "select/clear",
+          "catalog fatal retry"
+        ],
+        "states": "skeleton, QueryError, empty catalog, populated/retained selector"
+      },
+      {
+        "name": "Deadband metrics",
+        "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+        "line": 185,
+        "fields": [
+          "MAD noise band",
+          "redundant emissions",
+          "exactly unchanged",
+          "recommended deadband",
+          "noise suppressed",
+          "projected reduction",
+          "reconstruction fidelity",
+          "requested24h/signal",
+          "bounds/provenance/coverage disclaimer"
+        ],
+        "actions": [
+          "Review details"
+        ],
+        "states": "loading suppression, unavailable/unknown, retained refresh/error/pause"
+      },
+      {
+        "name": "Cumulative retained updates",
+        "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+        "line": 196,
+        "fields": [
+          "thresholdSI",
+          "retained",
+          "reduction%",
+          "noise suppressed%",
+          "material retained%",
+          "fidelity%",
+          "single retained line",
+          "axes",
+          "tooltip"
+        ],
+        "actions": [
+          "default PNG/SVG/copy image"
+        ],
+        "states": "same titled frame in loading/error/empty/data; only retained plotted; all6 dimensions in fallback table"
+      },
+      {
+        "name": "Retention audit",
+        "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+        "line": 243,
+        "fields": [
+          "numeric samples",
+          "recommended suppression",
+          "material retention",
+          "fidelity",
+          "requested24h/signal",
+          "bounds/provenance/cumulative simulation"
+        ],
+        "actions": [
+          "Review details when analysis exists"
+        ],
+        "states": "one title, skeleton or tailored EmptyState or retained summary"
+      }
+    ],
+    "inheritedActions": [
+      "individual/source-all retry",
+      "header help",
+      "details drawer close/focus behavior",
+      "onboarding navigation"
+    ],
+    "absentByDesign": [
+      "apply/save/configuration/vehicle mutations",
+      "page vehicle/range picker",
+      "CSV exportData",
+      "fullscreen",
+      "annotations",
+      "brush/legend toggles"
+    ],
+    "formulas": "Signed delta median/MAD; sigma=1.4826*MAD and noise band3*sigma. Thresholds0, noise factors[.25,.5,1,1.5,2,3,4,6], delta quantiles[.25,.5,.75,.9,.95]. First point retained; emit threshold0 OR absolute difference from last retained>=threshold. Reduction=1-retained/sampleCount; redundant/unchanged denominator=sampleCount-1. Noise/material classify adjacent delta. Fidelity=clamped1-RMSE/robustSpan(95-5 percentiles with fallback). Target=.9; score=.55 material+.35 fidelity+.1 reduction-2 suppression shortfall; smaller threshold tie-break.",
+    "numericInput": "signalHistorySamples.ts:14-57 finite numeric long ValueKindInt32/Int64/Float/Double only, valid dates, chronological/last-valid duplicate policy; no strings/enums/boolean/nonfinite promotion. Raw zero/signs/SI retained.",
+    "historicalComparisonLimit": "No Git history or preservation helper; no uninspected-original parity percentage claimed."
+  },
+  "states": {
+    "noVehicle": "governed prerequisite, id0 disabled queries; unresolved fleet/empty distinction not native reviewed",
+    "noSignal": "disabled history descriptor; all4 shells and unknown metrics/choose guidance",
+    "loading": "catalog skeleton, selected-history chart/summary suppression, retention shell",
+    "null": "undefined normal, missing/null data array normalized[], invalid/null numeric rows excluded; null ROOT response outside declared type is conditional",
+    "empty": "accurate empty catalog; zero history unavailable;1-2 numeric/nonnumeric-only history insufficient analysis, not measured0",
+    "error": "only fatalError without retained data replaces that source; titled chart and catalog survive; source retry inherited",
+    "paused": "source notice fetchStatus pause; initial history unknown not fake empty/failure; retained pause stale; initial catalog skeleton with source notice",
+    "retained": "history distributions/recommendation survive refresh failures/pause; summaries retained; no fatal chart from refreshError",
+    "trust": "historical input, estimate/projected metrics, no full-window promise; requested-vs-observed label issueF002",
+    "SIAndPreferences": "raw SI untouched. Diagnostic thresholds explicitly SI, no guessed unit converter. Number hook reactive locale/precision, chart font vars used; tiny precisionF004 and tooltip localeF005. Raw bounds ISO not localized timezone display; future fix must retain exact evidence and timezone preference. No theme/density/chart IDs reset.",
+    "rangeScope": "global vehicle consumed, fixed24h rangeF001; signal useState survives vehicle switch but cache key includes vehicle; absent optionC002"
+  },
+  "findings": [
+    {
+      "id": "F001",
+      "kind": "confirmed-source",
+      "severity": "medium",
+      "rule": "MDC-032",
+      "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+      "line": 38,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+          "line": 28
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 23
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "line": 165
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 184
+        }
+      ],
+      "detail": "Dated analysis always supplies24h and never useRangeState. /signal-deadband absent from RANGE_ENABLED_PATHS; global date window cannot scope analysis.",
+      "repro": "UNEXECUTED: carry7d/custom workspace preference into page, choose numeric signal and inspect hook arguments; source wiring still24,no from/to; header range disabled.",
+      "fix": "Integration owner registers route and wires shared startInstant/endInstantExclusive through raw-kind-compatible typed hook. Keep default24h,cache,polling,cancellation; verify inclusive backend versus exclusive frontend end.",
+      "owner": "integration",
+      "narrowOwner": "NEW proposed deadband workspace-bounds integration, not dispatched",
+      "dedup": "Inherited audit-page-204/P396 and inventoryG207; no active exact workspaceScope/useTelemetry file owner found. CompletedPhase5 page/Phase3 brief not reopened.",
+      "confidence": "high"
+    },
+    {
+      "id": "F002",
+      "kind": "confirmed-source",
+      "severity": "medium",
+      "rule": "MDC-026",
+      "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "line": 37,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+          "line": 190
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+          "line": 262
+        },
+        {
+          "file": "internal/api/signalinspect/handler.go",
+          "line": 110
+        },
+        {
+          "file": "internal/api/signalinspect/handler.go",
+          "line": 263
+        },
+        {
+          "file": "internal/api/signalinspect/handler.go",
+          "line": 294
+        },
+        {
+          "file": "internal/api/signalinspect/handler.go",
+          "line": 315
+        }
+      ],
+      "detail": "Brief labels echoed requested from/to as source bounds without observed numeric extrema. Ordinary hook omits limit, backend takes ascending first1000 rows. Existing full-window disclaimer mitigates but does not distinguish requested versus observed bounds.",
+      "repro": "UNEXECUTED: requested midnight-to-midnight with3 numeric samples around noon, or capped1000 history rows; label still interpolates requested bounds although analyzer only sees returned valid points.",
+      "fix": "Use existing scope/description to distinguish requested bounds, observed numeric extrema and known truncation uncertainty; never infer completeness. Preserve unknown metadata,exact raw evidence and timezone/locale. Serialized catalog owner handles copy.",
+      "owner": "integration/shared brief",
+      "narrowOwner": "NEW proposed requested-versus-observed telemetry evidence owner",
+      "dedup": "Inherited audit-page-204/P397/inventoryG207; Phase3 brief completed. No active exact new source fix found. One shared evidence owner, not two per-section fixes.",
+      "confidence": "high"
+    },
+    {
+      "id": "F003",
+      "kind": "confirmed-source",
+      "severity": "medium",
+      "rule": "MDC-045",
+      "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+      "line": 170,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+          "line": 175
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalDeadband.test.ts",
+          "line": 83
+        }
+      ],
+      "detail": "Constant valid series has zeroMAD/zero quantiles; default candidates collapse to threshold0, whose explicit policy emits every observation. Recommended0 therefore cannot suppress repeated constant emissions. Existing constant declaration supplies positive thresholds, not page defaults.",
+      "repro": "UNEXECUTED arithmetic deduction: chronological [5,5,5,5], default options ->only threshold0,retained4,reduction0. A supplied positive.5 threshold retains1,reduction.75,suppression1,fidelity1. Analyzer not called.",
+      "fix": "Domain owner defines honest constant-series candidate/recommendation policy and default-options coverage; do not invent safe production configuration or change threshold0 baseline semantics.",
+      "owner": "feature-domain",
+      "narrowOwner": "NEW proposed signalDeadband candidate policy/precision lib+matching-test owner, shared withF004",
+      "dedup": "No queue files-column owner for signalDeadband.ts found; completedPhase5 page does not own lib. One lib proposal forF003/F004, not overlapping writers.",
+      "confidence": "high"
+    },
+    {
+      "id": "F004",
+      "kind": "confirmed-source",
+      "severity": "medium",
+      "rule": "MDC-045",
+      "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+      "line": 54,
+      "citations": [
+        {
+          "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+          "line": 103
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+          "line": 104
+        },
+        {
+          "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+          "line": 175
+        },
+        {
+          "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+          "line": 226
+        },
+        {
+          "file": "web/src/lib/numberFormat.ts",
+          "line": 119
+        }
+      ],
+      "detail": "Absolute6-decimal rounding is inside noise/candidate arithmetic, not just display; valid smallSI estimates/nonzero candidates collapse to0. fmtScientificNumber uses fixed fractional formatting(min4), not significant/scientific notation, so surviving small thresholds may display identically.",
+      "repro": "UNEXECUTED: finite [0,1e-8,0,1e-8,0] has unrounded signed-deltaMAD1e-8 and positive noise band; six-place rounding loses them and positive candidates. With preference precision2, threshold1e-5 at4fractional digits appears0.0000. Source/format-policy deduction, not execution.",
+      "fix": "Preserve scale-relative/significant precision in domain and distinct nonzero representation at display. RawSI unchanged; preference precision remains minimum. No converter/new preferences.",
+      "owner": "feature-domain; display separately scoped if needed",
+      "narrowOwner": "same lib+test owner asF003; precise page formatting adoption only if required",
+      "dedup": "One shared numeric-policy proposal forF003/F004, no completed formatter objective reopened.",
+      "confidence": "high"
+    },
+    {
+      "id": "F005",
+      "kind": "confirmed-source",
+      "severity": "low",
+      "rule": "MDC-044",
+      "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+      "line": 228,
+      "citations": [
+        {
+          "file": "web/src/components/charts/ChartTooltip.tsx",
+          "line": 81
+        },
+        {
+          "file": "web/src/components/charts/ChartTooltip.tsx",
+          "line": 129
+        }
+      ],
+      "detail": "Bare ChartTooltip has no labelFormatter; numeric threshold label falls through String(label), bypassing localized axis/table formatting.",
+      "repro": "UNEXECUTED: de-DE numeric preference, candidate0.95; source axis/table use localized formatting while tooltip header String(0.95) remains0.95. No mounted tooltip inspected.",
+      "fix": "Existing labelFormatter renders SI-aware localized threshold, valueFormatter usesfmtInt retained counts; keep shared tooltip/raw payload.",
+      "owner": "page",
+      "narrowOwner": "NEW proposed SignalDeadbandPage tooltip caller-format fix",
+      "dedup": "CompletedPhase3 tooltip and Phase5 page not reopened; distinct new caller defect, not global tooltip rewrite.",
+      "confidence": "high"
+    },
+    {
+      "id": "F006",
+      "kind": "confirmed-source",
+      "severity": "low",
+      "rule": "direct-library-import",
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "line": 1,
+      "citations": [
+        {
+          "file": "web/src/components/motion/FadeIn.tsx",
+          "line": 24
+        },
+        {
+          "file": "web/src/components/motion/index.ts",
+          "line": 15
+        }
+      ],
+      "detail": "hooks/useMotionPreference directly imports framer-motion outside components building-block exception. FadeIn and motion barrel direct imports are accepted exceptions. Genuine reducedmotion/lowbandwidth behavior is preserved, not decorative motion.",
+      "repro": "RuntimeUNEXECUTED; literal grep found one hooks-file direct import, source boundary violation only, not motion regression.",
+      "fix": "Shared owner reconciles nonrecursive vendor-hook boundary while retaining policy. Do not naively import motion barrel: barrel->FadeIn->useMotionPreference introduces a cycle. Parent approves exact boundary need, no new engine.",
+      "owner": "shared hooks/vendor boundary",
+      "narrowOwner": "NEW proposed nonrecursive motion preference boundary owner",
+      "dedup": "No exact files-column owner for useMotionPreference.ts found; completed motion component objectives remain complete.",
+      "confidence": "high"
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "C001",
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "line": 184,
+      "condition": "real supported name contains path-significant /?#; actual catalog occurrence unproved",
+      "mechanism": "unencoded name interpolation, page test uses synthetic A/raw signal without HTTP",
+      "repro": "UNEXECUTED authorized synthetic path construction only",
+      "owner": "typed hook integration",
+      "status": "conditional-not-counted"
+    },
+    {
+      "id": "C002",
+      "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+      "line": 36,
+      "condition": "new vehicle/catalog omits previously selected name",
+      "mechanism": "signal state persists; selector controlled value can lack option while new vehicle/old name is queried; no intentional old vehicle cache reuse",
+      "repro": "UNEXECUTED syntheticA includesSpeed, B omitsSpeed; inspect selector/value/hook consistency",
+      "owner": "page",
+      "status": "conditional-not-counted"
+    },
+    {
+      "id": "C003",
+      "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+      "line": 96,
+      "condition": "near-max finite floats overflow intermediate arithmetic OR null root despite declared object type",
+      "mechanism": "finite input does not guarantee finite delta/rounding; page42 undefined-only then dereferences data.data",
+      "repro": "UNEXECUTED [1e308,-1e308,1e308] or null root reasoning; real endpoint occurrence unknown",
+      "owner": "domain/type integration",
+      "status": "conditional-not-counted"
+    },
+    {
+      "id": "C004",
+      "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+      "line": 226,
+      "condition": "product intends numeric threshold distance rather than categorical candidate comparison",
+      "mechanism": "installed recharts XAxis.js:77 defaultcategory; no type override, nonuniform candidates with monotone line",
+      "repro": "UNEXECUTED future safe native review of gaps[0,.25,.5,.75,.9,.95] and chart intent",
+      "owner": "page",
+      "status": "default-confirmed; misleading-scale verdict conditional"
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "N001",
+      "area": "Select/mobile/a11y",
+      "file": "web/src/components/ui/Select.tsx",
+      "line": 34,
+      "repro": "UNEXECUTED open native select, arrows/Home/End/typeahead/Escape, focus/hint announcement,44px actual target, longlabels/RTL and200% text at320/375/390/430",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N002",
+      "area": "candidate field reachability and exports",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "line": 864,
+      "repro": "UNEXECUTED sighted user inspects per-candidate quality: only normal-hidden SR/forced-colors table contains all6 fields; check intended visible reachability, responsive labels,PNG/SVG/copy. CSV/fullscreen not promised",
+      "status": "NOTRUN; usability candidate, not deletion assertion"
+    },
+    {
+      "id": "N003",
+      "area": "themes/contrast/forced-colors/motion/drawers",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "line": 246,
+      "repro": "UNEXECUTED dark/light/custom/OS forcedcolors, saved chart palette, reducedmotion/lowbandwidth; both drawers preserve captions,close/restorefocus and200% text",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "N004",
+      "area": "native trust/retry/freshness",
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "line": 264,
+      "repro": "UNEXECUTED loading/empty/fatal/retained-error/paused/retry transitions and last-success labels. Real notice individual+retry-all differs from page test mock single retry; declarations not native proof",
+      "status": "NOTRUN"
+    }
+  ],
+  "tests": {
+    "execution": "NOTRUN",
+    "native": "NOTRUN",
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "meaning": "no runner invoked; zero execution is not a passing receipt",
+    "declarations": [
+      {
+        "file": "web/src/features/telemetry/pages/SignalDeadbandPage.test.tsx",
+        "ordinary": 8,
+        "eachBlocks": 2,
+        "arrayRows": [
+          3,
+          2
+        ],
+        "potentialCases": 13,
+        "lines": [
+          145,
+          154,
+          169,
+          177,
+          192,
+          204,
+          237,
+          254,
+          270,
+          285
+        ],
+        "coverage": "four sections;stable/literal/mobile selector; empty catalog/history/1/2point;initial/paused;SI all6 distributions/exports;dedup/cumulative;retainederror/pause;fatalretry;no vehicle"
+      },
+      {
+        "file": "web/src/features/telemetry/lib/signalDeadband.test.ts",
+        "ordinary": 15,
+        "eachBlocks": 0,
+        "potentialCases": 15,
+        "lines": [
+          21,
+          30,
+          40,
+          47,
+          56,
+          61,
+          67,
+          74,
+          83,
+          97,
+          102,
+          108,
+          117,
+          129,
+          137
+        ],
+        "coverage": "typed filtering/dedup;invalid;MAD/ramp; cumulative/baseline/jitter/empty;min3;ratios;determinism;suppression target;score;denominators"
+      }
+    ],
+    "limits": [
+      "ChartContainer/Tooltip/Brief/PageLayout mocked",
+      "constant declaration supplies thresholds, not defaults",
+      "no tinySI/maxfloat/nullroot/scope-catalog-loss declaration",
+      "no actual locale/native/keyboard acceptance"
+    ]
+  },
+  "engineeringRuleScan": {
+    "productionFilesScanned": 9,
+    "rawMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param-initial-insensitive": 8,
+      "camelcase-param-corrected-sensitive": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "fetch-useeffect": 2
+    },
+    "supplementalDirectImports": {
+      "hooks/useMotionPreference.ts": 1,
+      "components/motion/FadeIn.tsx": 1,
+      "components/motion/index.ts": 1
+    },
+    "confirmedRuleViolations": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 1,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 0,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0,
+      "sql-interpolation": 0,
+      "fmt-println": 0,
+      "bare-panic": 0,
+      "missing-context": 0
+    },
+    "exceptions": [
+      "selected vehicle effects synchronize URL/store, not load data",
+      "PageLayout/NoVehicleSelected delegate PageContainer",
+      "Recharts props not staticDOM inline style",
+      "shared building-block raw native HTML/direct imports and dynamic tooltip colors expected",
+      "test mocks declarations only"
+    ],
+    "backendRaw": {
+      "sql-interpolation": 0,
+      "fmt-println": 0,
+      "bare-panic": 0,
+      "context-call-candidates": 1
+    },
+    "backendReview": "handler318 Pool.Query(ctx,q,parameterized args) not missing context; no HTTP NewRequest match. Local handler only, not backend-wide audit",
+    "i18n": {
+      "literalPageAndBriefCalls": 53,
+      "missingCanonicalKeys": 0,
+      "fallbackMismatches": 0,
+      "dynamicAuditLabels": [
+        "noise",
+        "material",
+        "fidelity"
+      ],
+      "scope": "English canonical only; runtime locales/RTL NOTRUN"
+    },
+    "limits": "regex candidates not AST/compiler/lint proof; original insensitive camelCase scan corrected; no application-wide0 claim"
+  },
+  "summary": {
+    "confirmedFindings": 6,
+    "conditionalCandidates": 4,
+    "nativeCandidates": 4,
+    "declaredPotentialTestCases": 28,
+    "executedTests": 0,
+    "byPrimaryRule": {
+      "MDC-032": 1,
+      "MDC-026": 1,
+      "MDC-045": 2,
+      "MDC-044": 1,
+      "direct-library-import": 1
+    },
+    "filesWithMostPrimaryFindings": [
+      {
+        "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+        "count": 2
+      },
+      {
+        "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+        "count": 2
+      }
+    ],
+    "priority": [
+      "range/requested/observed truth",
+      "constant/tinySI candidate policy",
+      "tooltip locale",
+      "nonrecursive motion boundary",
+      "native matrix still open"
+    ]
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "deadband workspace bounds",
+      "existingOwnerFile": "web/src/lib/workspaceScope.ts",
+      "dependsOn": [
+        "typed raw-kind-compatible hook",
+        "exclusive-end contract"
+      ],
+      "usedBy": [
+        "/signal-deadband"
+      ],
+      "disposition": "proposal only, deduplicateG207/P396"
+    },
+    {
+      "name": "requested versus observed evidence",
+      "existingOwnerFile": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "dependsOn": [
+        "requested-bound/row-cap semantics",
+        "numeric extrema"
+      ],
+      "usedBy": [
+        "both deadband summaries"
+      ],
+      "disposition": "proposal only,deduplicateG207/P397;do not reopen completedPhase3"
+    },
+    {
+      "name": "scale-aware default candidate policy",
+      "existingOwnerFile": "web/src/features/telemetry/lib/signalDeadband.ts",
+      "dependsOn": [
+        "domain policy and original matching tests"
+      ],
+      "usedBy": [
+        "SignalDeadbandPage"
+      ],
+      "disposition": "one narrow future lib+test owner forF003/F004"
+    },
+    {
+      "name": "nonrecursive motion vendor boundary",
+      "existingOwnerFile": "web/src/hooks/useMotionPreference.ts",
+      "dependsOn": [
+        "no barrel cycle"
+      ],
+      "usedBy": [
+        "FadeIn"
+      ],
+      "disposition": "proposal only"
+    }
+  ],
+  "competingImplementations": [
+    {
+      "existing": "useTelemetry raw-long-kind history/name catalog",
+      "alternative": "useSignals descriptor/bounds normalized history",
+      "decision": "not drop-in: preserve kinds,keys,polling,cancellation;no competing library"
+    }
+  ],
+  "evidenceLimits": [
+    "Source QA only; all concrete repros UNEXECUTED",
+    "tests/lint/build/compiler/server/browser/network/API/native NOTRUN",
+    "no agents/installs/helpers/Git or source/test/catalog/queue edits",
+    "no full mobile/visual/keyboard/contrast/auth acceptance",
+    "historical source acceptance not current green",
+    "overlarge initial outputs tool-truncated; smaller relevant ranges inspected",
+    "missing-path reads/pin and failed oversized artifact command logged honestly",
+    "queue concurrently modified; final source pins and item identity checked",
+    "Whole en.json,handoff,queue changed concurrently; no global frozen-input claim. Primary page/helper/hooks/tests/routes/support pins unchanged; current catalog key recheck not retained as passing receipt.",
+    "Pre-log exploratory command raw outputs remain in caller tool transcript, not all copied into log. Log includes literal substantive checks, failures, raw pins and finalJSON.",
+    "operationalMetrics.ts missing-path read/pin not resolved; no compiler/network/helper run authorized.",
+    "Correction: shell3307 deadline exception was premature due DateTime-kind/timezone comparison, not evidence of actual deadline expiry. Partial delivery reflects failed final validation, not source/native acceptance."
+  ],
+  "inputPins": [
+    {
+      "file": "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+      "unchanged": true,
+      "beforeSha256": "7521837C426F3D14794467DF16DDD870D4970B9E4FC2009262B437CDC68E5E0B",
+      "afterSha256": "7521837C426F3D14794467DF16DDD870D4970B9E4FC2009262B437CDC68E5E0B",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/features/telemetry/pages/SignalDeadbandPage.test.tsx",
+      "unchanged": true,
+      "beforeSha256": "F323F7738EDB54B6261E3CE16CB63392538880DCC7FC6857C099388565DE7533",
+      "afterSha256": "F323F7738EDB54B6261E3CE16CB63392538880DCC7FC6857C099388565DE7533",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/features/telemetry/lib/signalDeadband.ts",
+      "unchanged": true,
+      "beforeSha256": "5B2CC7A16F52C27E94D36D00B89BA10F43FBF213F44ACD69F0D1F32B9DA42542",
+      "afterSha256": "5B2CC7A16F52C27E94D36D00B89BA10F43FBF213F44ACD69F0D1F32B9DA42542",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/features/telemetry/lib/signalDeadband.test.ts",
+      "unchanged": true,
+      "beforeSha256": "9DF1C3A58A8F07C40AEB3DB293494C5803525323A987AB292846A95F6E72B09B",
+      "afterSha256": "9DF1C3A58A8F07C40AEB3DB293494C5803525323A987AB292846A95F6E72B09B",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/features/telemetry/lib/signalHistorySamples.ts",
+      "unchanged": true,
+      "beforeSha256": "B53DD46B07056C1BF5063787CEDACB75B088DA562A3316259B05A39BB9A954D5",
+      "afterSha256": "B53DD46B07056C1BF5063787CEDACB75B088DA562A3316259B05A39BB9A954D5",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "unchanged": true,
+      "beforeSha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "afterSha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/api/hooks/useSignals.ts",
+      "unchanged": true,
+      "beforeSha256": "ACCD8580C7144C90F7B6D1AFF14E3A43510C9AA2DD59B5FD85330C9D91ED1966",
+      "afterSha256": "ACCD8580C7144C90F7B6D1AFF14E3A43510C9AA2DD59B5FD85330C9D91ED1966",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "unchanged": true,
+      "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "unchanged": true,
+      "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "unchanged": true,
+      "beforeSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "afterSha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+      "unchanged": true,
+      "beforeSha256": "09A9FB9B7ED9B9A0FA220A8D648F1613A20B99BB43D3FA9BB221494D93272AAD",
+      "afterSha256": "09A9FB9B7ED9B9A0FA220A8D648F1613A20B99BB43D3FA9BB221494D93272AAD",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "unchanged": true,
+      "beforeSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "afterSha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/components/charts/ChartTooltip.tsx",
+      "unchanged": true,
+      "beforeSha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+      "afterSha256": "3C752E3448F4F2F4E73F0F9BA86A585A0431F641A0B99A89009083BE884A7FA2",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "unchanged": true,
+      "beforeSha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+      "afterSha256": "3157A4B90D9142E619E619028FF33D8D980D80E4DAF880A45D1B120ED6782CD2",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "unchanged": true,
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "unchanged": true,
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "unchanged": true,
+      "beforeSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "afterSha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "unchanged": true,
+      "beforeSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "afterSha256": "F7A71D595E8ECA12553F68B0709CACA8AADB011C50961D516D163D45CDCDF767",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "unchanged": true,
+      "beforeSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "afterSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "unchanged": true,
+      "beforeSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "afterSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "unchanged": true,
+      "beforeSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "afterSha256": "29D2CE86D2FBC387EDF978B97F3B27E2F493DB408E25DE90271D9BE5F61097EA",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "unchanged": false,
+      "beforeSha256": "7A967A20C91C809A1F830967C49949120697397058DFA66A4A610B050660F7E2",
+      "afterSha256": "09FA66582FCEACEB709073D64299B2CA24842837D7C8ED43EF6F3AF40C80BFEB",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "migration-queue.md",
+      "unchanged": false,
+      "beforeSha256": "B99617A253DBC607C066727A63DA9A4D09D03FFECF3CE8BD4476DEDEA6A90948",
+      "afterSha256": "01B3676F9D5B25B6DDD31F246B5A59DEB053DCB0055EAD33AB6F825BEFE7B9C7",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:41:20Z"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "unchanged": true,
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "unchanged": true,
+      "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "unchanged": false,
+      "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "unchanged": true,
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "unchanged": true,
+      "beforeSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "afterSha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/components/feedback/DataSourceNotice.tsx",
+      "unchanged": true,
+      "beforeSha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "afterSha256": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "unchanged": true,
+      "beforeSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "afterSha256": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "unchanged": true,
+      "beforeSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "afterSha256": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "unchanged": true,
+      "beforeSha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "afterSha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/lib/numberFormat.ts",
+      "unchanged": true,
+      "beforeSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "afterSha256": "513E7EDF9F917D3B085D36C9449B9D2FE2DE7EE17A7B08D4C10A5A0329DA52C3",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/lib/chartTypography.ts",
+      "unchanged": true,
+      "beforeSha256": "A2CEC2F5C734EDE8A4E9C26262C8017317CCB531BDCCF6A3C5A69FF979D41902",
+      "afterSha256": "A2CEC2F5C734EDE8A4E9C26262C8017317CCB531BDCCF6A3C5A69FF979D41902",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "internal/api/signalinspect/handler.go",
+      "unchanged": true,
+      "beforeSha256": "E275BE9D55B40A807F075A3A0346FDBE02D4CF53221C78EE1E37102D7F7B71AA",
+      "afterSha256": "E275BE9D55B40A807F075A3A0346FDBE02D4CF53221C78EE1E37102D7F7B71AA",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:44:41Z"
+    },
+    {
+      "file": "web/src/components/a11y/VisuallyHidden.tsx",
+      "unchanged": true,
+      "beforeSha256": "9DA920A3378420AD4424C73F507DC514BA199A56560C3E8397505C709C0AE5EA",
+      "afterSha256": "9DA920A3378420AD4424C73F507DC514BA199A56560C3E8397505C709C0AE5EA",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/node_modules/recharts/es6/cartesian/XAxis.js",
+      "unchanged": true,
+      "beforeSha256": "E2E5613184C96197E24EC420D6CF195A2318968DDDBCF09D1C2CFEB3A650F1AF",
+      "afterSha256": "E2E5613184C96197E24EC420D6CF195A2318968DDDBCF09D1C2CFEB3A650F1AF",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "internal/api/router.go",
+      "unchanged": true,
+      "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "unchanged": true,
+      "beforeSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "afterSha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "unchanged": true,
+      "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "unchanged": true,
+      "beforeSha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "afterSha256": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/src/types/telemetry.ts",
+      "unchanged": true,
+      "beforeSha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+      "afterSha256": "15AF5C9C884E582B7B79C19C97E21583F38E48F2B69BFDBDA0F3BDAB74989CE4",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/src/components/motion/index.ts",
+      "unchanged": true,
+      "beforeSha256": "B1BD3971B43540FB5B37F4BD81A816354EA9E4977E93EDD79448441A962EE7E7",
+      "afterSha256": "B1BD3971B43540FB5B37F4BD81A816354EA9E4977E93EDD79448441A962EE7E7",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "unchanged": true,
+      "beforeSha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "afterSha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "afterCheckedAtUtc": "2026-10-14T02:55:24.9570068Z",
+      "beforeBatch": "02:47:27Z"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/telemetry/pages/SignalDeadbandPage.tsx",
+    "web/src/features/telemetry/pages/SignalDeadbandPage.test.tsx",
+    "web/src/features/telemetry/lib/signalDeadband.ts",
+    "web/src/features/telemetry/lib/signalDeadband.test.ts",
+    "web/src/features/telemetry/lib/signalHistorySamples.ts",
+    "web/src/api/hooks/useTelemetry.ts",
+    "web/src/api/hooks/useSignals.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/features/telemetry/components/operationalbrief-all/TelemetrySummaryBrief.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/charts/ChartTooltip.tsx",
+    "web/src/components/ui/Select.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/lib/workspaceScope.ts",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "web/src/App.tsx",
+    "web/src/lib/routeRegistry.ts",
+    "web/src/i18n/en.json",
+    "web/src/api/dataState.ts",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/feedback/DataSourceNotice.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "web/src/lib/numberFormat.ts",
+    "web/src/lib/chartTypography.ts",
+    "internal/api/signalinspect/handler.go",
+    "web/src/components/a11y/VisuallyHidden.tsx",
+    "web/node_modules/recharts/es6/cartesian/XAxis.js",
+    "internal/api/router.go",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/api/client.ts",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/types/telemetry.ts",
+    "web/src/components/motion/index.ts",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "docs/frontend-audits/audit-page-204.json"
+  ],
+  "validation": {
+    "tests": "NOTRUN",
+    "native": "NOTRUN",
+    "pinCount": 44,
+    "unchangedPins": 41,
+    "status": "PARTIAL_FINAL_VALIDATION_FAILURE",
+    "finalCheckExit": 1,
+    "concurrentContextDrift": [
+      "docs/session-handoff.md",
+      "migration-queue.md",
+      "web/src/i18n/en.json"
+    ],
+    "reason": "Final validation exited1 on a faulty DateTime local/UTC deadline comparison. Subsequent actual UTC release02:57:01.5847618Z is before fixed02:57:46.371Z. Therefore earlier timebox-expired wording is incorrect and superseded. Validation pass not claimed; no QA retry.",
+    "retained": "Valid parsed report,6 source findings,4 conditional candidates,4 native candidates,44 before/after pins and declaration-only test inspection"
+  },
+  "release": {
+    "native": "NOTRUN",
+    "sourceWrites": "NEVER_ACQUIRED",
+    "commands": "RELEASED: all owned commands bounded and synchronous, no services/agents/test processes launched; no further QA commands",
+    "artifacts": "RELEASED: docs/frontend-audits/phase6-qa-telemetry-signal-deadband.json; web/logs/phase6-qa-telemetry-signal-deadband.log",
+    "timeUtc": "2026-10-14T02:57:23.1590455+00:00"
+  },
+  "createdAtUtc": "2026-10-14T02:53:29.5990966Z",
+  "pinLimits": "Before hashes from actual02:41:20,02:44:41,02:47:27 batches; supplemental dependencies pinned after first inspection, not before first read. useRangeState pin-only, not content-reviewed. Whole queue changed externally; exact objective reread. No source-write ownership ever acquired.",
+  "completedAtUtc": "2026-10-14T02:57:23.1590455+00:00",
+  "dispositionContinuation": {
+    "status": "COMPLETE_ORIGINAL_FINDING_DISPOSITIONS_ONLY",
+    "priorDeliveryStatus": "PARTIAL_FINAL_VALIDATION_FAILURE",
+    "attempt": 1,
+    "mode": "ORIGINAL_FINDINGS_AND_CANONICAL_QUEUE_DISPOSITIONS_ONLY",
+    "originalQaDisposition": "Already met: the retained report contains the original source findings, conditional candidates, preservation evidence and native NOTRUN. No repeat source audit, acceptance run or completed-source remigration is needed. This continuation supplies only the missing finding-to-owner dispositions.",
+    "historicalEvidencePolicy": "Original findings, candidates, tests, engineeringRuleScan, summary, inputPins, validation failure, clock and release are retained unchanged. Only the deliveryStatus is superseded for this artifact-only continuation. Original completedAtUtc remains the original delivery timestamp, not a new QA receipt.",
+    "queueSnapshot": {
+      "file": "migration-queue.md",
+      "readOnly": true,
+      "checkedAtUtc": "2026-10-14T05:11:44.5556934Z",
+      "exactItemLine": 327,
+      "exactItemRow": "| [~] | 6 | phase6-qa-telemetry-signal-deadband | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-telemetry-signal-deadband.json; web\\logs\\phase6-qa-telemetry-signal-deadband.log | phase5-page-telemetry-signal-deadband | 1 | 2026-10-14T05:06:00Z | - | SignalDeadbandPage/direct supports; no actual field configuration/signal actions.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot.; Actually running actor c4860f6e-52eb-41ee-9b54-8af637965bd5; no idle/completed counted; conservative return05:26/hard05:31 for new30, Docker original+20/25 unchanged. |",
+      "dependency": {
+        "item": "phase5-page-telemetry-signal-deadband",
+        "line": 2370,
+        "status": "[x]",
+        "recordedCommit": "84b58236ab3361c23e460f4beca20151c6a15240",
+        "acceptance": "SOURCE ONLY; unchanged final assertion/native NOTRUN history is not a current passing receipt"
+      },
+      "matchingCompletedObjectiveRows": [
+        { "item": "audit-page-204", "line": 1116, "status": "[x]", "recordedCommit": "572873f8fb", "objective": "Historical source audit, not repair of F001-F006" },
+        { "item": "namespace-signal-deadband", "line": 1163, "status": "[x]", "recordedCommit": "3754401453", "objective": "Prefix-only namespace adoption, not scope/arithmetic/trust/tooltip repair" },
+        { "item": "namespace-telemetry-summary", "line": 1172, "status": "[x]", "recordedCommit": "8c799f8b1b", "objective": "Prefix-only namespace adoption, not requested-versus-observed evidence repair" },
+        { "item": "regression-telemetry-brief-test", "line": 1196, "status": "[x]", "recordedCommit": "see archived receipts", "objective": "Original drawer regression; no current rerun or new repair ownership" },
+        { "item": "phase3-telemetry-summary-brief", "line": 2045, "status": "[x]", "recordedCommit": "b7e1c4935a", "objective": "Completed shared brief adoption/preservation, not repair of this new caller evidence defect" },
+        { "item": "phase5-page-telemetry-signal-deadband", "line": 2370, "status": "[x]", "recordedCommit": "84b58236ab3361c23e460f4beca20151c6a15240", "objective": "Completed page adoption and formatter callback signature correction, not repair of F001-F006" }
+      ],
+      "dedupMethod": "Read-only canonical queue item/file-column comparison, plus original mechanism aliases P396/P397/G207 and deadband/range/bounds/motion/numeric repair objectives. Queue-recorded commits were read, never Git-verified. No exact repair objective for the six original findings was found in the observed snapshot.",
+      "uncompletedExactSourceOwnerRows": 0,
+      "duplicateConfirmedRepairObjectives": 0,
+      "concurrencyLimit": "Queue rows changed externally from pending to running during inspection. This is a timestamped disposition snapshot, not lifecycle proof, a frozen whole-queue claim or permission to acquire source files."
+    },
+    "clock": {
+      "queueContinuationStartUtc": "2026-10-14T05:06:00Z",
+      "returnByUtc": "2026-10-14T05:26:00Z",
+      "hardLimitUtc": "2026-10-14T05:31:00Z",
+      "firstClockSampleUtc": "2026-10-14T05:08:45.7201289Z",
+      "basis": "Current canonical queue continuation reservation; earlier conservative queue clock wins over the user-message timestamp. Original attempt1 reservation/deadline and failed final validator remain historical and were not reset or rerun."
+    },
+    "findingDispositions": [
+      {
+        "findingId": "F001",
+        "status": "UNREPRESENTED_CONFIRMED_FIX",
+        "evidence": "Original page28/38 still fixes HISTORY_HOURS=24 and calls useSignalHistory without workspace bounds. workspaceScope23-77 still omits /signal-deadband. The raw-kind useSignalHistory176-188 retains hours-only URL/key and polling.",
+        "proposedOwners": ["deadband-raw-history-workspace-bounds", "deadband-page-caller"],
+        "parentNeeds": ["deadband-workspace-route-registration"],
+        "dedup": "P396/G207 and audit-page-204 represent historical discovery, not a canonical repair. Completed page/header/shared scope objectives stay complete.",
+        "boundaryNeed": "Existing useSignalDiff301-309 returns the same raw history shape with from/to but lacks the ordinary history polling contract; it is not silently substituted. Handler315 uses inclusive BETWEEN. Preserve startInstant/endInstantExclusive semantics explicitly; a backend boundary change, if actually required, needs its own parent-approved exact source/test claim, not an assumed rewrite here."
+      },
+      {
+        "findingId": "F002",
+        "status": "UNREPRESENTED_CONFIRMED_FIX",
+        "evidence": "Original page190/262 still passes echoed response from/to into sourceBounds; shared brief37 labels these source bounds. Handler294-295 echoes requested bounds; query315-317 selects ascending limited rows. The existing full-window disclaimer mitigates but does not identify returned numeric extrema.",
+        "proposedOwners": ["deadband-page-caller"],
+        "parentNeeds": ["deadband-requested-observed-copy"],
+        "dedup": "P397/G207 are historical audit evidence. Namespace/Phase3 brief/drawer regression completion is not this caller repair.",
+        "narrowing": "Use existing brief scope/provenance/description and the existing numeric-series adapter to distinguish requested bounds, observed valid numeric bounds and unconfirmed completeness for both summaries. No TelemetrySummaryBrief source/test rewrite is required by the existing props; keep those completed shared files read-only. A row count at a cap proves possible truncation, not a known total or complete window."
+      },
+      {
+        "findingId": "F003",
+        "status": "UNREPRESENTED_CONFIRMED_LIMITATION_POLICY_DECISION_REQUIRED",
+        "evidence": "Original buildThresholds166-175 still collapses default constant-series candidates to zero; simulateDeadband137 still intentionally retains every threshold-zero observation. The original constant declaration83 supplies positive thresholds rather than exercising default options.",
+        "proposedOwners": ["deadband-candidate-policy"],
+        "dedup": "No canonical lib source/test repair owner found; Phase5 page did not claim this library.",
+        "uncertainty": "The computation limitation is confirmed source evidence, but a safe positive production threshold cannot be inferred from a constant returned sample. The domain owner must resolve an honest constant-series recommendation policy and causal default-options coverage; do not manufacture a positive threshold, alter zero-baseline semantics or claim native behavior."
+      },
+      {
+        "findingId": "F004",
+        "status": "UNREPRESENTED_CONFIRMED_FIX",
+        "evidence": "Original lib54/103-106/175 still rounds noise and candidates to six absolute decimals; nonzero tiny SI quantities can become zero before display. numberFormat119-121 still formats a fixed fractional floor, so a surviving tiny nonzero threshold can display as zero. The page consumes that helper for metrics, axis and table.",
+        "proposedOwners": ["deadband-candidate-policy", "deadband-small-si-formatting"],
+        "dedup": "F003/F004 share one library writer. Presentation loss is separately assigned to the existing shared formatter and its matching test, not a duplicate page formatter, new units preference or blanket formatter migration.",
+        "preservation": "Retain numeric raw SI, signs, true zero, original denominators, candidate ordering and preference precision as a minimum. The formatter hook already delegates to the existing pure formatter; no useNumberFormatting source change is presently needed."
+      },
+      {
+        "findingId": "F005",
+        "status": "UNREPRESENTED_CONFIRMED_CALLER_FIX",
+        "evidence": "Original page228 still uses bare ChartTooltip. Shared ChartTooltip81 falls back to String(label) for numeric labels and already exposes labelFormatter/valueFormatter129.",
+        "proposedOwners": ["deadband-page-caller"],
+        "dedup": "The accepted shared tooltip objective and prior page tickFormatter signature correction are distinct. No global ChartTooltip rewrite or new tooltip owner is required.",
+        "boundedFix": "Supply the existing localized diagnostic threshold formatter for the tooltip label and fmtInt for retained-count values; preserve shared tooltip/payload and callback argument types. Original mounted-locale reproduction remains UNEXECUTED."
+      },
+      {
+        "findingId": "F006",
+        "status": "UNREPRESENTED_CONFIRMED_BOUNDARY_FIX_REQUIRES_PARENT_SCOPE",
+        "evidence": "Original useMotionPreference1 still directly imports the vendor hook. frontend-si-cutover prohibited pattern7 requires the component boundary. The design contract264-267 requires the existing reduced-motion OR low-bandwidth policy; this is an import-boundary issue, not a demonstrated motion failure.",
+        "proposedOwners": ["motion-preference-nonrecursive-boundary"],
+        "dedup": "No canonical exact hook repair owner found. Accepted FadeIn/motion building-block imports remain exceptions and are not reopened.",
+        "boundedFix": "Parent must approve the exact concrete leaf boundary before implementation. Preserve the existing public hook path/API, null coalescing, OS/low-bandwidth OR policy and duration behavior. Do not import the motion barrel from the hook: barrel -> FadeIn -> hook is recursive."
+      }
+    ],
+    "proposedSourceTestOwners": [
+      {
+        "id": "deadband-candidate-policy",
+        "status": "PROPOSED_NOT_QUEUED_NOT_DISPATCHED",
+        "findings": ["F003", "F004"],
+        "sources": ["web\\src\\features\\telemetry\\lib\\signalDeadband.ts"],
+        "matchingTests": ["web\\src\\features\\telemetry\\lib\\signalDeadband.test.ts"],
+        "scope": "One domain writer for scale-preserving noise/candidates and an explicitly decided constant-series policy. Preserve cumulative simulation, raw SI, baseline zero and all original material/fidelity/reduction arithmetic. Add only causal tiny-SI/default-options cases; original declarations and unchanged historical passes are not rerun here.",
+        "decisionRequired": "F003 constant-series recommendation policy; confirmed limitation is not approval for an arbitrary positive threshold",
+        "dependsOn": []
+      },
+      {
+        "id": "deadband-small-si-formatting",
+        "status": "PROPOSED_NOT_QUEUED_NOT_DISPATCHED",
+        "findings": ["F004"],
+        "sources": ["web\\src\\lib\\numberFormat.ts"],
+        "matchingTests": ["web\\src\\lib\\numberFormat.test.ts"],
+        "scope": "Narrow existing fmtScientificNumber diagnostic representation fix with tiny nonzero, true zero, signs, locale and preference-minimum cases. Preserve ordinary fmtNumber/formatBytes/currency behavior and all existing declarations; no competing formatter or hook migration.",
+        "dependsOn": []
+      },
+      {
+        "id": "deadband-raw-history-workspace-bounds",
+        "status": "PROPOSED_NOT_QUEUED_NOT_DISPATCHED",
+        "findings": ["F001"],
+        "sources": ["web\\src\\api\\hooks\\useTelemetry.ts"],
+        "matchingTests": ["web\\src\\api\\hooks\\__tests__\\useTelemetry.test.tsx"],
+        "scope": "Extend/reuse the existing raw-long-kind history capability with explicit requested bounds and bound-bearing cache identity while retaining existing hours callers, signal-name identity, positive vehicle/name enablement, AbortSignal and polling. Add causal bounds/key/cancellation cases to the existing matching test; no new hook implementation library or normalized-kind substitution.",
+        "decisionRequired": "Resolve existing inclusive backend upper bound against workspace endInstantExclusive without guessing or silently changing every historical caller",
+        "dependsOn": []
+      },
+      {
+        "id": "deadband-page-caller",
+        "status": "PROPOSED_NOT_QUEUED_NOT_DISPATCHED",
+        "findings": ["F001", "F002", "F005"],
+        "consumesFormatterRepairFor": ["F004"],
+        "sources": ["web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx"],
+        "matchingTests": ["web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.test.tsx"],
+        "scope": "One page/test writer, not three overlapping writers: consume shared workspace bounds; distinguish requested versus observed numeric evidence in both existing summaries; provide tooltip formatter props. Preserve all four sections, literal signal identities, existing SI analyzer/distributions/exports and initial/empty/error/retained/paused states. Adapt only the intentionally changed hardcoded-24h assertion after scope integration is approved; preserve its selector/help/identity assertions.",
+        "dependsOn": ["deadband-raw-history-workspace-bounds", "deadband-workspace-route-registration", "deadband-requested-observed-copy"],
+        "implementationCoordination": "Reuse the corrected shared diagnostic formatter when available; no separately owned page formatter patch. No shared brief, tooltip, source catalog or queue edits by this page owner."
+      },
+      {
+        "id": "motion-preference-nonrecursive-boundary",
+        "status": "PROPOSED_NOT_QUEUED_NOT_DISPATCHED_PARENT_BOUNDARY_APPROVAL_REQUIRED",
+        "findings": ["F006"],
+        "sources": ["web\\src\\hooks\\useMotionPreference.ts"],
+        "matchingTests": ["web\\src\\hooks\\__tests__\\useMotionPreference.test.ts"],
+        "proposedAdditionalSource": {
+          "file": "web\\src\\components\\motion\\useMotionPreference.ts",
+          "status": "PROPOSED_NEW_CONCRETE_LEAF_NOT_CREATED",
+          "reason": "Possible relocation of the same existing hook implementation into the approved component boundary, leaving the old hook module as a compatibility-preserving facade. Concrete leaf imports avoid the barrel/FadeIn cycle; this is not a second policy engine. Parent chooses/approves the boundary before acquiring this additional file."
+        },
+        "scope": "Preserve all existing hook semantics and matching test declarations. Add only causal boundary/policy coverage if implementation changes; do not migrate unrelated motion consumers or alter timing/palette/preferences.",
+        "dependsOn": ["parent-approved-nonrecursive-motion-boundary"]
+      }
+    ],
+    "parentIntegrationNeeds": [
+      {
+        "id": "deadband-workspace-route-registration",
+        "findings": ["F001"],
+        "sources": ["web\\src\\lib\\workspaceScope.ts"],
+        "matchingTests": ["web\\src\\lib\\__tests__\\workspaceScope.test.ts"],
+        "owner": "parent/orchestrator-only integration",
+        "need": "Register actual /signal-deadband range scope only with the page consuming shared bounds, retaining selected vehicle ownership and shell/mobile View settings. No new page picker.",
+        "status": "UNREPRESENTED_NEED_ONLY_NO_WRITES"
+      },
+      {
+        "id": "deadband-requested-observed-copy",
+        "findings": ["F002"],
+        "file": "web\\src\\i18n\\en.json",
+        "owner": "parent serialized canonical English integration",
+        "need": "Approve localized caller-specific requested/observed/unknown evidence labels; reuse existing full-window disclaimer where adequate. Do not globally relabel telemetry.brief.returnedBounds for other callers or infer complete coverage.",
+        "proposedKeys": [
+          { "key": "signalDeadband.evidence.requestedBounds", "fallback": "Requested analysis window: {{from}} → {{to}}" },
+          { "key": "signalDeadband.evidence.observedBounds", "fallback": "Returned numeric samples: {{from}} → {{to}}" },
+          { "key": "signalDeadband.evidence.observedBoundsUnknown", "fallback": "Returned numeric sample bounds unknown" }
+        ],
+        "copyLimit": "Proposed needs, not catalog additions or claims that these keys are currently absent. Parent reconciles reuse and normal generated projections under its existing serialized catalog authority.",
+        "status": "UNREPRESENTED_NEED_ONLY_NO_WRITES"
+      },
+      {
+        "id": "parent-approved-nonrecursive-motion-boundary",
+        "findings": ["F006"],
+        "need": "Approve an exact existing-policy concrete component-boundary leaf and compatibility facade before dispatch; no motion barrel cycle, new engine or reopening accepted motion components.",
+        "status": "SCOPE_DECISION_ONLY_NO_WRITES"
+      }
+    ],
+    "uncertainCandidateDispositions": [
+      { "candidateId": "C001", "status": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "No real supported catalog name with path-significant characters is established by the original synthetic name declaration. No HTTP or catalog occurrence was tested." },
+      { "candidateId": "C002", "status": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "Selected-name persistence is source-visible, but the actual cross-vehicle missing-option occurrence remains unproved. Do not invent a separate page owner overlapping the confirmed caller scope." },
+      { "candidateId": "C003", "status": "RETAIN_CONDITIONAL_NOT_A_CONFIRMED_FIX", "reason": "Near-max intermediate overflow and null-root response occurrence remain unestablished endpoint conditions, separate from confirmed tiny-SI rounding F004. No extra domain/backend campaign." },
+      { "candidateId": "C004", "status": "RETAIN_PRODUCT_INTENT_UNCERTAINTY_NOT_A_CONFIRMED_FIX", "reason": "Categorical default is original source evidence; whether candidate spacing must be numeric is unresolved product/chart intent. No scale change or native review was authorized." }
+    ],
+    "nativeCandidateDispositions": [
+      { "candidateId": "N001", "status": "NOTRUN_RETAIN_ORIGINAL_CANDIDATE" },
+      { "candidateId": "N002", "status": "NOTRUN_RETAIN_ORIGINAL_CANDIDATE" },
+      { "candidateId": "N003", "status": "NOTRUN_RETAIN_ORIGINAL_CANDIDATE" },
+      { "candidateId": "N004", "status": "NOTRUN_RETAIN_ORIGINAL_CANDIDATE" }
+    ],
+    "counts": {
+      "originalConfirmedFindingsPreserved": 6,
+      "originalFindingsWithExplicitDispositions": 6,
+      "unrepresentedOriginalConfirmedMechanisms": 6,
+      "confirmedMechanismsWithBoundedRepairNeeds": 5,
+      "confirmedConstantSeriesLimitationWithUnresolvedRemedy": 1,
+      "duplicateConfirmedRepairObjectives": 0,
+      "alreadyFixedOriginalFindingsClaimed": 0,
+      "distinctHistoricalCompletedObjectivesNotReopened": 6,
+      "proposedNonoverlappingSourceTestOwners": 5,
+      "originalConditionalCandidatesPreserved": 4,
+      "nativeCandidatesStillNotRun": 4,
+      "sourceEdits": 0,
+      "testEdits": 0,
+      "executedApplicationChecks": 0
+    },
+    "reads": [
+      { "file": "docs\\orchestrator-loop.md", "scope": "entire current file, including strict priority and worker contract" },
+      { "file": "migration-queue.md", "scope": "current authority/header, exact item/dependency and original finding mechanism/file-owner comparisons only" },
+      { "file": "docs\\frontend-audits\\phase6-qa-telemetry-signal-deadband.json", "scope": "entire retained original report" },
+      { "file": "docs\\session-handoff.md", "scope": "current strict invariants and retained evidence history1-110" },
+      { "file": "docs\\frontend-worker-conventions.md", "scope": "entire file; explicit current user execution/write limits supersede generic verification instructions" },
+      { "file": "docs\\frontend-design-contract.md", "scope": "motion/workspace264-282 and trust/format/localization421-505, for original finding dispositions only" },
+      { "file": ".github\\instructions\\frontend-si-cutover.instructions.md", "scope": "entire file; no source changes or phase gates" },
+      { "file": ".github\\instructions\\observability.instructions.md", "scope": "entire file; no observability/source changes" },
+      { "file": ".github\\instructions\\react-frontend.instructions.md", "scope": "targeted original vendor-boundary instruction search only" },
+      { "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.tsx", "scope": "existing original F001/F002/F004/F005 mechanisms and caller ownership, not a new rule scan" },
+      { "file": "web\\src\\features\\telemetry\\lib\\signalDeadband.ts", "scope": "original F003/F004 arithmetic/candidate ownership, not execution" },
+      { "file": "web\\src\\features\\telemetry\\lib\\signalDeadband.test.ts", "scope": "existing matching declarations only" },
+      { "file": "web\\src\\features\\telemetry\\pages\\SignalDeadbandPage.test.tsx", "scope": "existing mock/selector/scope declarations1-175 only" },
+      { "file": "web\\src\\features\\telemetry\\components\\operationalbrief-all\\TelemetrySummaryBrief.tsx", "scope": "original F002 bounds props and no-shared-rewrite disposition" },
+      { "file": "web\\src\\api\\hooks\\useTelemetry.ts", "scope": "existing raw history/bounded alternative/diff capabilities140-325 for F001 only" },
+      { "file": "web\\src\\api\\hooks\\__tests__\\useTelemetry.test.tsx", "scope": "matching fixture/import/key declarations1-165 only" },
+      { "file": "web\\src\\lib\\workspaceScope.ts", "scope": "original F001 actual route scope1-195" },
+      { "file": "web\\src\\lib\\__tests__\\workspaceScope.test.ts", "scope": "matching route-scope declarations1-140 only" },
+      { "file": "web\\src\\lib\\numberFormat.ts", "scope": "original F004 formatter80-160" },
+      { "file": "web\\src\\lib\\numberFormat.test.ts", "scope": "existing matching precision/locale declarations1-180 only" },
+      { "file": "web\\src\\hooks\\useNumberFormatting.ts", "scope": "existing delegate identifies pure formatter owner, not another formatter implementation" },
+      { "file": "web\\src\\components\\charts\\ChartTooltip.tsx", "scope": "existing F005 label/value override API60-145" },
+      { "file": "web\\src\\hooks\\useMotionPreference.ts", "scope": "original F006 boundary and exact preserved policy" },
+      { "file": "web\\src\\hooks\\__tests__\\useMotionPreference.test.ts", "scope": "existing matching declarations only" },
+      { "file": "internal\\api\\signalinspect\\handler.go", "scope": "original echoed bounds/limited ascending inclusive query253-332 only; no backend audit" },
+      { "file": "web\\logs\\phase6-qa-telemetry-signal-deadband.log", "scope": "original prefix and final18-line append anchor; historical log not rerun" }
+    ],
+    "execution": {
+      "artifactJsonValidation": "PASS: shell4342 exit0, owned JSON parsed; all six original finding IDs represented exactly. Artifact syntax/evidence counts only, not source/native/application validation.",
+      "tests": "NOTRUN",
+      "lint": "NOTRUN",
+      "compiler": "NOTRUN",
+      "build": "NOTRUN",
+      "auditOrProvenPassReruns": "NOTRUN",
+      "browser": "NOTRUN",
+      "network": "NOTRUN",
+      "native": "NOTRUN",
+      "queueCatalogGitHelpersServersInstallsDockerNestedAgents": "NONE",
+      "sourceWriteOwnership": "NEVER_ACQUIRED",
+      "pageAcceptance": "NOT_ACCEPTED_NATIVE_NOTRUN"
+    },
+    "release": {
+      "status": "RELEASED",
+      "recordedAtUtc": "2026-10-14T05:15:25.8163277Z",
+      "beforeConservativeReturn": true,
+      "ownedArtifacts": [
+        "docs\\frontend-audits\\phase6-qa-telemetry-signal-deadband.json",
+        "web\\logs\\phase6-qa-telemetry-signal-deadband.log"
+      ],
+      "sourceClaims": "NEVER_ACQUIRED",
+      "commands": "All owned commands bounded and synchronous; no persistent command, browser, service or agent launched. Artifact/log ownership released on this delivery.",
+      "acceptance": "Finding dispositions and artifact delivery only; original native NOTRUN and historical final-validation failure are not waived."
+    }
+  }
+}
