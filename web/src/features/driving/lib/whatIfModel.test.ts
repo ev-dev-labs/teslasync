@@ -125,6 +125,35 @@ describe('simulateWhatIf', () => {
     expect(r.energyDeltaWh).toBeCloseTo(0, 10);
   });
 
+  it.each([
+    { name: 'missing telemetry', points: undefined },
+    { name: 'empty telemetry', points: [] },
+    { name: 'missing temperatures', points: telemetry.map((p) => ({ ...p, outsideTemp: null })) },
+    { name: 'invalid temperatures', points: telemetry.map((p, i) => ({
+      ...p, outsideTemp: [NaN, Infinity, -Infinity][i % 3],
+    })) },
+    { name: 'recorded temperatures', points: telemetry },
+  ])('keeps the recorded baseline fixed with $name when scenario ambient changes', ({ points }) => {
+    const base = simulateWhatIf(drive, points, DEFAULT_KNOBS);
+    const cold = simulateWhatIf(drive, points, { ...DEFAULT_KNOBS, ambientC: -10 });
+    const warm = simulateWhatIf(drive, points, { ...DEFAULT_KNOBS, ambientC: 30 });
+
+    expect(base.ok).toBe(true);
+    expect(base.ambientNativeC).toBe(points === telemetry ? 4 : 18);
+    for (const result of [cold, warm]) {
+      expect(result.ok).toBe(true);
+      expect(result.ambientNativeC).toBe(base.ambientNativeC);
+      expect(result.baseline).toEqual(base.baseline);
+      expect(result.reconciliation).toBe(base.reconciliation);
+      expect(result.baselineArrivalSoc).toBe(base.baselineArrivalSoc);
+      expect(result.scenario.other).toBe(base.baseline.other);
+      expect(result.energyDeltaWh).toBe(result.scenario.total - base.baseline.total);
+    }
+    expect(cold.scenario.climate).toBeGreaterThan(warm.scenario.climate);
+    expect(cold.scenario.aero).toBeGreaterThan(warm.scenario.aero);
+    expect(cold.scenario.total).toBeGreaterThan(warm.scenario.total);
+  });
+
   it.each([NaN, Infinity, -Infinity])('flags invalid knob values %s', (value) => {
     expect(simulateWhatIf(drive, telemetry, { ...DEFAULT_KNOBS, speedFactor: value }).ok).toBe(false);
     expect(simulateWhatIf(drive, telemetry, { ...DEFAULT_KNOBS, ambientC: value }).ok).toBe(false);

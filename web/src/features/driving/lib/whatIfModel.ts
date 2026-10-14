@@ -29,6 +29,8 @@ const DRIVETRAIN_EFF = 0.9;
 const CLIMATE_BASE_W = 1500; // steady HVAC draw when on at ~20°C
 const J_TO_WH = 1 / 3600;
 const DEFAULT_PACK_WH = 75000;
+// Fixed baseline assumption when telemetry has no finite ambient reading.
+const ASSUMED_BASELINE_AMBIENT_C = 18;
 
 export type TirePreset = 'low' | 'nominal' | 'high';
 
@@ -39,7 +41,9 @@ export interface WhatIfKnobs {
   ambientC: number; // effective ambient temperature °C
 }
 
-export const DEFAULT_KNOBS: WhatIfKnobs = { speedFactor: 1, tires: 'nominal', hvac: true, ambientC: 18 };
+export const DEFAULT_KNOBS: WhatIfKnobs = {
+  speedFactor: 1, tires: 'nominal', hvac: true, ambientC: ASSUMED_BASELINE_AMBIENT_C,
+};
 
 export interface EnergyBreakdown {
   aero: number;
@@ -65,6 +69,7 @@ export interface WhatIfResult {
   energyDeltaWh: number;
   /** duration under the scenario (s). */
   scenarioDurationS: number;
+  /** Recorded mean ambient, or the fixed baseline assumption, in Celsius. */
   ambientNativeC: number;
 }
 
@@ -141,7 +146,7 @@ export function simulateWhatIf(
     scenarioArrivalSoc: null,
     energyDeltaWh: 0,
     scenarioDurationS: finite(duration) && duration > 0 ? duration : 0,
-    ambientNativeC: finite(knobs.ambientC) ? knobs.ambientC : DEFAULT_KNOBS.ambientC,
+    ambientNativeC: ASSUMED_BASELINE_AMBIENT_C,
   };
   if (!drive || !finite(distance) || distance <= 0 || !finite(duration) ||
       duration <= 0 || !finite(observed) || !finite(knobs.speedFactor) ||
@@ -150,7 +155,7 @@ export function simulateWhatIf(
   if (!finite(avgSpeed) || avgSpeed <= 0) return neutral;
 
   const { climb, climateOn, ambientC } = analyzeTelemetry(points);
-  const nativeAmbient = ambientC ?? knobs.ambientC;
+  const nativeAmbient = ambientC ?? ASSUMED_BASELINE_AMBIENT_C;
 
   // ---- Baseline decomposition (anchored to observed energy) -------------
   const aero0 = (0.5 * RHO * CDA * avgSpeed * avgSpeed * distance) * J_TO_WH / DRIVETRAIN_EFF;
