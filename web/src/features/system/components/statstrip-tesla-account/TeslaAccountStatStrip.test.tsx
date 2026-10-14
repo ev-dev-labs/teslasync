@@ -59,8 +59,8 @@ describe('Tesla account canonical summary source preservation', () => {
     expect(within(details).getByText('Account ID')).toBeInTheDocument();
     expect(within(details).getByText('#123456')).toBeInTheDocument();
     expect(details).toHaveTextContent('Fleet API identity');
-    expect(details).toHaveTextContent(formatDateTime(PROFILE.created_at));
-    expect(details).toHaveTextContent(formatDateTime(PROFILE.updated_at));
+    expect(details).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+    expect(details).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
   });
 
   describe('Tesla account summary sync evidence and preference adoption', () => {
@@ -134,14 +134,14 @@ describe('Tesla account canonical summary source preservation', () => {
     expect(measurements?.[1]?.display).toEqual({ identifierPrefix: '#' });
     expect(tiles.map(tile => tile.getAttribute('data-operational-metric'))).toEqual(['sync-status', 'account-id', 'member-since', 'last-updated']);
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent('#123456');
-    expect(tiles[0]).toHaveTextContent(formatRelative(PROFILE.fetched_at));
-    expect(tiles[0]).toHaveTextContent(formatDateTime(PROFILE.fetched_at));
-    expect(tiles[2]?.querySelector('[data-operational-value]')).toHaveTextContent(formatDate(PROFILE.created_at));
-    expect(tiles[3]?.querySelector('[data-operational-value]')).toHaveTextContent(formatRelative(PROFILE.updated_at));
-    expect(tiles[3]).toHaveTextContent(formatDate(PROFILE.updated_at));
+    expect(tiles[0]).toHaveTextContent(formatRelative(PROFILE.fetched_at, datePreferences));
+    expect(tiles[0]).toHaveTextContent(formatDateTime(PROFILE.fetched_at, datePreferences));
+    expect(tiles[2]?.querySelector('[data-operational-value]')).toHaveTextContent(formatDate(PROFILE.created_at, datePreferences));
+    expect(tiles[3]?.querySelector('[data-operational-value]')).toHaveTextContent(formatRelative(PROFILE.updated_at, datePreferences));
+    expect(tiles[3]).toHaveTextContent(formatDate(PROFILE.updated_at, datePreferences));
     const strip = screen.getByTestId('tesla-account-summary');
     expect(strip).toHaveTextContent('Fleet API profile snapshot');
-    expect(strip).toHaveTextContent(`Source fetched at ${formatDateTime(PROFILE.fetched_at)}`);
+    expect(strip).toHaveTextContent(`Source fetched at ${formatDateTime(PROFILE.fetched_at, datePreferences)}`);
     expect(strip).not.toHaveTextContent('Source fetched at Oct 6');
     const formatted = formatMetric('identifier', PROFILE.id, preferences, undefined, { identifierPrefix: '#' });
     expect(formatted.rawValue).toBe(123456);
@@ -170,7 +170,7 @@ describe('Tesla account canonical summary source preservation', () => {
   it('uses only the envelope source fetch timestamp when the profile has not been populated', () => {
     const { container } = setup({ profile: null });
     expect(container.querySelector('[data-operational-value]')).toHaveTextContent('Synced');
-    expect(container).toHaveTextContent(formatRelative(PROFILE.fetched_at));
+    expect(container).toHaveTextContent(formatRelative(PROFILE.fetched_at, datePreferences));
     expect(container.querySelectorAll('[data-operational-metric]')[1]).toHaveAttribute('data-value-state', 'missing');
   });
 

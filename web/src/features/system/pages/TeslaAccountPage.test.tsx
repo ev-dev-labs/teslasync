@@ -284,14 +284,14 @@ describe('TeslaAccountPage — populated', () => {
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
     expect(container.querySelectorAll('[data-stat-strip]')).toHaveLength(0);
     expect(strip).toHaveTextContent('Fleet API profile snapshot');
-    expect(strip).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT)}`);
+    expect(strip).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
     const tiles = [...strip.querySelectorAll('[data-operational-metric]')];
     expect(tiles.map(tile => tile.getAttribute('data-operational-metric'))).toEqual(['sync-status', 'account-id', 'member-since', 'last-updated']);
     expect(tiles[1]?.querySelector('[data-operational-value]')).toHaveTextContent('#42');
     expect(tiles[1]).toHaveTextContent('Fleet API identity');
-    expect(tiles[0]).toHaveTextContent(formatDateTime(FETCHED_AT));
-    expect(tiles[2]).toHaveTextContent(formatDateTime(PROFILE.created_at));
-    expect(tiles[3]).toHaveTextContent(formatDateTime(PROFILE.updated_at));
+    expect(tiles[0]).toHaveTextContent(formatDateTime(FETCHED_AT, datePreferences));
+    expect(tiles[2]).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+    expect(tiles[3]).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
     for (const heading of ['Profile', 'Sync', 'Account details', 'Activity']) {
       expect(panel(heading)).toBeInTheDocument();
     }
@@ -361,8 +361,8 @@ describe('TeslaAccountPage — populated', () => {
     setup(makeQuery({ data: envelope(PROFILE) }));
     const sync = panel('Sync');
 
-    expect(within(sync).getByText(formatRelative(FETCHED_AT))).toBeInTheDocument();
-    expect(within(sync).getByText(formatDateTime(FETCHED_AT))).toBeInTheDocument();
+    expect(within(sync).getByText(formatRelative(FETCHED_AT, datePreferences))).toBeInTheDocument();
+    expect(within(sync).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
     expect(
       within(sync).getByText(
         'Fetches your latest account profile from the Tesla Fleet API.',
@@ -378,7 +378,7 @@ describe('TeslaAccountPage — populated', () => {
     expect(within(details).getByText('driver@example.com')).toBeInTheDocument();
     expect(within(details).getByText('#42')).toBeInTheDocument();
     expect(within(details).getByText('Available')).toBeInTheDocument();
-    expect(within(details).getByText(formatDateTime(FETCHED_AT))).toBeInTheDocument();
+    expect(within(details).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
   });
 
   it('renders the activity timeline with linked / updated / synced entries', () => {
@@ -393,10 +393,10 @@ describe('TeslaAccountPage — populated', () => {
     ).toBeInTheDocument();
     // The three entry timestamps map to the three source dates.
     expect(
-      within(activity).getByText(formatDateTime(PROFILE.created_at)),
+      within(activity).getByText(formatDateTime(PROFILE.created_at, datePreferences)),
     ).toBeInTheDocument();
     expect(
-      within(activity).getByText(formatDateTime(PROFILE.updated_at)),
+      within(activity).getByText(formatDateTime(PROFILE.updated_at, datePreferences)),
     ).toBeInTheDocument();
   });
 
@@ -880,7 +880,7 @@ describe('TeslaAccountPage — restrained adoption', () => {
   it('retains identity and all lifecycle timestamps while a background refresh is in flight', () => {
     setup(makeQuery({ data: envelope(PROFILE), isLoading: true, isFetching: true }));
     expect(within(panel('Profile')).getByText(PROFILE.full_name)).toBeInTheDocument();
-    expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT))).toBeInTheDocument();
+    expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
     expect(within(panel('Account details')).getByText(PROFILE.email)).toBeInTheDocument();
     expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Retained source data');
