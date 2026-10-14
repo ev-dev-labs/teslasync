@@ -675,6 +675,30 @@ describe('StatisticsPage', () => {
     expect(within(averages).getByText('$0.50')).toBeInTheDocument();
   });
 
+  it.each(['km', 'mi'] as const)('discloses the existing CO₂ estimate in the occurrence and details without recalculating mass in %s', async length => {
+    unitState.length = length;
+    renderPage();
+
+    const totals = screen.getByTestId('statistics-totals-brief');
+    await within(totals).findByText('50.00 kg');
+    const co2 = totals.querySelector('[data-operational-metric="statistics-co2"]');
+    expect(co2).toHaveTextContent('CO₂ saved');
+    expect(co2).toHaveTextContent('Estimated CO₂ savings, not measured emissions.');
+    expect(co2).toHaveTextContent('completed-drive distance in kilometres × 0.120 kg CO₂/km');
+    expect(co2).toHaveTextContent('fixed ICE baseline and assuming zero EV emissions');
+    expect(co2).toHaveTextContent('Grid emissions vary and are not deducted.');
+    // The returned fixture is 50 kg, not 500 km × 0.120 = 60 kg.
+    expect(within(totals).queryByText('60.00 kg')).not.toBeInTheDocument();
+    const calls = periodStatsCallCount();
+    fireEvent.click(within(totals).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog');
+    expect(within(drawer).getByText('50.00 kg')).toBeInTheDocument();
+    expect(within(drawer).getByText('Estimated CO₂ savings, not measured emissions.')).toBeInTheDocument();
+    expect(within(drawer).getByText(/Grid emissions vary and are not deducted/)).toBeInTheDocument();
+    expect(within(drawer).getByText('Period statistics; CO₂ is a distance-based estimate with a fixed ICE baseline, excluding grid emissions.')).toBeInTheDocument();
+    expect(periodStatsCallCount()).toBe(calls);
+  });
+
   it('shows loading skeletons while the period-stats query is pending', async () => {
     periodStatsHandler = () => new Promise(() => {}); // never resolves
 

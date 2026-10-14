@@ -34,12 +34,15 @@ export function StatisticsPeriodBrief({
       display: { formatter: raw => ({ value: fmtInt(raw), unit: '' }) } },
     { metricId: 'energy', occurrenceId: 'statistics-total-energy', label: t('statistics.totalEnergy', 'Total energy'),
       rawValue: scaleMeasurement(stats?.energy_used, 1000),
+      context: t('statistics.brief.chargingEnergyNumerator', 'Charging-session energy added, not measured drive energy used; numerator of the efficiency proxy.'),
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kWh' }) } },
     { metricId: 'currency', occurrenceId: 'statistics-total-cost', label: t('statistics.totalCost', 'Total cost'),
       rawValue: stats?.total_cost ?? null,
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) } },
     { metricId: 'mass', occurrenceId: 'statistics-co2', label: t('statistics.co2Saved', 'CO₂ saved'),
       rawValue: stats?.co2_saved ?? null,
+      description: t('statistics.brief.co2Estimate', 'Estimated CO₂ savings, not measured emissions.'),
+      context: t('statistics.brief.co2Method', 'Period-statistics estimate: completed-drive distance in kilometres × 0.120 kg CO₂/km, using a fixed ICE baseline and assuming zero EV emissions. Grid emissions vary and are not deducted.'),
       display: { formatter: raw => ({ value: fmtNumber(raw), unit: 'kg' }) } },
   ];
   const averages: StatMetric[] = [
@@ -48,6 +51,7 @@ export function StatisticsPeriodBrief({
       display: { formatter: raw => ({ value: fmtNumber(fromKm(raw / 1000)), unit: distanceUnit }) } },
     { metricId: 'efficiency', occurrenceId: 'statistics-average-efficiency', label: t('statistics.avgEfficiency', 'Avg efficiency'),
       rawValue: scaleMeasurement(stats?.avg_efficiency, 1 / 1000),
+      context: t('statistics.brief.chargingEfficiencyProxy', 'Charging-energy/distance proxy: charging-session energy added divided by completed-drive distance, not measured driving efficiency.'),
       display: { formatter: raw => ({ value: fmtNumber(whPerKmToDisplay(raw * 1000)), unit: efficiencyUnit }) } },
     { metricId: 'rate', occurrenceId: 'statistics-cost-per-km', label: t('statistics.costPerKm', 'Cost per km'),
       rawValue: costPerKm,
@@ -68,7 +72,9 @@ export function StatisticsPeriodBrief({
     provenance: t('statistics.brief.periodSource', 'Period statistics'),
   };
   return <div className="space-y-3 sm:space-y-4">
-    <OperationalBrief {...metadata} title={t('statistics.title', 'Statistics')} metrics={totalMetrics} testId="statistics-totals-brief" />
+    <OperationalBrief {...metadata} title={t('statistics.title', 'Statistics')} metrics={totalMetrics}
+      provenance={t('statistics.brief.totalsSource', 'Period statistics; CO₂ is a distance-based estimate with a fixed ICE baseline, excluding grid emissions.')}
+      testId="statistics-totals-brief" />
     <OperationalBrief {...metadata} title={t('statistics.averages', 'Averages')} metrics={averageMetrics} testId="statistics-averages-brief" />
     <StatisticsSource hasData={stats != null} loading={loading} error={error} onRetry={onRetry}
       skeleton={null}

@@ -13630,6 +13630,9 @@
     "brief": {
       "loading": "Loading statistics",
       "periodSource": "Period statistics",
+      "co2Estimate": "Estimated CO₂ savings, not measured emissions.",
+      "co2Method": "Period-statistics estimate: completed-drive distance in kilometres × 0.120 kg CO₂/km, using a fixed ICE baseline and assuming zero EV emissions. Grid emissions vary and are not deducted.",
+      "totalsSource": "Period statistics; CO₂ is a distance-based estimate with a fixed ICE baseline, excluding grid emissions.",
       "batteryTitle": "Battery estimate evidence",
       "batteryDescription": "Capacity, annual degradation rate, cycle count and source-reported age retain their distinct units.",
       "retained": "Retained statistics",
