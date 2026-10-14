@@ -13,6 +13,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const translations = vi.hoisted(() => ({} as Record<string, string>));
+
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
     if (!vars) return str;
@@ -23,6 +25,7 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    if (translations[key] !== undefined) return translations[key];
     if (typeof second === 'string') {
       return interpolate(second, third as Record<string, unknown> | undefined);
     }
@@ -64,7 +67,7 @@ import {
 } from '@/api/hooks/useOwnership';
 import WarrantyCommandPage from './WarrantyCommandPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { Warranty, WarrantyCoverage, WarrantyOverview } from '@/types/ownership';
+import type { ClaimStatus, Warranty, WarrantyCoverage, WarrantyKind, WarrantyOverview } from '@/types/ownership';
 import { formatDateTime } from '@/lib/dateFormat';
 import * as settingsHook from '@/hooks/useSettings';
 import * as timezoneHook from '@/lib/timezone';
@@ -161,13 +164,15 @@ function card(title: string): HTMLElement {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const page = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <WarrantyCommandPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const view = render(page());
+  return { ...view, rerenderPage: () => view.rerender(page()) };
 }
 
 /** The Remove button in the table row showing the given coverage label. */
@@ -178,6 +183,7 @@ function removeButton(label: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  for (const key of Object.keys(translations)) delete translations[key];
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -265,7 +271,128 @@ describe('WarrantyCommandPage — saved date preferences', () => {
   });
 });
 
+describe('WarrantyCommandPage — enum display mappings', () => {
+  it.each<[WarrantyKind, string]>([
+    ['basic', 'Basic'], ['drivetrain', 'Drivetrain'], ['battery', 'Battery'],
+    ['corrosion', 'Corrosion'], ['tires', 'Tires'], ['aftermarket', 'Aftermarket'],
+    ['extended', 'Extended'],
+  ])('labels %s coverage consistently while submitting its wire value', (kind, label) => {
+    const warranty = makeWarranty({ kind });
+    const overview = makeOverview();
+    overview.coverages[0].warranty = warranty;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    mockWarranties.mockReturnValue(makeQuery({ items: [warranty] }));
+    renderPage();
+
+    expect(card('Recorded coverages')).toHaveTextContent(`Tesla · ${label}`);
+    expect(card('Coverage burn-down')).toHaveTextContent(`Tesla · ${label}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Add coverage' }));
+    const select = screen.getByRole('combobox', { name: 'Coverage type' });
+    expect(within(select).getByRole('option', { name: label })).toHaveValue(kind);
+    fireEvent.change(select, { target: { value: kind } });
+    fireEvent.submit(screen.getByRole('button', { name: 'Save coverage' }).closest('form')!);
+    expect(mockCreate().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ kind }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+    expect(warranty.kind).toBe(kind);
+  });
+
+  it.each([
+    ['time', 'Time', 'active', 'Active', 'critical', 'Critical'],
+    ['distance', 'Distance', 'expiring', 'Expiring', 'high', 'High'],
+    ['capacity', 'Capacity', 'expired', 'Expired', 'medium', 'Medium'],
+    ['time', 'Time', 'active', 'Active', 'low', 'Low'],
+  ])('labels %s / %s / %s without rewriting source enums', (binding, bindingLabel, status, statusLabel, severity, severityLabel) => {
+    const overview = makeOverview();
+    const coverage = overview.coverages[0];
+    coverage.binding_limit = binding;
+    coverage.status = status;
+    coverage.readiness = [{ code: 'evidence', label: 'Recorded evidence', detail: 'Available', severity, satisfied: true }];
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+
+    expect(within(card('Coverage burn-down')).getByText(bindingLabel, { exact: true })).toBeInTheDocument();
+    expect(within(card('Coverage burn-down')).getByText(statusLabel, { exact: true })).toBeInTheDocument();
+    expect(within(card('Claim readiness checklist')).getByText(severityLabel, { exact: true })).toBeInTheDocument();
+    expect(coverage.binding_limit).toBe(binding);
+    expect(coverage.status).toBe(status);
+    expect(coverage.readiness[0].severity).toBe(severity);
+    expect(card('Claim ledger')).toHaveTextContent('$123.45');
+    expect(card('Claim ledger')).toHaveTextContent('Full claim evidence retained.');
+  });
+
+  it('uses translations for the same recognized tokens across their display surfaces', () => {
+    translations['ownership.warranty.kind.battery'] = 'Batterie';
+    translations['ownership.warranty.binding.time'] = 'Temps';
+    translations['ownership.warranty.severity.high'] = 'Élevée';
+    translations['ownership.warranty.status.expiring'] = 'Expire bientôt';
+    const overview = makeOverview();
+    overview.coverages[0].status = 'expiring';
+    overview.coverages[0].readiness = [
+      { code: 'evidence', label: 'Recorded evidence', detail: 'Available', severity: 'high', satisfied: true },
+    ];
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+    expect(card('Recorded coverages')).toHaveTextContent('Tesla · Batterie');
+    expect(card('Coverage burn-down')).toHaveTextContent('Tesla · Batterie');
+    expect(card('Coverage burn-down')).toHaveTextContent('Temps');
+    expect(card('Coverage burn-down')).toHaveTextContent('Expire bientôt');
+    expect(card('Claim readiness checklist')).toHaveTextContent('Élevée');
+    fireEvent.click(screen.getByRole('button', { name: 'Add coverage' }));
+    expect(within(screen.getByRole('combobox', { name: 'Coverage type' }))
+      .getByRole('option', { name: 'Batterie' })).toHaveValue('battery');
+  });
+
+  it.each(['Future_TOKEN_v2', 'constructor'])('preserves unknown %s tokens verbatim without crashing or mutating records', (token) => {
+    const overview = makeOverview();
+    const coverage = overview.coverages[0];
+    const warranty = { ...coverage.warranty, kind: token };
+    const futureCoverage = {
+      ...coverage, warranty, status: token, binding_limit: token,
+      readiness: [{ code: 'future', label: 'Future evidence', detail: 'Retained detail', severity: token, satisfied: false }],
+      claims: [{ ...coverage.claims[0], status: token }],
+    };
+    mockOverview.mockReturnValue(makeQuery({ ...overview, coverages: [futureCoverage] }));
+    mockWarranties.mockReturnValue(makeQuery({ items: [warranty] }));
+    renderPage();
+
+    expect(card('Recorded coverages')).toHaveTextContent(`Tesla · ${token}`);
+    expect(within(card('Coverage burn-down')).getAllByText(token, { exact: true })).toHaveLength(2);
+    expect(within(card('Claim readiness checklist')).getByText(token, { exact: true })).toBeInTheDocument();
+    expect(within(card('Claim ledger')).getByText(token, { exact: true })).toBeInTheDocument();
+    expect(card('Claim ledger')).toHaveTextContent('$123.45');
+    expect(card('Claim ledger')).toHaveTextContent('Full claim evidence retained.');
+    expect(futureCoverage.claims[0].status).toBe(token);
+    expect(warranty.kind).toBe(token);
+    expect(mockClaim().mutate).not.toHaveBeenCalled();
+  });
+});
+
 describe('WarrantyCommandPage — confirm-gated delete', () => {
+  it.each<[ClaimStatus, string]>([
+    ['draft', 'Brouillon'],
+    ['submitted', 'Soumise'],
+    ['approved', 'Approuvée'],
+    ['denied', 'Refusée'],
+    ['closed', 'Clôturée'],
+  ])('renders the translated recorded %s claim status without implying verification', (status, label) => {
+    translations[`ownership.warranty.status.${status}`] = label;
+    const overview = makeOverview();
+    overview.coverages[0].claims[0].status = status;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    renderPage();
+
+    const row = within(card('Claim ledger')).getByText('Observed warranty claim').closest('tr')!;
+    expect(within(row).getByText(label)).toBeInTheDocument();
+    expect(within(row).queryByText(status, { exact: true })).not.toBeInTheDocument();
+    expect(row).not.toHaveTextContent(/verified/i);
+    expect(row).toHaveTextContent('$123.45');
+    expect(row).toHaveTextContent('Full claim evidence retained.');
+    expect(overview.coverages[0].claims[0].status).toBe(status);
+    expect(mockClaim().mutate).not.toHaveBeenCalled();
+  });
+
   it('uses the real coverage brief while keeping contract provenance, projected expiry and claim amounts', () => {
     mockOverview.mockReturnValue(makeQuery(makeOverview()));
     renderPage();
@@ -378,6 +505,79 @@ describe('WarrantyCommandPage — confirm-gated delete', () => {
 
 
 describe('WarrantyCommandPage — restrained shared adoption', () => {
+  it('offers coverage entry only when the overview confirms no recorded coverage', () => {
+    mockOverview.mockReturnValue(makeQuery({ ...makeOverview(), coverages: [] }));
+    mockWarranties.mockReturnValue(makeQuery({ items: [] }));
+    renderPage();
+
+    const checklist = within(card('Claim readiness checklist'));
+    expect(checklist.getByText('No coverage recorded, so nothing to evaluate.')).toBeInTheDocument();
+    expect(checklist.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(checklist.getByRole('button', { name: 'Add coverage' }));
+    expect(screen.getByLabelText('Coverage start')).toBeInTheDocument();
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+  });
+
+  it.each([{ readiness: [] }, { readiness: null }])('keeps recorded coverage with $readiness checks distinct from no coverage', ({ readiness }) => {
+    const overview = makeOverview();
+    const refetch = vi.fn();
+    mockOverview.mockReturnValue({
+      ...makeQuery({
+        ...overview,
+        coverages: [{ ...overview.coverages[0], readiness }],
+      }),
+      refetch,
+    });
+    renderPage();
+
+    const checklist = within(card('Claim readiness checklist'));
+    expect(checklist.queryByText('No coverage recorded, so nothing to evaluate.')).not.toBeInTheDocument();
+    expect(checklist.getByText('No supported data is available yet.')).toBeInTheDocument();
+    expect(checklist.queryByRole('button', { name: 'Add coverage' })).not.toBeInTheDocument();
+    expect(card('Coverage burn-down')).toHaveTextContent('Battery Shield');
+    fireEvent.click(checklist.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('does not infer no coverage from an unavailable coverage assessment', () => {
+    const refetch = vi.fn();
+    mockOverview.mockReturnValue({
+      ...makeQuery(undefined), error: new Error('assessment unavailable'), refetch,
+    });
+    renderPage();
+
+    const checklist = within(card('Claim readiness checklist'));
+    expect(checklist.queryByText('No coverage recorded, so nothing to evaluate.')).not.toBeInTheDocument();
+    expect(checklist.queryByRole('button', { name: 'Add coverage' })).not.toBeInTheDocument();
+    fireEvent.click(checklist.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+    expect(card('Recorded coverages')).toHaveTextContent('Battery Shield');
+  });
+
+  it.each([{ coverages: [] }, { coverages: null }])('does not infer no coverage from $coverages assessments when the register has coverage', ({ coverages }) => {
+    const refetch = vi.fn();
+    mockOverview.mockReturnValue({ ...makeQuery({ ...makeOverview(), coverages }), refetch });
+    renderPage();
+
+    const checklist = within(card('Claim readiness checklist'));
+    expect(checklist.getByText('No supported data is available yet.')).toBeInTheDocument();
+    expect(checklist.queryByText('No coverage recorded, so nothing to evaluate.')).not.toBeInTheDocument();
+    fireEvent.click(checklist.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledOnce();
+  });
+
+  it('keeps initial readiness loading distinct from no coverage without offering an assessment retry', () => {
+    mockOverview.mockReturnValue({ ...makeQuery(undefined), isLoading: true, isPending: true });
+    renderPage();
+
+    const checklist = within(card('Claim readiness checklist'));
+    expect(checklist.queryByText('No coverage recorded, so nothing to evaluate.')).not.toBeInTheDocument();
+    expect(checklist.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(checklist.queryByRole('button', { name: 'Add coverage' })).not.toBeInTheDocument();
+    expect(card('Recorded coverages')).toHaveTextContent('Battery Shield');
+  });
+
   it('keeps every section mounted for authoritative empty sources', () => {
     mockOverview.mockReturnValue(makeQuery({ ...makeOverview(), coverages: [] }));
     mockWarranties.mockReturnValue(makeQuery({ items: [] }));
@@ -428,6 +628,57 @@ describe('WarrantyCommandPage — restrained shared adoption', () => {
     renderPage();
     expect(within(card('Claim readiness checklist')).getByRole('img', { name: 'Yes' })).toBeInTheDocument();
     expect(within(card('Claim readiness checklist')).getByRole('img', { name: 'No' })).toBeInTheDocument();
+  });
+
+  it('keeps readiness rows identified by warranty ID and check code through duplicate labels, renaming and reordering', () => {
+    const overview = makeOverview();
+    const first = overview.coverages[0];
+    first.readiness = [
+      { code: 'evidence', label: 'First contract evidence', detail: 'Available', severity: 'low', satisfied: true },
+      { code: 'receipt', label: 'First contract receipt', detail: 'Unavailable', severity: 'high', satisfied: false },
+    ];
+    const second: WarrantyCoverage = {
+      ...first,
+      warranty: makeWarranty({ id: 2, label: first.warranty.label }),
+      readiness: [
+        { code: 'evidence', label: 'Second contract evidence', detail: 'Unavailable', severity: 'critical', satisfied: false },
+      ],
+      claims: [],
+    };
+    overview.coverages = [first, second];
+    mockOverview.mockReturnValue(makeQuery(overview));
+    const view = renderPage();
+    const checklist = () => within(card('Claim readiness checklist'));
+    const firstRow = checklist().getByText('First contract evidence').closest('tr')!;
+    const receiptRow = checklist().getByText('First contract receipt').closest('tr')!;
+    const secondRow = checklist().getByText('Second contract evidence').closest('tr')!;
+
+    expect(firstRow).not.toBe(secondRow);
+    expect(within(firstRow).getByRole('img', { name: 'Yes' })).toBeInTheDocument();
+    expect(within(secondRow).getByRole('img', { name: 'No' })).toBeInTheDocument();
+    expect(checklist().getAllByText('Battery Shield')).toHaveLength(3);
+
+    mockOverview.mockReturnValue(makeQuery({
+      ...overview,
+      coverages: [
+        second,
+        {
+          ...first,
+          warranty: { ...first.warranty, label: 'Renamed contract' },
+          readiness: [...first.readiness].reverse(),
+        },
+      ],
+    }));
+    view.rerenderPage();
+
+    expect(checklist().getByText('First contract evidence').closest('tr')).toBe(firstRow);
+    expect(checklist().getByText('First contract receipt').closest('tr')).toBe(receiptRow);
+    expect(checklist().getByText('Second contract evidence').closest('tr')).toBe(secondRow);
+    expect(firstRow).toHaveTextContent('Renamed contract');
+    expect(receiptRow).toHaveTextContent('Renamed contract');
+    expect(secondRow).toHaveTextContent('Battery Shield');
+    expect(first.warranty.label).toBe('Battery Shield');
+    expect(mockClaim().mutate).not.toHaveBeenCalled();
   });
 
   it('keeps initial overview loading independent of the ready coverage register', () => {

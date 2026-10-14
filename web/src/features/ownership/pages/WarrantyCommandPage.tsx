@@ -72,6 +72,39 @@ const CLAIM_STATUS_LABELS: Record<ClaimStatus, (t: TFunction) => string> = {
   closed: (t) => t('ownership.warranty.status.closed', 'Closed'),
 };
 
+const KIND_LABELS: Record<WarrantyKind, (t: TFunction) => string> = {
+  basic: (t) => t('ownership.warranty.kind.basic', 'Basic'),
+  drivetrain: (t) => t('ownership.warranty.kind.drivetrain', 'Drivetrain'),
+  battery: (t) => t('ownership.warranty.kind.battery', 'Battery'),
+  corrosion: (t) => t('ownership.warranty.kind.corrosion', 'Corrosion'),
+  tires: (t) => t('ownership.warranty.kind.tires', 'Tires'),
+  aftermarket: (t) => t('ownership.warranty.kind.aftermarket', 'Aftermarket'),
+  extended: (t) => t('ownership.warranty.kind.extended', 'Extended'),
+};
+
+const BINDING_LABELS = {
+  time: (t: TFunction) => t('ownership.warranty.binding.time', 'Time'),
+  distance: (t: TFunction) => t('ownership.warranty.binding.distance', 'Distance'),
+  capacity: (t: TFunction) => t('ownership.warranty.binding.capacity', 'Capacity'),
+};
+
+const SEVERITY_LABELS = {
+  critical: (t: TFunction) => t('ownership.warranty.severity.critical', 'Critical'),
+  high: (t: TFunction) => t('ownership.warranty.severity.high', 'High'),
+  medium: (t: TFunction) => t('ownership.warranty.severity.medium', 'Medium'),
+  low: (t: TFunction) => t('ownership.warranty.severity.low', 'Low'),
+};
+
+const COVERAGE_STATUS_LABELS = {
+  active: (t: TFunction) => t('ownership.verdict.active', 'Active'),
+  expiring: (t: TFunction) => t('ownership.warranty.status.expiring', 'Expiring'),
+  expired: (t: TFunction) => t('ownership.verdict.expired', 'Expired'),
+};
+
+function enumLabel(value: string, labels: Record<string, (t: TFunction) => string>, t: TFunction): string {
+  return Object.prototype.hasOwnProperty.call(labels, value) ? labels[value](t) : value;
+}
+
 function severityTone(severity: string): 'danger' | 'warning' | 'neutral' {
   if (severity === 'critical') return 'danger';
   if (severity === 'high') return 'warning';
@@ -161,12 +194,14 @@ export default function WarrantyCommandPage() {
     [warrantiesQuery.data?.items],
   );
   const currency = overview?.currency ?? draft.currency;
+  const noCoverage = Array.isArray(overview?.coverages) && coverages.length === 0 && warranties.length === 0;
 
   const allChecks = useMemo(
     () =>
       coverages.flatMap((coverage) =>
         (coverage.readiness ?? []).map((check) => ({
           ...check,
+          warrantyId: coverage.warranty.id,
           warrantyLabel: coverage.warranty.label,
         })),
       ),
@@ -220,7 +255,7 @@ export default function WarrantyCommandPage() {
     );
   };
 
-  const checkColumns: Column<ReadinessCheck & { warrantyLabel: string }>[] = [
+  const checkColumns: Column<ReadinessCheck & { warrantyId: number; warrantyLabel: string }>[] = [
     {
       key: 'state',
       header: t('ownership.warranty.check.state', 'State'),
@@ -257,7 +292,7 @@ export default function WarrantyCommandPage() {
     {
       key: 'severity',
       header: t('ownership.warranty.check.severity', 'If unmet'),
-      render: (row) => <Badge variant={severityTone(row.severity)}>{row.severity}</Badge>,
+      render: (row) => <Badge variant={severityTone(row.severity)}>{enumLabel(row.severity, SEVERITY_LABELS, t)}</Badge>,
     },
   ];
 
@@ -282,7 +317,8 @@ export default function WarrantyCommandPage() {
       key: 'status',
       header: t('ownership.warranty.claim.status', 'Status'),
       filterValue: (row) => row.status,
-      render: (row) => <VerdictBadge value={row.status} />,
+      filterValueLabel: (_value, row) => enumLabel(row.status, CLAIM_STATUS_LABELS, t),
+      render: (row) => <VerdictBadge value={row.status} label={enumLabel(row.status, CLAIM_STATUS_LABELS, t)} />,
     },
     {
       key: 'opened',
@@ -331,7 +367,7 @@ export default function WarrantyCommandPage() {
             {row.label}
           </Text>
           <Text as="p" variant="caption">
-            {row.provider} · {row.kind}
+            {row.provider} · {enumLabel(row.kind, KIND_LABELS, t)}
           </Text>
         </div>
       ),
@@ -424,10 +460,10 @@ export default function WarrantyCommandPage() {
             <Text as="h3" variant="label">
               {coverage.warranty.label}
             </Text>
-            <VerdictBadge value={coverage.status} />
+            <VerdictBadge value={coverage.status} label={enumLabel(coverage.status, COVERAGE_STATUS_LABELS, t)} />
           </div>
           <Text as="p" variant="caption">
-            {coverage.warranty.provider} · {coverage.warranty.kind}
+            {coverage.warranty.provider} · {enumLabel(coverage.warranty.kind, KIND_LABELS, t)}
           </Text>
         </div>
         <div className="text-end">
@@ -470,7 +506,7 @@ export default function WarrantyCommandPage() {
           </Text>
           <p className="mt-1">
             <Badge variant={coverage.binding_limit === 'distance' ? 'warning' : 'info'}>
-              {coverage.binding_limit}
+              {enumLabel(coverage.binding_limit, BINDING_LABELS, t)}
             </Badge>
           </p>
           <Text as="p" variant="caption">
@@ -621,16 +657,28 @@ export default function WarrantyCommandPage() {
             'Each requirement is evaluated against data already on this server, so you know what a reviewer would find.',
           )}
           empty={allChecks.length === 0}
-          emptyMessage={t(
-            'ownership.warranty.readiness.empty',
-            'No coverage recorded, so nothing to evaluate.',
-          )}
+          emptyMessage={noCoverage
+            ? t('ownership.warranty.readiness.empty', 'No coverage recorded, so nothing to evaluate.')
+            : t('ownership.source.empty', 'No supported data is available yet.')}
+          actions={vehicleId != null && overview && allChecks.length === 0 ? (
+            noCoverage ? (
+              <Button variant="secondary" size="sm" onClick={() => setFormOpen(true)}>
+                {t('ownership.warranty.list.add', 'Add coverage')}
+              </Button>
+            ) : !overviewQuery.error ? (
+              <Button variant="secondary" size="sm"
+                disabled={overviewQuery.isFetching || overviewQuery.fetchStatus === 'paused'}
+                onClick={() => { void overviewQuery.refetch(); }}>
+                {t('common.retry', 'Retry')}
+              </Button>
+            ) : null
+          ) : undefined}
         >
           <DataTable
             columns={checkColumns}
             mobileColumns={['label', 'state', 'severity']}
             data={allChecks}
-            keyExtractor={(row) => `${row.warrantyLabel}-${row.code}`}
+            keyExtractor={(row) => `${row.warrantyId}-${row.code}`}
             tableId="ownership-warranty-readiness"
           />
         </OwnershipPanel>
@@ -662,7 +710,7 @@ export default function WarrantyCommandPage() {
               <Select
                 label={t('ownership.warranty.form.kind', 'Coverage type')}
                 value={draft.kind}
-                options={KINDS.map((kind) => ({ value: kind, label: kind }))}
+                options={KINDS.map((kind) => ({ value: kind, label: enumLabel(kind, KIND_LABELS, t) }))}
                 onChange={(event) =>
                   setDraft((current) => ({ ...current, kind: event.target.value as WarrantyKind }))
                 }
