@@ -6,6 +6,7 @@ import { buildCarbonIntelligence } from '../../lib/carbonIntelligence';
 import type { CarbonQueryState } from '../carbon-intelligence/types';
 import { useCarbonDisplay } from '../carbon-intelligence/useCarbonDisplay';
 import { CarbonDirectoryBrief } from './CarbonDirectoryBrief';
+import { CarbonLifetimeBrief } from './CarbonLifetimeBrief';
 
 const originalPrecision = getGlobalPrecision();
 const emptyMessage = 'No valid hourly intensity rows are available.';
@@ -20,7 +21,9 @@ function source(overrides: Partial<CarbonQueryState> = {}): CarbonQueryState {
 }
 
 // Real analysis, display hook, Brief, source wrapper and Table: no rendered UI stubs.
-function DirectoryFixture({ intensity, state }: { intensity: unknown; state: CarbonQueryState }) {
+function DirectoryFixture({ intensity, state, withNeighbor = false }: {
+  intensity: unknown; state: CarbonQueryState; withNeighbor?: boolean;
+}) {
   const display = useCarbonDisplay();
   const analysis = buildCarbonIntelligence({
     intensity, periodSummary: undefined, lifetimeSummary: undefined, recommendation: undefined,
@@ -29,8 +32,11 @@ function DirectoryFixture({ intensity, state }: { intensity: unknown; state: Car
       startInstant: '2026-10-01T00:00:00Z', endInstantExclusive: '2026-10-14T00:00:00Z', timezone: 'UTC',
     },
   });
-  return <CarbonDirectoryBrief analysis={analysis} display={display}
-    states={{ intensity: state, period: source(), lifetime: source(), recommendation: source() }} />;
+  const states = { intensity: state, period: source(), lifetime: source(), recommendation: source() };
+  return <>
+    <CarbonDirectoryBrief analysis={analysis} display={display} states={states} />
+    {withNeighbor && <CarbonLifetimeBrief analysis={analysis} display={display} states={states} />}
+  </>;
 }
 
 function show(intensity: unknown, state = source()) {
@@ -60,6 +66,7 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     expect(within(section).getByText('Rows returned').nextElementSibling).toHaveTextContent('0.00');
     expect(within(section).getByText('24 expected clock-hours')).toBeVisible();
     expect(within(section).queryByText(invalidMessage)).not.toBeInTheDocument();
+    expect(within(section).queryByText('Valid unique hours')).not.toBeInTheDocument();
     expect(within(section).queryByRole('table')).not.toBeInTheDocument();
     expect(metricValues(section)).toEqual(['Minimum', 'Maximum', 'Mean', 'Median', 'Observed span']
       .map(label => ({ label, value: '—', state: 'missing' })));
@@ -70,11 +77,13 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     { name: 'invalid hours', curve: [{ hour_of_day: 24, g_co2_per_kwh: 100 }], hourRule: true, intensityRule: false },
     { name: 'invalid intensities', curve: [{ hour_of_day: 2, g_co2_per_kwh: -1 }, { hour_of_day: 3, g_co2_per_kwh: Infinity }], hourRule: false, intensityRule: true },
     { name: 'mixed invalid fields', curve: [{ hour_of_day: 0.5, g_co2_per_kwh: '100' }], hourRule: true, intensityRule: true },
+    { name: 'null rows', curve: [null], hourRule: true, intensityRule: true },
   ])('explains no valid ranked rows from $name without fabricating a recovery action', ({ curve, hourRule, intensityRule }) => {
     const section = show({ curve });
     expect(within(section).getByText(emptyMessage)).toBeVisible();
     expect(within(section).getByText(invalidMessage)).toBeVisible();
     expect(within(section).getByText('Rows returned').nextElementSibling).toHaveTextContent(curve.length === 2 ? '2.00' : '1.00');
+    expect(within(section).getByText('Valid unique hours').nextElementSibling).toHaveTextContent('0.00');
     expect(Boolean(within(section).queryByText('Required integer 0–23'))).toBe(hourRule);
     expect(Boolean(within(section).queryByText('Required finite non-negative value'))).toBe(intensityRule);
     expect(within(section).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
@@ -173,5 +182,85 @@ describe('CarbonDirectoryBrief local directory contract', () => {
     expect(metricValues(section).map(metric => metric.value)).toEqual([
       '123.5 g CO₂/kWh', '123.5 g CO₂/kWh', '123.5 g CO₂/kWh', '123.5 g CO₂/kWh', '0.0 g CO₂/kWh',
     ]);
+  });
+
+  it.each([
+    { name: 'undefined response', intensity: undefined },
+    { name: 'null response', intensity: null },
+    { name: 'missing curve', intensity: {} },
+    { name: 'null curve', intensity: { curve: null } },
+    { name: 'non-array curve', intensity: { curve: {} } },
+  ])('keeps $name unknown rather than reporting authoritative zero returned rows', ({ intensity }) => {
+    const section = show(intensity);
+    expect(within(section).getByText('Evidence unavailable')).toBeVisible();
+    expect(within(section).queryByText(emptyMessage)).not.toBeInTheDocument();
+    expect(within(section).queryByText('Rows returned')).not.toBeInTheDocument();
+    expect(within(section).queryByText('Valid unique hours')).not.toBeInTheDocument();
+    expect(within(section).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
+    expect(within(section).queryByText(invalidMessage)).not.toBeInTheDocument();
+    expect(within(section).queryByRole('table')).not.toBeInTheDocument();
+    expect(metricValues(section).map(metric => [metric.value, metric.state])).toEqual(Array(5).fill(['—', 'missing']));
+    expect(within(section).getAllByRole('button').map(button => button.textContent)).toEqual(['Review details']);
+  });
+
+  it.each([
+    { name: 'failed', refreshError: new Error('fixture retained failure'), refreshPaused: false, isFetching: false },
+    { name: 'paused', refreshError: null, refreshPaused: true, isFetching: false },
+    { name: 'in-flight', refreshError: null, refreshPaused: false, isFetching: true },
+  ])('keeps filtered-invalid emptiness and independent lifetime content through a $name refresh', ({
+    refreshError, refreshPaused, isFetching,
+  }) => {
+    const onRetry = vi.fn();
+    render(<MemoryRouter><DirectoryFixture intensity={{ curve: [{ hour_of_day: 24, g_co2_per_kwh: 0 }] }}
+      state={source({ refreshError, refreshPaused, isFetching, onRetry })} withNeighbor /></MemoryRouter>);
+    const section = screen.getByTestId('carbon-hourly-directory');
+    const neighbor = screen.getByTestId('carbon-lifetime-context');
+    expect(within(section).getByText(emptyMessage)).toBeVisible();
+    expect(within(section).getByText(invalidMessage)).toBeVisible();
+    expect(within(section).getByText('Rows returned').nextElementSibling).toHaveTextContent('1.00');
+    expect(within(section).getByText('Valid unique hours').nextElementSibling).toHaveTextContent('0.00');
+    expect(within(section).queryByText('24 expected clock-hours')).not.toBeInTheDocument();
+    expect(within(neighbor).getByRole('heading', { name: 'Lifetime context and period share' })).toBeVisible();
+    expect(within(neighbor).getByText('Full vehicle history')).toBeVisible();
+    expect(metricValues(neighbor)).toHaveLength(4);
+    expect(metricValues(neighbor).slice(0, 3).map(metric => [metric.value, metric.state]))
+      .toEqual(Array(3).fill(['—', 'missing']));
+    expect(within(neighbor).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    if (refreshError || refreshPaused) {
+      expect(within(section).getByText(refreshError
+        ? 'Refresh failed; the most recently loaded evidence remains visible.'
+        : 'The network is unavailable; cached evidence remains visible while refresh is paused.')).toBeVisible();
+      fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
+      expect(onRetry).toHaveBeenCalledOnce();
+    } else {
+      expect(within(section).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    }
+  });
+
+  it('keeps an independent lifetime section visible during fatal directory failure', () => {
+    const onRetry = vi.fn();
+    render(<MemoryRouter><DirectoryFixture intensity={undefined}
+      state={source({ hasData: false, isResolved: false, error: new Error('fixture fatal failure'), onRetry })}
+      withNeighbor /></MemoryRouter>);
+    const section = screen.getByTestId('carbon-hourly-directory');
+    const neighbor = screen.getByTestId('carbon-lifetime-context');
+    expect(within(section).queryByText(emptyMessage)).not.toBeInTheDocument();
+    expect(within(neighbor).getByRole('heading', { name: 'Lifetime context and period share' })).toBeVisible();
+    expect(within(neighbor).queryByText('This source is unavailable. Retry it from the source and scope ledger.')).not.toBeInTheDocument();
+    fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledOnce();
+  });
+
+  it('replaces the local invalid explanation with a real zero row after source recovery', () => {
+    const view = render(<MemoryRouter><DirectoryFixture
+      intensity={{ curve: [{ hour_of_day: 24, g_co2_per_kwh: 0 }] }} state={source()} /></MemoryRouter>);
+    expect(screen.getByText(invalidMessage)).toBeVisible();
+    view.rerender(<MemoryRouter><DirectoryFixture
+      intensity={{ curve: [{ hour_of_day: 0, g_co2_per_kwh: 0 }] }} state={source()} /></MemoryRouter>);
+    const section = screen.getByTestId('carbon-hourly-directory');
+    expect(within(section).queryByText(emptyMessage)).not.toBeInTheDocument();
+    expect(within(section).queryByText(invalidMessage)).not.toBeInTheDocument();
+    expect(within(section).getByRole('row')).toHaveTextContent('Rank 1 · 00:000.00 g CO₂/kWhFlat curve');
+    expect(metricValues(section).map(metric => [metric.value, metric.state])).toEqual(Array(5).fill(['0.00 g CO₂/kWh', 'value']));
   });
 });
