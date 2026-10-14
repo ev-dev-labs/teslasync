@@ -80,6 +80,31 @@ describe('FleetComparisonPanel', () => {
     cleanup()
   })
 
+  it('uses neutral secondary title ink without changing the saved vehicle palette or bar scale', () => {
+    renderPanel({
+      entries: [
+        makeEntry({ id: 'a', name: 'Alpha', distance: 50, efficiency: 140 }),
+        makeEntry({ id: 'b', name: 'Bravo', distance: 200, efficiency: 160 }),
+      ],
+    })
+
+    const title = screen.getByRole('heading', { name: 'Fleet comparison' })
+    expect(title).toHaveClass('text-[var(--text-secondary)]')
+    expect(title.querySelector('svg')).toHaveClass('text-[var(--text-secondary)]')
+    expect(title.querySelector('svg')).not.toHaveClass('text-cyan-300')
+
+    const items = screen.getAllByRole('listitem')
+    expect(items).toHaveLength(2)
+    for (const [index, value] of [200, 50].entries()) {
+      const bar = within(items[index]).getByRole('progressbar')
+      expect(bar).toHaveAttribute('aria-valuenow', String(value))
+      expect(bar).toHaveAttribute('aria-valuemax', '200')
+      expect(bar.querySelector('[data-metric-fill]')).toHaveStyle({
+        background: `linear-gradient(90deg, ${hoisted.palette[index]}99, ${hoisted.palette[index]})`,
+      })
+    }
+  })
+
   it('renders one row per vehicle sorted by distance (desc) with km + Wh/km labels', () => {
     renderPanel({
       entries: [

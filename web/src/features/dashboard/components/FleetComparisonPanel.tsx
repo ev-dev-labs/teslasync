@@ -74,8 +74,8 @@ export function FleetComparisonPanel({
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)} aria-busy={loading || undefined}>
-      <PanelTitle className="mb-3 flex items-center gap-2">
-        <Car className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+      <PanelTitle className="mb-3 flex items-center gap-2 text-[var(--text-secondary)]">
+        <Car className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('quickStats.fleet.title', 'Fleet comparison')}
       </PanelTitle>
 
