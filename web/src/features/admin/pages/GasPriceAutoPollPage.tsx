@@ -11,10 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { Button, Icon } from '@/components/ui';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { Button, Caption, Icon } from '@/components/ui';
+import { OperationalWriteNotice, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   useGasPriceStatus,
   useGasPriceHistory,
@@ -34,6 +35,7 @@ export default function GasPriceAutoPollPage() {
   const statusQuery = useGasPriceStatus();
   const historyQuery = useGasPriceHistory();
   const pollMut = usePollGasPrice();
+  const { canWrite, writeBlockReason } = useOperationalMode();
   const statusSource = deriveDataState(statusQuery);
   const historySource = deriveDataState(historyQuery);
 
@@ -45,7 +47,9 @@ export default function GasPriceAutoPollPage() {
       className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
       icon={<Icon icon={Zap} />}
       loading={pollMut.isPending}
-      onClick={() => pollMut.mutate()}
+      disabled={!canWrite}
+      title={writeBlockReason ?? undefined}
+      onClick={() => { if (canWrite) pollMut.mutate(); }}
     >
       {t('gas.pollNow', 'Poll now')}
     </Button>
@@ -62,11 +66,17 @@ export default function GasPriceAutoPollPage() {
         { id: 'gas-history', label: t('gas.historyTitle', 'Price history'), query: historyQuery },
       ]}
     >
+      <OperationalWriteNotice />
       <FadeIn>
         <GasPriceBrief source={statusSource} />
       </FadeIn>
 
       <FadeIn delay={0.1}>
+        <Caption className="mb-3">
+          {t('gas.priceTrend', 'Price trend')} / {t('gas.historyTitle', 'Price history')}
+          {': '}
+          {t('archetypes.kpis.windowHint', 'Bounded at {{limit}} newest rows', { limit: 50 })}
+        </Caption>
         <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
           <div className="min-w-0 space-y-3 xl:col-span-2">
             <StaleRefreshWarning state={historySource} label={t('gas.priceTrend', 'Price trend')} />

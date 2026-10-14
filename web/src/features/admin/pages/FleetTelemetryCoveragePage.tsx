@@ -126,7 +126,7 @@ export default function FleetTelemetryCoveragePage({
 
   // Only the first paint (no data yet) shows skeletons; background refetches
   // keep the last snapshot on screen so the layout never jumps.
-  const firstLoad = isLoading && !data
+  const firstLoad = source.status === 'initial'
 
   return (
     <PageLayout
@@ -334,6 +334,10 @@ export default function FleetTelemetryCoveragePage({
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="min-w-0 flex-1">
               <Input
+                label={t(
+                  'coverage.filter.placeholder',
+                  'Filter by field name, destination, or column…',
+                )}
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 placeholder={t(

@@ -99,12 +99,21 @@ const vehicleHook = vi.hoisted(() => ({
   data: [
     { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
     { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
-  ],
+  ] as { id: number; display_name: string; vin: string }[] | undefined,
+  error: null as Error | null,
+  fetchStatus: 'idle' as 'fetching' | 'paused' | 'idle',
+  refetch: vi.fn(),
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({
     data: vehicleHook.data,
-    isLoading: false,
+    error: vehicleHook.error,
+    isError: vehicleHook.error !== null,
+    isSuccess: vehicleHook.data !== undefined && vehicleHook.error === null,
+    isPending: vehicleHook.data === undefined && vehicleHook.error === null,
+    isLoading: vehicleHook.data === undefined && vehicleHook.fetchStatus === 'fetching',
+    fetchStatus: vehicleHook.fetchStatus,
+    refetch: vehicleHook.refetch,
   }),
 }));
 
@@ -195,6 +204,9 @@ beforeEach(() => {
   // reset the xray behaviour so each test starts from a clean slate.
   mockedRequest.mockClear();
   xrayFn.mockReset();
+  vehicleHook.error = null;
+  vehicleHook.fetchStatus = 'idle';
+  vehicleHook.refetch.mockReset();
   vehicleHook.data = [
     { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
     { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
@@ -202,6 +214,77 @@ beforeEach(() => {
 });
 
 describe('IngestXRayPage', () => {
+  it.each(['fetching', 'paused'] as const)(
+    'distinguishes a %s vehicle prerequisite from a successfully empty fleet',
+    (fetchStatus) => {
+      vehicleHook.data = undefined;
+      vehicleHook.fetchStatus = fetchStatus;
+      renderPage();
+      expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
+      expect(screen.getAllByText(fetchStatus === 'paused' ? 'Refresh paused' : 'Loading...').length)
+        .toBeGreaterThan(0);
+      expect(screen.getByText('Field statistics')).toBeInTheDocument();
+      expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+      expect(screen.getByText('Top fields by volume')).toBeInTheDocument();
+      expect(xrayFn).not.toHaveBeenCalled();
+    },
+  );
+
+  it('offers the vehicle prerequisite retry without claiming no selection or hiding sections', () => {
+    vehicleHook.data = undefined;
+    vehicleHook.error = new Error('fleet lookup failed');
+    renderPage();
+    expect(screen.queryByText('Select a vehicle')).not.toBeInTheDocument();
+    expect(screen.getByText('Vehicle registry')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+    expect(vehicleHook.refetch).toHaveBeenCalledTimes(1);
+    expect(xrayFn).not.toHaveBeenCalled();
+    expect(screen.getByText('Field statistics')).toBeInTheDocument();
+    expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
+  });
+
+  it('retains selected-vehicle ingest data and controls when the fleet refresh fails', async () => {
+    vehicleHook.error = new Error('fleet refresh failed');
+    xrayFn.mockResolvedValue(makeXRay());
+    renderPage();
+    await screen.findByText('4,096');
+    expect(screen.getByLabelText('Vehicle')).toHaveValue('1');
+    expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThan(0);
+    expect(screen.getByLabelText('Window')).toHaveValue('1h');
+    expect(screen.getByLabelText('Bucket')).toHaveValue('1m');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+    expect(vehicleHook.refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps Kind details, sorting and filtering reachable through the shared mobile adapter', async () => {
+    const rect = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 200));
+    xrayFn.mockResolvedValue(makeXRay());
+    const page = renderPage();
+    try {
+      await screen.findByText('4,096');
+      const mobile = page.container.querySelector<HTMLElement>('[data-mobile-table]');
+      expect(mobile).not.toBeNull();
+      const controls = within(mobile!);
+      const kindSort = controls.getByRole('button', { name: 'Kind' });
+      expect(kindSort).toBeInTheDocument();
+      fireEvent.click(kindSort);
+      fireEvent.click(controls.getByRole('button', { name: 'Kind filter' }));
+      const filter = screen.getByRole('dialog', { name: 'Kind filter' });
+      expect(within(filter).getByText('float64')).toBeInTheDocument();
+      fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+      fireEvent.click(controls.getAllByRole('button', { name: 'Quick view' })[0]);
+      const details = screen.getByRole('dialog');
+      expect(within(details).getByText('Kind')).toBeInTheDocument();
+      expect(within(details).getByText('float64')).toBeInTheDocument();
+      expect(screen.getByLabelText('Window')).toHaveValue('1h');
+      expect(screen.getByLabelText('Bucket')).toHaveValue('1m');
+    } finally {
+      page.unmount();
+      rect.mockRestore();
+    }
+  });
+
   it('keeps the named refresh action mobile-sized with a decorative shared icon', () => {
     vehicleHook.data = [];
     renderPage();
@@ -386,7 +469,7 @@ describe('IngestXRayPage', () => {
     // The failed poll must not blank the table nor swap it for the error panel:
     // Last-good data stays and no section-level retry replaces it.
     expect(screen.getAllByText('VehicleSpeed').length).toBeGreaterThanOrEqual(1);
-    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
     // KPI band still shows the last-good total, not a dash.
     expect(screen.getByText('4,096')).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('ingest-xray-summary')).toHaveAttribute('data-retained', 'true'));
@@ -417,7 +500,7 @@ describe('IngestXRayPage', () => {
     );
   });
 
-  it('enables the refresh control once a vehicle is picked and triggers a manual refetch', async () => {
+  it('enables refresh for the canonical selected vehicle and triggers a manual refetch', async () => {
     xrayFn.mockResolvedValue(makeXRay());
 
     renderPage();
@@ -425,9 +508,6 @@ describe('IngestXRayPage', () => {
     const refreshBtn = screen.getByRole('button', {
       name: 'Refresh ingest x-ray',
     });
-    expect(refreshBtn).toBeDisabled();
-
-    pickVehicle('1');
     await waitFor(() => expect(xrayFn).toHaveBeenCalled());
     await waitFor(() => expect(refreshBtn).not.toBeDisabled());
 
@@ -456,6 +536,6 @@ describe('IngestXRayPage', () => {
     expect(screen.getByText('Field statistics')).toBeInTheDocument();
     expect(screen.getByText('Samples per bucket')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Sample volume' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
   });
 });

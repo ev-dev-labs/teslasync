@@ -53,8 +53,10 @@ vi.mock('react-i18next', () => ({
 
 import { LiveVehicleState } from './LiveVehicleState';
 import type { SecurityEvent } from '@/types/admin';
+import { deriveDataState, type DataState } from '@/api/dataState';
 
 type Props = {
+  sourceState?: DataState<SecurityEvent>;
   latest: SecurityEvent | undefined;
   isLoading: boolean;
   error: unknown;
@@ -149,7 +151,7 @@ function tileValue(label: string): HTMLElement {
   return p as HTMLElement;
 }
 
-const ACTIVE_TONE = 'text-cyan-300';
+const ACTIVE_TONE = 'text-[var(--text-secondary)]';
 const MUTED_TONE = 'text-[var(--text-secondary)]';
 
 function title() {
@@ -214,14 +216,29 @@ describe('LiveVehicleState', () => {
   });
 
   it('renders all ten signal tiles plus the live badge for a populated snapshot', () => {
+    const latest = makeEvent({ lightsHazardsActive: true, pairedPhoneKeyCount: 2 });
     renderState({
-      latest: makeEvent({ lightsHazardsActive: true, pairedPhoneKeyCount: 2 }),
+      latest,
+      sourceState: deriveDataState({ data: latest, isSuccess: true }, { provenance: 'live' }),
     });
 
     for (const label of LABELS) {
       expect(screen.getByText(label)).toBeInTheDocument();
     }
     expect(screen.getByText('Live')).toBeInTheDocument();
+  });
+
+  it.each(['paused', 'failed', 'unknown'] as const)('does not assert Live for %s source trust', (kind) => {
+    const latest = makeEvent({ lightsHazardsActive: false, pairedPhoneKeyCount: 0 });
+    const sourceState = kind === 'unknown'
+      ? deriveDataState<SecurityEvent>({})
+      : deriveDataState({ data: latest, fetchStatus: kind === 'paused' ? 'paused' : 'idle',
+        error: kind === 'failed' ? new Error('refresh failed') : null }, { provenance: 'live' });
+    renderState({ latest, sourceState });
+    expect(screen.queryByText('Live')).not.toBeInTheDocument();
+    expect(screen.getByText(kind === 'unknown' ? 'Unknown source' : 'Cached')).toBeInTheDocument();
+    expect(tileValue('Hazards')).toHaveTextContent('Off');
+    expect(tileValue('Paired keys')).toHaveTextContent('0');
   });
 
   it('maps boolean light signals through On / Off / — with an active→cyan, inactive→muted tone', () => {
@@ -336,20 +353,20 @@ describe('LiveVehicleState', () => {
       expect(tileValue(label).textContent).toBe('—');
       expect(tileValue(label).className).toContain(MUTED_TONE);
     }
-    // A blank-but-present snapshot still counts as "Live".
-    expect(screen.getByText('Live')).toBeInTheDocument();
+    expect(screen.queryByText('Live')).not.toBeInTheDocument();
+    expect(screen.getByText('Unknown source')).toBeInTheDocument();
   });
 
   it('exposes the panel title as a level-3 heading and marks decorative icons aria-hidden (a11y)', () => {
-    renderState({ latest: makeEvent({ lightsHazardsActive: true }) });
+    const latest = makeEvent({ lightsHazardsActive: true });
+    renderState({ latest, sourceState: deriveDataState({ data: latest }, { provenance: 'live' }) });
 
     expect(title()).toBeInTheDocument();
 
     // The tile's icon chip conveys no independent meaning → decorative.
     expect(tile('Hazards').querySelector('[aria-hidden="true"]')).not.toBeNull();
 
-    // The pulsing live-badge dot is decorative; the word "Live" carries it.
-    const badge = screen.getByText('Live');
+    const badge = screen.getByLabelText('Live');
     expect(badge.querySelector('[aria-hidden="true"]')).not.toBeNull();
   });
 

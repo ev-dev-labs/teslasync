@@ -1,18 +1,22 @@
 import { UsersRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, InlineCallout, Skeleton } from '@/components/feedback';
+import { EmptyState, InlineCallout, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Table, Badge, Button } from '@/components/ui';
-import { LayoutCard } from '@/components/layout';
-import type { BenchmarkRelease } from '@/api/hooks/useBenchmarks';
+import { LayoutCard, SourceContent } from '@/components/layout';
+import type { BenchmarkPrivacyStatus, BenchmarkRelease, BenchmarkReleasePage } from '@/api/hooks/useBenchmarks';
+import type { DataState } from '@/api/dataState';
 
 interface CohortEligibilityPanelProps {
-  optedIn: boolean;
+  optedIn: boolean | undefined;
   release: BenchmarkRelease | null;
   minimumCohortSize: number;
   pending: boolean;
   loading: boolean;
   error: Error | null;
   onCreate: () => void;
+  source?: DataState<BenchmarkReleasePage>;
+  participationSource?: DataState<BenchmarkPrivacyStatus>;
+  canAct?: boolean;
 }
 
 export function CohortEligibilityPanel({
@@ -23,8 +27,12 @@ export function CohortEligibilityPanel({
   loading,
   error,
   onCreate,
+  source,
+  participationSource,
+  canAct = true,
 }: CohortEligibilityPanelProps) {
   const { t } = useTranslation();
+  const fatalError = participationSource?.fatalError ?? (optedIn === true ? source?.fatalError : null);
   const modelFamily = release
     ? t(
         `benchmarks.cohort.modelFamily.${release.model_family}`,
@@ -35,7 +43,9 @@ export function CohortEligibilityPanel({
     <LayoutCard
       title={t('benchmarks.cohort.title', 'Cohort eligibility')}
       actions={
-        loading ? (
+        fatalError ? (
+          <Badge variant="danger">{t('error.loadFailed', 'Failed to load data')}</Badge>
+        ) : loading || optedIn == null ? (
           <Skeleton className="h-6 w-24 rounded-full" />
         ) : (
           <Badge variant={release && !release.suppressed ? 'success' : 'warning'} dot>
@@ -46,7 +56,16 @@ export function CohortEligibilityPanel({
         )
       }
     >
-      {loading ? (
+      {source && optedIn === true && <StaleRefreshWarning state={source} />}
+      <SourceContent
+        state={fatalError ? 'error' : optedIn == null ? 'loading' : 'ready'}
+        label={t('benchmarks.cohort.title', 'Cohort eligibility')}
+        emptyMessage={t('benchmarks.cohort.noRelease', 'No stable release yet')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={fatalError}
+        errorRecovery={{ onRetry: (participationSource?.fatalError ? participationSource.retry : source?.retry) ?? undefined }}
+      >
+      {loading && !release ? (
         <div
           role="status"
           aria-busy="true"
@@ -114,23 +133,33 @@ export function CohortEligibilityPanel({
               )}
             </InlineCallout>
           ) : null}
-          <Button type="button" variant="secondary" onClick={onCreate} loading={pending} wrapLabel>
+          <Button type="button" variant="secondary" onClick={onCreate} loading={pending}
+            disabled={pending || !canAct} className="min-h-11 md:min-h-10" wrapLabel>
             {t('benchmarks.cohort.refresh', 'Check current source version')}
           </Button>
         </div>
       ) : (
-        <EmptyState
-          icon={<UsersRound className="h-8 w-8" />}
-          title={t('benchmarks.cohort.noRelease', 'No stable release yet')}
-          message={t(
-            'benchmarks.cohort.noReleaseMessage',
-            'Create a release for the last three completed months. Cohorts below k={{count}} remain suppressed.',
-            { count: minimumCohortSize },
-          )}
-          action={{ label: t('benchmarks.cohort.create', 'Create release'), onClick: onCreate }}
-          className="py-8"
-        />
+        <div>
+          {/* no-action: the pending-aware create control is immediately below this empty state. */}
+          <EmptyState
+            icon={<UsersRound className="h-8 w-8" />}
+            title={t('benchmarks.cohort.noRelease', 'No stable release yet')}
+            message={t(
+              'benchmarks.cohort.noReleaseMessage',
+              'Create a release for the last three completed months. Cohorts below k={{count}} remain suppressed.',
+              { count: minimumCohortSize },
+            )}
+            className="py-8"
+          />
+          <div className="flex justify-center">
+            <Button type="button" variant="secondary" onClick={onCreate}
+              loading={pending} disabled={pending || !canAct} wrapLabel className="min-h-11 md:min-h-10">
+              {t('benchmarks.cohort.create', 'Create release')}
+            </Button>
+          </div>
+        </div>
       )}
+      </SourceContent>
       {error ? (
         <InlineCallout variant="danger" className="mt-3">
           {t('benchmarks.cohort.error', 'Could not create release: {{message}}', {

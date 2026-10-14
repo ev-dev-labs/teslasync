@@ -8,13 +8,14 @@ import type { BenchmarkPrivacyStatus } from '@/api/hooks/useBenchmarks';
 import { BenchmarkStatusContent } from './BenchmarkStatusContent';
 
 interface ConsentGateProps {
-  optedIn: boolean;
+  optedIn: boolean | undefined;
   acknowledged: boolean;
   pending: boolean;
   error: Error | null;
   onAcknowledgedChange: (value: boolean) => void;
   onConsent: () => void;
   source?: DataState<BenchmarkPrivacyStatus>;
+  canAct?: boolean;
 }
 
 export function ConsentGate({
@@ -25,6 +26,7 @@ export function ConsentGate({
   onAcknowledgedChange,
   onConsent,
   source,
+  canAct = true,
 }: ConsentGateProps) {
   const { t } = useTranslation();
   return (
@@ -52,6 +54,7 @@ export function ConsentGate({
               <Checkbox
                 checked={acknowledged}
                 onChange={onAcknowledgedChange}
+                disabled={!canAct || pending}
                 label={t(
                   'benchmarks.consent.acknowledge',
                   'I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.',
@@ -60,8 +63,10 @@ export function ConsentGate({
               <Button
                 type="button"
                 onClick={onConsent}
-                disabled={!acknowledged || pending}
+                disabled={!acknowledged || pending || !canAct || optedIn !== false}
                 loading={pending}
+                className="min-h-11 md:min-h-10"
+                wrapLabel
               >
                 {t('benchmarks.consent.action', 'Opt in')}
               </Button>

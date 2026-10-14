@@ -32,8 +32,14 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown) => {
+        if (typeof fallback === 'string') return fallback
+        if (fallback && typeof fallback === 'object' && 'defaultValue' in fallback) {
+          const vars = fallback as Record<string, unknown>
+          return String(vars.defaultValue).replace(/{{(\w+)}}/g, (_, name: string) => String(vars[name]))
+        }
+        return key
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   }
@@ -126,7 +132,7 @@ describe('CronParserTool', () => {
     expect(screen.getAllByText('Every minute')).toHaveLength(2)
     // describeCron / getNextCronRuns were invoked with the parsed 5-field array.
     const fields = ['*', '*', '*', '*', '*']
-    expect(mockedDescribe).toHaveBeenCalledWith(fields)
+    expect(mockedDescribe).toHaveBeenCalledWith(fields, expect.any(Function), 'en-US')
     expect(mockedNextRuns).toHaveBeenCalledWith(fields, 5)
     // Exactly five run rows, badge-numbered 1..5 (clock-independent count).
     expect(screen.getByText('Next runs')).toBeInTheDocument()
@@ -172,7 +178,7 @@ describe('CronParserTool', () => {
     // Real describeCron for the weekly-midnight expression proves the trimmed,
     // whitespace-collapsed 5-field array reached the helper.
     expect(screen.getByText('At 00:00 on Sun')).toBeInTheDocument()
-    expect(mockedDescribe).toHaveBeenCalledWith(['0', '0', '*', '*', '0'])
+    expect(mockedDescribe).toHaveBeenCalledWith(['0', '0', '*', '*', '0'], expect.any(Function), 'en-US')
     expect(screen.queryByRole('alert')).toBeNull()
   })
 })

@@ -15,6 +15,7 @@ import type { CycleStressQueryState } from '../cycle-stress/types';
 interface Props {
   result: CycleStressResult;
   state: CycleStressQueryState;
+  retained?: boolean;
   locale: string;
 }
 interface AccountingRow {
@@ -26,7 +27,7 @@ interface AccountingRow {
 }
 type MobilePresentation = NonNullable<ComponentProps<typeof DataTable<AccountingRow>>['mobilePresentation']>;
 
-export function CycleStressAccounting({ result, state, locale }: Props) {
+export function CycleStressAccounting({ result, state, retained = false, locale }: Props) {
   const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const { t } = useTranslation();
   const drive = result.driveAccounting;
@@ -163,7 +164,7 @@ export function CycleStressAccounting({ result, state, locale }: Props) {
     <section aria-label={t('cycleStress.accounting.title', 'Source-row accounting')} data-testid="cycle-stress-accounting">
       <GlassPanel className="min-w-0 p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <Database className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Database className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('cycleStress.accounting.title', 'Source-row accounting')}
         </PanelTitle>
         <Text as="p" variant="caption" className="mb-4">
@@ -173,7 +174,7 @@ export function CycleStressAccounting({ result, state, locale }: Props) {
         <CycleStressSectionBody result={result} state={state} requirement="none">
           <BatteryEvidenceBrief
             title={t('cycleStress.modernization.accountingSummary', 'Drive and charging row summary')}
-            retained={Boolean(state.refreshError)}
+            retained={retained || Boolean(state.refreshError)}
             period={{ kind: 'unknown', label: t('cycleStress.modernization.period', 'Returned vehicle histories · bounded evidence'),
               reason: t('cycleStress.modernization.provenance', 'Reconstructed from up to 1,000 drives and 1,000 charging sessions. Source spans may differ; this is not a selected-date-window or full-history total.') }}
             metrics={[
@@ -181,7 +182,8 @@ export function CycleStressAccounting({ result, state, locale }: Props) {
                 label: t('cycleStress.accounting.returned', 'Known rows returned'),
                 display: { formatter: raw => ({ value: cycleStressNumber(raw, locale), unit: '' }) },
                 context: t('cycleStress.accounting.sourceSplit', 'available data: {{drives}} drives + {{charging}} charging',
-                  { drives: drive.returnedRows, charging: charging.returnedRows }) },
+                  { drives: driveUnavailable ? '—' : cycleStressNumber(drive.returnedRows, locale),
+                    charging: chargingUnavailable ? '—' : cycleStressNumber(charging.returnedRows, locale) }) },
               { metricId: 'count', occurrenceId: 'accepted-intervals', rawValue: included,
                 label: t('cycleStress.accounting.accepted', 'Accepted intervals'),
                 display: { formatter: raw => ({ value: cycleStressNumber(raw, locale), unit: '' }) },

@@ -9,15 +9,17 @@ import { deriveDataState } from '@/api/dataState';
 import { SEVERITY_ORDER, KIND_LABELS } from '../components/structural-closure/secret-rotation/helpers';
 
 export function useSecretRotationPage() {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, locale } = useNumberFormatting();
   const { t } = useTranslation();
   usePageTitle(t('admin.secretRotation.pageTitle', 'Secret rotation'));
 
   const query = useSecretRotation();
   const source = deriveDataState(query);
-  const subsystemMissing = isApiError(source.fatalError) && source.fatalError.status === 503;
+  const subsystemMissing = isApiError(source.fatalError)
+    && source.fatalError.status === 503
+    && source.fatalError.code === 'SUBSYSTEM_NOT_CONFIGURED';
   const showError = Boolean(source.fatalError) && !subsystemMissing;
-  const isLoading = query.isLoading && !source.hasData;
+  const isLoading = source.status === 'initial';
   const items = query.data?.items ?? [];
 
   // Friendly, translatable label for a secret kind — dynamic i18n key with the
@@ -39,7 +41,7 @@ export function useSecretRotationPage() {
     () => ({
       ok: t('admin.secretRotation.severityOk', 'OK'),
       warn: t('admin.secretRotation.severityWarn', 'Rotate soon'),
-      critical: t('admin.secretRotation.severityCritical', 'Overdue'),
+      critical: t('common.critical', 'Critical'),
       unknown: '—',
     }),
     [t],
@@ -82,15 +84,22 @@ export function useSecretRotationPage() {
     [items, rowLabel],
   );
 
-  // Rotation urgency — age relative to the per-kind critical threshold, so a
-  // full bar means the secret has hit (or passed) its overdue point. Sorted by
-  // that ratio so the closest-to-overdue secrets surface first.
+  // Certificate thresholds are remaining-expiry horizons; other kinds use age.
   const urgency = useMemo(
     () => [...items]
       .map((r) => {
-        const crit = r.critical_days ?? 0;
-        const ratio = crit > 0 ? (r.age_days ?? 0) / crit : 0;
-        return { r, ratio };
+        const basis = r.kind === 'mqtt_mtls_cert' && r.days_to_expiry != null ? 'expiry' : 'age';
+        const reading = basis === 'expiry' ? r.days_to_expiry : r.age_days;
+        const crit = r.critical_days;
+        const known = reading != null && Number.isFinite(reading)
+          && (basis === 'expiry' || reading >= 0)
+          && crit != null && Number.isFinite(crit) && crit > 0;
+        const ratio = known
+          ? basis === 'expiry'
+            ? reading > 0 ? crit / reading : Infinity
+            : reading / crit
+          : 0;
+        return { r, ratio, basis, known };
       })
       .sort((a, b) => b.ratio - a.ratio)
       .slice(0, 8),
@@ -115,6 +124,6 @@ export function useSecretRotationPage() {
   const retry = () => query.refetch();
 
   return {
-    fmtNumber, t, query, source, subsystemMissing, showError, isLoading, items, kindLabel, rowLabel, severityLabel, counts, total, distinctKinds, okPct, oldest, soonestExpiry, topByAge, urgency, expiryWatch, severitySlices, retry
+    fmtNumber, locale, t, query, source, subsystemMissing, showError, isLoading, items, kindLabel, rowLabel, severityLabel, counts, total, distinctKinds, okPct, oldest, soonestExpiry, topByAge, urgency, expiryWatch, severitySlices, retry
   };
 }

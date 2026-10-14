@@ -69,6 +69,7 @@ function makeStats(overrides: Partial<OrderStats> = {}): OrderStats {
     models: 2,
     withVin: 4,
     nextDelivery: '2026-01-15T00:00:00Z',
+    hasUnknownDelivery: false,
     ...overrides,
   };
 }
@@ -208,6 +209,12 @@ describe('DeliveryOutlookPanel — ready (populated)', () => {
 });
 
 describe('DeliveryOutlookPanel — ready (fallbacks)', () => {
+  it('shows unknown delivery rather than asserting none scheduled for incomplete facts', () => {
+    renderPanel({ stats: makeStats({ nextDelivery: null, hasUnknownDelivery: true }) });
+    expect(screen.getByText('Delivery date unknown')).toBeInTheDocument();
+    expect(screen.queryByText('None scheduled')).not.toBeInTheDocument();
+    expect(screen.getByText('VIN assigned')).toBeInTheDocument();
+  });
   it('shows "None scheduled" and an em-dash when delivery + sync time are absent', () => {
     renderPanel({ stats: makeStats({ nextDelivery: null }), fetchedAt: null });
 

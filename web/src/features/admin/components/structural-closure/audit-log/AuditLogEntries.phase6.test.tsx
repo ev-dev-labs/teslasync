@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { useEffect, useRef } from 'react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -55,7 +55,12 @@ const ROW: AuditLogRow = {
 function Harness({ initialOffset = 0 }: { initialOffset?: number }) {
   const controller = useAuditLogPage();
   const { setOffset } = controller;
-  useEffect(() => { setOffset(initialOffset); }, [initialOffset, setOffset]);
+  const appliedOffset = useRef<number | null>(null);
+  useEffect(() => {
+    if (appliedOffset.current === initialOffset) return;
+    appliedOffset.current = initialOffset;
+    setOffset(initialOffset);
+  }, [initialOffset, setOffset]);
   return <AuditLogEntries controller={controller} />;
 }
 
@@ -86,6 +91,10 @@ beforeEach(() => {
     if (path.startsWith('/admin/audit-log?')) return { rows: H.rows, limit: 100 };
     throw new Error(`Unexpected request: ${path}`);
   });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('AuditLogEntries phase6 independent contracts', () => {
@@ -134,6 +143,33 @@ describe('AuditLogEntries phase6 independent contracts', () => {
       toCSV([ROW], keys.map(key => ({ key }))),
     ));
     expect(vi.mocked(downloadCSV).mock.calls[0]?.[1]).toContain('before,after,trace_id');
+  });
+
+  it('consumes raw evidence strings through the normal client and success envelope without exporting alias fields', async () => {
+    const { request } = await vi.importActual<typeof import('@/api/client')>('@/api/client');
+    const fetch = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
+      JSON.stringify({ data: { rows: [ROW], limit: 100 } }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ));
+    const fixtures = H.request.getMockImplementation()!;
+    H.request.mockImplementation((path, init) =>
+      path.startsWith('/admin/audit-log?') ? request(path, init) : fixtures(path, init));
+    mount();
+    await screen.findByText(ROW.actor);
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringMatching(/\/api\/v1\/admin\/audit-log\?/),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row' }));
+    expect(screen.getByRole('group', { name: 'Before' })).toHaveTextContent('"locked": false');
+    expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('with all evidence preserved');
+    await exportAs('JSON');
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledWith(expect.any(String), [ROW]));
+    await exportAs('CSV');
+    const csv = vi.mocked(downloadCSV).mock.calls[0]?.[1];
+    expect(csv).toContain('before,after,trace_id,success,prev_row_hash,row_hash');
+    expect(csv).toContain('unparseable raw after payload\nwith all evidence preserved');
+    expect(csv).toContain('""locked"": false');
   });
 
   it('exports only matching loaded rows, never an implied full ledger', async () => {
@@ -193,6 +229,11 @@ describe('AuditLogEntries phase6 independent contracts', () => {
     const trace = within(container.querySelector('dl') as HTMLElement).getByText(ROW.trace_id ?? '');
     fireEvent.click(within(trace.parentElement as HTMLElement).getByRole('button'));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(ROW.trace_id));
+    for (const hash of [ROW.row_hash, ROW.prev_row_hash]) {
+      const value = within(container.querySelector('dl') as HTMLElement).getByText(hash ?? '');
+      fireEvent.click(within(value.parentElement as HTMLElement).getByRole('button'));
+      await waitFor(() => expect(writeText).toHaveBeenCalledWith(hash));
+    }
     fireEvent.click(within(screen.getByRole('group', { name: 'Before' })).getByRole('button'));
     await waitFor(() => expect(writeText).toHaveBeenCalledWith(JSON.stringify(JSON.parse(ROW.before ?? ''), null, 2)));
     fireEvent.click(within(screen.getByRole('group', { name: 'After' })).getByRole('button'));
@@ -214,6 +255,20 @@ describe('AuditLogEntries phase6 independent contracts', () => {
       </QueryClientProvider>,
     );
     expect(screen.getByText(formatDateTime(ROW.ts, { locale: H.locale, tz: H.tz }))).toBeInTheDocument();
+    await exportAs('JSON');
+    await waitFor(() => expect(downloadJSON).toHaveBeenCalledWith(expect.any(String), [ROW]));
+  });
+
+  it.each(['de-DE', 'fr-FR'])('localizes recent relative timestamps with saved %s preferences', async (locale) => {
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-10-05T18:05:00Z'));
+    H.locale = locale;
+    H.tz = 'Pacific/Auckland';
+    const expected = new Intl.RelativeTimeFormat(locale, { style: 'narrow', numeric: 'always' })
+      .format(-5, 'minute');
+    mount();
+    await screen.findByText(expected);
+    expect(screen.queryByText(new Intl.RelativeTimeFormat('en-US', { style: 'narrow', numeric: 'always' })
+      .format(-5, 'minute'))).not.toBeInTheDocument();
     await exportAs('JSON');
     await waitFor(() => expect(downloadJSON).toHaveBeenCalledWith(expect.any(String), [ROW]));
   });

@@ -48,7 +48,7 @@ describe('EvidencePanel date preferences', () => {
       limitations={['No causal proof.']} unsupported={['No physical actuation.']} />);
     const qualitySection = screen.getByRole('region', { name: 'Data quality' });
     expect(within(qualitySection).getByText('15 Jan 2026, 00:30 – 16 Jan 2026, 12:45')).toBeVisible();
-    expect(within(qualitySection).getByText('limited')).toBeVisible();
+    expect(within(qualitySection).getByText('Limited evidence')).toBeVisible();
     expect(within(qualitySection).getByText('0')).toBeVisible();
     expect(within(qualitySection).getByText('—')).toBeVisible();
     expect(within(qualitySection).getByText('• Synthetic coverage limitation.')).toBeVisible();

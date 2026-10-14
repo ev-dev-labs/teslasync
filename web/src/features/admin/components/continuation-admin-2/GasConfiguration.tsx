@@ -7,12 +7,14 @@ import { LayoutCard } from '@/components/layout';
 import { Toggle, HelpIcon, Select, Text, Caption } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
 import { FormSection } from '@/components/forms';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { AdminSourceContent } from './AdminSourceContent';
 
 export function GasConfiguration({ source }: { source: DataState<GasPriceStatus> }) {
   const { t } = useTranslation();
   const toggle = useToggleGasPrice();
   const config = useUpdateGasPriceConfig();
+  const { canWrite, writeBlockReason } = useOperationalMode();
   const data = source.data;
   return (
     <LayoutCard title={t('gas.config', 'Configuration')}>
@@ -22,7 +24,8 @@ export function GasConfiguration({ source }: { source: DataState<GasPriceStatus>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-1">
               <Toggle id="gas-auto-poll" label={t('gas.autoPoll', 'Auto-poll')} checked={data?.enabled ?? false}
-                disabled={!data || toggle.isPending} onChange={(next) => toggle.mutate(next)} />
+                disabled={!data || !canWrite || toggle.isPending} title={writeBlockReason ?? undefined}
+                onChange={(next) => { if (canWrite) toggle.mutate(next); }} />
               <HelpIcon i18nKey="help.fields.settings.gasPriceAutoPoll" for="gas-auto-poll"
                 content={t('gas.autoPollHelp', 'When on, TeslaSync fetches the latest US average gas price on the schedule below.')} />
             </div>
@@ -32,7 +35,8 @@ export function GasConfiguration({ source }: { source: DataState<GasPriceStatus>
             </span>
           </div>
           <Select label={t('gas.pollInterval', 'Poll interval')} value={data?.poll_interval || '7d'}
-            disabled={!data || config.isPending} onChange={(event) => config.mutate(event.target.value)}
+            disabled={!data || !canWrite || config.isPending} title={writeBlockReason ?? undefined}
+            onChange={(event) => { if (canWrite) config.mutate(event.target.value); }}
             options={[
               { value: 'daily', label: t('gas.daily', 'Daily') },
               { value: '7d', label: t('gas.weekly', 'Weekly') },

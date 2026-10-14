@@ -72,7 +72,7 @@ const EMPTY_ROWS: LiveSignalRow[] = [];
 
 /** Hoisted static table config — keeps the JSX prop identities stable. */
 const PAGINATION = { defaultPageSize: 50, pageSizeOptions: [25, 50, 100] };
-const MOBILE_COLUMNS = ['name', 'value'];
+const MOBILE_COLUMNS = ['name', 'value', 'kind', 'source', 'timestamp'];
 
 /**
  * Parse an ISO timestamp to epoch millis for sorting. Missing or unparseable

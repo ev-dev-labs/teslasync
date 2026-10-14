@@ -12,8 +12,8 @@
  *      the on-demand SiteInfoSection (operation mode, backup-reserve gauge,
  *      rated power/energy, firmware, component chips, TOU rate plan) all
  *      render their deterministic values; refresh controls expose a11y names.
- *   2. CAPS    — capability chips convey on/off through BOTH colour and an
- *      aria-label state word, and the "Storm Mode Active" badge only shows
+ *   2. CAPS    — capability chips convey on/off through visible and accessible
+ *      state words, and the "Storm Mode Active" badge only shows
  *      when storm mode is enabled.
  *   3. AGG     — the KPI band aggregates counts + total SI capacity across
  *      multiple sites (useMemo derive), not a single-site smoke value.
@@ -25,7 +25,7 @@
  *      KPI band still renders its zeroed counts (never a blank page).
  *   7. REFRESH — the header "Refresh from Tesla" action invokes the mutation.
  *   8. SITEINFO — the per-card SiteInfoSection owns its own loading / error /
- *      empty states and wires its refresh + retry to the site-info mutation.
+ *      empty states, retries the cached query, and keeps explicit Tesla refresh.
  *   9. TOU     — the "Update" affordance opens the rate-plan modal (dialog).
  *  10. HELPERS — fmtEnergy / fmtPower SI scaling + nullish, resourceLabel /
  *      operationModeLabel branch mapping + i18n fallbacks, resourceIcon map.
@@ -40,6 +40,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { Battery, Sun, Zap } from 'lucide-react';
 import type { ReactNode } from 'react';
+import * as metricReference from '@/lib/metric-reference';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import type {
@@ -58,6 +59,7 @@ const h = vi.hoisted(() => ({
 }));
 
 const refetchSitesMock = vi.fn();
+const refetchSiteInfoMock = vi.fn();
 const refreshSitesMock = vi.fn();
 const refreshSiteInfoMock = vi.fn();
 const updateTouMock = vi.fn();
@@ -156,6 +158,7 @@ interface SiteInfoQueryStub {
   isLoading: boolean;
   isError: boolean;
   error: unknown;
+  refetch: () => void;
 }
 
 function makeSiteInfoQuery(overrides: Partial<SiteInfoQueryStub> = {}): SiteInfoQueryStub {
@@ -164,6 +167,7 @@ function makeSiteInfoQuery(overrides: Partial<SiteInfoQueryStub> = {}): SiteInfo
     isLoading: false,
     isError: false,
     error: null,
+    refetch: refetchSiteInfoMock,
     ...overrides,
   };
 }
@@ -309,7 +313,7 @@ describe('EnergyProductsPage — ready dashboard', () => {
     expect(screen.getByText('5.00 kW')).toBeInTheDocument(); // rated power (W → kW)
     expect(screen.getByText(/Firmware: 23\.44\.0/)).toBeInTheDocument(); // firmware label + version
     expect(screen.getByText(/America\/Los_Angeles/)).toBeInTheDocument(); // timezone
-    expect(screen.getByText('tou capable')).toBeInTheDocument(); // component chip (underscored → spaced)
+    expect(screen.getByText('tou_capable: available')).toBeInTheDocument();
     expect(screen.getByText('PG&E EV2-A')).toBeInTheDocument(); // TOU rate plan
 
     // "13.5 kWh" appears in KPI total + card capacity + rated energy.
@@ -321,17 +325,17 @@ describe('EnergyProductsPage — ready dashboard', () => {
     expect(screen.getByRole('button', { name: 'Update rate plan' })).toBeInTheDocument();
   });
 
-  it('conveys capability state via aria-label and only badges an active storm mode', () => {
+  it('conveys capability state visibly and via aria-label and only badges an active storm mode', () => {
     h.sites = makeSitesQuery({
       data: [makeSite({ has_grid: false, storm_mode_enabled: true })],
     });
 
     renderPage();
 
-    // Colour is not the only signal — the state word rides in the aria-label.
-    expect(screen.getByLabelText('Solar: available')).toBeInTheDocument();
-    expect(screen.getByLabelText('Grid: unavailable')).toBeInTheDocument();
+    expect(screen.getAllByLabelText('Solar: available')).toHaveLength(2);
+    expect(screen.getByLabelText('Grid: unavailable')).toHaveTextContent('Grid: unavailable');
     expect(screen.getByLabelText('Storm Watch: available')).toBeInTheDocument();
+    expect(screen.getByLabelText('Backup: unavailable')).toHaveTextContent('Backup: unavailable');
     // Storm mode is enabled → the extra active badge shows.
     expect(screen.getByText('Storm Mode Active')).toBeInTheDocument();
   });
@@ -342,6 +346,76 @@ describe('EnergyProductsPage — ready dashboard', () => {
     renderPage();
 
     expect(screen.queryByText('Storm Mode Active')).not.toBeInTheDocument();
+  });
+
+  it('passes raw percent, Wh, and W measurements to the numeric metric contracts without changing specialist display', () => {
+    const format = vi.spyOn(metricReference, 'formatMetric');
+    renderPage();
+
+    expect(format).toHaveBeenCalledWith('percent', 87.5, expect.anything(), undefined, expect.objectContaining({
+      formatter: expect.any(Function),
+    }));
+    expect(format).toHaveBeenCalledWith('energy', 13500, expect.anything(), undefined, expect.objectContaining({
+      formatter: expect.any(Function),
+    }));
+    expect(format).toHaveBeenCalledWith('power', 5000, expect.anything(), undefined, expect.objectContaining({
+      formatter: expect.any(Function),
+    }));
+    const summary = document.getElementById('energy-site-555-summary');
+    const configuration = document.getElementById('energy-site-555-configuration');
+    expect(summary?.querySelector('[data-metric="percent"]')).toHaveTextContent('87.50%');
+    expect(summary?.querySelector('[data-metric="energy"]')).toHaveTextContent('13.50 kWh');
+    expect(configuration?.querySelector('[data-metric="power"]')).toHaveTextContent('5.00 kW');
+    expect(configuration?.querySelector('[data-metric="energy"]')).toHaveTextContent('13.50 kWh');
+  });
+
+  it('retains genuine zero and signed numeric measurements without changing magnitude-dependent units', () => {
+    const format = vi.spyOn(metricReference, 'formatMetric');
+    h.sites = makeSitesQuery({ data: [makeSite({ percentage_charged: 0, total_pack_energy: 999 })] });
+    h.siteInfo = makeSiteInfoQuery({ data: makeSiteInfo({ nameplate_power: -2000, nameplate_energy: 0 }) });
+    renderPage();
+
+    expect(format).toHaveBeenCalledWith('percent', 0, expect.anything(), undefined, expect.anything());
+    expect(format).toHaveBeenCalledWith('energy', 999, expect.anything(), undefined, expect.anything());
+    expect(format).toHaveBeenCalledWith('power', -2000, expect.anything(), undefined, expect.anything());
+    expect(format).toHaveBeenCalledWith('energy', 0, expect.anything(), undefined, expect.anything());
+    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getAllByText('999.00 Wh')).toHaveLength(2);
+    expect(screen.getByText('-2.00 kW')).toBeInTheDocument();
+    expect(screen.getByText('0.00 Wh')).toBeInTheDocument();
+  });
+
+  it('keeps missing and nonfinite physical measurements unavailable rather than synthesizing zero', () => {
+    h.sites = makeSitesQuery({ data: [makeSite({ percentage_charged: null, total_pack_energy: Infinity })] });
+    h.siteInfo = makeSiteInfoQuery({ data: makeSiteInfo({ nameplate_power: NaN, nameplate_energy: undefined }) });
+    renderPage();
+
+    const summary = document.getElementById('energy-site-555-summary');
+    const configuration = document.getElementById('energy-site-555-configuration');
+    for (const metric of [
+      summary?.querySelector('[data-metric="percent"]'),
+      summary?.querySelector('[data-metric="energy"]'),
+      configuration?.querySelector('[data-metric="power"]'),
+      configuration?.querySelector('[data-metric="energy"]'),
+    ]) {
+      expect(metric).toHaveAttribute('data-state', 'missing');
+      expect(metric?.querySelector('[data-stat-value]')).toHaveTextContent('—');
+    }
+    expect(screen.queryByText('0.00%')).not.toBeInTheDocument();
+    expect(screen.queryByText('0.00 Wh')).not.toBeInTheDocument();
+  });
+
+  it('localizes established configuration labels and preserves unknown technical keys verbatim with visible boolean states', () => {
+    h.siteInfo = makeSiteInfoQuery({ data: makeSiteInfo({
+      components: { solar: true, battery: false, grid: true, storm_mode_capable: false, custom_technical_key: false },
+    }) });
+    renderPage();
+
+    expect(screen.getAllByLabelText('Solar: available')).toHaveLength(2);
+    expect(screen.getByLabelText('Battery: unavailable')).toHaveTextContent('Battery: unavailable');
+    expect(screen.getByLabelText('Storm Watch: unavailable')).toHaveTextContent('Storm Watch: unavailable');
+    expect(screen.getByLabelText('custom_technical_key: unavailable')).toHaveTextContent('custom_technical_key: unavailable');
+    expect(screen.queryByText('custom technical key')).not.toBeInTheDocument();
   });
 
   it('aggregates KPI counts and total SI capacity across multiple sites', () => {
@@ -437,7 +511,7 @@ describe('EnergyProductsPage — SiteInfoSection states', () => {
     expect(container.querySelectorAll('section > [aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"].h-40').length).toBeGreaterThan(0);
   });
 
-  it('surfaces QueryError in the card and retries via the site-info mutation', () => {
+  it('surfaces QueryError in the card and retries the cached site-info query without a Tesla refresh', () => {
     h.siteInfo = makeSiteInfoQuery({ isError: true, error: new Error('site boom') });
 
     renderPage();
@@ -445,6 +519,9 @@ describe('EnergyProductsPage — SiteInfoSection states', () => {
     expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }));
+    expect(refetchSiteInfoMock).toHaveBeenCalledTimes(1);
+    expect(refreshSiteInfoMock).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh site info' }));
     expect(refreshSiteInfoMock).toHaveBeenCalledWith(555);
   });
 
@@ -475,6 +552,40 @@ describe('EnergyProductsPage — SiteInfoSection states', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog).toBeInTheDocument();
     expect(within(dialog).getByText(/Configure your utility rate plan/i)).toBeInTheDocument();
+    for (const name of ['Cancel', 'Update Rate Plan']) {
+      const control = within(dialog).getByRole('button', { name });
+      expect(control).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'max-w-full');
+      expect(control).not.toHaveClass('h-10');
+      expect(within(control).getByText(name)).toHaveClass('min-w-0', 'break-words');
+      expect(control.parentElement).toHaveClass('flex-wrap');
+    }
+    fireEvent.change(within(dialog).getByLabelText('Rate Plan'), { target: { value: 'pge-ev2a' } });
+    const preview = within(dialog).getByText('Preview').parentElement;
+    expect(preview).toHaveClass('bg-[var(--surface-2)]', 'border-[var(--border-subtle)]');
+    expect(preview).not.toHaveClass('bg-white/[0.03]', 'border-white/[0.06]');
+    const json = preview?.querySelector('pre');
+    expect(json).toHaveClass('overflow-auto', 'max-h-48');
+    expect(JSON.parse(json?.textContent ?? '')).toEqual(expect.objectContaining({
+      tou_settings: expect.objectContaining({
+        optimization_strategy: 'economics',
+        tariff_content_v2: expect.objectContaining({
+          name: 'PG&E EV2-A',
+          daily_charges: [{ amount: 0.32854, name: 'Charge' }],
+          energy_charges: expect.objectContaining({
+            Summer: {
+              ON_PEAK: [{ rate: 0.49, start: 16, end: 21 }],
+              OFF_PEAK: [
+                { rate: 0.35, start: 0, end: 16 },
+                { rate: 0.35, start: 21, end: 24 },
+              ],
+            },
+          }),
+        }),
+      }),
+    }));
+    expect(updateTouMock).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 });
 

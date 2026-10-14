@@ -54,6 +54,13 @@ export function EvidencePanel({
   const evidenceItems = evidence ?? [];
   const limitationItems = limitations ?? [];
   const unsupportedItems = unsupported ?? [];
+  const qualityLabel = quality?.status === 'sufficient'
+    ? t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence')
+    : quality?.status === 'limited'
+      ? t('advancedIntelligence.brief.quality.limited', 'Limited evidence')
+      : quality?.status === 'insufficient'
+        ? t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence')
+        : t('advancedIntelligence.brief.quality.unknown', 'Quality not supplied');
 
   return (
     <InsightPanel
@@ -77,7 +84,7 @@ export function EvidencePanel({
           <SourceContent {...sourceContentProps} label={t('advancedIntelligence.quality.title', 'Data quality')}>
           {quality ? (
             <>
-              <Badge variant={qualityVariant(quality.status)} dot>{quality.status}</Badge>
+              <Badge variant={qualityVariant(quality.status)} dot>{qualityLabel}</Badge>
               <KVList layout="responsive" wrap items={[
                 { id: 'samples', label: t('advancedIntelligence.quality.samples', 'Samples'), value: fmtInt(quality.sample_count) },
                 { id: 'coverage', label: t('advancedIntelligence.quality.coverage', 'Coverage'), value: quality.coverage_pct != null ? `${fmtNumber(quality.coverage_pct)}%` : '—' },

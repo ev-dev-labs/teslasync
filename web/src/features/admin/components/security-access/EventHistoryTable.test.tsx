@@ -30,6 +30,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { SecurityEvent } from '@/types/admin';
+import { deriveDataState, type DataState } from '@/api/dataState';
 
 /* ── i18n: return the English fallback, interpolating {{vars}}. ────── */
 vi.mock('react-i18next', () => ({
@@ -101,16 +102,17 @@ function makeEvent(overrides: Partial<SecurityEvent> = {}): SecurityEvent {
 }
 
 interface RenderProps {
+  sourceState?: DataState<SecurityEvent[]>;
   history?: SecurityEvent[];
   isLoading?: boolean;
   error?: unknown;
   onRetry?: () => void;
 }
 
-function renderTable({ history = [], isLoading = false, error = null, onRetry }: RenderProps = {}) {
+function renderTable({ history = [], sourceState, isLoading = false, error = null, onRetry }: RenderProps = {}) {
   return render(
     <MemoryRouter>
-      <EventHistoryTable history={history} isLoading={isLoading} error={error} onRetry={onRetry} />
+      <EventHistoryTable history={history} sourceState={sourceState} isLoading={isLoading} error={error} onRetry={onRetry} />
     </MemoryRouter>,
   );
 }
@@ -128,6 +130,25 @@ afterEach(() => {
 /* ── Tests ────────────────────────────────────────────────────────── */
 
 describe('EventHistoryTable — structure', () => {
+  it('labels measured open, closed and unknown doors consistently in the value checklist', () => {
+    renderTable({ history: [
+      makeEvent({ id: 'closed', doorState: false }),
+      makeEvent({ id: 'open', doorState: true }),
+      makeEvent({ id: 'unknown', doorState: null }),
+    ] });
+    fireEvent.click(screen.getByRole('button', { name: 'Doors filter' }));
+    for (const label of ['Closed', 'Open', 'Unknown']) {
+      expect(screen.getByRole('checkbox', { name: label })).toBeInTheDocument();
+    }
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Open' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Done' }));
+    expect(screen.getAllByTestId('ts')).toHaveLength(1);
+    expect(screen.getByText('Open')).toBeInTheDocument();
+    expect(screen.queryByText('Closed')).not.toBeInTheDocument();
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+  });
+
   it('keeps explicit false separate from an unknown lock value in the value checklist', () => {
     renderTable({ history: [
       makeEvent({ id: 'locked', locked: true }),
@@ -193,10 +214,10 @@ describe('EventHistoryTable — door + window branches', () => {
     renderTable({ history: [makeEvent()] });
 
     const door = screen.getByText('Closed', { exact: true });
-    expect(door.className).toContain('text-emerald-300');
+    expect(door.className).toContain('text-[var(--text-secondary)]');
 
     const windows = screen.getByText('All closed');
-    expect(windows.className).toContain('text-emerald-300');
+    expect(windows.className).toContain('text-[var(--text-secondary)]');
   });
 
   it('renders an open door (raw enum) and an interpolated window count in amber', () => {
@@ -205,11 +226,44 @@ describe('EventHistoryTable — door + window branches', () => {
     });
 
     const door = screen.getByText('DriverFrontOpen');
-    expect(door.className).toContain('text-amber-300');
+    expect(door.className).toContain('text-[var(--text-secondary)]');
 
     // 3 closed + 1 open → windowSummary interpolates "1 Open/Venting".
     const windows = screen.getByText('1 open/venting');
-    expect(windows.className).toContain('text-amber-300');
+    expect(windows.className).toContain('text-[var(--text-secondary)]');
+  });
+
+  describe('EventHistoryTable — evidence and mobile preservation', () => {
+    it('keeps unknown lock, Sentry, doors and windows separate from measured false', () => {
+      renderTable({ history: [makeEvent({
+        locked: null, sentryMode: null, doorState: null,
+        fdWindow: null, fpWindow: null, rdWindow: null, rpWindow: null,
+      })] });
+      expect(screen.getAllByText('Unknown')).toHaveLength(4);
+      expect(screen.queryByText('Unlocked')).not.toBeInTheDocument();
+      expect(screen.queryByText('Off')).not.toBeInTheDocument();
+    });
+
+    it('keeps historical door and window cells accessible below md without dropping other cells', () => {
+      renderTable({ history: [makeEvent({ doorState: 'DriverFrontOpen', fdWindow: 'Open' })] });
+      for (const text of ['DriverFrontOpen', '1 open/venting']) {
+        expect(screen.getByText(text).closest('td')).not.toHaveClass('hidden');
+      }
+      expect(screen.getByText('DriverFrontOpen').closest('tr')?.querySelectorAll('td')).toHaveLength(5);
+    });
+
+    it('does not claim authoritative emptiness when the first read is paused', () => {
+      renderTable({ sourceState: deriveDataState<SecurityEvent[]>({ fetchStatus: 'paused' }) });
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(screen.queryByText('No security events recorded yet.')).not.toBeInTheDocument();
+    });
+
+    it('preserves loaded rows under paused history trust', () => {
+      const history = [makeEvent()];
+      renderTable({ history, sourceState: deriveDataState({ data: history, fetchStatus: 'paused' }, { provenance: 'historical' }) });
+      expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+      expect(screen.getByText('Locked')).toBeInTheDocument();
+    });
   });
 });
 

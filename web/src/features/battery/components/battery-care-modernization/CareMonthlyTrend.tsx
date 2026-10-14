@@ -7,7 +7,7 @@ import {
   axisTick, chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
-import { Badge, DataTable, type Column } from '@/components/ui';
+import { Badge, DataTable, Text, type Column } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import type { CareScore } from '../../lib/batteryCare';
 import { CareSourceNotices } from './CareSourceNotices';
@@ -85,7 +85,7 @@ export function CareMonthlyTrend({ care, state }: { care: CareScore; state: Care
     }),
     [columns],
   );
-  const initialLoading = !state.trust.hasData && !state.trust.fatalError;
+  const initialLoading = state.isInitialLoading;
 
   return (
     <section
@@ -109,7 +109,7 @@ export function CareMonthlyTrend({ care, state }: { care: CareScore; state: Care
         chartKey="battery-care-monthly"
         exportable={!state.trust.fatalError && !initialLoading && hasData}
         exportFilename="battery-care-monthly"
-        data={state.trust.fatalError ? [] : rows}
+        data={!state.trust.hasData || state.trust.fatalError ? [] : rows}
         dataColumns={columns}
         action={
           <Badge variant={calibratedMonths > 0 ? 'success' : 'warning'} dot>
@@ -121,6 +121,10 @@ export function CareMonthlyTrend({ care, state }: { care: CareScore; state: Care
           <div className="flex h-full items-center justify-center">
             <QueryError error={state.trust.fatalError} onRetry={state.trust.retry ?? undefined} />
           </div>
+        ) : !state.trust.hasData ? (
+          <Text as="p" variant="bodySm">
+            {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          </Text>
         ) : !hasData ? (
           <EmptyState /* no-action: observed monthly telemetry determines this read-only result */
             className="h-full"

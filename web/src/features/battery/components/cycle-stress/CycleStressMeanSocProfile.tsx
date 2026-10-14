@@ -17,6 +17,7 @@ import {
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import type { CycleStressResult } from '../../lib/cycleStress';
+import { cycleStressCycleEvidence } from '../cycle-stress-modernization/queryState';
 import { CycleStressSectionBody } from './CycleStressSectionBody';
 import type { CycleStressQueryState } from './types';
 
@@ -30,6 +31,7 @@ export function CycleStressMeanSocProfile({
   state,
 }: CycleStressMeanSocProfileProps) {
   const { t } = useTranslation();
+  const evidence = cycleStressCycleEvidence(result, state, t);
   const rows = useMemo(
     () =>
       result.meanSocProfile.map((point) => ({
@@ -62,11 +64,10 @@ export function CycleStressMeanSocProfile({
         height={300}
         loading={state.isLoading}
         empty={false}
-        exportable={
-          state.isResolved && !state.error && result.cycles.length > 0
-        }
-        exportData={rows}
-        data={rows}
+        exportable={evidence.available}
+        exportData={evidence.available ? rows : []}
+        data={evidence.available ? rows : []}
+        ariaDescription={evidence.description}
         dataColumns={[
           {
             key: 'label',

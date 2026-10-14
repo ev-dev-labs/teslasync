@@ -29,7 +29,7 @@ vi.mock('@/lib/workspaceScope', async () => {
   const actual = await vi.importActual<typeof import('@/lib/workspaceScope')>('@/lib/workspaceScope');
   return { ...actual, getWorkspaceRouteScope: (path: string) => ({
     ...actual.getWorkspaceRouteScope(path),
-    ...(path === '/admin/audit-log' && preferences.headerRange ? { range: true } : {}),
+    ...(path === '/admin/audit-log' ? { range: preferences.headerRange } : {}),
   }) };
 });
 
@@ -93,7 +93,7 @@ describe('AuditLogPage deployment capability evidence', () => {
       .find(query => query.queryKey[2] === 'list')?.state.error).toBeInstanceOf(ApiError));
     expect(screen.queryByText('The audit log subsystem is not configured on this deployment.')).not.toBeInTheDocument();
     expect(screen.getByText(ROW.actor)).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row:/ }));
     expect(await screen.findByRole('group', { name: 'Before' })).toHaveTextContent('"locked": false');
     expect(screen.getByRole('group', { name: 'After' })).toHaveTextContent('"locked": true');
     expect(screen.getByText(ROW.trace_id ?? '')).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe('AuditLogPage presentation preservation', () => {
       return renderPage(['/admin/audit-log'], client);
     }
 
-    it.each([0, -1])('never calls an intact result with %s checked rows verification evidence', async (rows_checked) => {
+    it.each([0, -1, NaN, Infinity])('never calls an intact result with %s checked rows verification evidence', async (rows_checked) => {
       receipt({ intact: true, rows_checked, first_bad_id: 0 });
       await screen.findByText(ROW.actor);
       expect(screen.getByText('No verification evidence')).toBeInTheDocument();
@@ -213,9 +213,45 @@ describe('AuditLogPage presentation preservation', () => {
       expect(await screen.findByText('No audit entries')).toBeInTheDocument();
       expect(screen.queryByText('Entries have not been received; no empty ledger has been established.')).not.toBeInTheDocument();
     });
+
+    it('keeps explicitly requested verification pending until the read-only receipt arrives', async () => {
+      install();
+      const success = mockedRequest.getMockImplementation()!;
+      let finishVerification!: (value: unknown) => void;
+      const pendingReceipt = new Promise<unknown>((resolve) => { finishVerification = resolve; });
+      mockedRequest.mockImplementation((path, init) => path.startsWith('/admin/audit-log/verify')
+        ? pendingReceipt : success(path, init));
+      renderPage();
+      await screen.findByText(ROW.actor);
+      expect(mockedRequest.mock.calls.some(([path]) => path.startsWith('/admin/audit-log/verify'))).toBe(false);
+      fireEvent.click(screen.getByRole('button', { name: 'Verify chain' }));
+      expect(await screen.findByRole('button', { name: 'Verifying…' })).toBeDisabled();
+      expect(screen.queryByText(/Read-only GET re-derives at most/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Chain intact')).not.toBeInTheDocument();
+      expect(mockedRequest.mock.calls.some(([path, init]) =>
+        path === '/admin/audit-log/verify?limit=1000' && (!init?.method || init.method === 'GET'))).toBe(true);
+      await act(async () => {
+        finishVerification({ intact: true, first_bad_id: 0, rows_checked: 4, since: '', limit: 1000 });
+        await pendingReceipt;
+      });
+      expect(await screen.findByText('4 rows checked')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Verify chain' })).toBeEnabled();
+    });
   });
 
   describe('AuditLogPage shared and minute-level range consumers', () => {
+    it('uses the registered workspace range capability without adding vehicle scope', async () => {
+      const { getWorkspaceRouteScope } = await vi.importActual<typeof import('@/lib/workspaceScope')>('@/lib/workspaceScope');
+      expect(getWorkspaceRouteScope('/admin/audit-log')).toMatchObject({ range: true, vehicle: false });
+      preferences.headerRange = true;
+      install();
+      renderPage(['/admin/audit-log?from=2026-10-01&to=2026-10-02']);
+      await screen.findByText(ROW.actor);
+      expect(screen.queryByLabelText('Since')).not.toBeInTheDocument();
+      expect(screen.queryByLabelText('Until')).not.toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: /vehicle/i })).not.toBeInTheDocument();
+    });
+
     it('keeps fresh ledger access unbounded without manufacturing a seven-day default', async () => {
       install();
       renderPage(['/admin/audit-log']);
@@ -326,7 +362,7 @@ describe('AuditLogPage presentation preservation', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Verify chain' }));
     await screen.findByText('Chain intact');
     expect(mockedRequest.mock.calls.some(([path]) => path === '/admin/audit-log/verify?limit=1000')).toBe(true);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Details' })[0]!);
+    fireEvent.click(screen.getByRole('button', { name: /^Expand row:/ }));
     const before = await screen.findByRole('group', { name: 'Before' });
     const after = screen.getByRole('group', { name: 'After' });
     expect(within(before).getByText('{\n  "locked": false\n}', { exact: true, normalizer: (value) => value })).toBeInTheDocument();

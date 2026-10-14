@@ -656,7 +656,8 @@ export function useRefreshFleetTelemetryErrorVINs() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => request('/tesla/fleet-telemetry/error-vins/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fleet-telemetry-error-vins'] });
       toast.success('Telemetry error VINs refreshed');
@@ -671,7 +672,8 @@ export function useRefreshFleetTelemetryErrors() {
   const qc = useQueryClient();
   const toast = useToast();
   return useMutation({
-    mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST' }),
+    networkMode: 'always',
+    mutationFn: () => request('/tesla/fleet-telemetry/errors/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['fleet-telemetry-errors'] });
       toast.success('Telemetry errors refreshed');

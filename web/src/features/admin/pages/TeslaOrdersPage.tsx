@@ -20,6 +20,7 @@ import { FadeIn } from '@/components/motion';
 import { SectionErrorBoundary } from '@/components/feedback';
 import { typography } from '@/lib/tokens';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser';
 import { deriveDataState } from '@/api/dataState';
 import { OrdersOperationalBrief } from '../components/statstrip-tesla-account-privacy/OrdersOperationalBrief';
@@ -49,6 +50,14 @@ export default function TeslaOrdersPage() {
   );
   const stats = useMemo(() => computeOrderStats(orders), [orders]);
   const fetchedAt = ordersQuery.data?.fetched_at ?? null;
+  useLoadAnnouncement({
+    label: t('admin.teslaOrders.resource', 'Orders'),
+    isLoading: ordersQuery.isLoading,
+    count: Array.isArray(ordersQuery.data?.orders) ? orders.length : undefined,
+    enabled: ordersQuery.isLoading || (
+      ordersQuery.isSuccess && Array.isArray(ordersQuery.data?.orders)
+    ),
+  });
 
   // Each data section renders its own affordance from this single discriminator
   // rather than gating the whole page behind one `{data && …}`.
@@ -113,6 +122,7 @@ export default function TeslaOrdersPage() {
       )}
       secondaryActions={actions}
       query={ordersQuery}
+      busy={ordersQuery.isFetching || ordersRefresh.isPending}
       dataSources={[{ id: 'tesla-orders', label: t('admin.teslaOrders.pageTitle', 'Tesla orders'), query: ordersQuery }]}
     >
       {/* 1 — KPI band: full-width responsive metric grid (always visible) */}

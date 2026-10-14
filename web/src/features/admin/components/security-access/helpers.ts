@@ -1,5 +1,6 @@
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
+import { ymdInTz } from '@/lib/dateFormat';
 
 /** Minimal translator shape — matches react-i18next's `t` for the
  *  `(key, defaultValue, options?)` call form these formatters use so the
@@ -21,6 +22,7 @@ export interface SentryDayBucket {
   date: string;
   sentryOn: number;
   sentryOff: number;
+  sentryUnknown?: number;
 }
 
 export interface TimelineEvent {
@@ -47,10 +49,10 @@ export interface SecurityStats {
 export function parseWindowState(val: unknown): WindowState {
   const raw = asNonEmptyString(val);
   if (!raw) return 'Unknown';
-  const lower = raw.toLowerCase();
+  const lower = raw.trim().toLowerCase();
   if (lower === 'closed' || lower === '0') return 'Closed';
   if (lower.includes('vent')) return 'Venting';
-  if (lower.includes('open') || lower !== '0') return 'Open';
+  if (lower.includes('open')) return 'Open';
   return 'Unknown';
 }
 
@@ -72,32 +74,40 @@ export function windowTone(state: WindowState): TileTone {
 /*  Door helpers                                                       */
 /* ------------------------------------------------------------------ */
 
-export function doorClosed(state: unknown): boolean {
+/** Null means missing/unrecognized evidence, never measured closed or open. */
+export function doorClosed(state: unknown): boolean | null {
   // Backend may emit DoorState as bool/object.
-  if (state == null) return true;
+  if (state == null) return null;
   if (typeof state === 'boolean') return !state;
-  if (typeof state === 'number') return state === 0;
+  if (typeof state === 'number') return Number.isFinite(state) ? state === 0 : null;
   if (typeof state === 'object' && !Array.isArray(state)) {
-    return Object.values(state as Record<string, unknown>).every((v) => v === false || v == null);
+    const values = Object.values(state);
+    if (values.some((v) => v === true)) return false;
+    return values.length > 0 && values.every((v) => v === false) ? true : null;
   }
   const raw = asNonEmptyString(state);
-  if (!raw) return true;
+  if (!raw) return null;
   const lower = raw.trim().toLowerCase();
-  if (lower === '' || lower === 'closed' || lower === 'closedall' || lower === '0' || lower === 'false') return true;
+  if (lower === 'closed' || lower === 'closedall' || lower === '0' || lower === 'false') return true;
   if (lower.startsWith('{')) {
     try {
-      const parsed = JSON.parse(raw) as Record<string, unknown>;
-      return Object.values(parsed).every((v) => v === false || v == null);
-    } catch { /* fall through */ }
+      return doorClosed(JSON.parse(raw));
+    } catch { return null; }
   }
-  return false;
+  return lower.includes('open') || lower === 'true' ? false : null;
 }
 
-export function allWindowsClosed(ev: SecurityEvent | undefined): boolean {
-  if (!ev) return true;
-  return [ev.fdWindow, ev.fpWindow, ev.rdWindow, ev.rpWindow]
-    .map(parseWindowState)
-    .every((s) => s === 'Closed');
+export function allWindowsClosed(ev: SecurityEvent | undefined): boolean | null {
+  if (!ev) return null;
+  const states = [ev.fdWindow, ev.fpWindow, ev.rdWindow, ev.rpWindow].map(parseWindowState);
+  if (states.some((s) => s === 'Open' || s === 'Venting')) return false;
+  return states.every((s) => s === 'Closed') ? true : null;
+}
+
+export function securityPosture(ev: SecurityEvent | undefined): boolean | null {
+  const states = [ev?.locked ?? null, doorClosed(ev?.doorState), allWindowsClosed(ev)];
+  if (states.includes(false)) return false;
+  return states.every((state) => state === true) ? true : null;
 }
 
 export function windowSummary(ev: SecurityEvent | undefined, t: Translate): string {
@@ -105,8 +115,10 @@ export function windowSummary(ev: SecurityEvent | undefined, t: Translate): stri
   const states = [ev.fdWindow, ev.fpWindow, ev.rdWindow, ev.rpWindow].map(parseWindowState);
   const allClosed = states.every((s) => s === 'Closed');
   if (allClosed) return t('admin.security.window.allClosed', 'All closed');
-  const openCount = states.filter((s) => s !== 'Closed').length;
-  return t('admin.security.window.openVenting', '{{count}} open/venting', { count: openCount });
+  const openCount = states.filter((s) => s === 'Open' || s === 'Venting').length;
+  const unknown = states.includes('Unknown') ? t('admin.security.unknown', 'Unknown') : '';
+  const measured = openCount > 0 ? t('admin.security.window.openVenting', '{{count}} open/venting', { count: openCount }) : '';
+  return [measured, unknown].filter(Boolean).join(' · ');
 }
 
 /* ------------------------------------------------------------------ */
@@ -131,25 +143,31 @@ export function timeSince(iso: string | null | undefined, t: Translate): string 
 /*  Sentry helpers                                                     */
 /* ------------------------------------------------------------------ */
 
-/** Returns true if the SentryMode value means armed (any non-Off state).
- *  Accepts native bool and string enum values. */
-export function isSentryActive(val: unknown): boolean {
+/** Known bool/enum states only; missing and future enums remain unknown. */
+export function isSentryActive(val: unknown): boolean | null {
   if (typeof val === 'boolean') return val;
   const raw = asNonEmptyString(val);
-  if (!raw) return false;
-  return !raw.toLowerCase().includes('off');
+  if (!raw) return null;
+  const lower = raw.trim().toLowerCase();
+  if (lower === 'off' || lower === 'sentrymodestateoff') return false;
+  if (['on', 'armed', 'sentrymodestatearmed', 'sentrymodestateaware', 'sentrymodestatepanic'].includes(lower)) return true;
+  return null;
 }
 
-export function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
-  const bucketMap = new Map<string, { on: number; off: number }>();
+export function buildSentryBuckets(events: SecurityEvent[], timezone?: string): SentryDayBucket[] {
+  const bucketMap = new Map<string, { on: number; off: number; unknown: number }>();
 
   for (const ev of events) {
-    const dateKey = (ev.createdAt ?? '').slice(0, 10);
-    const bucket = bucketMap.get(dateKey) ?? { on: 0, off: 0 };
-    if (isSentryActive(ev.sentryMode)) {
+    const dateKey = ev.createdAt ? ymdInTz(new Date(ev.createdAt), timezone) : null;
+    if (!dateKey) continue;
+    const bucket = bucketMap.get(dateKey) ?? { on: 0, off: 0, unknown: 0 };
+    const active = isSentryActive(ev.sentryMode);
+    if (active === true) {
       bucket.on += 1;
-    } else {
+    } else if (active === false) {
       bucket.off += 1;
+    } else {
+      bucket.unknown += 1;
     }
     bucketMap.set(dateKey, bucket);
   }
@@ -160,12 +178,13 @@ export function buildSentryBuckets(events: SecurityEvent[]): SentryDayBucket[] {
       date,
       sentryOn: counts.on,
       sentryOff: counts.off,
+      ...(counts.unknown > 0 ? { sentryUnknown: counts.unknown } : {}),
     }));
 }
 
 export function computeSentryUptime(events: SecurityEvent[]): number {
   if (events.length === 0) return 0;
-  const sentryOnCount = events.filter((e) => isSentryActive(e.sentryMode)).length;
+  const sentryOnCount = events.filter((e) => isSentryActive(e.sentryMode) === true).length;
   return (sentryOnCount / events.length) * 100;
 }
 
@@ -174,12 +193,19 @@ export function computeSentryUptime(events: SecurityEvent[]): number {
 /* ------------------------------------------------------------------ */
 
 export function findLastLockChange(events: SecurityEvent[]): string | undefined {
-  for (let i = 1; i < events.length; i++) {
-    if (events[i].locked !== events[i - 1].locked) {
-      return events[i - 1].createdAt;
+  const sorted = chronologicalEvents(events);
+  let lastChange: string | undefined;
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].locked != null && sorted[i - 1].locked != null && sorted[i].locked !== sorted[i - 1].locked) {
+      lastChange = sorted[i].createdAt;
     }
   }
-  return events[0]?.createdAt;
+  return lastChange ?? sorted[0]?.createdAt;
+}
+
+function chronologicalEvents(events: SecurityEvent[]): SecurityEvent[] {
+  return events.filter((ev) => Number.isFinite(Date.parse(ev.createdAt)))
+    .slice().sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
 }
 
 /* ------------------------------------------------------------------ */
@@ -189,11 +215,12 @@ export function findLastLockChange(events: SecurityEvent[]): string | undefined 
 export function computeSecurityStats(history: SecurityEvent[]): SecurityStats | null {
   if (history.length === 0) return null;
   let lockEvents = 0;
-  for (let i = 1; i < history.length; i++) {
-    if (history[i].locked !== history[i - 1].locked) lockEvents++;
+  const sorted = chronologicalEvents(history);
+  for (let i = 1; i < sorted.length; i++) {
+    if (sorted[i].locked != null && sorted[i - 1].locked != null && sorted[i].locked !== sorted[i - 1].locked) lockEvents++;
   }
-  const doorOpenCount = history.filter((e) => !doorClosed(e.doorState)).length;
-  const windowOpenCount = history.filter((e) => !allWindowsClosed(e)).length;
+  const doorOpenCount = history.filter((e) => doorClosed(e.doorState) === false).length;
+  const windowOpenCount = history.filter((e) => allWindowsClosed(e) === false).length;
   const homelinkCount = history.filter((e) => e.homelinkNearby).length;
   const guestCount = history.filter((e) => e.guestMode).length;
   return { lockEvents, doorOpenCount, windowOpenCount, homelinkCount, guestCount, total: history.length };
@@ -206,9 +233,7 @@ export function computeSecurityStats(history: SecurityEvent[]): SecurityStats | 
 export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
   if (events.length === 0) return [];
 
-  const sorted = [...events].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-  );
+  const sorted = chronologicalEvents(events).reverse();
 
   const timeline: TimelineEvent[] = [];
 
@@ -216,7 +241,7 @@ export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
     const curr = sorted[i];
     const prev = sorted[i + 1];
 
-    if (curr.locked !== prev.locked) {
+    if (curr.locked != null && prev.locked != null && curr.locked !== prev.locked) {
       timeline.push({
         id: `lock-${curr.id}`,
         kind: 'lock',
@@ -226,18 +251,21 @@ export function deriveTimeline(events: SecurityEvent[]): TimelineEvent[] {
       });
     }
 
-    if (curr.sentryMode !== prev.sentryMode) {
+    const currSentry = isSentryActive(curr.sentryMode);
+    const prevSentry = isSentryActive(prev.sentryMode);
+    if (currSentry != null && prevSentry != null && curr.sentryMode !== prev.sentryMode) {
       timeline.push({
         id: `sentry-${curr.id}`,
         kind: 'sentry',
         detail: '',
         timestamp: curr.createdAt,
-        variant: isSentryActive(curr.sentryMode) ? 'positive' : 'negative',
+        variant: currSentry ? 'positive' : 'negative',
       });
     }
 
-    if (curr.doorState !== prev.doorState) {
-      const closed = doorClosed(curr.doorState);
+    const closed = doorClosed(curr.doorState);
+    const prevClosed = doorClosed(prev.doorState);
+    if (closed != null && prevClosed != null && curr.doorState !== prev.doorState) {
       timeline.push({
         id: `door-${curr.id}`,
         kind: 'door',

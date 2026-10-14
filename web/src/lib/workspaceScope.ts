@@ -122,6 +122,7 @@ export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([
   '/exports',
   '/fleet-api',
   '/fleet-operations',
+  '/gas-price',
   '/mqtt-inspector',
   '/power/dashboards',
   '/power-flow',
@@ -133,6 +134,7 @@ export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([
   '/tesla-charging-history',
   '/tesla-charging-sessions',
   '/tesla-account',
+  '/tesla-region',
   '/vehicle-comparison',
   '/vehicles',
 ]);

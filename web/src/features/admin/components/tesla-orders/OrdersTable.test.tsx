@@ -22,6 +22,7 @@
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
+const translatedLabels = vi.hoisted(() => ({} as Record<string, string>));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -29,7 +30,7 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallback?: unknown, values?: Record<string, unknown>) => {
-        const text = typeof fallback === 'string' ? fallback : key;
+        const text = translatedLabels[key] ?? (typeof fallback === 'string' ? fallback : key);
         return text.replace(/{{(\w+)}}/g, (match, name: string) => String(values?.[name] ?? match));
       },
       i18n: { language: 'en', changeLanguage: vi.fn() },
@@ -76,6 +77,7 @@ beforeEach(() => {
   // DataTable persists column widths / visibility keyed by tableId; clear so
   // one test's layout never bleeds into the next.
   window.localStorage.clear();
+  for (const key of Object.keys(translatedLabels)) delete translatedLabels[key];
 });
 
 afterEach(() => {
@@ -83,6 +85,34 @@ afterEach(() => {
 });
 
 describe('OrdersTable', () => {
+  it('searches visible English status phrases as well as raw codes', () => {
+    render(<OrdersTable orders={[
+      makeOrder({ id: 1, order_id: 'RN-READY', status: 'READY_FOR_DELIVERY' }),
+      makeOrder({ id: 2, order_id: 'RN-BOOKED', status: 'BOOKED' }),
+    ]} />);
+    const input = screen.getByRole('textbox', { name: 'Filter orders' });
+    for (const value of ['ready for delivery', 'READY_FOR_DELIVERY']) {
+      fireEvent.change(input, { target: { value } });
+      expect(dataRows()).toHaveLength(1);
+      expect(screen.getByText('RN-READY')).toBeInTheDocument();
+    }
+  });
+
+  it('uses localized statuses in rows, search and value filters and a localized table name', () => {
+    translatedLabels['admin.teslaOrders.status.readyForDelivery'] = 'Bereit zur Auslieferung';
+    translatedLabels['admin.teslaOrders.panels.details'] = 'Bestelldetails';
+    const order = makeOrder({ order_id: 'RN-READY', status: 'READY_FOR_DELIVERY' });
+    render(<OrdersTable orders={[order]} />);
+    expect(screen.getByRole('table', { name: 'Bestelldetails' })).toBeInTheDocument();
+    expect(screen.getByText('Bereit zur Auslieferung')).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: 'Filter orders' }), {
+      target: { value: 'bereit zur auslieferung' },
+    });
+    expect(screen.getByText('RN-READY')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Status filter' }));
+    expect(screen.getByRole('checkbox', { name: 'Bereit zur Auslieferung' })).toBeInTheDocument();
+    expect(order.status).toBe('READY_FOR_DELIVERY');
+  });
   it('filters the full loaded fleet before pagination, including values beyond the first page', () => {
     const orders = Array.from({ length: 30 }, (_, index) =>
       makeOrder({

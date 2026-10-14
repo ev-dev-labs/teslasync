@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Sun, Battery, Grid3x3, Shield, CloudLightning } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { LayoutCard } from '@/components/layout';
+import { StatStrip, type StatMetric } from '@/components/data-display';
 import { Badge, Label, Text } from '@/components/ui';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
@@ -14,10 +14,12 @@ export function EnergySiteCard({ site, retained }: { site: TeslaEnergySite; reta
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const metrics: StatMetric[] = [
-    { metricId: 'text', occurrenceId: 'charge', label: t('energy.products.charge', 'Charge'),
-      rawValue: site.percentage_charged != null && Number.isFinite(site.percentage_charged) ? `${fmtNumber(site.percentage_charged)}%` : null },
-    { metricId: 'text', occurrenceId: 'capacity', label: t('energy.products.capacity', 'Capacity'),
-      rawValue: site.total_pack_energy == null || !Number.isFinite(site.total_pack_energy) ? null : fmtEnergy(site.total_pack_energy) },
+    { metricId: 'percent', occurrenceId: 'charge', label: t('energy.products.charge', 'Charge'),
+      rawValue: site.percentage_charged != null && Number.isFinite(site.percentage_charged) ? site.percentage_charged : null,
+      display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'capacity', label: t('energy.products.capacity', 'Capacity'),
+      rawValue: site.total_pack_energy == null || !Number.isFinite(site.total_pack_energy) ? null : site.total_pack_energy,
+      display: { formatter: raw => ({ value: fmtEnergy(raw), unit: '' }) } },
     { metricId: 'text', occurrenceId: 'type', label: t('energy.products.type', 'Type'), rawValue: resourceLabel(site.resource_type, t) },
   ];
   return (

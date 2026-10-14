@@ -308,6 +308,111 @@ beforeEach(() => {
 });
 
 describe('CycleStressPage', () => {
+  it.each(['no vehicle', 'loading', 'paused initial', 'failure', 'empty', 'unqualified'] as const)(
+    'CSQA-03 excludes generated chart alternatives for %s while preserving every shell',
+    (sourceState) => {
+      if (sourceState === 'no vehicle') h.vehicleId = null;
+      if (sourceState === 'loading') {
+        h.sessions = query(refetchCharging, { isLoading: true });
+        h.drives = query(refetchDrives, { isLoading: true });
+      }
+      if (sourceState === 'paused initial') {
+        h.sessions = query(refetchCharging, { fetchStatus: 'paused', isSuccess: false });
+        h.drives = query(refetchDrives, { fetchStatus: 'paused', isSuccess: false });
+      }
+      if (sourceState === 'failure') {
+        h.sessions = query(refetchCharging, { isError: true });
+        h.drives = query(refetchDrives, { isError: true });
+      }
+      if (sourceState === 'empty' || sourceState === 'unqualified') {
+        const history = readyHistory();
+        h.sessions = query(refetchCharging, {
+          data: sourceState === 'empty' ? [] : [{ ...history.sessions[0], end_soc_pct: null }],
+        });
+        h.drives = query(refetchDrives, { data: [] });
+      }
+      renderPage();
+      expectEverySection();
+      for (const id of ['depth-distribution', 'threshold-sensitivity', 'exponent-sensitivity',
+        'mean-soc-profile', 'duration-profile']) {
+        const section = screen.getByTestId(`cycle-stress-${id}`);
+        expect(section.querySelector('figcaption table')).toBeNull();
+        expect(section.querySelector('figcaption')).toHaveTextContent(
+          /Select a vehicle|Loading Cycle Stress|Both source histories|has not resolved|No drive or charging|No returned row/,
+        );
+      }
+    },
+  );
+
+  it('CSQA-03 retains all raw chart alternatives and real zero bins with available cycles', () => {
+    h.drives = query(refetchDrives, { isLoading: true });
+    renderPage();
+    for (const [id, rowCount] of [
+      ['depth-distribution', 5], ['threshold-sensitivity', 5], ['exponent-sensitivity', 4],
+      ['mean-soc-profile', 5], ['duration-profile', 4],
+    ] as const) {
+      const table = screen.getByTestId(`cycle-stress-${id}`).querySelector('figcaption table');
+      expect(table).not.toBeNull();
+      expect(table?.querySelectorAll('tbody tr')).toHaveLength(rowCount);
+    }
+    const depthTable = screen.getByTestId('cycle-stress-depth-distribution')
+      .querySelector('figcaption table');
+    expect(depthTable?.querySelector('tbody tr')).toHaveTextContent('0-20%000');
+  });
+
+  it('CSQA-04/06 keeps every diagnostic label and caption wrapping with neutral decorative icons', () => {
+    renderPage();
+    for (const [id, count] of [
+      ['source-coverage', 8], ['continuity', 10], ['composition', 6], ['evidence-support', 6],
+    ] as const) {
+      const section = screen.getByTestId(`cycle-stress-${id}`);
+      expect(section.querySelectorAll('[data-role="metric-card"]')).toHaveLength(count);
+      for (const caption of section.querySelectorAll('[data-role="metric-subtitle"]')) {
+        expect(caption).toHaveClass('whitespace-normal', 'break-words');
+        expect(caption).not.toHaveClass('truncate');
+      }
+      for (const label of section.querySelectorAll('[data-role="metric-label"]')) {
+        expect(label).not.toHaveClass('truncate');
+        expect(label.firstElementChild).toHaveClass('break-words');
+      }
+      for (const icon of section.querySelectorAll('[data-role="metric-icon"]')) {
+        expect(icon).toHaveAttribute('data-color', 'neutral');
+      }
+    }
+  });
+
+  it.each(['cap', 'unqualified', 'thin'] as const)(
+    'CSQA-07 keeps the %s caveat beside available evidence with an ordinary pending neighbor',
+    (caveat) => {
+      const history = readyHistory();
+      h.sessions = query(refetchCharging, {
+        data: caveat === 'cap'
+          ? Array.from({ length: 1_000 }, (_, index) => ({ ...history.sessions[0], id: String(index) }))
+          : caveat === 'unqualified'
+            ? [{ ...history.sessions[0], end_soc_pct: null }]
+            : [history.sessions[0]],
+      });
+      h.drives = query(refetchDrives, { isLoading: true });
+      const view = renderPage();
+      const text = caveat === 'cap' ? /1,000-row cap/
+        : caveat === 'unqualified' ? /no complete, valid/ : /Thin support/;
+      expect(screen.getByTestId('cycle-stress-retained-caveat')).toHaveTextContent(text);
+      h.drives = query(refetchDrives, { data: [] });
+      view.rerenderPage();
+      expect(screen.queryByTestId('cycle-stress-retained-caveat')).not.toBeInTheDocument();
+      expect(within(screen.getByTestId('cycle-stress-kpis')).getAllByText(text)).toHaveLength(1);
+    },
+  );
+
+  it('CSQA-01 wires cached paused trust into both summary and accounting', () => {
+    const history = readyHistory();
+    h.sessions = query(refetchCharging, { data: history.sessions, fetchStatus: 'paused' });
+    renderPage();
+    for (const id of ['cycle-stress-kpis', 'cycle-stress-accounting']) {
+      expect(within(screen.getByTestId(id)).getByText('Retained source evidence')).toBeInTheDocument();
+    }
+  });
+
   it('renders all fifteen analytical shells with both capped hooks', () => {
     renderPage();
 

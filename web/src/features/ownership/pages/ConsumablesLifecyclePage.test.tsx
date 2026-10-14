@@ -13,6 +13,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const { datePreferences } = vi.hoisted(() => ({
+  datePreferences: { locale: 'en-US', tz_display_default: 'utc', timezone_user: '' },
+}));
+
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
     if (!vars) return str;
@@ -37,6 +41,17 @@ vi.mock('react-i18next', () => {
     useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
     initReactI18next: { type: '3rdParty', init: () => undefined },
+  };
+});
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings');
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return { ...result, settings: { ...result.settings, ...datePreferences }, locale: datePreferences.locale };
+    },
   };
 });
 
@@ -198,6 +213,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 beforeEach(() => {
   vi.clearAllMocks();
+  Object.assign(datePreferences, { locale: 'en-US', tz_display_default: 'utc', timezone_user: '' });
   mobileObservers.length = 0;
   mockSelected.mockReturnValue({
     vehicleId: 7,
@@ -527,6 +543,128 @@ describe('ConsumablesLifecyclePage — confirm-gated delete', () => {
     });
     expect(screen.getByRole('spinbutton', { name: 'Odometer at install' })).toHaveValue(123456);
     expect(screen.getByRole('spinbutton', { name: 'Rated life (days)' })).toHaveValue(30);
+  });
+
+  it('exposes a stable record-part disclosure relationship across editor activations', () => {
+    renderPage();
+    const toggle = screen.getByRole('button', { name: 'Record part' });
+    const target = toggle.getAttribute('aria-controls');
+    expect(target).toBeTruthy();
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('textbox', { name: 'Part label required' }).closest('form')).toHaveAttribute('id', target);
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-controls', target);
+  });
+
+  it.each(['unchanged', 'edited', 'reopened', 'batched reactivation', 'vehicle changed', 'vehicle round trip', 'reopened for another vehicle'] as const)(
+    'settles a part-create callback only for its owning editor: %s',
+    (scenario) => {
+      let settle: (() => void) | undefined;
+      const mutate = vi.fn((_body: unknown, options: { onSuccess: () => void }) => { settle = options.onSuccess; });
+      mockCreate.mockReturnValue(makeMutation({ mutate }));
+      const view = renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'Record part' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Part label required' }), { target: { value: 'Original part' } });
+      fireEvent.change(screen.getByRole('textbox', { name: 'Notes' }), { target: { value: 'Keep my raw note' } });
+      fireEvent.click(screen.getByRole('button', { name: 'Save part' }));
+      expect(mutate).toHaveBeenCalledOnce();
+      expect(mutate.mock.calls[0][0]).toMatchObject({ vehicle_id: 7, label: 'Original part', notes: 'Keep my raw note' });
+
+      if (scenario === 'edited') {
+        fireEvent.change(screen.getByRole('textbox', { name: 'Part label required' }), { target: { value: 'Later part' } });
+      }
+      if (scenario === 'reopened') {
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Record part' }));
+      }
+      if (scenario === 'batched reactivation') {
+        const toggle = screen.getByRole('button', { name: 'Cancel' });
+        act(() => {
+          fireEvent.click(toggle);
+          fireEvent.click(toggle);
+        });
+      }
+      if (scenario === 'reopened for another vehicle') {
+        fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+        mockSelected.mockReturnValue({ vehicleId: 8 });
+        view.rerenderPage();
+        fireEvent.click(screen.getByRole('button', { name: 'Record part' }));
+      }
+      if (scenario === 'vehicle changed' || scenario === 'vehicle round trip') {
+        mockSelected.mockReturnValue({ vehicleId: 8 });
+        view.rerenderPage();
+        if (scenario === 'vehicle round trip') {
+          mockSelected.mockReturnValue({ vehicleId: 7 });
+          view.rerenderPage();
+        }
+      }
+      const notes = screen.getByRole('textbox', { name: 'Notes' });
+      notes.focus();
+      act(() => settle?.());
+      if (scenario === 'unchanged') {
+        expect(screen.queryByRole('button', { name: 'Save part' })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Record part' }));
+      } else {
+        expect(screen.getByRole('button', { name: 'Save part' })).toBeInTheDocument();
+        expect(notes).toHaveFocus();
+      }
+      expect(screen.getByRole('textbox', { name: 'Notes' })).toHaveValue('Keep my raw note');
+      expect(screen.getByRole('textbox', { name: 'Part label required' })).toHaveValue(
+        scenario === 'edited' ? 'Later part' : 'Original part',
+      );
+    },
+  );
+
+  it('does not submit a second part while its create mutation is pending', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate, isPending: true }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Record part' }));
+    const form = screen.getByRole('textbox', { name: 'Part label required' }).closest('form');
+    if (!form) throw new Error('Missing part editor');
+    fireEvent.submit(form);
+    expect(mutate).not.toHaveBeenCalled();
+  });
+
+  it('renders installed, retired, projected and history timestamps with saved locale and timezone on desktop and mobile', () => {
+    useNarrowTables();
+    Object.assign(datePreferences, { locale: 'de-DE', tz_display_default: 'utc' });
+    const instant = '2026-02-02T00:30:00Z';
+    const expected = (locale: string, timeZone: string) => new Date(instant).toLocaleString(locale, {
+      year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', timeZone,
+    });
+    const item = makeItem({ installed_at: instant, retired_at: instant });
+    const lifecycle = makeLifecycle({
+      item, projected_replace_at: instant,
+      events: [{ id: 1, item_id: 1, kind: 'inspect', occurred_at: instant, odometer_m: null,
+        cost_minor: 0, note: 'Raw dated note', created_at: instant }],
+    });
+    mockItems.mockReturnValue(makeQuery({ items: [item] }));
+    mockReport.mockReturnValue(makeQuery({ ...makeReport(lifecycle), next_replace_at: instant }));
+    const view = renderPage();
+    const assertDates = (date: string) => {
+      expect(card('Part register')).toHaveTextContent(date);
+      expect(card('Part-by-part projection')).toHaveTextContent(date);
+      expect(summaryMetric('Fleet wear posture', 'next')).toHaveTextContent(date);
+    };
+    assertDates(expected('de-DE', 'UTC'));
+    fireEvent.click(screen.getByRole('button', { name: 'Service history (1 events)' }));
+    expect(screen.getByRole('region', { name: 'Service history (1 events)' })).toHaveTextContent(expected('de-DE', 'UTC'));
+    Object.assign(datePreferences, { locale: 'fr-FR', tz_display_default: 'user', timezone_user: 'America/Los_Angeles' });
+    view.rerenderPage();
+    assertDates(expected('fr-FR', 'America/Los_Angeles'));
+    resizeTables(320);
+    assertDates(expected('fr-FR', 'America/Los_Angeles'));
+    fireEvent.click(within(card('Part register')).getByRole('button', { name: 'Quick view' }));
+    expect(screen.getByRole('dialog', { name: 'Cabin Filter' })).toHaveTextContent(expected('fr-FR', 'America/Los_Angeles'));
+    expect(item.installed_at).toBe(instant);
+    expect(item.retired_at).toBe(instant);
+    expect(lifecycle.projected_replace_at).toBe(instant);
+    expect(lifecycle.events?.[0].occurred_at).toBe(instant);
   });
 
   it('does not remove the previous vehicle part when workspace scope changes during confirmation', async () => {

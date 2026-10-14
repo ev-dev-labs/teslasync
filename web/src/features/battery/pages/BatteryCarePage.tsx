@@ -77,10 +77,12 @@ export default function BatteryCarePage() {
   const chargingSource = {
     label: t('batteryCare.method.returnedSessions', 'Sessions returned'),
     state: sessionsTrust,
+    isInitialLoading: sessionsQuery.isLoading,
   };
   const driveSource = {
     label: t('batteryCare.method.returnedDrives', 'Drives returned'),
     state: drivesTrust,
+    isInitialLoading: drivesQuery.isLoading,
   };
   const chargingState = careSectionState([chargingSource]);
   const driveState = careSectionState([driveSource]);
@@ -145,6 +147,8 @@ export default function BatteryCarePage() {
                   <BatteryCareMethodology
                     care={care}
                     state={readonlySpecialistState}
+                    sessionsAvailable={sessionsTrust.hasData}
+                    drivesAvailable={drivesTrust.hasData}
                     sessionLimit={BATTERY_CARE_HISTORY_LIMIT}
                     driveLimit={BATTERY_CARE_HISTORY_LIMIT}
                   />

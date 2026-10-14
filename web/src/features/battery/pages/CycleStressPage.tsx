@@ -102,8 +102,9 @@ export default function CycleStressPage() {
   const { state } = trust;
   const locale = i18n.language;
   const needsEvidenceCaveat = state.vehicleSelected && state.isResolved && !state.error
-    && trust.sources.some(source => source.trust.fatalError
-      || source.trust.refreshError || source.trust.isRefreshBlocked);
+    && (state.loadingSources.length > 0
+      || trust.sources.some(source => source.trust.fatalError
+        || source.trust.refreshError || source.trust.isRefreshBlocked));
   const capReached = result.driveAccounting.historyCapReached
     || result.chargingAccounting.historyCapReached;
   const returnedRows = result.driveAccounting.returnedRows
@@ -240,6 +241,7 @@ export default function CycleStressPage() {
         <CycleStressAccounting
           result={result}
           state={state}
+          retained={trust.retained}
           locale={locale}
         />
       </FadeIn>

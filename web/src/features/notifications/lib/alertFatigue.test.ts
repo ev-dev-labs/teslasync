@@ -93,9 +93,70 @@ describe('analyzeAlertFatigue', () => {
   it('is empty and safe with no data', () => {
     const s = analyzeAlertFatigue([]);
     expect(s.groups).toEqual([]);
+    expect(s.totalNotifications).toBe(0);
     expect(s.fatiguingCount).toBe(0);
     expect(s.overallIgnoredRate).toBeNull();
-    expect(s.overallPerDay).toBe(0);
+    expect(s.overallPerDay).toBeNull();
+    expect(s.overallBurstRate).toBeNull();
+    expect(s.analyzedDays).toBe(0);
+  });
+
+  it.each([1.49, 1.51, 2.25])('uses the same fractional %s-day span for rule and overall rates', (days) => {
+    const s = analyzeAlertFatigue(series('Recorded rule', 3, days * 24 * 60 / 2));
+    const g = s.groups[0]!;
+    expect(g.spanDays).toBeCloseTo(days, 10);
+    expect(s.analyzedDays).toBe(g.spanDays);
+    expect(g.perDay).toBe(Math.round((3 / days) * 100) / 100);
+    expect(s.overallPerDay).toBe(g.perDay);
+  });
+
+  it('preserves the one-day minimum for a sub-day recorded span', () => {
+    const s = analyzeAlertFatigue(series('Short burst', 3, 10));
+    const g = s.groups[0]!;
+    expect(g.spanDays).toBe(1);
+    expect(s.analyzedDays).toBe(1);
+    expect(g.perDay).toBe(3);
+    expect(s.overallPerDay).toBe(3);
+    expect(g.burstRate).toBe(1);
+    expect(s.overallBurstRate).toBe(1);
+  });
+
+  it('uses the full recorded span across groups without changing the global burst denominator', () => {
+    const s = analyzeAlertFatigue([
+      log({ min: 0, title: 'First rule' }),
+      log({ min: 5, title: 'First rule' }),
+      log({ min: 1.49 * 24 * 60 - 5, title: 'Second rule' }),
+      log({ min: 1.49 * 24 * 60, title: 'Second rule' }),
+    ]);
+    expect(s.analyzedDays).toBeCloseTo(1.49, 10);
+    expect(s.overallPerDay).toBe(2.68);
+    expect(s.groups.map((g) => g.perDay)).toEqual([2, 2]);
+    expect(s.groups.map((g) => g.burstRate)).toEqual([1, 1]);
+    expect(s.overallBurstRate).toBe(0.667);
+  });
+
+  it('keeps rates unknown when every input is unusable, without changing raw counts', () => {
+    const entry = log({ min: 0, title: 'Rejected rule' });
+    const s = analyzeAlertFatigue([
+      { ...entry, sent_at: 'invalid', created_at: 'invalid' },
+      { ...entry, title: '   ' },
+    ]);
+    expect(s.groups).toEqual([]);
+    expect(s.totalNotifications).toBe(2);
+    expect(s.fatiguingCount).toBe(0);
+    expect(s.analyzedDays).toBe(0);
+    expect(s.overallPerDay).toBeNull();
+    expect(s.overallBurstRate).toBeNull();
+    expect(s.overallIgnoredRate).toBeNull();
+  });
+
+  it('preserves measured zero burst and ignored rates when denominators exist', () => {
+    const s = analyzeAlertFatigue(series('Read daily rule', 3, 24 * 60, { readAfterMin: 1 }));
+    expect(s.totalNotifications).toBe(3);
+    expect(s.fatiguingCount).toBe(0);
+    expect(s.overallPerDay).toBe(1.5);
+    expect(s.overallBurstRate).toBe(0);
+    expect(s.overallIgnoredRate).toBe(0);
   });
 
   it('groups firings that differ only by an embedded value', () => {
@@ -189,11 +250,15 @@ describe('analyzeAlertFatigue', () => {
   });
 
   it('withholds a verdict below the minimum firing count', () => {
-    const g = analyzeAlertFatigue([log({ min: 0, title: 'One off' })]).groups[0]!;
+    const s = analyzeAlertFatigue([log({ min: 0, title: 'One off' })]);
+    const g = s.groups[0]!;
     expect(g.verdict).toBe('healthy');
     expect(g.noiseScore).toBe(0);
     // Span is clamped so a lone event cannot report an infinite rate.
     expect(Number.isFinite(g.perDay)).toBe(true);
+    expect(s.analyzedDays).toBe(1);
+    expect(s.overallPerDay).toBe(1);
+    expect(s.overallBurstRate).toBeNull();
   });
 
   it('ranks the noisiest rule first', () => {

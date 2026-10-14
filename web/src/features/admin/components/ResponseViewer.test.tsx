@@ -76,7 +76,7 @@ const noop = () => {};
 const url = 'https://api.test/v1/vehicles';
 const alertsUrl = 'https://api.test/v1/alerts';
 
-const writeText = vi.fn(() => Promise.resolve());
+const writeText = vi.fn((_text: string) => Promise.resolve());
 
 beforeEach(() => {
   cleanup();
@@ -201,7 +201,7 @@ describe('ResponseViewer', () => {
     expect(screen.getByText(meta)).toBeInTheDocument();
   });
 
-  it('renders a neutral "0 B" for a NaN or negative size instead of "NaN MB" (bug fix)', () => {
+  it('renders unknown size for NaN or negative metadata instead of a measured "0 B"', () => {
     const { rerender } = render(
       <ResponseViewer
         response={makeResponse({ size: NaN, duration: 42 })}
@@ -210,8 +210,9 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.getByText('42.00ms · 0 B')).toBeInTheDocument();
+    expect(screen.getByText('42.00ms · —')).toBeInTheDocument();
     expect(screen.queryByText(/NaN/)).toBeNull();
+    expect(screen.queryByText('42.00ms · 0 B')).toBeNull();
 
     rerender(
       <ResponseViewer
@@ -221,7 +222,51 @@ describe('ResponseViewer', () => {
         onReplay={noop}
       />,
     );
-    expect(screen.getByText('42.00ms · 0 B')).toBeInTheDocument();
+    expect(screen.getByText('42.00ms · —')).toBeInTheDocument();
+    expect(screen.queryByText('42.00ms · 0 B')).toBeNull();
+  });
+
+  it('preserves measured zero timing and size on a real HTTP success', () => {
+    render(
+      <ResponseViewer
+        response={makeResponse({ status: 204, statusText: 'No Content', duration: 0, size: 0 })}
+        loading={false}
+        history={[]}
+        onReplay={noop}
+      />,
+    );
+    expect(screen.getByText('204 No Content')).toHaveClass('text-green-400');
+    expect(screen.getByText('0.00ms · 0 B')).toBeInTheDocument();
+    expect(screen.queryByText('— · —')).toBeNull();
+  });
+
+  it.each([
+    { duration: NaN, size: NaN },
+    { duration: 0, size: 0 },
+  ])('shows network failure without HTTP success or measured metadata: %j', metadata => {
+    render(
+      <ResponseViewer
+        response={makeResponse({
+          status: 0,
+          statusText: 'Network error',
+          contentType: 'text/plain',
+          body: { error: 'connection failed' },
+          bodyText: 'connection failed',
+          ...metadata,
+        })}
+        loading={false}
+        history={[]}
+        onReplay={noop}
+      />,
+    );
+    const status = screen.getByText('Network error');
+    expect(status).toHaveClass('text-red-400');
+    expect(status).not.toHaveClass('text-green-400');
+    expect(status.closest('div')).toHaveClass('bg-red-500/10');
+    expect(screen.queryByText('0 Network error')).toBeNull();
+    expect(screen.getByText('— · —')).toBeInTheDocument();
+    expect(screen.queryByText('0.00ms · 0 B')).toBeNull();
+    expect(screen.getByRole('region', RESPONSE_BODY)).toHaveTextContent('connection failed');
   });
 
   it('shows raw bodyText for a non-JSON content type', () => {
@@ -453,12 +498,18 @@ describe('SnippetPanel', () => {
   });
 
   it('adds json= to the Python snippet for a POST body', () => {
-    render(<SnippetPanel method="POST" url={alertsUrl} body='{"a":1}' />);
+    const body = '{"a":1}';
+    render(<SnippetPanel method="POST" url={alertsUrl} body={body} />);
     expandSnippet();
     fireEvent.click(screen.getByRole('button', { name: 'Python' }));
-    expect(screen.getByLabelText(SNIPPET_LABEL)).toHaveTextContent(
-      `requests.post('${alertsUrl}', json={"a":1})`,
+    const snippet = screen.getByLabelText(SNIPPET_LABEL);
+    expect(snippet).toHaveTextContent('import json');
+    expect(snippet).toHaveTextContent(
+      `requests.post('${alertsUrl}', json=json.loads(${JSON.stringify(body)}))`,
     );
+    const encoded = snippet.textContent?.match(/json=json\.loads\((.*)\)\)/)?.[1];
+    expect(encoded).toBeDefined();
+    expect(JSON.parse(encoded!)).toBe(body);
   });
 
   it('renders the Go http.Get snippet for a GET request', () => {
@@ -489,7 +540,7 @@ describe('SnippetPanel', () => {
     expandSnippet();
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
-    const copied = writeText.mock.calls[0][0] as string;
+    const copied = writeText.mock.calls[0][0];
     expect(copied).toContain(`curl -X GET '${url}'`);
   });
 

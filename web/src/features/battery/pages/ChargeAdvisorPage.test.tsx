@@ -321,6 +321,30 @@ describe('ChargeAdvisorPage', () => {
     expect(sensitivity.getByText('Selected')).toBeInTheDocument();
   });
 
+  it('shows independent p75 end values in both the scenario data table and day directory', () => {
+    renderPage();
+    expectEveryShell();
+    const table = within(screen.getByTestId('charge-advisor-scenarios'))
+      .getByRole('table', { hidden: true });
+    const rows = within(table).getAllByRole('row', { hidden: true }).slice(1);
+    expect(rows).toHaveLength(7);
+    for (const row of rows) {
+      const cells = within(row).getAllByRole('cell', { hidden: true });
+      expect(cells).toHaveLength(5);
+      expect(Number(cells[1]?.textContent)).toBeLessThan(80);
+      expect(Number(cells[2]?.textContent)).toBe(80);
+      expect(Number(cells[4]?.textContent)).toBe(0);
+    }
+    const days = screen.getByTestId('charge-advisor-directory').querySelectorAll('article');
+    expect(days).toHaveLength(7);
+    for (const day of days) {
+      const p75 = within(day).getByText('Calendar-day p75 end SoC').parentElement;
+      expect(p75).toHaveTextContent('80.00%');
+      const mean = within(day).getByText('Mean end SoC').parentElement;
+      expect(mean).not.toHaveTextContent('80.00%');
+    }
+  });
+
   it('shows live current-state provenance and charge limit', () => {
     renderPage();
     const current = within(screen.getByTestId('charge-advisor-current'));

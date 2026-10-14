@@ -9,6 +9,7 @@ import {
   setGlobalPrecision,
 } from '@/lib/numberFormat';
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
+import { BADGE_VARIANTS } from '@/components/ui';
 import { EvidencePanel } from './EvidencePanel';
 
 vi.unmock('react-i18next');
@@ -47,11 +48,21 @@ beforeEach(async () => {
     interpolation: { escapeValue: false },
     // Synthetic plural copy exercises the real engine; production catalog integration is parent-owned.
     resources: {
-      en: { translation: { advancedIntelligence: { evidence: {
+      en: { translation: { advancedIntelligence: { brief: { quality: {
+        sufficient: 'Sufficient evidence',
+        limited: 'Limited evidence',
+        insufficient: 'Insufficient evidence',
+        unknown: 'Quality not supplied',
+      } }, evidence: {
         sampleLine_one: '{{formattedCount}} sample · {{date}}',
         sampleLine_other: '{{formattedCount}} samples · {{date}}',
       } } } },
-      de: { translation: { advancedIntelligence: { evidence: {
+      de: { translation: { advancedIntelligence: { brief: { quality: {
+        sufficient: 'Ausreichende Evidenz',
+        limited: 'Begrenzte Evidenz',
+        insufficient: 'Unzureichende Evidenz',
+        unknown: 'Qualitaet nicht angegeben',
+      } }, evidence: {
         sampleLine_one: '{{formattedCount}} Beobachtung · {{date}}',
         sampleLine_other: '{{formattedCount}} Beobachtungen · {{date}}',
       } } } },
@@ -59,6 +70,46 @@ beforeEach(async () => {
         sampleLine_other: '{{formattedCount}} 件の観測 · {{date}}',
       } } } },
     },
+  });
+});
+
+describe('EvidencePanel known quality labels', () => {
+  it.each([
+    { status: 'sufficient', label: 'Sufficient evidence', translated: 'Ausreichende Evidenz', variant: 'success' },
+    { status: 'limited', label: 'Limited evidence', translated: 'Begrenzte Evidenz', variant: 'warning' },
+    { status: 'insufficient', label: 'Insufficient evidence', translated: 'Unzureichende Evidenz', variant: 'danger' },
+  ] satisfies Array<{
+    status: DataQuality['status'];
+    label: string;
+    translated: string;
+    variant: keyof typeof BADGE_VARIANTS;
+  }>)('localizes $status without changing raw quality, variants or source prose', async ({ status, label, translated, variant }) => {
+    const metadata: DataQuality = Object.freeze({ ...quality, status });
+    const item = observation(1);
+    const refetch = vi.fn();
+    render(<I18nextProvider i18n={translations}>
+      <EvidencePanel quality={metadata} evidence={[item]} query={{ data: metadata, refetch }} />
+    </I18nextProvider>);
+    const section = within(screen.getByRole('region', { name: 'Data quality' }));
+    expect(section.getByText(label)).toHaveClass(...BADGE_VARIANTS[variant].split(' '));
+    expect(section.queryByText(status)).not.toBeInTheDocument();
+    await act(async () => { await translations.changeLanguage('de'); });
+    expect(section.getByText(translated)).toHaveClass(...BADGE_VARIANTS[variant].split(' '));
+    expect(screen.getByText(SOURCE)).toBeVisible();
+    expect(screen.getByText(item.summary)).toBeVisible();
+    expect(section.getByText('• Synthetic coverage limitation.')).toBeVisible();
+    expect(metadata.status).toBe(status);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('uses the existing unknown label for an unrecognized wire status without treating it as a translation key', async () => {
+    const metadata: DataQuality = Object.freeze(JSON.parse(JSON.stringify({ ...quality, status: 'future-quality' })));
+    render(<I18nextProvider i18n={translations}><EvidencePanel quality={metadata} /></I18nextProvider>);
+    expect(screen.getByText('Quality not supplied')).toBeVisible();
+    expect(screen.queryByText('future-quality')).not.toBeInTheDocument();
+    await act(async () => { await translations.changeLanguage('de'); });
+    expect(screen.getByText('Qualitaet nicht angegeben')).toBeVisible();
+    expect(metadata.status).toBe('future-quality');
   });
 });
 

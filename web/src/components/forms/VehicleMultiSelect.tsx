@@ -68,9 +68,9 @@ function lastFourVin(vin: string | undefined | null): string | null {
   return vin.slice(-4);
 }
 
-function vehicleLabel(v: Vehicle): string {
+function vehicleLabel(v: Vehicle, fallbackLabel: string): string {
   const last4 = lastFourVin(v.vin);
-  const base = v.display_name || v.model || `Vehicle #${v.id}`;
+  const base = v.display_name || v.model || fallbackLabel;
   if (!last4) return v.model ? `${base} — ${v.model}` : base;
   if (!v.model || v.display_name === v.model) return `${base} (VIN ...${last4})`;
   return `${base} — ${v.model} (VIN ...${last4})`;
@@ -151,9 +151,11 @@ export function VehicleMultiSelect({
     }
     if (count === 1) {
       const veh = vehicles.find((v) => v.id === selectedIds[0]);
-      const name = veh
-        ? veh.display_name || veh.model || `Vehicle #${selectedIds[0]}`
-        : `Vehicle #${selectedIds[0]}`;
+      const name = veh?.display_name || veh?.model || t(
+        'notifications.alertStudio.editor.vehiclesUnknownLabel',
+        'Vehicle #{{id}}',
+        { id: selectedIds[0] },
+      );
       return t(
         'notifications.alertStudio.editor.vehiclesSummaryOne',
         '{{name}}',
@@ -375,7 +377,13 @@ export function VehicleMultiSelect({
                       </svg>
                     )}
                   </span>
-                  <Text variant="body" className="min-w-0 break-words">{vehicleLabel(v)}</Text>
+                  <Text variant="body" className="min-w-0 break-words">
+                    {vehicleLabel(v, t(
+                      'notifications.alertStudio.editor.vehiclesUnknownLabel',
+                      'Vehicle #{{id}}',
+                      { id: v.id },
+                    ))}
+                  </Text>
                 </span>
               </Button>
             );

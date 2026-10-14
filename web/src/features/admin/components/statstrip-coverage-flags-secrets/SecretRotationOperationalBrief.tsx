@@ -32,8 +32,8 @@ export function secretRotationMetrics(
       })],
     ['soon', 'admin.secretRotation.warnLabel', 'Rotate soon', count('warn'),
       t('admin.secretRotation.warnSub', 'Approaching threshold')],
-    ['overdue', 'admin.secretRotation.criticalLabel', 'Overdue', count('critical'),
-      t('admin.secretRotation.criticalSub', 'Past critical threshold')],
+    ['overdue', 'common.critical', 'Critical', count('critical'),
+      t('admin.secretRotation.statstrip.overdueDescription', 'Returned credentials classified critical by their server-side per-kind thresholds.')],
   ] as const;
   return [
     ...counts.map(([occurrenceId, key, fallback, value, context]): StatMetric => ({

@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ShieldAlert } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { AlertBanner } from '@/components/feedback';
+import { AlertBanner, DataStateNotice } from '@/components/feedback';
 
 import { FadeIn } from '@/components/motion';
 
@@ -16,8 +16,7 @@ import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
 import { deriveDataState } from '@/api/dataState';
 
 import {
-  doorClosed,
-  allWindowsClosed,
+  securityPosture,
   isSentryActive,
   computeSentryUptime,
   findLastLockChange,
@@ -57,11 +56,17 @@ export default function SecurityAccessPage() {
   /* ---- Latest security state (polled) ---- */
   const latestQuery = useLatestSecurityEvent(activeId);
   const { data: latest, isLoading: loadingLatest, refetch: refetchLatest } = latestQuery;
-  const latestState = deriveDataState(latestQuery, { provenance: 'live' });
+  const hasLatestReadings = latest != null && Object.entries(latest).some(
+    ([key, value]) => key !== 'id' && key !== 'createdAt' && value != null,
+  );
+  const latestState = deriveDataState(latestQuery, {
+    provenance: hasLatestReadings ? 'live' : 'unknown',
+    unavailable: !hasLatestReadings,
+  });
   const latestError = latestState.fatalError;
 
   /* ---- Security event history ---- */
-  const { startInstant, endInstantExclusive } = useRangeState();
+  const { startInstant, endInstantExclusive, timezone } = useRangeState();
   const historyQuery = useSecurityEvents(activeId, startInstant, endInstantExclusive);
   const {
     data: rawHistory = [],
@@ -106,14 +111,11 @@ export default function SecurityAccessPage() {
   }, [rawHistory, startInstant, endInstantExclusive]);
 
   /* ---- Computed stats ---- */
-  const isSecure = useMemo(() => {
-    if (!latest) return true;
-    return !!latest.locked && doorClosed(latest.doorState) && allWindowsClosed(latest);
-  }, [latest]);
+  const isSecure = useMemo(() => securityPosture(latest), [latest]);
 
   const sentryUptime = useMemo(() => computeSentryUptime(history), [history]);
   const lastLockChange = useMemo(() => findLastLockChange(history), [history]);
-  const sentryBuckets = useMemo(() => buildSentryBuckets(history), [history]);
+  const sentryBuckets = useMemo(() => buildSentryBuckets(history, timezone), [history, timezone]);
   const securityStats = useMemo(() => computeSecurityStats(history), [history]);
   const twinState = useMemo(
     () => buildTwinStateFromAdmin(latest ? { ...latest, sentryMode: isSentryActive(latest.sentryMode) } : null),
@@ -123,9 +125,9 @@ export default function SecurityAccessPage() {
 
   const twinVehicleId = activeId ? Number(activeId) : undefined;
   const summarySource = {
-    known: latestState.hasData && historyState.hasData,
+    known: hasLatestReadings && historyState.hasData,
     loading: loadingLatest && loadingHistory,
-    retained: [latestState, historyState].some(state => state.hasData && (state.isRefreshing || state.status === 'stale')),
+    retained: [latestState, historyState].some(state => state.hasData && (state.isRefreshing || state.isRefreshBlocked || state.status === 'stale')),
     failed: latestState.fatalError != null || historyState.fatalError != null,
   };
   const historyScope = t('admin.security.brief.historyScope', 'Returned security events for vehicle {{vehicle}}, {{start}} to {{end}} (exclusive); statistics describe event samples, not a complete time-weighted history.', {
@@ -144,7 +146,7 @@ export default function SecurityAccessPage() {
       dataSources={dataSources}
     >
       {/* Contextual insecure-vehicle warning */}
-      {!isSecure && latest && (
+      {isSecure === false && latest && (
         <FadeIn>
           <AlertBanner
             variant="warning"
@@ -168,7 +170,6 @@ export default function SecurityAccessPage() {
             historyLoading={loadingHistory}
             source={summarySource}
             start={startInstant} endExclusive={endInstantExclusive} vehicleId={activeId}
-            observedAt={latest?.createdAt}
           />
         </section>
       </FadeIn>
@@ -206,6 +207,7 @@ export default function SecurityAccessPage() {
         >
           <LiveVehicleState
             latest={latest}
+            sourceState={latestState}
             isLoading={loadingLatest}
             error={latestError}
             onRetry={refetchLatest}
@@ -229,26 +231,31 @@ export default function SecurityAccessPage() {
         >
           <SentryModeChart
             sentryBuckets={sentryBuckets}
+            sourceState={historyState}
             isLoading={loadingHistory}
             error={historyError}
             onRetry={refetchHistory}
             className="xl:col-span-2"
           />
-          <SecurityStatisticsBrief
-            securityStats={securityStats}
-            sentryUptime={sentryUptime}
-            isLoading={loadingHistory}
-            error={historyError}
-            onRetry={refetchHistory}
-            className="xl:col-span-1"
-            source={{
-              known: historyState.hasData,
-              loading: loadingHistory,
-              retained: historyState.hasData && (historyState.isRefreshing || historyState.status === 'stale'),
-              failed: historyState.fatalError != null,
-            }}
-            scope={historyScope}
-          />
+          <div className="xl:col-span-1">
+            {historyState.isRefreshBlocked && !historyState.hasData && (
+              <DataStateNotice state="partial" title={t('dataSources.status.paused', 'Refresh paused')} />
+            )}
+            <SecurityStatisticsBrief
+              securityStats={securityStats}
+              sentryUptime={sentryUptime}
+              isLoading={loadingHistory || historyState.status === 'initial'}
+              error={historyError}
+              onRetry={refetchHistory}
+              source={{
+                known: historyState.hasData,
+                loading: loadingHistory || historyState.status === 'initial',
+                retained: historyState.hasData && (historyState.isRefreshing || historyState.isRefreshBlocked || historyState.status === 'stale'),
+                failed: historyState.fatalError != null,
+              }}
+              scope={historyScope}
+            />
+          </div>
         </section>
       </FadeIn>
 
@@ -260,12 +267,14 @@ export default function SecurityAccessPage() {
         >
           <EventHistoryTable
             history={history}
+            sourceState={historyState}
             isLoading={loadingHistory}
             error={historyError}
             onRetry={refetchHistory}
           />
           <EventTimeline
             timelineEvents={timelineEvents}
+            sourceState={historyState}
             isLoading={loadingHistory}
             error={historyError}
             onRetry={refetchHistory}

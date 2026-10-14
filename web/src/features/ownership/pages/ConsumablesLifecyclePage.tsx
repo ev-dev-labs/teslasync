@@ -17,10 +17,10 @@ import { FadeIn } from '@/components/motion';
 import { Accordion, Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
 import { neonColorMap } from '@/lib/tokens';
 
 import type {
@@ -84,9 +84,11 @@ function healthTone(pct: number): string {
 export default function ConsumablesLifecyclePage() {
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const [formOpen, setFormOpen] = useState(false);
+  const partFormId = useId();
   const [eventFor, setEventFor] = useState<ConsumableItem | null>(null);
   const eventHeadingId = useId();
   const eventHeading = useRef<HTMLHeadingElement>(null);
@@ -117,6 +119,15 @@ export default function ConsumablesLifecyclePage() {
     cost_minor: 0,
     note: '',
   });
+  const currentPartEditor = useRef({ vehicleId, draft, formOpen, revision: 0 });
+  if (currentPartEditor.current.vehicleId !== vehicleId
+    || currentPartEditor.current.draft !== draft
+    || currentPartEditor.current.formOpen !== formOpen) {
+    currentPartEditor.current = {
+      vehicleId, draft, formOpen, revision: currentPartEditor.current.revision + 1,
+    };
+  }
+  useEffect(() => () => { currentPartEditor.current.revision += 1; }, []);
 
   usePageTitle(t('ownership.consumables.navTitle', 'Consumables lifecycle'));
 
@@ -167,7 +178,9 @@ export default function ConsumablesLifecyclePage() {
 
   const submitItem = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null) return;
+    if (vehicleId == null || !formOpen || create.isPending) return;
+    const revision = currentPartEditor.current.revision;
+    const submittedVehicleId = vehicleId;
     create.mutate(
       {
         vehicle_id: vehicleId,
@@ -182,7 +195,13 @@ export default function ConsumablesLifecyclePage() {
         currency: draft.currency,
         notes: draft.notes,
       },
-      { onSuccess: () => setFormOpen(false) },
+      {
+        onSuccess: () => {
+          const editor = currentPartEditor.current;
+          if (editor.revision === revision && editor.formOpen
+            && editor.vehicleId === submittedVehicleId) setFormOpen(false);
+        },
+      },
     );
   };
 
@@ -678,7 +697,12 @@ export default function ConsumablesLifecyclePage() {
               size="sm"
               icon={<Icon icon={PackagePlus} size="md" />}
               wrapLabel
-              onClick={() => setFormOpen((open) => !open)}
+              aria-expanded={formOpen}
+              aria-controls={partFormId}
+              onClick={() => {
+                currentPartEditor.current.revision += 1;
+                setFormOpen((open) => !open);
+              }}
             >
               {formOpen
                 ? t('ownership.action.cancel', 'Cancel')
@@ -687,7 +711,7 @@ export default function ConsumablesLifecyclePage() {
           }
         >
           {formOpen ? (
-            <form className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={submitItem}>
+            <form id={partFormId} className="mb-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3" onSubmit={submitItem}>
               <Select
                 label={t('ownership.consumables.form.category', 'Category')}
                 value={draft.category}

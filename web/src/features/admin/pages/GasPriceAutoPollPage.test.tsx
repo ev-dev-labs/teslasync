@@ -1,11 +1,10 @@
 /**
  * GasPriceAutoPollPage contract tests.
  *
- * The page is a thin orchestrator that fans three queries out to four
+ * The page is a thin orchestrator that fans two queries out to four
  * self-sufficient sub-components (KPI band, trend chart, control panel,
- * history table). These tests exercise the page end-to-end — the real hooks
- * run against a mocked `request()` — so every branch the user can hit is
- * covered:
+ * history table). The real hooks run against a mocked request() boundary;
+ * these are not transport-guard or provider-completion acceptance tests.
  *
  *   1. Full render: header, Poll-Now action, and all four sections with data.
  *   2. KPI band — enabled/"Running" state with formatted prices.
@@ -21,10 +20,25 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+
+const operational = vi.hoisted(() => ({
+  mode: 'live',
+  asOf: null,
+  online: true,
+  isReadOnly: false,
+  label: 'Live',
+  description: '',
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}))
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operational,
+}))
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
@@ -142,7 +156,7 @@ function install(opts: InstallOptions = {}) {
       return Promise.resolve(history)
     }
     if (path === '/gas-price/poll') {
-      return pollPending ? never() : Promise.resolve({ status: 'ok' })
+      return pollPending ? never() : Promise.resolve({ status: 'poll_triggered' })
     }
     if (path === '/gas-price/toggle') {
       const body = init?.body ? (JSON.parse(String(init.body)) as { enabled: boolean }) : { enabled: false }
@@ -187,6 +201,9 @@ const kpiRegion = () => screen.getByRole('region', { name: /Gas price summary/i 
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  Object.assign(operational, {
+    mode: 'live', online: true, isReadOnly: false, canWrite: true, writeBlockReason: null,
+  })
 })
 
 describe('GasPriceAutoPollPage retained sources', () => {
@@ -361,7 +378,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
         '/gas-price/poll',
-        expect.objectContaining({ method: 'POST' }),
+        expect.objectContaining({ method: 'POST', requiresLiveMode: true }),
       ),
     )
   })
@@ -388,7 +405,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
         '/gas-price/toggle',
-        expect.objectContaining({ method: 'POST', body: JSON.stringify({ enabled: false }) }),
+        expect.objectContaining({ method: 'POST', requiresLiveMode: true, body: JSON.stringify({ enabled: false }) }),
       ),
     )
   })
@@ -407,6 +424,7 @@ describe('GasPriceAutoPollPage — interactions', () => {
         '/gas-price/config',
         expect.objectContaining({
           method: 'PUT',
+          requiresLiveMode: true,
           body: JSON.stringify({ poll_interval: 'daily' }),
         }),
       ),
@@ -414,7 +432,91 @@ describe('GasPriceAutoPollPage — interactions', () => {
   })
 })
 
+describe('GasPriceAutoPollPage polling lifecycle', () => {
+  const historyCalls = () => mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history').length
+
+  it('reports acknowledgement as triggered without refreshing history or claiming completion', async () => {
+    install()
+    renderPage()
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    const before = historyCalls()
+    fireEvent.click(screen.getByRole('button', { name: 'Poll now' }))
+    await screen.findByText('Gas price poll triggered')
+    await waitFor(() => expect(statusCallCount()).toBe(2))
+    expect(historyCalls()).toBe(before)
+    expect(screen.queryByText('Gas prices updated')).not.toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('$3.45')).toBeInTheDocument()
+  })
+
+  it('refreshes mounted history only when the successful-poll timestamp advances', async () => {
+    install()
+    const { qc } = renderPage()
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    const before = historyCalls()
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before)
+
+    install({ status: makeStatus({ last_poll_time: '2026-01-16T12:00:00Z' }) })
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    await waitFor(() => expect(historyCalls()).toBe(before + 1))
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before + 1)
+  })
+
+  it('keeps retained history when a status refresh fails or reports an invalid timestamp', async () => {
+    install()
+    const { qc } = renderPage()
+    await within(kpiRegion()).findByText('Running')
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    const before = historyCalls()
+    install({ statusError: true })
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before)
+    install({ status: makeStatus({ last_poll_time: 'invalid' }) })
+    await act(async () => { await qc.invalidateQueries({ queryKey: ['gas-price-status'] }) })
+    expect(historyCalls()).toBe(before)
+    expect(screen.getByRole('img', { name: /line chart of historical Gas prices/i })).toBeInTheDocument()
+  })
+
+  it.each([
+    ['as_of', 'Return to live mode before making operational changes.'],
+    ['cached', 'Reconnect before making operational changes.'],
+  ])('disables all gas controls in %s mode while keeping source sections visible', async (mode, reason) => {
+    Object.assign(operational, { mode, canWrite: false, isReadOnly: true, writeBlockReason: reason })
+    install()
+    renderPage()
+    await within(kpiRegion()).findByText('Running')
+    const poll = screen.getByRole('button', { name: 'Poll now' })
+    const toggle = screen.getByRole('switch', { name: 'Auto-poll' })
+    const interval = screen.getByRole('combobox', { name: /Poll interval/i })
+    expect(poll).toBeDisabled()
+    expect(toggle).toBeDisabled()
+    expect(interval).toBeDisabled()
+    expect(poll).toHaveAttribute('title', reason)
+    expect(screen.getByText(reason)).toBeInTheDocument()
+    fireEvent.click(poll)
+    fireEvent.click(toggle)
+    fireEvent.change(interval, { target: { value: 'daily' } })
+    expect(mockedRequest.mock.calls.filter(([, init]) => ['POST', 'PUT'].includes(init?.method))).toHaveLength(0)
+    expect(screen.getByRole('heading', { name: 'Price history' })).toBeInTheDocument()
+  })
+})
+
 describe('GasPriceAutoPollPage — history table', () => {
+  it('discloses the newest-50 bound for both history and trend without implying full history', async () => {
+    const history = Array.from({ length: 50 }, (_, index) => ({
+      ...makeHistory()[0],
+      id: 51 - index,
+    }))
+    install({ history })
+    renderPage()
+    await screen.findByRole('img', { name: /line chart of historical Gas prices/i })
+    expect(screen.getByText('Price trend / Price history: Bounded at 50 newest rows')).toBeInTheDocument()
+    expect(mockedRequest.mock.calls.filter(([path]) => path === '/gas-price/history')).toHaveLength(1)
+  })
+
   it('lists one row per record with its formatted price and unit', async () => {
     install()
     renderPage()

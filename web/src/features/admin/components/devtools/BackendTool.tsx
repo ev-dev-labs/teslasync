@@ -29,23 +29,21 @@ export function BackendTool({
 }: BackendToolProps) {
   const { t } = useTranslation()
   const mutation = useMutation({
+    networkMode: 'always',
     mutationFn: () => apiFetch(endpoint, method, bodyBuilder?.()),
   })
 
-  // `apiFetch` resolves to the parsed body, or a `{ error: string }`
-  // envelope when the request fails — it never rejects. Any truthy `error`
-  // field means failure (mirrors the sibling FleetApiSection tools). We
-  // normalise it to a human-readable message here so a truthy-but-non-string
-  // error can no longer leave the result panel stuck on its idle copy.
   const result = mutation.data
-  const rawError = result?.error
-  const hasError = Boolean(rawError)
+  const rawError: unknown = mutation.error ?? result?.error
+  const hasError = mutation.isError || Boolean(rawError)
   const errorText =
-    typeof rawError === 'string' && rawError.trim() !== ''
-      ? rawError
-      : hasError
-        ? t('devtools.backendTool.requestFailed', 'Request failed')
-        : undefined
+    rawError instanceof Error && rawError.message.trim() !== ''
+      ? rawError.message
+      : typeof rawError === 'string' && rawError.trim() !== ''
+        ? rawError
+        : hasError
+          ? t('devtools.backendTool.requestFailed', 'Request failed')
+          : undefined
 
   return (
     <ToolCard icon={icon} color={color} title={title} description={description}>
@@ -60,7 +58,7 @@ export function BackendTool({
         >
           {t('devtools.backendTool.run', 'Run')}
         </Button>
-        {result && (
+        {(result || hasError) && (
           <Badge
             variant={hasError ? 'danger' : 'success'}
             size="sm"
@@ -73,7 +71,7 @@ export function BackendTool({
           </Badge>
         )}
       </div>
-      {result && (
+      {(result || hasError) && (
         <ResultPanel title={title} data={hasError ? undefined : result} error={errorText} />
       )}
     </ToolCard>

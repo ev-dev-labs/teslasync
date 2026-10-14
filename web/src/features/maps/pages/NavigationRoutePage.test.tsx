@@ -44,10 +44,13 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor, cleanup } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 import type { LocationSnapshot } from '@/api/types';
+import { formatDateTime } from '@/lib/dateFormat';
+
+vi.unmock('@/lib/timezone');
 
 // ── Hoisted, per-test controllable state ─────────────────────────────
 // Every field is a knob a single test can flip; the mock factories below
@@ -56,15 +59,22 @@ const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   liveStatus: 'connected' as 'connected' | 'reconnecting' | 'disconnected' | 'unknown',
   vehiclesLoading: false,
+  vehiclesResolved: true,
+  vehiclesFetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
   vehiclesError: null as Error | null,
   latest: null as LocationSnapshot | null,
   latestLoading: false,
+  latestPending: false,
+  latestFetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
   latestError: null as unknown,
   charging: null as { expected_energy_pct_at_arrival?: number | null } | null,
   chargingError: null as Error | null,
   realChartFrames: false,
   history: [] as LocationSnapshot[],
   historyMode: 'resolve' as 'resolve' | 'reject' | 'pending',
+  dateLocale: 'en-US',
+  dateMode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+  userTimezone: 'UTC',
   refetchLatest: vi.fn(),
   refetchCharging: vi.fn(),
   requestSpy: vi.fn(),
@@ -108,6 +118,26 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   }),
 }));
 
+vi.mock('@/hooks/useSettings', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  return {
+    ...actual,
+    useSettings: () => {
+      const result = actual.useSettings();
+      return {
+        ...result,
+        locale: h.dateLocale,
+        settings: {
+          ...result.settings,
+          locale: h.dateLocale,
+          tz_display_default: h.dateMode,
+          timezone_user: h.userTimezone,
+        },
+      };
+    },
+  };
+});
+
 // Deterministic unit formatting: distance→km, speed→km/h, and a
 // formatDuration that echoes the seconds it was handed so the page's
 // wiring (which field feeds the badge/metric) stays assertable. The page
@@ -148,8 +178,11 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   return {
     ...actual,
     useVehicles: () => ({
-      data: [],
+      data: h.vehiclesResolved ? [] : undefined,
       isLoading: h.vehiclesLoading,
+      isPending: !h.vehiclesResolved && h.vehiclesError == null,
+      isSuccess: h.vehiclesResolved && h.vehiclesError == null,
+      fetchStatus: h.vehiclesFetchStatus,
       error: h.vehiclesError,
       isError: h.vehiclesError != null,
       refetch: vi.fn(),
@@ -157,6 +190,9 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
     useLocationSnapshotLatest: () => ({
       data: h.latest,
       isLoading: h.latestLoading,
+      isPending: h.latestPending || h.latestLoading,
+      isSuccess: !h.latestPending && !h.latestLoading && h.latestError == null,
+      fetchStatus: h.latestFetchStatus,
       error: h.latestError,
       isError: h.latestError != null,
       isFetching: false,
@@ -182,8 +218,8 @@ vi.mock('@/api/client', async (importOriginal) => {
   return {
     ...actual,
     request: (path: string, _options?: unknown) => {
-      h.requestSpy(path);
       if (path.startsWith('/location-snapshots?')) {
+        h.requestSpy(path);
         if (h.historyMode === 'reject') return Promise.reject(new Error('history boom'));
         if (h.historyMode === 'pending') return new Promise(() => {});
         return Promise.resolve(h.history);
@@ -205,7 +241,11 @@ vi.mock('@/components/charts', async (importOriginal) => {
     ...chartTestDoubles,
     EmbeddedChart: (props: ComponentProps<typeof actual.EmbeddedChart>) => h.realChartFrames
       ? <actual.EmbeddedChart {...props} />
-      : <chartTestDoubles.EmbeddedChart {...props} />,
+      : <chartTestDoubles.EmbeddedChart {...props}>
+        {typeof props.children === 'function'
+          ? props.children({ annotations: [], hidden: false, hiddenSeries: null })
+          : props.children}
+      </chartTestDoubles.EmbeddedChart>,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
@@ -403,15 +443,23 @@ beforeEach(() => {
   h.vehicleId = 7;
   h.liveStatus = 'connected';
   h.vehiclesLoading = false;
+  h.vehiclesResolved = true;
+  h.vehiclesFetchStatus = 'idle';
   h.vehiclesError = null;
   h.latest = baseLatest();
   h.latestLoading = false;
+  h.latestPending = false;
+  h.latestFetchStatus = 'idle';
   h.latestError = null;
   h.charging = { expected_energy_pct_at_arrival: 85 };
   h.chargingError = null;
   h.realChartFrames = false;
   h.history = baseHistory();
   h.historyMode = 'resolve';
+  h.dateLocale = 'en-US';
+  h.dateMode = 'vehicle';
+  h.userTimezone = 'UTC';
+  onlineManager.setOnline(true);
   h.refetchLatest.mockReset();
   h.refetchCharging.mockReset();
   h.requestSpy.mockReset();
@@ -419,6 +467,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  onlineManager.setOnline(true);
   vi.clearAllMocks();
 });
 
@@ -671,7 +720,8 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     // Distance + ETA + Traffic Delay + Energy metrics all fall back to em-dash.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText(/No active navigation/)).toBeInTheDocument();
-    expect(screen.getByText('No active route selected')).toBeInTheDocument();
+    expect(screen.getAllByText('No active route selected')).toHaveLength(2);
+    expect(within(screen.getByRole('region', { name: 'Route details' })).queryByText(/600s/)).not.toBeInTheDocument();
   });
 
   it('explains when an active route omits waypoint metadata', () => {
@@ -758,6 +808,161 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     const retries = screen.getAllByRole('button', { name: /^Retry$/i });
     fireEvent.click(retries[0]);
     expect(h.refetchLatest).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('NavigationRoutePage — original trust, dates, zero coordinates and delay', () => {
+  it('keeps every initial paused history panel unresolved and resumes into the real rows', async () => {
+    onlineManager.setOnline(false);
+    const { qc } = renderPage();
+    await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.fetchStatus).toBe('paused'));
+
+    const charts = screen.getByRole('region', { name: 'Route charts' });
+    const details = screen.getByRole('region', { name: 'Route details' });
+    const history = screen.getByRole('region', { name: 'Location history' });
+    expect(within(charts).getAllByRole('status', { name: 'Location history' })).toHaveLength(2);
+    expect(within(details).getByRole('status', { name: 'Location history' })).toHaveTextContent('Refresh paused');
+    expect(within(history).getByRole('status', { name: 'Location history' })).toHaveTextContent('Refresh paused');
+    for (const message of [
+      'No location history available for this vehicle.',
+      'No presence history available.',
+      'No destination history available.',
+      'No location snapshots recorded yet.',
+    ]) {
+      expect(screen.queryByText(message)).not.toBeInTheDocument();
+    }
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+    expect(screen.getByText('85.00%')).toBeInTheDocument();
+    expect(h.requestSpy).not.toHaveBeenCalled();
+
+    onlineManager.setOnline(true);
+    await screen.findByTestId('maps:navigation-location-history');
+    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '3');
+    expect(screen.getByTestId('line-chart')).toHaveAttribute('data-points', '3');
+    expect(h.requestSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['idle', 'fetching', 'paused'] as const)(
+    'does not infer inactive navigation from an initial %s latest query',
+    (fetchStatus) => {
+      h.latest = null;
+      h.latestPending = true;
+      h.latestFetchStatus = fetchStatus;
+      h.historyMode = 'pending';
+      renderPage();
+      const nav = screen.getByRole('region', { name: 'Navigation status' });
+      const details = screen.getByRole('region', { name: 'Route details' });
+      expect(within(nav).getByRole('status', { name: 'Navigation' })).toBeInTheDocument();
+      expect(within(details).getAllByRole('status', { name: 'Navigation' })).toHaveLength(2);
+      expect(within(nav).queryByText('Inactive')).not.toBeInTheDocument();
+      expect(screen.queryByText('No active route selected')).not.toBeInTheDocument();
+      expect(screen.queryByText(/No active navigation/)).not.toBeInTheDocument();
+      expect(screen.getByText('85.00%')).toBeInTheDocument();
+      if (fetchStatus === 'paused') {
+        expect(within(nav).getByRole('status', { name: 'Navigation' })).toHaveTextContent('Refresh paused');
+        expect(within(nav).getByText('Unknown')).toBeInTheDocument();
+      }
+    },
+  );
+
+  it.each(['idle', 'fetching', 'paused'] as const)(
+    'does not ask for vehicle selection before the initial %s fleet prerequisite resolves',
+    (fetchStatus) => {
+      h.vehicleId = null;
+      h.vehiclesResolved = false;
+      h.vehiclesFetchStatus = fetchStatus;
+      const { rerender, qc } = renderPage();
+      expect(screen.getByRole('status', { name: 'Vehicle' })).toBeInTheDocument();
+      expect(screen.queryByText('Select a vehicle to view navigation and route data.')).not.toBeInTheDocument();
+      expect(h.requestSpy).not.toHaveBeenCalled();
+
+      h.vehiclesResolved = true;
+      h.vehiclesFetchStatus = 'idle';
+      rerender(buildTree(qc));
+      expect(screen.getByText('Select a vehicle to view navigation and route data.')).toBeInTheDocument();
+      expect(h.requestSpy).not.toHaveBeenCalled();
+    },
+  );
+
+  it('preserves fleet failure recovery instead of presenting a selection prerequisite', () => {
+    h.vehicleId = null;
+    h.vehiclesResolved = false;
+    h.vehiclesError = new Error('fleet unavailable');
+    renderPage();
+    expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Retry$/ })).toBeInTheDocument();
+    expect(screen.queryByText('Select a vehicle to view navigation and route data.')).not.toBeInTheDocument();
+    expect(h.requestSpy).not.toHaveBeenCalled();
+  });
+
+  it('keeps retained history and the measured route delay visible while refresh is paused', async () => {
+    h.latestFetchStatus = 'paused';
+    const { qc } = renderPage();
+    await screen.findByTestId('maps:navigation-location-history');
+    onlineManager.setOnline(false);
+    void qc.refetchQueries({ queryKey: ['location-history', 7] });
+    await waitFor(() => expect(qc.getQueryState(['location-history', 7])?.fetchStatus).toBe('paused'));
+    expect(screen.getByTestId('area-chart')).toHaveAttribute('data-points', '3');
+    expect(screen.getByTestId('line-chart')).toHaveAttribute('data-points', '3');
+    expect(screen.getByTestId('maps:navigation-recent-destinations')).toBeInTheDocument();
+    expect(screen.getByTestId('maps:navigation-location-history')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Route details' })).getByText('600s delay')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText('Downtown Office')).toBeInTheDocument();
+  });
+
+  it('reactively applies effective saved locale and timezone to chart, recent, hero and mobile timestamps without changing source rows', async () => {
+    h.dateMode = 'utc';
+    const { qc, rerender } = renderPage();
+    await screen.findByTestId('maps:navigation-location-history');
+    const rawHistory = h.history;
+    const assertTimes = (locale: string, tz: string) => {
+      const expected = (instant: string) => formatDateTime(instant, { locale, tz });
+      const area = JSON.parse(screen.getByTestId('area-chart').getAttribute('data-values')!) as { time: string; speed: number }[];
+      const presence = JSON.parse(screen.getByTestId('line-chart').getAttribute('data-values')!) as { time: string }[];
+      const recent = screen.getByTestId('maps:navigation-recent-destinations');
+      const recentMobile = JSON.parse(recent.getAttribute('data-mobile-values')!) as { time: string }[];
+      const historyMobile = JSON.parse(screen.getByTestId('maps:navigation-location-history').getAttribute('data-mobile-values')!) as { time: string }[];
+      expect(area.map((row) => row.time)).toEqual(rawHistory.map((row) => expected(row.created_at)));
+      expect(presence.map((row) => row.time)).toEqual(area.map((row) => row.time));
+      expect(area.map((row) => row.speed)).toEqual([36, 72, 108]);
+      expect(recentMobile.map((row) => row.time)).toEqual(rawHistory.slice(0, 2).map((row) => expected(row.created_at)));
+      expect(historyMobile.map((row) => row.time)).toEqual([...rawHistory].reverse().map((row) => expected(row.created_at)));
+      expect(within(recent).getByText(expected(rawHistory[0].created_at))).toBeInTheDocument();
+      expect(within(screen.getByRole('region', { name: 'Navigation status' })).getByText(expected(baseLatest().route_last_updated!))).toBeInTheDocument();
+    };
+    assertTimes('en-US', 'UTC');
+    const originalTimes = screen.getByTestId('area-chart').getAttribute('data-values');
+    const requestCount = h.requestSpy.mock.calls.length;
+    h.dateMode = 'user';
+    h.userTimezone = 'America/Los_Angeles';
+    h.dateLocale = 'de-DE';
+    rerender(buildTree(qc));
+    assertTimes('de-DE', 'America/Los_Angeles');
+    expect(screen.getByTestId('area-chart').getAttribute('data-values')).not.toBe(originalTimes);
+    expect(h.history).toBe(rawHistory);
+    expect(h.requestSpy).toHaveBeenCalledTimes(requestCount);
+  });
+
+  it.each([
+    { latitude: 0, longitude: 12, lat: '0.000000', lon: '12.000000', current: '0.0000, 12.0000' },
+    { latitude: -12, longitude: 0, lat: '-12.000000', lon: '0.000000', current: '-12.0000, 0.0000' },
+  ])('preserves measured zero coordinates at $current in current, desktop and mobile history', async ({ latitude, longitude, lat, lon, current }) => {
+    h.latest = { ...baseLatest(), latitude, longitude };
+    h.history = [
+      { ...baseHistory()[0], latitude, longitude },
+      { ...baseHistory()[1], latitude: undefined, longitude: undefined },
+    ];
+    renderPage();
+    const table = await screen.findByTestId('maps:navigation-location-history');
+    expect(screen.getByText(current)).toBeInTheDocument();
+    expect(screen.queryByText(/GPS coordinates not available/)).not.toBeInTheDocument();
+    expect(within(table).getByText(lat)).toBeInTheDocument();
+    expect(within(table).getByText(lon)).toBeInTheDocument();
+    const mobile = JSON.parse(table.getAttribute('data-mobile-values')!) as { latitude: string; longitude: string }[];
+    expect(mobile).toMatchObject([
+      { latitude: '—', longitude: '—' },
+      { latitude: lat, longitude: lon },
+    ]);
   });
 });
 

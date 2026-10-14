@@ -13,7 +13,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { QueryClient, QueryClientProvider, QueryObserver } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -54,7 +54,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request } from '@/api/client'
-import FleetTelemetryCoveragePage from './FleetTelemetryCoveragePage'
+import FleetTelemetryCoveragePage, { type FleetTelemetryCoveragePageProps } from './FleetTelemetryCoveragePage'
 import type { FleetTelemetryCoverageResponse } from '@/api/types'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -110,14 +110,14 @@ function makeResponse(
   }
 }
 
-function renderPage() {
+function renderPage(props: FleetTelemetryCoveragePageProps = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   })
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
-        <FleetTelemetryCoveragePage />
+        <FleetTelemetryCoveragePage {...props} />
       </QueryClientProvider>
     </MemoryRouter>,
   )
@@ -142,6 +142,52 @@ describe('FleetTelemetryCoveragePage', () => {
 
     // Resolve so React-Query teardown is clean.
     resolver({ categories: [], destination_totals: {}, orphan_fields: [] })
+  })
+
+  it.each(['idle', 'paused'] as const)('does not infer an empty snapshot from an unresolved %s source', (fetchStatus) => {
+    mockedRequest.mockReturnValue(new Promise<FleetTelemetryCoverageResponse>(() => {}))
+    const client = new QueryClient()
+    const observer = new QueryObserver<FleetTelemetryCoverageResponse>(client, {
+      queryKey: ['coverage-unresolved'],
+      queryFn: async () => makeResponse(),
+      enabled: false,
+    })
+    const pending = observer.getCurrentResult()
+    renderPage({
+      testHookOverride: { ...pending, fetchStatus },
+    })
+
+    expect(screen.getByTestId('coverage-loading')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-destinations-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-summary')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-legend-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('coverage-filter-panel')).toBeInTheDocument()
+    expect(screen.queryByTestId('coverage-empty')).not.toBeInTheDocument()
+    expect(screen.queryByText('No destinations reported.')).not.toBeInTheDocument()
+    const tiles = screen.getByTestId('coverage-summary').querySelectorAll('[data-operational-metric]')
+    expect(tiles).toHaveLength(6)
+    for (const tile of tiles) {
+      expect(tile).toHaveAttribute('data-value-state', 'missing')
+    }
+    if (fetchStatus === 'paused') {
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    }
+    observer.destroy()
+    client.clear()
+  })
+
+  it('keeps the localized visible filter label after entering a search', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse())
+    renderPage()
+    await screen.findByTestId('coverage-categories')
+
+    const label = 'Filter by field name, destination, or column…'
+    const input = screen.getByLabelText(label)
+    fireEvent.change(input, { target: { value: 'BrakePedal' } })
+
+    expect(screen.getByText(label, { selector: 'label' })).toBeVisible()
+    expect(screen.getByLabelText(label)).toHaveValue('BrakePedal')
+    expect(screen.getByText('Showing 1 of 2 categories')).toHaveAttribute('role', 'status')
   })
 
   it('renders summary stats and categories from the response', async () => {

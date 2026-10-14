@@ -23,12 +23,13 @@ import { useTranslation } from 'react-i18next';
 import { Info, RefreshCw } from 'lucide-react';
 
 import { PageLayout, LayoutCard } from '@/components/layout';
-import { Button, GlassPanel, Icon } from '@/components/ui';
+import { Button, GlassPanel, Icon, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import {
   AlertBanner,
   QueryError,
   SectionErrorBoundary,
+  Skeleton,
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -51,7 +52,7 @@ export default function IngestXRayPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.xray.pageTitle', 'Ingest x-ray'));
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles, vehiclesState, setVehicleId } = useSelectedVehicle();
   const [windowSel, setWindowSel] = useState<IngestXRayWindow>('1h');
   const [bucketSel, setBucketSel] = useState<IngestXRayBucket>('1m');
 
@@ -114,13 +115,38 @@ export default function IngestXRayPage() {
       contextActions={actions}
       query={xray}
       dataSources={[{
+        id: 'vehicles',
+        label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'),
+        query: {
+          data: vehiclesState.data,
+          error: vehiclesState.fatalError ?? vehiclesState.refreshError,
+          isError: vehiclesState.fatalError !== null || vehiclesState.refreshError !== null,
+          isPending: !vehiclesState.hasData,
+          isLoading: vehiclesState.status === 'initial' && !vehiclesState.isRefreshBlocked,
+          isFetching: vehiclesState.isRefreshing,
+          fetchStatus: vehiclesState.isRefreshBlocked ? 'paused' : 'idle',
+          refetch: vehiclesState.retry ?? undefined,
+        },
+      }, {
         id: 'ingest-xray',
         label: t('admin.xray.pageTitle', 'Ingest x-ray'),
         query: xray,
         enabled: !noVehicle,
       }]}
     >
-      {noVehicle && (
+      {!vehiclesState.hasData && !vehiclesState.fatalError && (
+        <LayoutCard title={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}>
+          <div role="status">
+            <Text color="secondary">
+              {vehiclesState.isRefreshBlocked
+                ? t('dataSources.status.paused', 'Refresh paused')
+                : t('common.loading', 'Loading...')}
+            </Text>
+            <Skeleton lines={2} />
+          </div>
+        </LayoutCard>
+      )}
+      {noVehicle && vehiclesState.hasData && (
         <AlertBanner
           variant="info"
           icon={<Icon icon={Info} size="lg" />}

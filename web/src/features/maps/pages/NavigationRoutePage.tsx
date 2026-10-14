@@ -58,7 +58,7 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { convertSpeedFromSI, convertDistanceFromSI } from '@/lib/unitConversion';
 import { request } from '@/api/client';
@@ -135,6 +135,17 @@ function RouteField({ label, children }: RouteFieldProps) {
   );
 }
 
+function InitialSourceContent({ paused, label, children }: { paused: boolean; label: string; children: ReactNode }) {
+  const { t } = useTranslation();
+  return (
+    <div role="status" aria-label={label} aria-live="polite">
+      {paused
+        ? <Caption>{t('dataSources.status.paused', 'Refresh paused')}</Caption>
+        : children}
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Helper: waypoint builder + type                                   */
 /* ------------------------------------------------------------------ */
@@ -163,6 +174,7 @@ function buildWaypoints(latest: LocationSnapshot): Waypoint[] {
 
 export default function NavigationRoutePage() {
   const { fmtNumber, fmtScientificNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('nav.pageTitle', 'Navigation & route'));
 
@@ -178,6 +190,7 @@ export default function NavigationRoutePage() {
   /* ---- vehicle selector — header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
   const vehiclesQuery = useVehicles();
+  const vehiclesState = deriveDataState(vehiclesQuery);
 
   /* ---- latest snapshot ---- */
   const latestQuery = useLocationSnapshotLatest(vehicleId ?? 0, 15_000);
@@ -186,7 +199,7 @@ export default function NavigationRoutePage() {
     refetch: refetchLatest,
   } = latestQuery;
   const latestState = deriveDataState({ ...latestQuery, data: latest ?? undefined }, { provenance: 'live' });
-  const latestLoading = latestQuery.isLoading && !latestState.hasData;
+  const latestLoading = latestState.status === 'initial' && !latestQuery.isSuccess;
   const latestError = latestState.fatalError;
 
   /* ---- history ---- */
@@ -201,7 +214,7 @@ export default function NavigationRoutePage() {
   });
   const { data: history, refetch: refetchHistory } = historyQuery;
   const historyState = deriveDataState(historyQuery, { provenance: 'historical', unavailable: history?.length === 0 });
-  const historyLoading = historyQuery.isLoading && !historyState.hasData;
+  const historyLoading = historyState.status === 'initial';
   const historyError = historyState.fatalError;
 
   /* ---- charging telemetry (for expected energy at arrival) ---- */
@@ -242,7 +255,7 @@ export default function NavigationRoutePage() {
           /* miles_to_arrival is meters SI; convert to user pref. */
           miles: s.miles_to_arrival == null ? null : convertDistanceFromSI(s.miles_to_arrival, distanceUnit),
         })),
-    [history, speedUnit, distanceUnit],
+    [history, speedUnit, distanceUnit, formatDateTime],
   );
 
   /* ---- average measured speed in SI ---- */
@@ -261,12 +274,13 @@ export default function NavigationRoutePage() {
   const recentDestinations = useMemo(() => {
     if (!history?.length) return [];
     const seen = new Set<string>();
-    const result: { time: string; destination: string; distance: number | null; eta: number | null }[] = [];
+    const result: { createdAt: string; time: string; destination: string; distance: number | null; eta: number | null }[] = [];
     for (const s of history) {
       const name = s.destination_name;
       if (!name || seen.has(name)) continue;
       seen.add(name);
       result.push({
+        createdAt: s.created_at,
         time: formatDateTime(s.created_at),
         destination: name,
         /* miles_to_arrival is meters SI; convert to user pref. */
@@ -275,7 +289,7 @@ export default function NavigationRoutePage() {
       });
     }
     return result.slice(0, 20);
-  }, [history, distanceUnit]);
+  }, [history, distanceUnit, formatDateTime]);
 
   /* ---- presence chart (home / work over time) ---- */
   const presenceChartData = useMemo(() => {
@@ -288,7 +302,7 @@ export default function NavigationRoutePage() {
         work: s.located_at_work == null ? null : s.located_at_work ? 1 : 0,
         homelink: s.homelink_nearby == null ? null : s.homelink_nearby ? 1 : 0,
       }));
-  }, [history]);
+  }, [history, formatDateTime]);
 
   /* ---- recent-destination table columns ---- */
   const destColumns: Column<typeof recentDestinations[number]>[] = useMemo(
@@ -319,7 +333,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <Text mono color="primary">
-            {row.latitude != null && row.latitude !== 0 ? fmtScientificNumber(row.latitude, 6) : '—'}
+            {row.latitude != null ? fmtScientificNumber(row.latitude, 6) : '—'}
           </Text>
         ),
       },
@@ -330,7 +344,7 @@ export default function NavigationRoutePage() {
         sortable: true,
         render: (row: LocationSnapshot) => (
           <Text mono color="primary">
-            {row.longitude != null && row.longitude !== 0 ? fmtScientificNumber(row.longitude, 6) : '—'}
+            {row.longitude != null ? fmtScientificNumber(row.longitude, 6) : '—'}
           </Text>
         ),
       },
@@ -486,7 +500,7 @@ export default function NavigationRoutePage() {
   }, [refetchLatest, refetchHistory, refetchCharging]);
 
   /* ---- traffic-delay accent (dynamic, computed) ---- */
-  const trafficDelaySec = latest?.route_traffic_delay_s;
+  const trafficDelaySec = hasActiveRoute ? latest?.route_traffic_delay_s : undefined;
   const trafficDelayColor = {
     neutral: neonColorMap.neutral.text,
     success: neonColorMap.green.text,
@@ -549,11 +563,21 @@ export default function NavigationRoutePage() {
 
         {vehicleId === null ? (
           <GlassPanel className="p-4 sm:p-5">
-            <EmptyState
+            {vehiclesState.status === 'initial' ? (
+              <InitialSourceContent paused={vehiclesState.isRefreshBlocked} label={t('geofences.vehicle', 'Vehicle')}>
+                <Skeleton lines={4} />
+              </InitialSourceContent>
+            ) : vehiclesState.fatalError ? (
+              <QueryError
+                error={vehiclesState.fatalError}
+                onRetry={() => void vehiclesQuery.refetch()}
+                resourceName={t('geofences.vehicle', 'Vehicle')}
+              />
+            ) : <EmptyState
               icon={<Icon icon={Navigation} size="xl" className="text-[var(--text-muted)]" />}
               message={t('nav.noVehicle', 'Select a vehicle to view navigation and route data.')}
               actionTo={{ label: t('nav.manageVehicles', 'Manage vehicles'), to: '/vehicles' }}
-            />
+            />}
           </GlassPanel>
         ) : (
           <>
@@ -581,7 +605,9 @@ export default function NavigationRoutePage() {
                   actions={
                     <Badge variant={hasActiveRoute ? 'success' : 'neutral'} size="md" dot>
                       {latestLoading
-                        ? t('common.loading', 'Loading...')
+                        ? latestState.isRefreshBlocked
+                          ? t('nav.unknown', 'Unknown')
+                          : t('common.loading', 'Loading...')
                         : latestError
                           ? t('common.error', 'Error')
                           : latest == null
@@ -604,7 +630,9 @@ export default function NavigationRoutePage() {
                   </Caption>
 
                   {latestLoading ? (
-                    <Skeleton lines={4} />
+                    <InitialSourceContent paused={latestState.isRefreshBlocked} label={t('nav.resource', 'Navigation')}>
+                      <Skeleton lines={4} />
+                    </InitialSourceContent>
                   ) : latestError ? (
                     <QueryError
                       error={latestError}
@@ -672,7 +700,9 @@ export default function NavigationRoutePage() {
                 {/* Speed / distance profile */}
                 <LayoutCard title={t('nav.speedProfile', 'Speed profile')}>
                   {historyLoading ? (
-                    <Skeleton height={260} />
+                    <InitialSourceContent paused={historyState.isRefreshBlocked} label={t('nav.resourceHistory', 'Location history')}>
+                      <Skeleton height={260} />
+                    </InitialSourceContent>
                   ) : historyError ? (
                     <QueryError
                       error={historyError}
@@ -767,7 +797,9 @@ export default function NavigationRoutePage() {
                 {/* Home / Work presence */}
                 <LayoutCard title={t('nav.presenceChart', 'Home / work presence')}>
                   {historyLoading ? (
-                    <Skeleton height={260} />
+                    <InitialSourceContent paused={historyState.isRefreshBlocked} label={t('nav.resourceHistory', 'Location history')}>
+                      <Skeleton height={260} />
+                    </InitialSourceContent>
                   ) : historyError ? (
                     <QueryError
                       error={historyError}
@@ -832,12 +864,18 @@ export default function NavigationRoutePage() {
                 {/* Route Traffic Delay */}
                 <LayoutCard title={t('nav.trafficDelayTitle', 'Route traffic delay')}>
                   {latestLoading ? (
-                    <Skeleton height={64} />
+                    <InitialSourceContent paused={latestState.isRefreshBlocked} label={t('nav.resource', 'Navigation')}>
+                      <Skeleton height={64} />
+                    </InitialSourceContent>
                   ) : latestError ? (
                     <QueryError
                       error={latestError}
                       onRetry={() => void refetchLatest()}
                       resourceName={t('nav.resource', 'Navigation')}
+                    />
+                  ) : latest && !hasActiveRoute ? (
+                    <EmptyState /* no-action: route delay requires an active vehicle navigation route. */
+                      message={t('navigation.noRoute', 'No active route selected')}
                     />
                   ) : (
                     <div className="flex flex-wrap items-center gap-3">
@@ -845,7 +883,7 @@ export default function NavigationRoutePage() {
                         {trafficDelaySec == null || !Number.isFinite(trafficDelaySec) ? '—' : formatDuration(trafficDelaySec)}
                       </MetricValue>
                       <TrafficDelayBadge
-                        seconds={latest?.route_traffic_delay_s}
+                        seconds={trafficDelaySec}
                         t={t}
                       />
                     </div>
@@ -855,7 +893,9 @@ export default function NavigationRoutePage() {
                 {/* Route Waypoints */}
                 <LayoutCard title={t('nav.waypoints', 'Route waypoints')}>
                   {latestLoading ? (
-                    <Skeleton lines={4} />
+                    <InitialSourceContent paused={latestState.isRefreshBlocked} label={t('nav.resource', 'Navigation')}>
+                      <Skeleton lines={4} />
+                    </InitialSourceContent>
                   ) : latestError ? (
                     <QueryError
                       error={latestError}
@@ -864,7 +904,9 @@ export default function NavigationRoutePage() {
                     />
                   ) : !hasActiveRoute ? (
                     <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-                      message={t('navigation.noRoute', 'No active route selected')}
+                      message={latest == null
+                        ? t('nav.unknown', 'Unknown')
+                        : t('navigation.noRoute', 'No active route selected')}
                     />
                   ) : waypoints.length > 0 ? (
                     <DataTable
@@ -898,7 +940,9 @@ export default function NavigationRoutePage() {
                 <div className="min-w-0 md:col-span-2 xl:col-span-1">
                 <LayoutCard title={t('nav.recentDestinations', 'Recent destinations')}>
                   {historyLoading ? (
-                    <Skeleton lines={6} />
+                    <InitialSourceContent paused={historyState.isRefreshBlocked} label={t('nav.resourceHistory', 'Location history')}>
+                      <Skeleton lines={6} />
+                    </InitialSourceContent>
                   ) : historyError ? (
                     <QueryError
                       error={historyError}
@@ -922,7 +966,7 @@ export default function NavigationRoutePage() {
                               : key === 'eta' ? row.eta == null ? '—' : `${fmtNumber(row.eta)} ${t('nav.minutes', 'min')}` : undefined,
                       }}
                       data={recentDestinations}
-                      keyExtractor={(row) => `${row.time}-${row.destination}`}
+                      keyExtractor={(row) => `${row.createdAt}-${row.destination}`}
                       compact
                       pagination
                     />
@@ -937,7 +981,9 @@ export default function NavigationRoutePage() {
               <section aria-label={t('nav.historyAria', 'Location history')}>
                 <LayoutCard title={t('nav.locationHistory', 'Location history')}>
                   {historyLoading ? (
-                    <Skeleton lines={8} />
+                    <InitialSourceContent paused={historyState.isRefreshBlocked} label={t('nav.resourceHistory', 'Location history')}>
+                      <Skeleton lines={8} />
+                    </InitialSourceContent>
                   ) : historyError ? (
                     <QueryError
                       error={historyError}
@@ -963,7 +1009,7 @@ export default function NavigationRoutePage() {
                           if (key === 'destination_name') return row.destination_name ?? '—';
                           if (key === 'latitude' || key === 'longitude') {
                             const value = row[key];
-                            return value != null && value !== 0 ? fmtScientificNumber(value, 6) : '—';
+                            return value != null ? fmtScientificNumber(value, 6) : '—';
                           }
                           if (key === 'located_at_home' || key === 'located_at_work') {
                             return row[key] === true ? t('common.yes', 'Yes') : row[key] === false ? t('common.no', 'No') : '—';

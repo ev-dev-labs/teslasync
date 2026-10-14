@@ -454,7 +454,7 @@ describe('ChargingForensicsPage', () => {
         '/advanced-intelligence/charging-forensics?vehicle_id=4&limit=15&offset=15',
       ]);
       const quality = within(screen.getByRole('region', { name: 'Data quality' }));
-      expect(quality.getByText('insufficient')).toBeVisible();
+      expect(quality.getByText('Insufficient evidence')).toBeVisible();
       expect(quality.getByText('0')).toBeVisible();
       expect(quality.getByText('0.00%')).toBeVisible();
       expect(quality.getByText(/Test-only second-page quality/)).toBeVisible();
@@ -579,7 +579,7 @@ describe('ChargingForensicsPage', () => {
       await waitFor(() => {
         expect(screen.getByText('No charging sessions are available for reconciliation.')).toBeVisible();
         expect(screen.getByText('No additional limitations were returned.')).toBeVisible();
-        expect(screen.getByText('insufficient')).toBeVisible();
+        expect(screen.getByText('Insufficient evidence')).toBeVisible();
         expect(within(screen.getByRole('region', { name: 'Data quality' })).getByText('0')).toBeVisible();
       });
       expect(screen.queryByText('Unknown')).not.toBeInTheDocument();

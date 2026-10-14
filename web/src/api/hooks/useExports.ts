@@ -167,7 +167,7 @@ export interface ExportBulkResult {
 }
 
 /**
- * Delete a batch of export-job UUIDs, refresh the jobs list and legacy
+ * Delete a batch of export-job UUIDs in live mode, refresh the jobs list and legacy
  * /exports cache, and return the server report for partial-success UI.
  */
 export function useBulkExportsDelete() {
@@ -178,6 +178,7 @@ export function useBulkExportsDelete() {
       request<ExportBulkResult>('/export/jobs/bulk', {
         method: 'POST',
         body: JSON.stringify({ ids, op: 'delete' }),
+        requiresLiveMode: true,
       }),
     onSuccess: (result) => {
       invalidateAndBroadcast(qc, { queryKey: exportKeys.jobs });

@@ -18,8 +18,18 @@ function MqttTestTool() {
   const [message, setMessage] = useState('')
 
   const mutation = useMutation({
+    networkMode: 'always',
     mutationFn: () => apiFetch('mqtt-test', 'POST', { topic, message }),
   })
+  const rawError: unknown = mutation.error ?? mutation.data?.error
+  const hasError = mutation.isError || Boolean(rawError)
+  const errorText = rawError instanceof Error && rawError.message.trim() !== ''
+    ? rawError.message
+    : typeof rawError === 'string' && rawError.trim() !== ''
+      ? rawError
+      : hasError
+        ? t('devtools.backendTool.requestFailed', 'Request failed')
+        : undefined
 
   return (
     <ToolCard
@@ -52,11 +62,11 @@ function MqttTestTool() {
         >
           {t('devtools.infra.sendTest', 'Send test')}
         </Button>
-        {mutation.data && (
+        {(mutation.data || hasError) && (
           <ResultPanel
             title={t('devtools.infra.mqtt', 'MQTT')}
-            data={mutation.data.error ? undefined : mutation.data}
-            error={typeof mutation.data.error === 'string' ? mutation.data.error : undefined}
+            data={hasError ? undefined : mutation.data}
+            error={errorText}
           />
         )}
       </div>

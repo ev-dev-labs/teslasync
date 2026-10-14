@@ -63,4 +63,19 @@ describe('cycle-stress independent source trust', () => {
     expect(disabled.state.failedSources).toEqual([]);
     expect(disabled.fatalError).toBeNull();
   });
+  it('CSQA-01 identifies cached paused evidence without synthesizing an error', () => {
+    const rows: ChargingSession[] = [];
+    const paused = cycleStressQueryState(true,
+      { data: rows, fetchStatus: 'paused', isSuccess: true },
+      { isPending: true });
+    expect(paused.retained).toBe(true);
+    expect(paused.sources[0].trust.data).toBe(rows);
+    expect(paused.state.refreshError).toBeNull();
+    expect(paused.state.error).toBeNull();
+    expect(paused.state.loadingSources).toEqual(['drive']);
+    expect(cycleStressQueryState(true, { fetchStatus: 'paused' }, {}).retained).toBe(false);
+    expect(cycleStressQueryState(false, { data: rows, fetchStatus: 'paused' }, {}).retained).toBe(false);
+    expect(cycleStressQueryState(true, { data: rows, isSuccess: true },
+      { data: [], isSuccess: true }).retained).toBe(false);
+  });
 });

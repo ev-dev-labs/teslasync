@@ -18,7 +18,7 @@ import { Activity, RefreshCw, Radio } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, Caption, Icon, PanelTitle } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { SectionErrorBoundary } from '@/components/feedback';
+import { AlertBanner, QueryError, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { LiveIndicator } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
@@ -45,7 +45,7 @@ export default function LiveSignalInspectorPage() {
   const { reduce } = useMotionPreference();
   usePageTitle(t('admin.liveSignals.pageTitle', 'Live signal inspector'));
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles, vehiclesState, setVehicleId } = useSelectedVehicle();
   const live = useVehicleLiveSignals(vehicleId ?? undefined, {
     refetchInterval: 1_000,
     enabled: vehicleId !== null,
@@ -54,22 +54,26 @@ export default function LiveSignalInspectorPage() {
   const rows = useMemo(() => rowsFromResponse(live.data), [live.data]);
   const stats = useMemo(() => computeStats(rows), [rows]);
   const liveState = useDataState(live, { provenance: 'live', unavailable: rows.length === 0 });
+  const sectionState = vehicleId === null ? vehiclesState : liveState;
 
   // Only a fatal first-load failure replaces the snapshot. Paused/erroring
   // refreshes keep retained rows and expose source-specific recovery.
   const status: SectionStatus =
     vehicleId === null
-      ? 'no-vehicle'
+      ? vehiclesState.fatalError
+        ? 'error'
+        : vehiclesState.status === 'initial' ? 'loading' : 'no-vehicle'
       : liveState.fatalError
         ? 'error'
         : rows.length > 0
           ? liveState.status === 'stale' ? 'retained' : 'ready'
-          : live.isLoading
+          : liveState.status === 'initial'
             ? 'loading'
             : liveState.status === 'stale' ? 'retained-empty' : 'empty';
 
   const onRetry = () => {
-    void live.refetch();
+    if (vehicleId === null) vehiclesState.retry?.();
+    else void live.refetch();
   };
 
   const noVehicleIcon = <Icon icon={Radio} size="xl" className={typography.color.muted} />;
@@ -117,6 +121,26 @@ export default function LiveSignalInspectorPage() {
       contextActions={actions}
       query={live}
     >
+      {sectionState.status === 'initial' && sectionState.isRefreshBlocked && (
+        <AlertBanner variant="warning" role="status" title={t('dataSources.status.paused', 'Refresh paused')}>
+          {t('chargingPlaces.workspace.initialPaused', '{{source}} loading is paused. No data has been loaded yet.', {
+            source: vehicleId === null
+              ? t('devtools.overview.vehicles', 'Vehicles')
+              : t('admin.liveSignals.panels.snapshot', 'Live snapshot'),
+          })}
+          {sectionState.retry && (
+            <Button variant="secondary" size="sm" className="mt-2 min-h-11 md:min-h-9" onClick={sectionState.retry}>
+              {t('common.retry', 'Retry')}
+            </Button>
+          )}
+        </AlertBanner>
+      )}
+      {vehicleId !== null && vehiclesState.fatalError && (
+        <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
+      )}
+      {vehiclesState.status === 'stale' && (
+        <StaleRefreshWarning state={vehiclesState} label={t('devtools.overview.vehicles', 'Vehicles')} />
+      )}
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section aria-label={t('admin.liveSignals.kpis', 'Snapshot summary')}>
@@ -140,14 +164,14 @@ export default function LiveSignalInspectorPage() {
             <LiveSignalSourceBreakdown
               stats={stats}
               status={status}
-              error={liveState.fatalError}
+              error={sectionState.fatalError}
               onRetry={onRetry}
               noVehicleIcon={noVehicleIcon}
             />
             <LiveSignalKindBreakdown
               stats={stats}
               status={status}
-              error={liveState.fatalError}
+              error={sectionState.fatalError}
               onRetry={onRetry}
               noVehicleIcon={noVehicleIcon}
             />
@@ -165,7 +189,7 @@ export default function LiveSignalInspectorPage() {
             </PanelTitle>
             <LiveSectionState
               status={status}
-              error={liveState.fatalError}
+              error={sectionState.fatalError}
               onRetry={onRetry}
               skeletonHeight={320}
               noVehicleIcon={noVehicleIcon}

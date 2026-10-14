@@ -1,13 +1,16 @@
 import { createElement, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClientProvider, type QueryClient } from '@tanstack/react-query';
 
-const { successToast, warningToast, errorToast } = vi.hoisted(() => ({
+const { successToast, warningToast, errorToast, broadcast } = vi.hoisted(() => ({
   successToast: vi.fn(),
   warningToast: vi.fn(),
   errorToast: vi.fn(),
+  broadcast: vi.fn(),
 }));
+
+vi.mock('@/lib/broadcast', () => ({ broadcast }));
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -22,8 +25,13 @@ vi.mock('./_toastHelpers', () => ({
   }),
 }));
 
-import { request } from '@/api/client';
-import { __resetQueryBroadcastForTests } from '@/lib/queryBroadcast';
+import { apiUrl, request } from '@/api/client';
+import { createQueryClient } from '@/api/queryClient';
+import {
+  __flushQueryBroadcastForTests,
+  __resetQueryBroadcastForTests,
+} from '@/lib/queryBroadcast';
+import { OperationalModeWriteError } from '@/lib/operationalMode';
 import {
   exportKeys,
   useBulkExportsDelete,
@@ -45,12 +53,7 @@ const retainedJobs: ExportJobSummary[] = ids.map((id) => ({
 const clients: QueryClient[] = [];
 
 function setup() {
-  const client = new QueryClient({
-    defaultOptions: {
-      queries: { retry: false, gcTime: Infinity },
-      mutations: { retry: false },
-    },
-  });
+  const client = createQueryClient();
   clients.push(client);
   client.setQueryData(exportKeys.jobs, retainedJobs);
   client.setQueryData(exportKeys.all, retainedJobs);
@@ -65,6 +68,7 @@ beforeEach(() => {
   successToast.mockReset();
   warningToast.mockReset();
   errorToast.mockReset();
+  broadcast.mockReset();
 });
 
 afterEach(() => {
@@ -77,6 +81,15 @@ function expectRetainedCache(client: QueryClient, invalidated: boolean) {
   expect(client.getQueryData(exportKeys.all)).toEqual(retainedJobs);
   expect(client.getQueryState(exportKeys.jobs)?.isInvalidated).toBe(invalidated);
   expect(client.getQueryState(exportKeys.all)?.isInvalidated).toBe(invalidated);
+  __flushQueryBroadcastForTests();
+  if (invalidated) {
+    expect(broadcast).toHaveBeenCalledExactlyOnceWith({
+      type: 'queryInvalidate',
+      keys: [exportKeys.jobs, exportKeys.all],
+    });
+  } else {
+    expect(broadcast).not.toHaveBeenCalled();
+  }
 }
 
 describe('useBulkExportsDelete outcome notifications', () => {
@@ -99,7 +112,9 @@ describe('useBulkExportsDelete outcome notifications', () => {
     expect(request).toHaveBeenCalledExactlyOnceWith('/export/jobs/bulk', {
       method: 'POST',
       body: JSON.stringify({ ids, op: 'delete' }),
+      requiresLiveMode: true,
     });
+
     expect(warningToast).toHaveBeenCalledExactlyOnceWith(
       'toast.export.bulkDelete.error', 'Failed to delete exports',
     );
@@ -202,6 +217,117 @@ describe('useBulkExportsDelete outcome notifications', () => {
     expect(successToast).toHaveBeenCalledExactlyOnceWith(
       'toast.export.bulkDelete.success', 'Exports deleted',
     );
+    expectRetainedCache(client, true);
+  });
+});
+
+describe('useBulkExportsDelete live-only request policy', () => {
+  let originalUrl: string;
+  let originalOnline: boolean;
+
+  beforeEach(async () => {
+    originalUrl = window.location.href;
+    originalOnline = onlineManager.isOnline();
+    const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
+    vi.mocked(request).mockImplementation(actual.request);
+    window.history.replaceState(null, '', '/exports');
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+    onlineManager.setOnline(true);
+  });
+
+  afterEach(() => {
+    window.history.replaceState(null, '', originalUrl);
+    onlineManager.setOnline(originalOnline);
+    vi.restoreAllMocks();
+  });
+
+  it.each([
+    { label: 'historical data', online: true, asOf: '2026-10-12T10:00:00Z', mode: 'as_of' },
+    { label: 'offline data', online: false, asOf: null, mode: 'cached' },
+    { label: 'historical data while offline', online: false, asOf: '2026-10-12T10:00:00Z', mode: 'as_of' },
+  ] as const)('rejects $label before transport without retrying or queueing', async ({ online, asOf, mode }) => {
+    window.history.replaceState(
+      null, '', asOf ? `/exports?as_of=${encodeURIComponent(asOf)}` : '/exports',
+    );
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online);
+    onlineManager.setOnline(online);
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const { result, client } = setup();
+
+    expect(client.getDefaultOptions().mutations).toMatchObject({
+      retry: 0,
+      networkMode: 'always',
+    });
+    await act(async () => {
+      await expect(result.current.mutateAsync(ids)).rejects.toMatchObject({
+        name: 'OperationalModeWriteError',
+        code: 'OPERATIONAL_MODE_READ_ONLY',
+        mode,
+      });
+    });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(result.current.error).toBeInstanceOf(OperationalModeWriteError);
+    expect(result.current.data).toBeUndefined();
+    expect(result.current.isPaused).toBe(false);
+    expect(result.current.failureCount).toBe(1);
+    expect(request).toHaveBeenCalledExactlyOnceWith('/export/jobs/bulk', {
+      method: 'POST',
+      body: JSON.stringify({ ids, op: 'delete' }),
+      requiresLiveMode: true,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(errorToast).toHaveBeenCalledExactlyOnceWith(
+      result.current.error, 'toast.export.bulkDelete.error', 'Failed to delete exports',
+    );
+    expect(successToast).not.toHaveBeenCalled();
+    expect(warningToast).not.toHaveBeenCalled();
+    expectRetainedCache(client, false);
+
+    await act(async () => {
+      window.history.replaceState(null, '', '/exports');
+      vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true);
+      onlineManager.setOnline(true);
+      await client.resumePausedMutations();
+    });
+    expect(result.current.isError).toBe(true);
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expectRetainedCache(client, false);
+  });
+
+  it('preserves the live POST body, failed IDs, invalidation and broadcast', async () => {
+    const response: ExportBulkResult = {
+      deleted: 1,
+      failed: [{ id: ids[1], reason: 'not_found' }],
+    };
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response(
+      JSON.stringify(response),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    ));
+    const { result, client } = setup();
+
+    await act(async () => {
+      expect(await result.current.mutateAsync(ids)).toEqual(response);
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(fetchSpy).toHaveBeenCalledExactlyOnceWith(
+      apiUrl('/export/jobs/bulk'),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({ ids, op: 'delete' }),
+      }),
+    );
+    const options = fetchSpy.mock.calls[0][1];
+    expect(options).not.toHaveProperty('requiresLiveMode');
+    expect(new Headers(options?.headers).get('Content-Type')).toBe('application/json');
+    expect(result.current.data).toEqual(response);
+    expect(warningToast).toHaveBeenCalledExactlyOnceWith(
+      'toast.export.bulkDelete.error', 'Failed to delete exports',
+    );
+    expect(successToast).not.toHaveBeenCalled();
+    expect(errorToast).not.toHaveBeenCalled();
     expectRetainedCache(client, true);
   });
 });

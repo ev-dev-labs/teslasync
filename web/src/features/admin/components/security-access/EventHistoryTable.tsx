@@ -3,13 +3,15 @@ import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
 import { Badge, GlassPanel, PanelTitle, DataTable, useSortToggle, type Column } from '@/components/ui';
-import { Skeleton, QueryError } from '@/components/feedback';
+import { Skeleton, QueryError, DataStateNotice } from '@/components/feedback';
+import type { DataState } from '@/api/dataState';
 import { TimeStamp } from '@/components/data-display';
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
-import { doorClosed, allWindowsClosed, windowSummary, isSentryActive } from './helpers';
+import { doorClosed, windowSummary, isSentryActive } from './helpers';
 
 interface EventHistoryTableProps {
+  sourceState?: DataState<SecurityEvent[]>;
   history: SecurityEvent[];
   isLoading: boolean;
   error: unknown;
@@ -17,7 +19,7 @@ interface EventHistoryTableProps {
   className?: string;
 }
 
-export function EventHistoryTable({ history, isLoading, error, onRetry, className }: EventHistoryTableProps) {
+export function EventHistoryTable({ history, sourceState, isLoading, error, onRetry, className }: EventHistoryTableProps) {
   const { t } = useTranslation();
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle();
 
@@ -38,15 +40,15 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         filterValueLabel: (_value, row) => row.locked == null ? '—' : row.locked ? t('admin.security.locked', 'Locked') : t('admin.security.unlocked', 'Unlocked'),
         header: t('admin.security.col.lock', 'Lock'),
         render: (row) => (
-          <Badge variant={row.locked ? 'success' : 'danger'} size="sm">
-            {row.locked ? t('admin.security.locked', 'Locked') : t('admin.security.unlocked', 'Unlocked')}
+          <Badge variant={row.locked == null ? 'neutral' : row.locked ? 'success' : 'danger'} size="sm">
+            {row.locked == null ? t('admin.security.unknown', 'Unknown') : row.locked ? t('admin.security.locked', 'Locked') : t('admin.security.unlocked', 'Unlocked')}
           </Badge>
         ),
       },
       {
         key: 'sentryMode',
         filterValue: (row) => row.sentryMode ?? null,
-        filterValueLabel: (_value, row) => row.sentryMode == null ? '—' : isSentryActive(row.sentryMode) ? t('admin.security.on', 'On') : t('admin.security.off', 'Off'),
+        filterValueLabel: (_value, row) => isSentryActive(row.sentryMode) == null ? t('admin.security.unknown', 'Unknown') : isSentryActive(row.sentryMode) ? t('admin.security.on', 'On') : t('admin.security.off', 'Off'),
         header: t('admin.security.col.sentry', 'Sentry'),
         render: (row) => {
           // `sentryMode` arrives as a string enum ("SentryModeStateOff") or a
@@ -56,7 +58,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
           const active = isSentryActive(row.sentryMode);
           return (
             <Badge variant={active ? 'success' : 'neutral'} size="sm">
-              {active ? t('admin.security.on', 'On') : t('admin.security.off', 'Off')}
+              {active == null ? t('admin.security.unknown', 'Unknown') : active ? t('admin.security.on', 'On') : t('admin.security.off', 'Off')}
             </Badge>
           );
         },
@@ -64,11 +66,11 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
       {
         key: 'doorState',
         filterValue: (row) => row.doorState ?? null,
-        filterValueLabel: (_value, row) => row.doorState == null ? '—' : asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : '—'),
+        filterValueLabel: (_value, row) => asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) == null ? t('admin.security.unknown', 'Unknown') : doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : t('admin.security.open', 'Open')),
         header: t('admin.security.col.doors', 'Doors'),
         render: (row) => (
-          <span className={cn(typography.size.sm, doorClosed(row.doorState) ? 'text-emerald-300' : 'text-amber-300')}>
-            {asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : '—')}
+          <span className={cn(typography.size.sm, typography.color.secondary)}>
+            {asNonEmptyString(row.doorState) ?? (doorClosed(row.doorState) == null ? t('admin.security.unknown', 'Unknown') : doorClosed(row.doorState) ? t('admin.security.closed', 'Closed') : t('admin.security.open', 'Open'))}
           </span>
         ),
       },
@@ -76,7 +78,7 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
         key: 'windows',
         header: t('admin.security.col.windows', 'Windows'),
         render: (row) => (
-          <span className={cn(typography.size.sm, allWindowsClosed(row) ? 'text-emerald-300' : 'text-amber-300')}>
+          <span className={cn(typography.size.sm, typography.color.secondary)}>
             {windowSummary(row, t)}
           </span>
         ),
@@ -103,15 +105,20 @@ export function EventHistoryTable({ history, isLoading, error, onRetry, classNam
   return (
     <GlassPanel className={cn('min-w-0 p-4 sm:p-5', className)}>
       <PanelTitle className="mb-3">{t('admin.security.eventHistory', 'Security event history')}</PanelTitle>
+      {sourceState?.status === 'stale' && <DataStateNotice state="stale" />}
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
+      ) : sourceState && !sourceState.hasData && sourceState.isRefreshBlocked ? (
+        <DataStateNotice state="partial" title={t('dataSources.status.paused', 'Refresh paused')} />
+      ) : sourceState?.status === 'initial' ? (
+        <Skeleton lines={8} />
       ) : isLoading ? (
         <Skeleton lines={8} />
       ) : (
         <DataTable<SecurityEvent>
           tableId="admin:security-events"
           columns={eventColumns}
-          mobileColumns={['createdAt', 'locked', 'sentryMode']}
+          mobileColumns={['createdAt', 'locked', 'sentryMode', 'doorState', 'windows']}
           data={rows}
           enableValueFilters
           keyExtractor={(row) => row.id}

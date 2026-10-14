@@ -193,6 +193,18 @@ describe('SecurityStatusCards', () => {
     expect(screen.queryByText('Locked')).not.toBeInTheDocument();
   });
 
+  it('renders all missing posture readings as unknown, never measured inactive/open/disabled', () => {
+    renderCards({ latest: makeEvent({
+      locked: null, sentryMode: null, doorState: null,
+      fdWindow: null, fpWindow: null, rdWindow: null, rpWindow: null,
+      homelinkNearby: null, guestMode: null,
+    }) });
+    expect(screen.getAllByText('Unknown')).toHaveLength(6);
+    for (const value of ['Unlocked', 'Inactive', 'Closed', 'Away', 'Disabled', '4 open/venting']) {
+      expect(screen.queryByText(value)).not.toBeInTheDocument();
+    }
+  });
+
   it('treats a null lock state as "Unknown" rather than a false "Unlocked" alarm', () => {
     renderCards({ latest: makeEvent({ locked: null }) });
 

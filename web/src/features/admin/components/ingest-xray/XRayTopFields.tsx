@@ -14,7 +14,7 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { CHART_COLORS } from '@/components/charts';
-import { safeNumber } from '@/lib/numberFormat';
+import { knownNumber } from '@/api/dataState';
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
@@ -34,32 +34,32 @@ export function XRayTopFields({
   onRetry,
   limit = 8,
 }: XRayTopFieldsProps) {
-  const { fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
 
-  // Sort by sample volume desc and take the loudest N. Hardened against a
-  // malformed payload where `sample_count` is missing, non-finite, or the
-  // wrong type (`safeNumber` → 0), and against a NaN/negative `limit` that
-  // would otherwise make `slice` drop rows from the tail instead of the head.
-  // `max` is derived in the same pass so the bar scale can never diverge from
-  // the rows actually rendered; it floors at 1 to avoid a divide-by-zero in
-  // MetricBar.
+  // Unknown counts follow measured values without becoming zero readings.
   const { top, max } = useMemo(() => {
     const take = Number.isFinite(limit) ? Math.max(0, Math.trunc(limit)) : 0;
     const ranked = [...(rows ?? [])]
-      .sort((a, b) => safeNumber(b?.sample_count) - safeNumber(a?.sample_count))
+      .sort((a, b) => {
+        const left = knownNumber(a?.sample_count);
+        const right = knownNumber(b?.sample_count);
+        if (left === null) return right === null ? 0 : 1;
+        if (right === null) return -1;
+        return right - left;
+      })
       .slice(0, take);
     const peak = ranked.reduce(
-      (hi, r) => Math.max(hi, safeNumber(r?.sample_count)),
+      (hi, r) => Math.max(hi, knownNumber(r?.sample_count) ?? hi),
       1,
     );
     return { top: ranked, max: peak };
-  }, [rows, limit, displayPrecision, displayLocale]);
+  }, [rows, limit]);
 
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <ListTree className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <ListTree className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('admin.xray.topFields.title', 'Top fields by volume')}
       </PanelTitle>
 
@@ -83,7 +83,7 @@ export function XRayTopFields({
           aria-label={t('admin.xray.topFields.title', 'Top fields by volume')}
         >
           {top.map((row, i) => {
-            const count = safeNumber(row?.sample_count);
+            const count = knownNumber(row?.sample_count);
             // `field` is the primary key of the row; a malformed payload could
             // still omit it, so fall back to an em-dash label rather than
             // rendering a blank bar. The key mixes in the index so duplicate
@@ -96,7 +96,7 @@ export function XRayTopFields({
                   value={count}
                   max={max}
                   color={CHART_COLORS[i % CHART_COLORS.length]}
-                  sublabel={fmtInt(count)}
+                  sublabel={count === null ? '—' : fmtInt(count)}
                 />
               </li>
             );

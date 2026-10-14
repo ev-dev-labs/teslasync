@@ -9,7 +9,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -70,15 +70,18 @@ import {
 import ChargingReconciliationPage from './ChargingReconciliationPage';
 import { downloadCSV, downloadJSON, objectsToCSV } from '@/lib/csvExport';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
-import type { ChargingInvoice, ReconciledLine, ReconciliationReport } from '@/types/ownership';
+import type { ChargingInvoice, CreateDisputeRequest, CreateInvoiceRequest, InvoiceDispute, ReconciledLine, ReconciliationReport } from '@/types/ownership';
+import type { CsvCellValue } from '@/lib/csvExport';
 import { formatPct } from '../formatters';
 import { severityTokens, typography } from '@/lib/tokens';
+import * as datePreferences from '@/hooks/useDateFormat';
+import { formatDateTime as formatSavedDateTime } from '@/lib/dateFormat';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockInvoices = useChargingInvoices as unknown as ReturnType<typeof vi.fn>;
-const mockDispute = useCreateDispute as unknown as ReturnType<typeof vi.fn>;
-const mockCreate = useCreateInvoice as unknown as ReturnType<typeof vi.fn>;
-const mockRemove = useDeleteInvoice as unknown as ReturnType<typeof vi.fn>;
+const mockDispute = useCreateDispute as unknown as ReturnType<typeof vi.fn<() => ReturnType<typeof makeMutation>>>;
+const mockCreate = useCreateInvoice as unknown as ReturnType<typeof vi.fn<() => ReturnType<typeof makeMutation>>>;
+const mockRemove = useDeleteInvoice as unknown as ReturnType<typeof vi.fn<() => ReturnType<typeof makeMutation>>>;
 const mockReport = useReconciliationReport as unknown as ReturnType<typeof vi.fn>;
 
 function makeInvoice(overrides: Partial<ChargingInvoice> = {}): ChargingInvoice {
@@ -164,6 +167,30 @@ function makeReport(): ReconciliationReport {
   };
 }
 
+function reportExportRows(report: ReconciliationReport, rows: Record<string, CsvCellValue>[], matching = false) {
+  return rows.map((row) => {
+    const line = report.lines?.find((item) => item.line.line_ref === row.line_ref);
+    return {
+      ...row,
+      currency: report.invoice.currency,
+      invoice_id: report.invoice.id,
+      invoice_ref: report.invoice.invoice_ref,
+      vehicle_id: report.invoice.vehicle_id,
+      provider: report.invoice.provider,
+      period_start: report.invoice.period_start,
+      period_end: report.invoice.period_end,
+      invoice_version: report.invoice.version,
+      dispute_packet_digest: report.dispute_packet_digest,
+      ...(matching ? {
+        session_id: line?.session_id,
+        session_started_at: line?.session_started_at,
+        energy_delta_wh: line?.energy_delta_wh,
+        ambiguous: line?.ambiguous,
+      } : {}),
+    };
+  });
+}
+
 function card(title: string): HTMLElement {
   const element = screen.getByRole('heading', { name: title }).closest('[data-card]');
   if (!(element instanceof HTMLElement)) throw new Error(`Missing card: ${title}`);
@@ -184,13 +211,15 @@ async function exportPanel(title: string, format: 'CSV' | 'JSON') {
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const root = () => (
     <MemoryRouter>
       <QueryClientProvider client={client}>
         <ChargingReconciliationPage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+  const view = render(root());
+  return { ...view, rerenderPage: () => view.rerender(root()) };
 }
 
 /** The Remove button in the table row showing the given invoice ref. */
@@ -245,12 +274,13 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
         recoverable: true, variance_reasons: ['energy_overcharge', 'timing, mismatch'],
       },
     ];
+    const exported = reportExportRows(report, expected, true);
     await exportPanel('Line-by-line audit', format);
-    if (format === 'JSON') expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', expected);
+    if (format === 'JSON') expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', exported);
     else {
-      expect(downloadCSV).toHaveBeenCalledWith('charging-reconciliation-lines', objectsToCSV(expected));
+      expect(downloadCSV).toHaveBeenCalledWith('charging-reconciliation-lines', objectsToCSV(exported));
       expect(vi.mocked(downloadCSV).mock.calls[0][1].split('\r\n')[0]).toBe(
-        'line_ref,location,occurred_at,match_state,match_confidence_pct,billed_energy_wh,measured_energy_wh,energy_delta_pct,time_delta_s,billed_total_minor,expected_cost_minor,variance_minor,recoverable,variance_reasons',
+        'line_ref,location,occurred_at,match_state,match_confidence_pct,billed_energy_wh,measured_energy_wh,energy_delta_pct,time_delta_s,billed_total_minor,expected_cost_minor,variance_minor,recoverable,variance_reasons,currency,invoice_id,invoice_ref,vehicle_id,provider,period_start,period_end,invoice_version,dispute_packet_digest,session_id,session_started_at,energy_delta_wh,ambiguous',
       );
     }
   });
@@ -270,8 +300,8 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       { category: 'No variance', reason: 'no_variance', line_count: 0, amount_minor: 0, share_pct: 0, recoverable: false },
     ];
     await exportPanel('Variance attribution', format);
-    if (format === 'JSON') expect(downloadJSON).toHaveBeenCalledWith('charging-variance-attribution', expected);
-    else expect(downloadCSV).toHaveBeenCalledWith('charging-variance-attribution', objectsToCSV(expected));
+    if (format === 'JSON') expect(downloadJSON).toHaveBeenCalledWith('charging-variance-attribution', reportExportRows(report, expected));
+    else expect(downloadCSV).toHaveBeenCalledWith('charging-variance-attribution', objectsToCSV(reportExportRows(report, expected)));
   });
 
   it.each(['CSV', 'JSON'] as const)('exports all five uninvoiced fields as %s preserving ISO time, empty location and zero Wh', async (format) => {
@@ -288,8 +318,8 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       energy_wh: 0, narrative: 'Measured, not billed\nOriginal evidence.',
     }];
     await exportPanel('Sessions the provider never billed', format);
-    if (format === 'JSON') expect(downloadJSON).toHaveBeenCalledWith('charging-uninvoiced-sessions', expected);
-    else expect(downloadCSV).toHaveBeenCalledWith('charging-uninvoiced-sessions', objectsToCSV(expected));
+    if (format === 'JSON') expect(downloadJSON).toHaveBeenCalledWith('charging-uninvoiced-sessions', reportExportRows(report, expected));
+    else expect(downloadCSV).toHaveBeenCalledWith('charging-uninvoiced-sessions', objectsToCSV(reportExportRows(report, expected)));
   });
 
   it('exports only line search matches while retaining hidden raw fields and nullable reasons', async () => {
@@ -305,13 +335,13 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       fireEvent.change(within(panel).getByRole('searchbox'), { target: { value: 'Observed zero price line' } });
       await waitFor(() => expect(within(panel).queryByText('Unknown price line')).toBeNull());
       await exportPanel('Line-by-line audit', 'JSON');
-      expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', [{
+      expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', reportExportRows(report, [{
         line_ref: 'Observed zero price line', location: 'Site A', occurred_at: '2026-01-04T12:00:00Z',
         match_state: 'probable', match_confidence_pct: 80, billed_energy_wh: 12500,
         measured_energy_wh: 0, energy_delta_pct: 0, time_delta_s: 0,
         billed_total_minor: 1250, expected_cost_minor: 0, variance_minor: 0,
         recoverable: false, variance_reasons: null,
-      }]);
+      }], true));
       expect(within(panel).queryByRole('columnheader', { name: 'Billed' })).toBeNull();
       expect(within(card('Provider statements')).getByText('INV-002')).toBeInTheDocument();
     } finally {
@@ -336,13 +366,13 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(within(panel).queryByText('Unknown price line')).toBeNull());
     await exportPanel('Line-by-line audit', 'JSON');
-    expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', [{
+    expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', reportExportRows(report, [{
       line_ref: 'Observed zero price line', location: 'Site A', occurred_at: '2026-01-04T12:00:00Z',
       match_state: 'unmatched', match_confidence_pct: 80, billed_energy_wh: 12500,
       measured_energy_wh: 0, energy_delta_pct: 0, time_delta_s: 0,
       billed_total_minor: 1250, expected_cost_minor: 0, variance_minor: 0,
       recoverable: false, variance_reasons: [],
-    }]);
+    }], true));
     expect(within(card('Variance attribution')).getByText('Observed energy overcharge')).toBeInTheDocument();
   });
 
@@ -356,10 +386,10 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.change(within(panel).getByRole('searchbox'), { target: { value: 'Observed energy overcharge' } });
     await waitFor(() => expect(within(panel).queryByText('Excluded cause')).toBeNull());
     await exportPanel('Variance attribution', 'JSON');
-    expect(downloadJSON).toHaveBeenCalledWith('charging-variance-attribution', [{
+    expect(downloadJSON).toHaveBeenCalledWith('charging-variance-attribution', reportExportRows(report, [{
       category: 'Observed energy overcharge', reason: 'energy_overcharge',
       line_count: 1, amount_minor: 345, share_pct: 100, recoverable: true,
-    }]);
+    }]));
     expect(within(card('Line-by-line audit')).getByText('Unknown price line')).toBeInTheDocument();
     expect(within(card('Provider statements')).getByText('INV-002')).toBeInTheDocument();
   });
@@ -381,10 +411,10 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
     await waitFor(() => expect(within(panel).queryByText('Excluded site')).toBeNull());
     await exportPanel('Sessions the provider never billed', 'JSON');
-    expect(downloadJSON).toHaveBeenCalledWith('charging-uninvoiced-sessions', [{
+    expect(downloadJSON).toHaveBeenCalledWith('charging-uninvoiced-sessions', reportExportRows(report, [{
       session_id: 88, started_at: '2026-01-05T12:00:00Z', location: 'Unbilled site',
       energy_wh: 25000, narrative: 'Independent measured session evidence.',
-    }]);
+    }]));
     expect(within(card('Line-by-line audit')).getByText('Unknown price line')).toBeInTheDocument();
   });
 
@@ -687,7 +717,7 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     );
 
     await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
-    expect(mutate).toHaveBeenCalledWith(2);
+    expect(mutate).toHaveBeenCalledWith(2, { onSuccess: expect.any(Function) });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -747,6 +777,319 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
     expect(screen.getByRole('textbox', { name: 'Note to the provider' })).toHaveValue('Retained claim note');
     expect(mockCreate().mutate).not.toHaveBeenCalled();
     expect(mockDispute().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retains invoice evidence but refuses dispute authority after the workspace vehicle changes', () => {
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    const view = renderPage();
+    selectInvoice();
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    view.rerenderPage();
+    expect(mockInvoices).toHaveBeenLastCalledWith(8, 50, 0);
+    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(card('Line-by-line audit')).toHaveTextContent('Unknown price line');
+    expect(screen.getByRole('button', { name: 'Open dispute' })).toBeDisabled();
+    expect(screen.getByText(/This form belongs to #7 \/ #1/)).toBeInTheDocument();
+    expect(mockDispute().mutate).not.toHaveBeenCalled();
+  });
+
+  it('never renders another invoice or vehicle report as the selected invoice evidence', () => {
+    const report = makeReport();
+    report.invoice.vehicle_id = 8;
+    mockReport.mockReturnValue(makeQuery(report));
+    renderPage();
+    selectInvoice();
+    expect(card('Line-by-line audit')).not.toHaveTextContent('Unknown price line');
+    expect(card('Dispute desk')).not.toHaveTextContent(report.dispute_packet_digest);
+    expect(screen.getByRole('button', { name: 'Open dispute' })).toBeDisabled();
+  });
+
+  it('pins the retained import draft to its original vehicle and ignores settlement after newer edits', () => {
+    const mutate = vi.fn<(body: CreateInvoiceRequest, options: {
+      onSuccess: (created: ChargingInvoice) => void; onSettled: () => void;
+    }) => void>();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Provider required' }), { target: { value: 'GridCo' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Draft A' } });
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Import and reconcile' })).toBeDisabled();
+    const form = screen.getByRole('textbox', { name: 'Provider required' }).closest('form')!;
+    fireEvent.submit(form);
+    expect(mutate).not.toHaveBeenCalled();
+    mockSelected.mockReturnValue({ vehicleId: 7 });
+    view.rerenderPage();
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(mutate).toHaveBeenCalledOnce();
+    expect(mutate.mock.calls[0][0].vehicle_id).toBe(7);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Newer draft edit' } });
+    act(() => {
+      mutate.mock.calls[0][1].onSuccess(makeInvoice({ id: 9 }));
+      mutate.mock.calls[0][1].onSettled();
+    });
+    expect(screen.getByRole('textbox', { name: 'Invoice reference required' })).toHaveValue('Newer draft edit');
+    expect(mockReport).toHaveBeenLastCalledWith(null);
+  });
+
+  it('keeps selected evidence on delete rejection and never clears a newer selected invoice on success', async () => {
+    const mutate = vi.fn<(id: number, options: { onSuccess: () => void }) => void>();
+    mockRemove.mockReturnValue(makeMutation({ mutate }));
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(removeButton('INV-001'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
+    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(card('Dispute desk')).toHaveTextContent('full-dispute-packet-digest-with-no-truncation');
+    mockRemove.mockReturnValue(makeMutation({ mutate, error: new Error('Delete rejected') }));
+    view.rerenderPage();
+    expect(mockReport).toHaveBeenLastCalledWith(1);
+    fireEvent.click(within(screen.getByText('INV-002').closest('tr')!).getByRole('button', { name: 'Audit' }));
+    act(() => mutate.mock.calls[0][1].onSuccess());
+    expect(mockReport).toHaveBeenLastCalledWith(2);
+  });
+
+  it('retains a newer audit and the import draft when an earlier import succeeds', () => {
+    const mutate = vi.fn<(body: CreateInvoiceRequest, options: {
+      onSuccess: (created: ChargingInvoice) => void; onSettled: () => void;
+    }) => void>();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Provider required' }), { target: { value: 'GridCo' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Pending import' } });
+    fireEvent.submit(screen.getByRole('textbox', { name: 'Provider required' }).closest('form')!);
+    expect(mutate).toHaveBeenCalledOnce();
+    selectInvoice();
+    act(() => {
+      mutate.mock.calls[0][1].onSuccess(makeInvoice({ id: 9, invoice_ref: 'Pending import' }));
+      mutate.mock.calls[0][1].onSettled();
+    });
+    expect(mockReport).toHaveBeenLastCalledWith(1);
+    expect(screen.getByRole('textbox', { name: 'Invoice reference required' })).toHaveValue('Pending import');
+  });
+
+  it('does not clear retained selection after a delete settles across a workspace departure and return', async () => {
+    const mutate = vi.fn<(id: number, options: { onSuccess: () => void }) => void>();
+    mockRemove.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(removeButton('INV-001'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    view.rerenderPage();
+    mockSelected.mockReturnValue({ vehicleId: 7 });
+    view.rerenderPage();
+    act(() => mutate.mock.calls[0][1].onSuccess());
+    expect(mockReport).toHaveBeenLastCalledWith(1);
+  });
+
+  it('clears the same selected invoice only after successful deletion', async () => {
+    const mutate = vi.fn<(id: number, options: { onSuccess: () => void }) => void>();
+    mockRemove.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    selectInvoice();
+    fireEvent.click(removeButton('INV-001'));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mutate).toHaveBeenCalledOnce());
+    expect(mockReport).toHaveBeenLastCalledWith(1);
+    act(() => mutate.mock.calls[0][1].onSuccess());
+    expect(mockReport).toHaveBeenLastCalledWith(null);
+  });
+
+  it('pins a dispute amount, currency, reasons and note instead of silently retargeting another audit', () => {
+    const report = makeReport();
+    mockReport.mockReturnValue(makeQuery(report));
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(screen.getByRole('button', { name: 'Open dispute' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Amount claimed required' }), { target: { value: '123' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note to the provider' }), { target: { value: 'Invoice A claim' } });
+    const next = makeReport();
+    next.invoice = makeInvoice({ id: 2, invoice_ref: 'INV-002', currency: 'JPY' });
+    mockReport.mockReturnValue(makeQuery(next));
+    fireEvent.click(within(screen.getByText('INV-002').closest('tr')!).getByRole('button', { name: 'Audit' }));
+    view.rerenderPage();
+    expect(mockDispute).toHaveBeenLastCalledWith(1);
+    expect(screen.getByRole('spinbutton', { name: 'Amount claimed required' })).toHaveValue(123);
+    expect(screen.getByRole('textbox', { name: 'Note to the provider' })).toHaveValue('Invoice A claim');
+    expect(screen.getByRole('button', { name: 'Record dispute' })).toBeDisabled();
+    expect(card('Dispute desk')).toHaveTextContent('USD');
+    expect(card('Dispute desk')).toHaveTextContent(report.dispute_packet_digest);
+    fireEvent.submit(screen.getByRole('textbox', { name: 'Note to the provider' }).closest('form')!);
+    expect(mockDispute().mutate).not.toHaveBeenCalled();
+  });
+
+  it('preserves a reopened dispute editor after delayed success and blocks changed report revisions', () => {
+    const mutate = vi.fn<(body: CreateDisputeRequest, options: {
+      onSuccess: (created: InvoiceDispute) => void; onSettled: () => void;
+    }) => void>();
+    mockDispute.mockReturnValue(makeMutation({ mutate }));
+    const report = makeReport();
+    mockReport.mockReturnValue(makeQuery(report));
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(screen.getByRole('button', { name: 'Open dispute' }));
+    const form = screen.getByRole('textbox', { name: 'Note to the provider' }).closest('form')!;
+    fireEvent.submit(form);
+    fireEvent.submit(form);
+    expect(mutate).toHaveBeenCalledOnce();
+    expect(mutate.mock.calls[0][0]).toEqual({
+      claimed_minor: 345, note: '', reasons: ['energy_overcharge'], confirmed: true,
+    });
+    const desk = card('Dispute desk');
+    fireEvent.click(within(desk).getByRole('button', { name: 'Cancel' }));
+    fireEvent.click(within(desk).getByRole('button', { name: 'Open dispute' }));
+    act(() => {
+      mutate.mock.calls[0][1].onSuccess(report.disputes![0]);
+      mutate.mock.calls[0][1].onSettled();
+    });
+    expect(screen.getByRole('textbox', { name: 'Note to the provider' })).toBeInTheDocument();
+    mockReport.mockReturnValue(makeQuery({ ...report, dispute_packet_digest: 'new digest' }));
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Record dispute' })).toBeDisabled();
+    expect(desk).toHaveTextContent(report.dispute_packet_digest);
+    expect(mutate).toHaveBeenCalledOnce();
+  });
+
+  it('retains blank required money and both billing dates instead of fabricating zero or today', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
+    const total = screen.getByRole('spinbutton', { name: 'Statement total required' });
+    fireEvent.change(total, { target: { value: '' } });
+    expect(total).toHaveValue(null);
+    expect(total).toBeInvalid();
+    const start = screen.getByLabelText(/Period start/);
+    const end = screen.getByLabelText(/Period end/);
+    fireEvent.change(start, { target: { value: '' } });
+    fireEvent.change(end, { target: { value: '' } });
+    expect(start).toHaveValue('');
+    expect(end).toHaveValue('');
+    expect(start).toBeInvalid();
+    expect(end).toBeInvalid();
+    fireEvent.submit(total.closest('form')!);
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the claim editor when the register revision changes before the report refreshes', () => {
+    const mutate = vi.fn<(body: CreateDisputeRequest, options: {
+      onSuccess: (created: InvoiceDispute) => void; onSettled: () => void;
+    }) => void>();
+    mockDispute.mockReturnValue(makeMutation({ mutate }));
+    const report = makeReport();
+    mockReport.mockReturnValue(makeQuery(report));
+    const view = renderPage();
+    selectInvoice();
+    fireEvent.click(screen.getByRole('button', { name: 'Open dispute' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Note to the provider' }), { target: { value: 'Retained claim' } });
+    fireEvent.submit(screen.getByRole('textbox', { name: 'Note to the provider' }).closest('form')!);
+    expect(mutate).toHaveBeenCalledOnce();
+    mockInvoices.mockReturnValue(makeQuery({ items: [makeInvoice({ version: 2 })] }));
+    view.rerenderPage();
+    expect(screen.getByRole('button', { name: 'Record dispute' })).toBeDisabled();
+    act(() => {
+      mutate.mock.calls[0][1].onSuccess(report.disputes![0]);
+      mutate.mock.calls[0][1].onSettled();
+    });
+    expect(screen.getByRole('textbox', { name: 'Note to the provider' })).toHaveValue('Retained claim');
+    expect(screen.getByRole('button', { name: 'Record dispute' })).toBeDisabled();
+  });
+
+  it('retains a total-only line but blocks import rather than inventing an all-energy fee allocation', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Import statement' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Provider required' }), { target: { value: 'GridCo' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Invoice reference required' }), { target: { value: 'Actual total only' } });
+    const amount = screen.getByRole('spinbutton', { name: 'Line total' });
+    fireEvent.change(amount, { target: { value: '1000' } });
+    expect(amount).toHaveValue(1000);
+    expect(card('Provider statements')).toHaveTextContent('Explicitly not computed');
+    expect(card('Provider statements')).toHaveTextContent('billed_energy_minor / billed_idle_minor / billed_tax_minor');
+    expect(screen.getByRole('button', { name: 'Import and reconcile' })).toBeDisabled();
+    fireEvent.submit(amount.closest('form')!);
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+    expect(amount).toHaveValue(1000);
+  });
+
+  it('rejects a cleared claim but submits an explicitly entered zero in original currency minor units', () => {
+    const mutate = vi.fn();
+    mockDispute.mockReturnValue(makeMutation({ mutate }));
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    selectInvoice();
+    fireEvent.click(screen.getByRole('button', { name: 'Open dispute' }));
+    const amount = screen.getByRole('spinbutton', { name: 'Amount claimed required' });
+    fireEvent.change(amount, { target: { value: '' } });
+    expect(amount).toHaveValue(null);
+    expect(amount).toBeInvalid();
+    fireEvent.submit(amount.closest('form')!);
+    expect(mutate).not.toHaveBeenCalled();
+    fireEvent.change(amount, { target: { value: '0' } });
+    fireEvent.submit(amount.closest('form')!);
+    expect(mutate).toHaveBeenCalledOnce();
+    expect(mutate.mock.calls[0][0]).toEqual({
+      claimed_minor: 0, note: '', reasons: ['energy_overcharge'], confirmed: true,
+    });
+  });
+
+  it('pages the full server register, discloses loaded rows and resets paging for another vehicle', () => {
+    mockInvoices.mockReturnValue(makeQuery({ items: [makeInvoice()], total: 81, limit: 50, offset: 0 }));
+    const view = renderPage();
+    const panel = card('Provider statements');
+    expect(panel).toHaveTextContent('1 matching / 1 loaded rows');
+    expect(panel).toHaveTextContent('Showing 1–50 of 81');
+    fireEvent.click(within(panel).getByRole('button', { name: 'Next page' }));
+    expect(mockInvoices).toHaveBeenLastCalledWith(7, 50, 50);
+    mockInvoices.mockReturnValue(makeQuery({ items: [makeInvoice({ id: 51, invoice_ref: 'INV-051' })], total: 81, limit: 50, offset: 50 }));
+    view.rerenderPage();
+    expect(panel).toHaveTextContent('Showing 51–81 of 81');
+    expect(within(panel).getByRole('button', { name: 'Next page' })).toBeDisabled();
+    expect(within(panel).getByRole('button', { name: 'Previous page' })).toBeEnabled();
+    mockSelected.mockReturnValue({ vehicleId: 8 });
+    view.rerenderPage();
+    expect(mockInvoices).toHaveBeenLastCalledWith(8, 50, 0);
+  });
+
+  it('describes signed variance as billed minus expected rather than adjudicated debt', () => {
+    mockReport.mockReturnValue(makeQuery(makeReport()));
+    renderPage();
+    selectInvoice();
+    expect(card('Reconciliation result')).toHaveTextContent('Billed − Expected = Net variance');
+    expect(card('Reconciliation result')).toHaveTextContent('Tax and idle-fee legality');
+    expect(card('Reconciliation result')).not.toHaveTextContent('owes you');
+    expect(card('Reconciliation result')).not.toHaveTextContent('under-paid');
+  });
+
+  it('uses the saved date formatter at page timestamp sites without changing exported ISO instants', async () => {
+    const original = datePreferences.useDateFormat;
+    const formatter = vi.fn((value: string | Date | null | undefined) =>
+      formatSavedDateTime(value, { locale: 'de-DE', tz: 'America/Los_Angeles' }));
+    const spy = vi.spyOn(datePreferences, 'useDateFormat').mockImplementation(() => ({
+      ...original(), formatDateTime: formatter,
+    }));
+    try {
+      const report = makeReport();
+      mockReport.mockReturnValue(makeQuery(report));
+      renderPage();
+      selectInvoice();
+      expect(card('Provider statements')).toHaveTextContent(formatter(report.invoice.period_start));
+      expect(card('Line-by-line audit')).toHaveTextContent(formatter(report.lines![0].line.occurred_at));
+      expect(card('Sessions the provider never billed')).toHaveTextContent(formatter(report.uninvoiced_sessions![0].started_at));
+      expect(card('Dispute desk')).toHaveTextContent(formatter(report.disputes![0].opened_at));
+      await exportPanel('Line-by-line audit', 'JSON');
+      const rows = vi.mocked(downloadJSON).mock.calls[0][1];
+      expect(Array.isArray(rows)).toBe(true);
+      if (!Array.isArray(rows)) throw new Error('Missing exported rows');
+      expect(rows[0].occurred_at).toBe('2026-01-04T12:00:00Z');
+      expect(rows[0].period_start).toBe('2026-01-01');
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it('keeps signed variance and energy tolerance semantics while using restrained roles and neutral digest text', () => {
@@ -850,13 +1193,13 @@ describe('ChargingReconciliationPage — confirm-gated delete', () => {
       fireEvent.change(within(audit).getByRole('searchbox'), { target: { value: 'Unknown price line' } });
       await waitFor(() => expect(within(audit).queryByText('Observed zero price line')).toBeNull());
       await exportPanel('Line-by-line audit', 'JSON');
-      expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', [{
+      expect(downloadJSON).toHaveBeenCalledWith('charging-reconciliation-lines', reportExportRows(report, [{
         line_ref: 'Unknown price line', location: 'Site A', occurred_at: '2026-01-04T12:00:00Z',
         match_state: 'probable', match_confidence_pct: 80, billed_energy_wh: 12500,
         measured_energy_wh: null, energy_delta_pct: null, time_delta_s: null,
         billed_total_minor: 1250, expected_cost_minor: null, variance_minor: 0,
         recoverable: false, variance_reasons: ['price_not_observed'],
-      }]);
+      }], true));
       expect(within(card('Provider statements')).getByText('INV-002 · GridCo')).toBeInTheDocument();
       expect(within(card('Variance attribution')).getByText('Observed energy overcharge')).toBeInTheDocument();
       expect(within(card('Sessions the provider never billed')).getByText('Unbilled site')).toBeInTheDocument();

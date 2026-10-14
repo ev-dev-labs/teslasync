@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Clock, Cpu, RefreshCw, Settings } from 'lucide-react';
-import { Button, Badge, PanelTitle, Text } from '@/components/ui';
-import { StatStrip, type StatMetric } from '@/components/data-display/stat-reference';
+import { Button, PanelTitle, Text } from '@/components/ui';
+import { StatStrip, type StatMetric } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useTeslaEnergySiteInfo, useRefreshTeslaEnergySiteInfo } from '@/api/hooks/useEnergy';
@@ -11,6 +11,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatDateTime } from '@/lib/dateFormat';
 import { TOUSettingsModal } from '../TOUSettingsModal';
 import { InfoTile } from './InfoTile';
+import { CapBadge } from './CapBadge';
 import { fmtEnergy, fmtPower, operationModeLabel } from './helpers';
 import { SourceTrustNotice } from '../projected-range-modernization/SourceTrustNotice';
 
@@ -31,10 +32,21 @@ export function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCap
   const tariffName = tariff && typeof tariff === 'object' && 'name' in tariff && typeof tariff.name === 'string' ? tariff.name
     : nestedTariff && typeof nestedTariff === 'object' && 'name' in nestedTariff && typeof nestedTariff.name === 'string'
       ? nestedTariff.name : undefined;
+  const componentLabels: Record<string, string> = {
+    solar: t('energy.products.solar', 'Solar'),
+    battery: t('energy.products.battery', 'Battery'),
+    grid: t('energy.products.grid', 'Grid'),
+    backup: t('energy.products.backup', 'Backup'),
+    storm_mode_capable: t('energy.products.stormWatch', 'Storm Watch'),
+  };
   const metrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'powerwalls', label: t('energy.siteInfo.batteryCount', 'Powerwalls'), rawValue: info?.battery_count },
-    { metricId: 'text', occurrenceId: 'power', label: t('energy.siteInfo.ratedPower', 'Rated Power'), rawValue: info?.nameplate_power == null || !Number.isFinite(info.nameplate_power) ? null : fmtPower(info.nameplate_power) },
-    { metricId: 'text', occurrenceId: 'energy', label: t('energy.siteInfo.ratedEnergy', 'Rated Energy'), rawValue: info?.nameplate_energy == null || !Number.isFinite(info.nameplate_energy) ? null : fmtEnergy(info.nameplate_energy) },
+    { metricId: 'power', occurrenceId: 'power', label: t('energy.siteInfo.ratedPower', 'Rated Power'),
+      rawValue: info?.nameplate_power == null || !Number.isFinite(info.nameplate_power) ? null : info.nameplate_power,
+      display: { formatter: raw => ({ value: fmtPower(raw), unit: '' }) } },
+    { metricId: 'energy', occurrenceId: 'energy', label: t('energy.siteInfo.ratedEnergy', 'Rated Energy'),
+      rawValue: info?.nameplate_energy == null || !Number.isFinite(info.nameplate_energy) ? null : info.nameplate_energy,
+      display: { formatter: raw => ({ value: fmtEnergy(raw), unit: '' }) } },
   ];
 
   return (
@@ -53,7 +65,7 @@ export function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCap
       </div>
       <SourceTrustNotice source={source} label={t('energy.siteInfo.title', 'Site Configuration')} />
       {infoQuery.isLoading && !source.hasData ? <Skeleton className="h-40 rounded-xl" />
-        : source.fatalError ? <QueryError error={source.fatalError} onRetry={() => refreshMutation.mutate(siteId)} />
+        : source.fatalError ? <QueryError error={source.fatalError} onRetry={() => infoQuery.refetch()} />
         : info ? (
           <div className="space-y-3">
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -83,7 +95,8 @@ export function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCap
             )}
             {info.components && <div className="flex flex-wrap gap-1.5">
               {Object.entries(info.components).map(([key, value]) => typeof value === 'boolean' ? (
-                <Badge key={key} variant={value ? 'success' : 'neutral'} size="sm">{key.replace(/_/g, ' ')}</Badge>
+                <CapBadge key={key} active={value} size="sm"
+                  label={Object.prototype.hasOwnProperty.call(componentLabels, key) ? componentLabels[key] : key} />
               ) : null)}
             </div>}
             {showTou && (

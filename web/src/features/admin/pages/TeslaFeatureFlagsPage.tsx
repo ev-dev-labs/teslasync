@@ -18,11 +18,12 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
-import { Button, Icon } from '@/components/ui';
+import { Button, Icon, HelperText } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useTeslaFeatureConfig, useRefreshTeslaFeatureConfig } from '@/api/hooks/useUser';
 import { deriveDataState } from '@/api/dataState';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 
 import {
   FeatureConfigDistribution,
@@ -41,9 +42,11 @@ export default function TeslaFeatureFlagsPage() {
 
   const featureQuery = useTeslaFeatureConfig();
   const refresh = useRefreshTeslaFeatureConfig();
+  const { canWrite, writeBlockReason } = useOperationalMode();
 
-  const { data: envelope, isLoading, refetch } = featureQuery;
+  const { data: envelope, refetch } = featureQuery;
   const source = deriveDataState(featureQuery);
+  const isLoading = source.status === 'initial';
 
   const entries = useMemo(() => parseFeatureEntries(envelope?.data), [envelope?.data]);
   const summary = useMemo(() => summarizeFeatureEntries(entries), [entries]);
@@ -56,18 +59,24 @@ export default function TeslaFeatureFlagsPage() {
   const sectionError = source.fatalError;
 
   const actions = (
-    <Button
-      variant="secondary"
-      size="sm"
-      wrapLabel
-      className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
-      icon={<Icon icon={RefreshCw} />}
-      loading={refresh.isPending}
-      onClick={() => refresh.mutate()}
-      disabled={refresh.isPending}
-    >
-      {t('featureConfig.refresh', 'Refresh')}
-    </Button>
+    <div className="flex min-w-0 flex-col items-start gap-2">
+      <Button
+        variant="secondary"
+        size="sm"
+        wrapLabel
+        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
+        icon={<Icon icon={RefreshCw} />}
+        loading={refresh.isPending}
+        onClick={() => canWrite && !refresh.isPending && refresh.mutate()}
+        disabled={!canWrite || refresh.isPending}
+        aria-describedby={writeBlockReason ? 'tesla-feature-refresh-reason' : undefined}
+      >
+        {t('featureConfig.refresh', 'Refresh')}
+      </Button>
+      {writeBlockReason && (
+        <HelperText id="tesla-feature-refresh-reason">{writeBlockReason}</HelperText>
+      )}
+    </div>
   );
 
   return (

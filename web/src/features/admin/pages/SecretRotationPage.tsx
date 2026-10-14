@@ -23,7 +23,7 @@ import { SecretRotationDetails } from '../components/structural-closure/secret-r
 
 export default function SecretRotationPage() {
   const controller = useSecretRotationPage();
-  const { t, query, subsystemMissing, counts } = controller;
+  const { t, fmtNumber, query, subsystemMissing, counts } = controller;
   return (
     <PageLayout
       title={t('admin.secretRotation.pageTitle', 'Secret rotation')}
@@ -44,11 +44,11 @@ export default function SecretRotationPage() {
       )}
 
       {counts.critical > 0 && (
-        <AlertBanner variant="danger" title={t('admin.secretRotation.criticalTitle', 'Overdue rotations')}>
+        <AlertBanner variant="danger" title={t('common.critical', 'Critical')}>
+          {fmtNumber(counts.critical)}{' — '}
           {t(
-            'admin.secretRotation.criticalMessage',
-            '{{count}} secrets are past their critical rotation threshold. These should be rotated immediately to reduce blast radius.',
-            { count: counts.critical },
+            'admin.secretRotation.statstrip.overdueDescription',
+            'Returned credentials classified critical by their server-side per-kind thresholds.',
           )}
         </AlertBanner>
       )}

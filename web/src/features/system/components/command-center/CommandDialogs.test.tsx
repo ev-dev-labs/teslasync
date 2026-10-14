@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { CommandDialogs, type ActiveCommandDialog } from './CommandDialogs';
 import { COMMANDS, type Vehicle } from '../../commands';
@@ -51,7 +52,7 @@ describe('CommandDialogs — authoritative amperage', () => {
     const onExecute = vi.fn();
     const onClose = vi.fn();
     const props = { active: amps, vehicle, loading: false, onExecute, onClose };
-    return { ...render(<CommandDialogs {...props} />), props, onExecute, onClose };
+    return { ...render(<CommandDialogs {...props} />, { wrapper: MemoryRouter }), props, onExecute, onClose };
   }
 
   it.each(['missing', 'paused', 'failed', 'stale'])('blocks a %s maximum, including stale child submit handlers', kind => {

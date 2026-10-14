@@ -16,6 +16,7 @@ import type {
   BenchmarkReleasePage,
 } from '@/api/hooks/useBenchmarks';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { MetricComparisonDetails } from './operationalbrief-all/MetricComparisonDetails';
 
 export function MetricComparisonGrid({
@@ -30,6 +31,7 @@ export function MetricComparisonGrid({
   optedIn?: boolean;
 }) {
   const { fmtNumber, fmtPercent } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
 
@@ -111,7 +113,7 @@ export function MetricComparisonGrid({
       })
     : t('benchmarks.brief.unknownScope', 'No released cohort or source window is available.');
   const created = release
-    ? t('benchmarks.brief.created', 'Released {{date}}', { date: release.created_at })
+    ? t('benchmarks.brief.created', 'Released {{date}}', { date: formatDateTime(release.created_at) })
     : t('benchmarks.brief.noTimestamp', 'Release timestamp unavailable');
   const provenance = release
     ? t('benchmarks.brief.provenance', 'Release {{id}}; mechanism version {{version}}. {{scope}} {{created}}', {

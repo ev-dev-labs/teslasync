@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { QueryClient, MutationObserver } from '@tanstack/react-query'
+import { cleanup, fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react'
+import { QueryClient, QueryClientProvider, MutationObserver, onlineManager } from '@tanstack/react-query'
+import { Wrench } from 'lucide-react'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import i18n from 'i18next'
 import { formatDateTime, formatRelative } from '@/lib/dateFormat'
@@ -25,6 +26,12 @@ vi.mock('@/hooks/useDateFormat', () => ({
 vi.mock('./ToolCard', () => ({
   ToolCard: ({ children }: { children: ReactNode }) => createElement('section', null, children),
 }))
+vi.mock('./ResultPanel', () => ({
+  ResultPanel: ({ data, error }: { data?: unknown; error?: string }) =>
+    error ? createElement('p', { role: 'alert' }, error) : createElement('pre', null, JSON.stringify(data)),
+}))
+const toast = vi.hoisted(() => ({ success: vi.fn(), error: vi.fn() }))
+vi.mock('@/components/feedback/Toast', () => ({ useToast: () => toast }))
 vi.mock('@/components/ui', () => ({
   Input: ({ label, icon: _icon, ...props }: {
     label: string
@@ -32,8 +39,11 @@ vi.mock('@/components/ui', () => ({
     value: string
     onChange: (event: React.ChangeEvent<HTMLInputElement>) => void
   }) => createElement('label', null, label, createElement('input', props)),
-  Button: ({ children, onClick }: { children: ReactNode; onClick: () => void }) =>
-    createElement('button', { onClick }, children),
+  Textarea: ({ label, ...props }: { label: string; value: string; onChange: () => void }) =>
+    createElement('label', null, label, createElement('textarea', props)),
+  Button: ({ children, onClick, loading }: {
+    children: ReactNode; onClick: () => void; loading?: boolean
+  }) => createElement('button', { onClick, disabled: loading }, children),
   Badge: ({ children }: { children: ReactNode }) => createElement('span', null, children),
 }))
 
@@ -41,6 +51,9 @@ import { request, SudoCanceledError } from '@/api/client'
 import { apiFetch, describeCron, getNextCronRuns, getRelativeTime, isValidCron } from './helpers'
 import { CronParserTool } from './tools/CronParser'
 import { TimestampTool } from './tools/TimestampTool'
+import { BackendTool } from './BackendTool'
+import { InfrastructureSection } from './InfrastructureSection'
+import { useRefreshFleetTelemetryErrors, useRefreshFleetTelemetryErrorVINs } from '@/api/hooks/useTelemetry'
 
 const requestMock = vi.mocked(request)
 const originalLocale = getGlobalLocale()
@@ -67,6 +80,7 @@ afterEach(() => {
   vi.restoreAllMocks()
   setGlobalLocale(originalLocale)
   window.history.replaceState(null, '', originalUrl)
+  onlineManager.setOnline(true)
 })
 
 describe('phase6 helper request contract', () => {
@@ -244,6 +258,130 @@ describe('phase6 cron grammar', () => {
     })
     expect(describeCron(fields('30 9 * * 1'), translator.t, 'de-DE')).toBe('Um 09:30 am Mo')
   })
+})
+
+describe('phase6 rejected request consumers', () => {
+  beforeEach(() => {
+    vi.useRealTimers()
+    toast.success.mockClear()
+    toast.error.mockClear()
+  })
+
+  function wrapper({ children }: { children: ReactNode }) {
+    return createElement(QueryClientProvider, {
+      client: new QueryClient({ defaultOptions: { mutations: { retry: false } } }),
+    }, children)
+  }
+
+  it.each([
+    new Error('synthetic backend failure'),
+    new SudoCanceledError(),
+    new DOMException('synthetic cancellation', 'AbortError'),
+    'synthetic string rejection',
+  ])('shows failure rather than success after a backend rejection: %s', async error => {
+    requestMock.mockRejectedValueOnce(error)
+    render(createElement(BackendTool, {
+      icon: Wrench, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
+      endpoint: 'db-stats',
+    }), { wrapper })
+    fireEvent.click(screen.getByRole('button', { name: 'Run' }))
+    await waitFor(() => expect(screen.getByText('Failed')).toBeTruthy())
+    expect(screen.getByRole('alert').textContent).toBe(error instanceof Error ? error.message : error)
+    expect(screen.queryByText('Success')).toBeNull()
+  })
+
+  it.each([null, undefined, false, 0, ''])(
+    'shows an explicit fallback for a rejected value without a message: %s', async error => {
+      requestMock.mockRejectedValueOnce(error)
+      render(createElement(BackendTool, {
+        icon: Wrench, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
+        endpoint: 'db-stats',
+      }), { wrapper })
+      fireEvent.click(screen.getByRole('button', { name: 'Run' }))
+      await waitFor(() => expect(screen.getByText('Failed')).toBeTruthy())
+      expect(screen.getByRole('alert').textContent).toBe('Request failed')
+      expect(screen.queryByText('Success')).toBeNull()
+    },
+  )
+
+  it('shows a rejected MQTT request and permits a successful retry', async () => {
+    requestMock.mockRejectedValueOnce(new Error('synthetic broker failure'))
+    requestMock.mockResolvedValueOnce({ published: true })
+    render(createElement(InfrastructureSection), { wrapper })
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
+    await waitFor(() => expect(screen.getByRole('alert').textContent).toBe('synthetic broker failure'))
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
+    await waitFor(() => expect(screen.getByText('{"published":true}')).toBeTruthy())
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(requestMock).toHaveBeenLastCalledWith('/dev-tools/mqtt-test', {
+      method: 'POST', requiresLiveMode: true, body: '{"topic":"","message":""}',
+    })
+  })
+
+  it('rejects offline backend and MQTT writes immediately instead of queueing them for reconnect', async () => {
+    const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
+    requestMock.mockImplementation(actual.request)
+    onlineManager.setOnline(false)
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    const transport = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected transport'))
+    render(createElement('div', null,
+      createElement(BackendTool, {
+        icon: Wrench, color: 'info', title: 'Synthetic backend', description: 'Synthetic',
+        endpoint: 'generate-keypair', method: 'POST',
+      }),
+      createElement(InfrastructureSection),
+    ), { wrapper })
+    fireEvent.click(screen.getAllByRole('button', { name: 'Run' })[0]!)
+    fireEvent.click(screen.getByRole('button', { name: 'Send test' }))
+    await waitFor(() => expect(screen.getAllByRole('alert')).toHaveLength(2))
+    expect(transport).not.toHaveBeenCalled()
+    expect(screen.queryByText('Success')).toBeNull()
+    onlineManager.setOnline(true)
+    expect(transport).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    [useRefreshFleetTelemetryErrorVINs, '/tesla/fleet-telemetry/error-vins/refresh'],
+    [useRefreshFleetTelemetryErrors, '/tesla/fleet-telemetry/errors/refresh'],
+  ] as const)('guards refresh writes and never emits success for a rejection: %s', async (hook, path) => {
+    const failure = new Error('synthetic refresh rejection')
+    requestMock.mockRejectedValueOnce(failure)
+    onlineManager.setOnline(false)
+    const { result } = renderHook(hook, { wrapper })
+    await expect(result.current.mutateAsync()).rejects.toBe(failure)
+    expect(requestMock).toHaveBeenCalledWith(path, { method: 'POST', requiresLiveMode: true })
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(toast.error).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    [useRefreshFleetTelemetryErrorVINs, 'historical'],
+    [useRefreshFleetTelemetryErrorVINs, 'offline'],
+    [useRefreshFleetTelemetryErrors, 'historical'],
+    [useRefreshFleetTelemetryErrors, 'offline'],
+  ] as const)(
+    'rejects refresh through the real client without transport or reconnect replay: %s %s',
+    async (hook, mode) => {
+      const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
+      requestMock.mockImplementation(actual.request)
+      const transport = vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unexpected transport'))
+      if (mode === 'historical') {
+        window.history.replaceState(null, '', '?as_of=2024-01-01T00:00:00Z')
+        vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(true)
+      } else {
+        window.history.replaceState(null, '', window.location.pathname)
+        onlineManager.setOnline(false)
+        vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+      }
+      const { result } = renderHook(hook, { wrapper })
+      await expect(result.current.mutateAsync()).rejects.toBeInstanceOf(OperationalModeWriteError)
+      expect(transport).not.toHaveBeenCalled()
+      expect(toast.success).not.toHaveBeenCalled()
+      expect(toast.error).toHaveBeenCalledOnce()
+      onlineManager.setOnline(true)
+      expect(transport).not.toHaveBeenCalled()
+    },
+  )
 })
 
 describe('phase6 relative time and calculator presentation', () => {

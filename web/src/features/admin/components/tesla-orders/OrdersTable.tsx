@@ -65,11 +65,11 @@ export function OrdersTable({ orders }: OrdersTableProps) {
     const q = filter.trim().toLowerCase();
     if (!q) return list;
     return list.filter((o) =>
-      [o.model, o.order_id, o.vin, o.status]
+      [o.model, o.order_id, o.vin, o.status, formatOrderStatus(o.status, t)]
         .filter(Boolean)
         .some((field) => String(field).toLowerCase().includes(q)),
     );
-  }, [orders, filter]);
+  }, [orders, filter, t]);
 
   const sorted = useMemo(() => {
     const dir = sortDir === 'asc' ? 1 : -1;
@@ -125,13 +125,13 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       {
         key: 'status',
         filterValue: (row) => row.status ?? null,
-        filterValueLabel: (_value, row) => formatOrderStatus(row.status),
+        filterValueLabel: (_value, row) => formatOrderStatus(row.status, t),
         header: t('admin.teslaOrders.cols.status', 'Status'),
         sortable: true,
         visibleOnMobile: true,
         render: (row) => (
           <Badge variant={orderStatusVariant(row.status)} size="sm">
-            {formatOrderStatus(row.status)}
+            {formatOrderStatus(row.status, t)}
           </Badge>
         ),
       },
@@ -185,6 +185,7 @@ export function OrdersTable({ orders }: OrdersTableProps) {
       <DataTable<TeslaOrder>
         tableId="admin:tesla-orders"
         name="tesla-orders"
+        caption={t('admin.teslaOrders.panels.details', 'Order details')}
         columns={columns}
         data={sorted}
         enableValueFilters

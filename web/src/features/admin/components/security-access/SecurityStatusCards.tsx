@@ -73,26 +73,26 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
             description={t('admin.security.card.lockDesc', 'Vehicle lock state')}
           />
           <StatusTile
-            icon={sentryOn ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
+            icon={sentryOn == null ? <ShieldQuestion className="h-5 w-5" /> : sentryOn ? <ShieldCheck className="h-5 w-5" /> : <ShieldAlert className="h-5 w-5" />}
             tone={sentryOn ? 'blue' : 'muted'}
             label={t('admin.security.card.sentryMode', 'Sentry mode')}
-            value={sentryOn ? t('admin.security.active', 'Active') : t('admin.security.inactive', 'Inactive')}
+            value={sentryOn == null ? t('admin.security.unknown', 'Unknown') : sentryOn ? t('admin.security.active', 'Active') : t('admin.security.inactive', 'Inactive')}
             description={t('admin.security.card.sentryDesc', 'Camera surveillance system')}
           />
           <StatusTile
-            icon={doorsClosed ? <DoorClosed className="h-5 w-5" /> : <DoorOpen className="h-5 w-5" />}
-            tone={doorsClosed ? 'green' : 'amber'}
+            icon={doorsClosed == null ? <ShieldQuestion className="h-5 w-5" /> : doorsClosed ? <DoorClosed className="h-5 w-5" /> : <DoorOpen className="h-5 w-5" />}
+            tone={doorsClosed == null ? 'muted' : doorsClosed ? 'green' : 'amber'}
             label={t('admin.security.card.doors', 'Doors')}
             value={
-              doorsClosed
+              doorsClosed == null ? t('admin.security.unknown', 'Unknown') : doorsClosed
                 ? t('admin.security.closed', 'Closed')
                 : (asNonEmptyString(latest.doorState) ?? t('admin.security.open', 'Open'))
             }
             description={t('admin.security.card.doorsDesc', 'All vehicle doors')}
           />
           <StatusTile
-            icon={windowsClosed ? <DoorClosed className="h-5 w-5" /> : <DoorOpen className="h-5 w-5" />}
-            tone={windowsClosed ? 'green' : 'amber'}
+            icon={windowsClosed == null ? <ShieldQuestion className="h-5 w-5" /> : windowsClosed ? <DoorClosed className="h-5 w-5" /> : <DoorOpen className="h-5 w-5" />}
+            tone={windowsClosed == null ? 'muted' : windowsClosed ? 'green' : 'amber'}
             label={t('admin.security.card.windows', 'Windows')}
             value={windowSummary(latest, t)}
             description={t('admin.security.card.windowsDesc', 'Window positions')}
@@ -101,14 +101,14 @@ export function SecurityStatusCards({ latest, isLoading, error, onRetry, classNa
             icon={<Home className="h-5 w-5" />}
             tone={latest.homelinkNearby ? 'purple' : 'muted'}
             label={t('admin.security.card.homelink', 'HomeLink')}
-            value={latest.homelinkNearby ? t('admin.security.nearby', 'Nearby') : t('admin.security.away', 'Away')}
+            value={latest.homelinkNearby == null ? t('admin.security.unknown', 'Unknown') : latest.homelinkNearby ? t('admin.security.nearby', 'Nearby') : t('admin.security.away', 'Away')}
             description={t('admin.security.card.homelinkDesc', 'Garage door opener')}
           />
           <StatusTile
             icon={<UserCheck className="h-5 w-5" />}
             tone={latest.guestMode ? 'amber' : 'muted'}
             label={t('admin.security.card.guestMode', 'Guest mode')}
-            value={latest.guestMode ? t('admin.security.enabled', 'Enabled') : t('admin.security.disabled', 'Disabled')}
+            value={latest.guestMode == null ? t('admin.security.unknown', 'Unknown') : latest.guestMode ? t('admin.security.enabled', 'Enabled') : t('admin.security.disabled', 'Disabled')}
             description={t('admin.security.card.guestDesc', 'Temporary access mode')}
           />
         </div>

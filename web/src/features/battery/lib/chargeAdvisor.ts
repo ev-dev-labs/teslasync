@@ -935,7 +935,7 @@ function buildScenarios(
       meanBurnPct: round(meanBurn) ?? 0,
       p75BurnPct: round(p75Burn) ?? 0,
       meanEndSocPct: round(meanSoc) ?? 0,
-      p75EndSocPct: round(meanSoc) ?? 0,
+      p75EndSocPct: round(p75Soc) ?? 0,
     };
     const p75Day = {
       ...meanDay,

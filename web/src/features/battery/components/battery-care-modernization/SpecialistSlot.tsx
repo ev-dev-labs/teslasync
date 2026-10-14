@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { useCardPlacement } from '@/components/layout';
 import { cn } from '@/lib/cn';
 import { CareSourceNotices } from './CareSourceNotices';
 import type { CareSectionState } from './state';

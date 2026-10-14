@@ -21,9 +21,9 @@ export function PrivacyBudgetPanel({
   const { t } = useTranslation();
   const spent = status?.epsilon_spent;
   const budget = status?.epsilon_budget;
-  const hasBudget = typeof spent === 'number' && Number.isFinite(spent)
-    && typeof budget === 'number' && Number.isFinite(budget);
-  const pct = hasBudget && budget > 0 ? (spent / budget) * 100 : 0;
+  const hasBudget = typeof spent === 'number' && Number.isFinite(spent) && spent >= 0
+    && typeof budget === 'number' && Number.isFinite(budget) && budget > 0;
+  const pct = hasBudget ? (spent / budget) * 100 : 0;
   const caption = t(
     'benchmarks.budget.caption',
     'Epsilon composes across new source versions. Reading or refreshing an existing release costs nothing.',

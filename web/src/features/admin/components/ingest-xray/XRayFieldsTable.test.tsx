@@ -35,6 +35,9 @@ import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { IngestXRayFieldStat } from '@/types/admin-diagnostics';
+import type { MobileDataTablePresentation } from '@/components/ui';
+
+const localizedCopy = vi.hoisted(() => ({ kindFallback: null as string | null }));
 
 // ── i18n: return the English fallback (2nd arg) for every t() call ───────────
 vi.mock('react-i18next', async () => {
@@ -43,8 +46,14 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, vars?: Record<string, unknown>) => {
+        const template = key === 'admin.xray.fields.kindFallback'
+          ? localizedCopy.kindFallback ?? fallback
+          : fallback;
+        return typeof template === 'string'
+          ? template.replace(/{{(\w+)}}/g, (_, name: string) => String(vars?.[name] ?? `{{${name}}}`))
+          : key;
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
@@ -69,6 +78,8 @@ interface StubColumn {
   header: string;
   sortable?: boolean;
   render: (row: IngestXRayFieldStat) => ReactNode;
+  filterValue?: (row: IngestXRayFieldStat) => unknown;
+  filterValueLabel?: (value: unknown, row: IngestXRayFieldStat) => string;
 }
 interface StubProps {
   data: IngestXRayFieldStat[];
@@ -78,20 +89,26 @@ interface StubProps {
   sortDir?: 'asc' | 'desc';
   onSort?: (key: string) => void;
   emptyMessage?: string;
+  mobilePresentation?: MobileDataTablePresentation<IngestXRayFieldStat>;
 }
+
+const tableContract = vi.hoisted(() => ({ current: null as StubProps | null }));
 
 vi.mock('@/components/ui', async () => {
   const actual =
     await vi.importActual<typeof import('@/components/ui')>('@/components/ui');
-  const DataTable = ({
-    data,
-    columns,
-    keyExtractor,
-    sortKey,
-    sortDir,
-    onSort,
-    emptyMessage,
-  }: StubProps) => (
+  const DataTable = (props: StubProps) => {
+    tableContract.current = props;
+    const {
+      data,
+      columns,
+      keyExtractor,
+      sortKey,
+      sortDir,
+      onSort,
+      emptyMessage,
+    } = props;
+    return (
     <div data-testid="datatable">
       <div data-testid="sort-state" data-key={sortKey} data-dir={sortDir} />
       <div>
@@ -128,7 +145,8 @@ vi.mock('@/components/ui', async () => {
         </ul>
       )}
     </div>
-  );
+    );
+  };
   return { ...actual, DataTable };
 });
 
@@ -263,6 +281,23 @@ describe('XRayFieldsTable — empty & loading states', () => {
 // ── Cell contract ────────────────────────────────────────────────────────────
 
 describe('XRayFieldsTable — cell contract', () => {
+  it('uses the existing mobile presentation with all four fields and raw kind filters', () => {
+    const row = { ...BRAVO, value_kind: 99 };
+    renderTable([row]);
+    const contract = tableContract.current!;
+    const mobile = contract.mobilePresentation!;
+    expect(mobile.roles).toEqual({
+      field: 'title', sample_count: 'primary', last_seen_at: 'meta', value_kind: 'badge',
+    });
+    expect(mobile.displayValue(row, 'value_kind')).toBe('kind 99');
+    expect(mobile.displayValue(row, 'sample_count')).toBe('300');
+    expect(mobile.displayValue(row, 'last_seen_at')).toBe(row.last_seen_at);
+    const kind = contract.columns.find(column => column.key === 'value_kind')!;
+    expect(kind.sortable).toBe(true);
+    expect(kind.filterValue?.(row)).toBe(99);
+    expect(kind.filterValueLabel?.(99, row)).toBe('kind 99');
+  });
+
   it('exposes exactly the four sortable columns', () => {
     renderTable();
 
@@ -340,15 +375,39 @@ describe('XRayFieldsTable — null-safety & hardening', () => {
     expect(rowOrder()).toEqual(['good', 'broken']);
   });
 
-  it('coalesces a missing sample_count to 0 in the rendered cell', () => {
-    const holed = {
-      ...ALPHA,
-      field: 'no-samples',
-      sample_count: undefined,
-    } as unknown as IngestXRayFieldStat;
+  it.each([undefined, null, NaN, Infinity, -Infinity, '100'])(
+    'keeps malformed count %s unknown in cells, filters and mobile summaries',
+    (sample_count) => {
+      const holed = { ...ALPHA, field: 'no-samples', sample_count } as IngestXRayFieldStat;
+      renderTable([holed, { ...BRAVO, sample_count: 0 }]);
+      expect(rowOrder()).toEqual(['bravo', 'no-samples']);
+      const cells = screen.getAllByTestId('cell-sample_count');
+      expect(cells[0]).toHaveTextContent(/^0$/);
+      expect(cells[1]).toHaveTextContent('—');
+      const contract = tableContract.current!;
+      const count = contract.columns.find(column => column.key === 'sample_count')!;
+      expect(count.filterValue?.(holed)).toBeNull();
+      expect(count.filterValueLabel?.(null, holed)).toBe('—');
+      expect(contract.mobilePresentation?.displayValue(holed, 'sample_count')).toBe('—');
+      fireEvent.click(screen.getByTestId('sort-sample_count'));
+      expect(rowOrder()).toEqual(['bravo', 'no-samples']);
+    },
+  );
 
-    renderTable([holed]);
-
-    expect(screen.getByTestId('cell-sample_count')).toHaveTextContent('0');
+  it('localizes the human kind fallback without translating known raw type names', () => {
+    localizedCopy.kindFallback = 'tipo {{kind}}';
+    try {
+      const exotic = { ...ALPHA, value_kind: 99 };
+      renderTable([exotic, BRAVO]);
+      expect(screen.getAllByTestId('cell-value_kind').map(cell => cell.textContent))
+        .toEqual(['string', 'tipo 99']);
+      const contract = tableContract.current!;
+      const kind = contract.columns.find(column => column.key === 'value_kind')!;
+      expect(kind.filterValue?.(exotic)).toBe(99);
+      expect(kind.filterValueLabel?.(99, exotic)).toBe('tipo 99');
+      expect(contract.mobilePresentation?.displayValue(exotic, 'value_kind')).toBe('tipo 99');
+    } finally {
+      localizedCopy.kindFallback = null;
+    }
   });
 });

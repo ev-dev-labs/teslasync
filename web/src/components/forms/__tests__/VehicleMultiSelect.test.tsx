@@ -6,7 +6,10 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { createInstance } from 'i18next';
+import { I18nextProvider } from 'react-i18next';
 import { useState } from 'react';
 import '@/i18n';
 import {
@@ -218,6 +221,128 @@ describe('VehicleMultiSelect', () => {
     fireEvent.mouseDown(document.body);
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
     expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('VehicleMultiSelect localized vehicle fallbacks', () => {
+  async function renderLocalized(props: HarnessProps) {
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'de',
+      fallbackLng: 'en',
+      interpolation: { escapeValue: false },
+      resources: {
+        de: {
+          translation: {
+            notifications: {
+              alertStudio: {
+                editor: {
+                  vehiclesUnknownLabel: 'Fahrzeug #{{id}}',
+                  vehiclesUnknownBadge: 'Unbekannt',
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    render(
+      <I18nextProvider i18n={i18n}>
+        <Harness {...props} />
+      </I18nextProvider>,
+    );
+    return i18n;
+  }
+
+  it.each(['', 'VIN1AAAA'])('localizes the unnamed known vehicle summary and option with VIN %s', async (vin) => {
+    const onChange = vi.fn();
+    const vehicle = { ...makeVehicle(1, '', vin), model: '' };
+    await renderLocalized({
+      vehicles: [vehicle],
+      initial: { kind: 'specific', vehicle_ids: [1] },
+      onChange,
+    });
+    const trigger = screen.getByRole('button', { name: 'Fahrzeug #1' });
+    fireEvent.click(trigger);
+    const option = screen.getByRole('checkbox', {
+      name: vin ? 'Fahrzeug #1 (VIN ...AAAA)' : 'Fahrzeug #1',
+    });
+    expect(option).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText(/Vehicle #/)).not.toBeInTheDocument();
+    fireEvent.click(option);
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'specific', vehicle_ids: [] });
+  });
+
+  it('localizes unknown single IDs in both the summary and the removable checked row', async () => {
+    const onChange = vi.fn();
+    await renderLocalized({ initial: { kind: 'specific', vehicle_ids: [99] }, onChange });
+    fireEvent.click(screen.getByRole('button', { name: 'Fahrzeug #99' }));
+    const option = screen.getByRole('checkbox', { name: 'Fahrzeug #99 Unbekannt' });
+    expect(option).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText(/Vehicle #/)).not.toBeInTheDocument();
+    fireEvent.click(option);
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'specific', vehicle_ids: [] });
+  });
+
+  it.each([
+    ['Raw Vehicle #1 & <name>', 'Model X', 'Raw Vehicle #1 & <name>', 'Raw Vehicle #1 & <name> — Model X (VIN ...AAAA)'],
+    ['', 'Raw Model #1', 'Raw Model #1', 'Raw Model #1 — Raw Model #1 (VIN ...AAAA)'],
+    ['Model X', 'Model X', 'Model X', 'Model X (VIN ...AAAA)'],
+  ])('preserves raw display name %s and model %s', async (displayName, model, summary, label) => {
+    await renderLocalized({
+      vehicles: [{ ...makeVehicle(1, displayName), model }],
+      initial: { kind: 'specific', vehicle_ids: [1] },
+    });
+    fireEvent.click(screen.getByRole('button', { name: summary }));
+    expect(screen.getByRole('checkbox', { name: label })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText('Fahrzeug #1')).not.toBeInTheDocument();
+  });
+
+  it.each([1, 99])('updates the selected ID %s summary and open option when the locale changes', async (id) => {
+    const i18n = await renderLocalized({
+      vehicles: [{ ...makeVehicle(1, '', ''), model: '' }],
+      initial: { kind: 'specific', vehicle_ids: [id] },
+    });
+    const trigger = screen.getByRole('button', { name: `Fahrzeug #${id}` });
+    fireEvent.click(trigger);
+    await act(async () => { await i18n.changeLanguage('en'); });
+    expect(trigger).toHaveAccessibleName(`Vehicle #${id}`);
+    expect(screen.getByRole('checkbox', { name: id === 99 ? 'Vehicle #99 Unknown' : 'Vehicle #1' }))
+      .toHaveAttribute('aria-checked', 'true');
+    expect(screen.queryByText(/Fahrzeug #/)).not.toBeInTheDocument();
+  });
+
+  it('preserves native Space/Enter toggling, unknown IDs and focus with localized options', async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn<(next: VehicleSelection) => void>();
+    await renderLocalized({
+      vehicles: [{ ...makeVehicle(1, '', ''), model: '' }],
+      initial: { kind: 'specific', vehicle_ids: [1, 99] },
+      onChange,
+    });
+    const trigger = screen.getByRole('button');
+    trigger.focus();
+    await user.keyboard('{Enter}');
+    const all = screen.getByTestId('vehicle-multiselect-option-all_sticky_sentinel');
+    expect(all).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'all_sticky' });
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'specific', vehicle_ids: [1, 99] });
+    expect(buildVehiclePayload(onChange.mock.calls[1][0])).toEqual({
+      all_vehicles: false, vehicle_ids: [1, 99],
+    });
+    await user.keyboard('{ArrowDown}');
+    expect(screen.getByRole('checkbox', { name: 'Fahrzeug #1' })).toHaveFocus();
+    await user.keyboard(' ');
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'specific', vehicle_ids: [99] });
+    await user.keyboard('{End}');
+    expect(screen.getByRole('checkbox', { name: 'Fahrzeug #99 Unbekannt' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+    expect(onChange).toHaveBeenLastCalledWith({ kind: 'specific', vehicle_ids: [] });
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('group')).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
   });
 });
 

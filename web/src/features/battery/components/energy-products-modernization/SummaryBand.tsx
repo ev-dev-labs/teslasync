@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import type { TeslaEnergySite } from '@/types/energy';
 import { fmtEnergy } from './helpers';

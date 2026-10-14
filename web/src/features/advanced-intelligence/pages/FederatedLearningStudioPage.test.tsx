@@ -305,9 +305,9 @@ describe('Federated learning studio scoped adoption', () => {
     expect(container).toHaveAttribute('data-source-status', 'ok');
     expect(container).toHaveAttribute('data-source-provenance', 'cached');
     expect(container).toHaveAttribute('aria-busy', 'false');
-    ['sufficient', '• Round-local coverage.', 'local-round', 'Round-local evidence.', '• Round-local limitation.']
+    ['Sufficient evidence', '• Round-local coverage.', 'local-round', 'Round-local evidence.', '• Round-local limitation.']
       .forEach(text => expect(evidence.getByText(text)).toBeInTheDocument());
-    ['limited', 'local-budget', '• Local coverage only.', '• Local aggregate only.']
+    ['Limited evidence', 'local-budget', '• Local coverage only.', '• Local aggregate only.']
       .forEach(text => expect(evidence.queryByText(text)).not.toBeInTheDocument());
     expect(screen.getByRole('table', { name: 'local-efficiency' })).toBeInTheDocument();
     expect(screen.getByText('Synthetic local aggregate privacy policy.')).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe('Federated learning studio scoped adoption', () => {
     };
     renderPage();
     const evidence = within(evidenceContainer());
-    expect(evidence.getByText('sufficient')).toBeInTheDocument();
+    expect(evidence.getByText('Sufficient evidence')).toBeInTheDocument();
     expect(evidence.getByText('No supporting evidence was returned.')).toBeInTheDocument();
     expect(evidence.getByText('No additional limitations were returned.')).toBeInTheDocument();
     expect(evidence.queryByText('local-budget')).not.toBeInTheDocument();
@@ -356,7 +356,7 @@ describe('Federated learning studio scoped adoption', () => {
     const evidence = within(evidenceContainer());
     expect(evidenceContainer()).toHaveAttribute('data-source-status', 'stale');
     expect(evidence.getByText('local-budget')).toBeInTheDocument();
-    expect(evidence.getByText('limited')).toBeInTheDocument();
+    expect(evidence.getByText('Limited evidence')).toBeInTheDocument();
     expect(evidence.getByText('• Vehicle-eight limitation.')).toBeInTheDocument();
     expect(evidence.queryByText('local-round')).not.toBeInTheDocument();
     expect(evidence.queryByText('• Round-local coverage.')).not.toBeInTheDocument();
@@ -409,7 +409,7 @@ describe('Federated learning studio scoped adoption', () => {
     expect(container).toHaveAttribute('data-source-status', status);
     expect(container).toHaveAttribute('data-source-provenance', 'cached');
     expect(container).toHaveAttribute('aria-busy', busy);
-    ['limited', '• Local coverage only.', 'local-budget', 'Subject-local evidence.', '• Local aggregate only.']
+    ['Limited evidence', '• Local coverage only.', 'local-budget', 'Subject-local evidence.', '• Local aggregate only.']
       .forEach(text => expect(evidence.getByText(text)).toBeInTheDocument());
     expect(evidence.queryByRole('button', { name: /Refresh|Retry/ })).not.toBeInTheDocument();
     if (status === 'stale') {
@@ -434,7 +434,7 @@ describe('Federated learning studio scoped adoption', () => {
     view.update();
     const evidence = within(evidenceContainer());
     expect(evidenceContainer()).toHaveAttribute('data-source-status', 'ok');
-    expect(evidence.getByText('limited')).toBeInTheDocument();
+    expect(evidence.getByText('Limited evidence')).toBeInTheDocument();
     expect(evidence.getByText('No supporting evidence was returned.')).toBeInTheDocument();
     expect(evidence.getByText('No additional limitations were returned.')).toBeInTheDocument();
     expect(screen.getByText('No local model cards exist for this vehicle and subject.')).toBeInTheDocument();

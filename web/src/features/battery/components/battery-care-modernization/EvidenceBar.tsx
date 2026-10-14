@@ -18,6 +18,6 @@ export function EvidenceBar({ label, value, max, color, sublabel }: EvidenceBarP
       <Text as="p" variant="metricValue">—</Text>
     </div>
   ) : (
-    <MetricBar label={label} value={value} max={max} color={color} sublabel={sublabel} />
+    <MetricBar label={label} value={value} max={max} color={color} fill="solid" sublabel={sublabel} />
   );
 }

@@ -271,7 +271,7 @@ describe('XRayTopFields — limit clamping & row null-safety', () => {
     expect(screen.queryByText('a')).toBeNull();
   });
 
-  it('falls back to an em-dash label and zero count for malformed rows', () => {
+  it('falls back to an em-dash label and unknown count for malformed rows', () => {
     const rows = [
       makeRow({ field: '', sample_count: 7 }),
       {
@@ -286,10 +286,29 @@ describe('XRayTopFields — limit clamping & row null-safety', () => {
     const items = screen.getAllByRole('listitem');
     expect(items).toHaveLength(2);
     // Both malformed rows render an em-dash label rather than a blank bar.
-    expect(screen.getAllByText('—')).toHaveLength(2);
-    // The undefined count is coerced to a formatted 0.
-    expect(screen.getByText('0')).toBeInTheDocument();
+    expect(screen.getAllByText('—')).toHaveLength(3);
+    expect(screen.queryByText('0')).not.toBeInTheDocument();
+    const unknown = screen.getAllByRole('progressbar')[1];
+    expect(unknown).not.toHaveAttribute('aria-valuenow');
+    expect(unknown).toHaveAttribute('aria-valuetext', 'No reading');
     // The present count still renders.
     expect(screen.getByText('7')).toBeInTheDocument();
   });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '100'])(
+    'ranks unknown count %s after valid zero without fabricating a reading',
+    (sample_count) => {
+      const malformed = { ...makeRow({ field: 'unknown' }), sample_count } as IngestXRayFieldStat;
+      renderPanel({ rows: [malformed, makeRow({ field: 'zero', sample_count: 0 })] });
+      const items = screen.getAllByRole('listitem');
+      expect(items[0]).toHaveTextContent('zero');
+      expect(items[1]).toHaveTextContent('unknown');
+      const bars = screen.getAllByRole('progressbar');
+      expect(bars[0]).toHaveAttribute('aria-valuenow', '0');
+      expect(bars[1]).not.toHaveAttribute('aria-valuenow');
+      expect(bars[1]).toHaveAttribute('aria-valuetext', 'No reading');
+      expect(bars[1].querySelector('[data-metric-fill]')).toBeNull();
+      expect(items[1]).toHaveTextContent('—');
+    },
+  );
 });

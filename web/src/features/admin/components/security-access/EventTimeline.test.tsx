@@ -38,6 +38,9 @@ import type { ComponentProps, ReactNode } from 'react';
 
 import { ApiError } from '@/lib/resilience';
 import type { TimelineEvent } from './helpers';
+import { neonColorMap } from '@/lib/tokens';
+import { deriveDataState } from '@/api/dataState';
+import type { SecurityEvent } from '@/types/admin';
 
 // Deterministic i18n: t(key, fallback) returns the English fallback so the
 // visible copy we assert on is independent of the translation JSON.
@@ -104,6 +107,20 @@ function firstChip(container: HTMLElement): HTMLElement | null {
 // ── State precedence ─────────────────────────────────────────────────────────
 
 describe('EventTimeline — state precedence', () => {
+  it('does not claim no transitions before a cold-paused history response', () => {
+    renderTimeline({ sourceState: deriveDataState<SecurityEvent[]>({ fetchStatus: 'paused' }) });
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No state changes detected in the history.')).not.toBeInTheDocument();
+  });
+
+  it('retains visible transitions while history refresh is paused', () => {
+    renderTimeline({
+      timelineEvents: [makeEvent()],
+      sourceState: deriveDataState<SecurityEvent[]>({ data: [], fetchStatus: 'paused' }, { provenance: 'historical' }),
+    });
+    expect(screen.getByText('Data may be stale')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle locked')).toBeInTheDocument();
+  });
   it('always renders the panel title regardless of state', () => {
     renderTimeline({ timelineEvents: [] });
     expect(
@@ -239,8 +256,7 @@ describe('EventTimeline — icon chip', () => {
       timelineEvents: [makeEvent({ variant: 'positive' })],
     });
     const chip = firstChip(container);
-    expect(chip?.className).toContain('bg-neon-green/10');
-    expect(chip?.className).toContain('text-emerald-300');
+    expect(chip).toHaveClass(neonColorMap.green.bg, neonColorMap.green.text);
   });
 
   it('applies the negative (rose) tone chip', () => {
@@ -248,8 +264,7 @@ describe('EventTimeline — icon chip', () => {
       timelineEvents: [makeEvent({ variant: 'negative' })],
     });
     const chip = firstChip(container);
-    expect(chip?.className).toContain('bg-neon-red/10');
-    expect(chip?.className).toContain('text-rose-300');
+    expect(chip).toHaveClass(neonColorMap.red.bg, neonColorMap.red.text);
   });
 
   it('applies the neutral (muted) tone chip', () => {
@@ -257,8 +272,7 @@ describe('EventTimeline — icon chip', () => {
       timelineEvents: [makeEvent({ variant: 'neutral' })],
     });
     const chip = firstChip(container);
-    expect(chip?.className).toContain('bg-white/[0.04]');
-    expect(chip?.className).toContain('text-[var(--text-muted)]');
+    expect(chip).toHaveClass(neonColorMap.neutral.bg, neonColorMap.neutral.text);
   });
 
   it('marks the icon chip decorative (aria-hidden) so SR users hear only the label', () => {

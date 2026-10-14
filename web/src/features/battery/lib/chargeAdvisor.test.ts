@@ -299,6 +299,41 @@ describe('computeChargeAdvice', () => {
     expect(result.reserveSensitivity.every((item) => item.meanDaysToCross == null || item.meanDaysToCross >= 0)).toBe(true);
   });
 
+  it.each(['sparse', 'dense'] as const)(
+    'keeps displayed mean and p75 end values paired with their independent %s paths',
+    (density) => {
+      const rows = density === 'sparse'
+        ? [drive('2026-05-04T09:00:00Z', 50)]
+        : Array.from({ length: 13 }, (_, index) => {
+          const date = new Date(Date.UTC(2025, 11, 8 + index * 14));
+          return drive(`${date.toISOString().slice(0, 10)}T09:00:00Z`, 10);
+        });
+      const result = computeChargeAdvice(rows, [], live(90), NOW, 'UTC', {
+        reserveFloorPct: 82,
+        reserveSensitivityPcts: [82],
+      });
+      const { meanPath, p75Path } = result.scenarios;
+      expect(meanPath).toHaveLength(7);
+      expect(p75Path).toHaveLength(7);
+      for (const [index, day] of meanPath.entries()) {
+        expect(day.localDate).toBe(p75Path[index]?.localDate);
+        expect(day.meanEndSocPct).toBe(p75Path[index]?.meanEndSocPct);
+        expect(day.p75EndSocPct).toBe(p75Path[index]?.p75EndSocPct);
+      }
+      const monday = meanPath.find((day) => day.weekday === 1)!;
+      expect(monday.meanEndSocPct).toBe(density === 'sparse' ? 88.08 : 85);
+      expect(monday.p75EndSocPct).toBe(density === 'sparse' ? 90 : 80);
+      expect(result.scenarios.meanEndSocPct).toBe(meanPath[meanPath.length - 1]?.meanEndSocPct);
+      expect(result.scenarios.p75EndSocPct).toBe(meanPath[meanPath.length - 1]?.p75EndSocPct);
+      expect(result.scenarios.meanDaysToCrossReserve).toBeNull();
+      expect(result.scenarios.p75DaysToCrossReserve).toBe(density === 'sparse' ? null : 6);
+      expect(result.reserveSensitivity.find((item) => item.floorPct === 82)).toMatchObject({
+        meanDaysToCross: null,
+        p75DaysToCross: density === 'sparse' ? null : 6,
+      });
+    },
+  );
+
   it('gives charging precedence over all scenario guidance', () => {
     const result = computeChargeAdvice(
       qualifiedHistory(30),

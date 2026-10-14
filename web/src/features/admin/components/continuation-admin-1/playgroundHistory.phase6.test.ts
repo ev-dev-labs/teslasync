@@ -1,10 +1,27 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createElement } from 'react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import i18n from 'i18next';
+import { request } from '@/api/client';
+import { ErrorBoundary } from '@/components/feedback/ErrorBoundary';
 import { reportFrontendError } from '@/lib/errorReporter';
+import ApiPlaygroundPage from '../../pages/ApiPlaygroundPage';
 import type { ParsedEndpoint } from '../EndpointSidebar';
 import type { HistoryEntry } from '../ResponseViewer';
 import { findReplayEndpoint, loadHistory, MAX_HISTORY, saveHistory } from './playgroundHistory';
 
 vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
+vi.mock('@/api/client', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/api/client')>();
+  return { ...actual, request: vi.fn() };
+});
+vi.mock('@/hooks/useSettings', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useSettings')>();
+  const { summaryTestPreferences } = await import('../operationalbrief-a-g/summaryTestPreferences');
+  return { ...actual, useSettings: summaryTestPreferences };
+});
 
 const HISTORY_KEY = 'teslasync-api-playground-history';
 const getItem = vi.fn<(key: string) => string | null>();
@@ -39,10 +56,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  cleanup();
   expect(fetchMock).not.toHaveBeenCalled();
   expect(localGetItem).not.toHaveBeenCalled();
   expect(localSetItem).not.toHaveBeenCalled();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe('playground history existing behavior', () => {
@@ -108,6 +127,67 @@ describe('playground history bounded shape trust', () => {
     getItem.mockReturnValue(JSON.stringify(entries));
     expect(loadHistory()).toEqual(entries.slice(0, MAX_HISTORY));
     expect(setItem).not.toHaveBeenCalled();
+  });
+
+  describe('playground history existing consumer boundaries', () => {
+    async function renderPage(raw: string) {
+      await i18n.init({ lng: 'en', resources: { en: { translation: {} } } });
+      getItem.mockReturnValue(raw);
+      vi.mocked(request).mockResolvedValue('paths:\n  /vehicles/{vehicleID}/state:\n    get:\n      tags: [Vehicles]\n      summary: Read vehicle state\n      responses: {}\n');
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const view = render(createElement(MemoryRouter, null,
+        createElement(QueryClientProvider, { client },
+          createElement(ErrorBoundary, {
+            name: 'ApiPlayground', children: createElement(ApiPlaygroundPage),
+          }))));
+      return { ...view, client };
+    }
+
+    it.each([
+      ['malformed JSON', '{"private":"synthetic-secret"', 'API playground history is not valid JSON'],
+      ['non-array history', 'null', 'API playground history must be an array'],
+      ['entirely invalid history', '[null,{},false]', 'API playground history contains invalid entries'],
+    ])('surfaces %s through the existing render boundary without a false ready summary', async (_name, raw, message) => {
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      const { client } = await renderPage(raw);
+      expect(screen.getByText(message)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Try Again' })).toBeInTheDocument();
+      expect(screen.queryByTestId('api-playground-history-summary')).not.toBeInTheDocument();
+      expect(reportFrontendError).toHaveBeenCalledWith(
+        expect.objectContaining({ message }), 'react',
+      );
+      expect(setItem).not.toHaveBeenCalled();
+      client.clear();
+    });
+
+    it('renders capped valid metadata and replay while the existing reporter receives the filtered-row diagnostic', async () => {
+      const reporter = await vi.importActual<typeof import('@/lib/errorReporter')>('@/lib/errorReporter');
+      reporter.__resetErrorReporterForTests();
+      vi.mocked(reportFrontendError).mockImplementation(reporter.reportFrontendError);
+      const valid = Array.from({ length: MAX_HISTORY + 3 }, (_, index) => entry(index));
+      try {
+        const { client } = await renderPage(JSON.stringify([null, ...valid, { private: 'synthetic-secret' }]));
+        const summary = screen.getByTestId('api-playground-history-summary');
+        expect(summary.querySelector('[data-operational-metric="recent"]')).toHaveAttribute('data-value-state', 'value');
+        expect(within(summary).getByText(String(MAX_HISTORY))).toBeInTheDocument();
+        fireEvent.click(await screen.findByRole('button', { name: /GET.*\/vehicles\/\{vehicleID\}\/state/ }));
+        await waitFor(() => expect(screen.getAllByRole('button', { name: /GET.*\/vehicles\/\d+\/state/ })).toHaveLength(MAX_HISTORY));
+        expect(screen.queryByRole('button', { name: /GET.*\/vehicles\/20\/state/ })).not.toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: /GET.*\/vehicles\/0\/state/ }));
+        expect(screen.getByRole('button', { name: /GET.*\/vehicles\/\{vehicleID\}\/state/ })).toHaveAttribute('aria-current', 'true');
+        expect(reporter.getRecentReportsForFeedback()).toEqual([
+          expect.objectContaining({
+            name: 'TypeError', message: 'API playground history contains invalid entries', source: 'react',
+          }),
+        ]);
+        expect(JSON.stringify(reporter.getRecentReportsForFeedback())).not.toContain('synthetic-secret');
+        expect(setItem).not.toHaveBeenCalled();
+        client.clear();
+      } finally {
+        reporter.__resetErrorReporterForTests();
+        vi.mocked(reportFrontendError).mockReset();
+      }
+    });
   });
 
   it.each(['null', '{}', '"history"', '42', 'false'])(

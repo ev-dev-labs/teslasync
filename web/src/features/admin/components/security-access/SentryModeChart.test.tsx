@@ -38,6 +38,8 @@ import type { ComponentProps, ReactNode } from 'react';
 
 import { chartTokens } from '@/lib/tokens';
 import type { SentryDayBucket } from './helpers';
+import { deriveDataState } from '@/api/dataState';
+import type { SecurityEvent } from '@/types/admin';
 
 /* ── i18n: resolve t(key, fallback) → fallback so copy is deterministic and
  *    locale-file independent. Applies to QueryError's copy too. ─────────── */
@@ -114,7 +116,7 @@ vi.mock('@/components/charts', async () => {
       <div
         data-testid="x-axis"
         data-key={String(dataKey)}
-        data-sample={tickFormatter ? tickFormatter('2026-04-30T12:00:00Z') : ''}
+        data-sample={tickFormatter ? tickFormatter('2026-04-30') : ''}
       />
     ),
     YAxis: () => <div data-testid="y-axis" />,
@@ -151,6 +153,25 @@ function renderChart(overrides: Partial<ChartProps> = {}) {
 
 afterEach(() => {
   cleanup();
+});
+
+describe('SentryModeChart — calendar and source trust', () => {
+  it('labels a calendar-only day without shifting it to the previous day', () => {
+    renderChart({ sentryBuckets: [bucket()] });
+    expect(screen.getByTestId('x-axis')).toHaveAttribute('data-sample', 'Apr 30');
+  });
+
+  it('does not claim no activity when history is cold-paused', () => {
+    renderChart({ sourceState: deriveDataState<SecurityEvent[]>({ fetchStatus: 'paused' }) });
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No Sentry Mode activity is recorded in this history window.')).not.toBeInTheDocument();
+  });
+
+  it('keeps unknown samples in a separate series rather than labeling them off', () => {
+    renderChart({ sentryBuckets: [bucket({ sentryOn: 0, sentryOff: 0, sentryUnknown: 2 })] });
+    expect(screen.getAllByTestId('bar').map((bar) => bar.getAttribute('data-key'))).toEqual(['sentryOn', 'sentryOff', 'sentryUnknown']);
+    expect(screen.getAllByTestId('bar')[2]).toHaveAttribute('data-name', 'Unknown');
+  });
 });
 
 describe('SentryModeChart — panel chrome', () => {

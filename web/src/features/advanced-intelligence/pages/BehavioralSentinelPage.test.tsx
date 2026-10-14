@@ -141,7 +141,7 @@ describe('BehavioralSentinelPage', () => {
     expect(screen.getByText('Anomaly is not attribution')).toBeInTheDocument();
     expect(screen.getByText('Findings identify unusual aggregate behavior. They do not identify a person, prove intent, or establish compromise.')).toBeInTheDocument();
     const quality = within(screen.getByRole('region', { name: 'Data quality' }));
-    expect(quality.getByText('limited')).toBeInTheDocument();
+    expect(quality.getByText('Limited evidence')).toBeInTheDocument();
     expect(quality.getByText('12')).toBeInTheDocument();
     expect(quality.getByText('65.00%')).toBeInTheDocument();
     expect(quality.getByText(/May 1, 2026.*Jun 1, 2026/)).toBeInTheDocument();

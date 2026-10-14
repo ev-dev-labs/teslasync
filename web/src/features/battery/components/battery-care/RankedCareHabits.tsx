@@ -102,7 +102,9 @@ export function RankedCareHabits({
       state={state}
       testId="battery-care-habits"
       badge={
-        <Badge variant={care.opportunities.length > 0 ? 'warning' : 'success'} dot>
+        <Badge variant={!care.scoreReady || state.isLoading || state.error
+          ? 'neutral'
+          : care.opportunities.length > 0 ? 'warning' : 'success'} dot>
           {t('batteryCare.actions.ranked', '{{count}} ranked', {
             count: care.opportunities.length,
           })}

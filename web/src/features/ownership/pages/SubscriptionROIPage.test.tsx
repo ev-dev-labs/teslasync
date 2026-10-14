@@ -1,18 +1,21 @@
 /**
- * SubscriptionROIPage — confirm-gated subscription deletion.
+ * SubscriptionROIPage — subscription lifecycle, display and evidence contracts.
  *
  * Removing a subscription is destructive (ROI history goes with it), so the
  * row Remove button must open a danger confirm dialog naming the
  * subscription instead of firing the mutation directly. Only the data hooks,
  * vehicle selection, and i18n are mocked; the table, buttons, and confirm
- * dialog render for real.
+ * dialog render for real. Scoped settings/timezone spies exercise saved date
+ * preferences without changing the UTC business-date wire contract.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+
+const translatedLabels = vi.hoisted(() => new Map<string, string>());
 
 vi.mock('react-i18next', () => {
   const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
@@ -24,6 +27,7 @@ vi.mock('react-i18next', () => {
     return s;
   };
   const t = (key: string, second?: unknown, third?: unknown): string => {
+    if (translatedLabels.has(key)) return translatedLabels.get(key)!;
     if (typeof second === 'string') {
       return interpolate(second, third as Record<string, unknown> | undefined);
     }
@@ -65,12 +69,16 @@ import SubscriptionROIPage from './SubscriptionROIPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { Subscription, SubscriptionROI, SubscriptionROIReport } from '@/types/ownership';
 import { neonColorMap, typography } from '@/lib/tokens';
+import { getGlobalPrecision, setGlobalPrecision } from '@/lib/numberFormat';
+import { formatDateTime } from '@/lib/dateFormat';
+import * as settingsHook from '@/hooks/useSettings';
+import * as timezoneHook from '@/lib/timezone';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockROI = useSubscriptionROI as unknown as ReturnType<typeof vi.fn>;
 const mockSubs = useSubscriptions as unknown as ReturnType<typeof vi.fn>;
-const mockCreate = useCreateSubscription as unknown as ReturnType<typeof vi.fn>;
-const mockRemove = useDeleteSubscription as unknown as ReturnType<typeof vi.fn>;
+const mockCreate = vi.mocked(useCreateSubscription, { partial: true });
+const mockRemove = vi.mocked(useDeleteSubscription, { partial: true });
 
 function makeSubscription(overrides: Partial<Subscription> = {}): Subscription {
   return {
@@ -178,6 +186,7 @@ function removeButton(name: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  translatedLabels.clear();
   mockSelected.mockReturnValue({
     vehicleId: 7,
     vehicle: null,
@@ -275,7 +284,9 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     expect(metric('Portfolio economics', 'Portfolio ROI')).toHaveTextContent('—');
     const row = within(card('Per-subscription verdict')).getByText('Measured Connectivity').closest('tr');
     expect(row).toHaveTextContent('Usage has not been observed.');
-    expect(row?.textContent?.match(/—/g)).toHaveLength(7);
+    if (!row) throw new Error('Missing verdict row');
+    const originalCells = within(row).getAllByRole('cell').slice(0, 10);
+    expect(originalCells.map((cell) => cell.textContent).join('').match(/—/g)).toHaveLength(7);
     expect(screen.getByText('No subscription has enough measured usage to compute a return yet.')).toBeInTheDocument();
   });
 
@@ -446,8 +457,8 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     expect(detail).toHaveTextContent('One-time purchase');
     expect(detail).toHaveTextContent('One-time');
     expect(detail).toHaveTextContent('¥1,000');
-    expect(detail).toHaveTextContent('connectivity time');
-    expect(detail).toHaveTextContent('¥3');
+    expect(detail).toHaveTextContent('Connectivity time');
+    expect(detail).toHaveTextContent('3.25 JPY minor / s');
     expect(detail).not.toHaveTextContent('ongoing');
     fireEvent.click(within(detail).getByRole('button', { name: 'Remove' }));
     const confirmation = screen.getByRole('dialog', { name: 'Delete this subscription?' });
@@ -487,5 +498,178 @@ describe('SubscriptionROIPage — confirm-gated delete', () => {
     expect(measured.usage_per_month).toBe(1250);
     expect(measured.break_even_usage_per_month).toBe(1000);
     expect(measured.usage_unit).toBe('m');
+  });
+
+  it('preserves a cancelled draft until a deliberate new draft binds the selected vehicle', () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name required' }), { target: { value: 'Retained draft' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    mockSelected.mockReturnValue({ vehicleId: 8, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    view.rerenderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    expect(screen.getByRole('textbox', { name: 'Name required' })).toHaveValue('Retained draft');
+    expect(screen.getByRole('form', { name: 'Add subscription' })).toHaveTextContent('Vehicle 7');
+    expect(screen.getByRole('button', { name: 'Save subscription' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Start new draft' }));
+    expect(screen.getByRole('textbox', { name: 'Name required' })).toHaveValue('');
+    expect(screen.getByRole('form', { name: 'Add subscription' })).toHaveTextContent('Vehicle 8');
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+  });
+
+  it('retires a successfully saved draft so a subsequent draft can bind another vehicle', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Name required' }), { target: { value: 'Saved draft' } });
+    fireEvent.submit(screen.getByRole('form', { name: 'Add subscription' }));
+    const callbacks = mutate.mock.calls[0][1] as { onSuccess: () => void };
+    act(() => callbacks.onSuccess());
+    expect(screen.queryByRole('form', { name: 'Add subscription' })).not.toBeInTheDocument();
+    mockSelected.mockReturnValue({ vehicleId: 8, vehicle: null, vehicles: [], setVehicleId: vi.fn() });
+    view.rerenderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    expect(screen.getByRole('form', { name: 'Add subscription' })).toHaveTextContent('Vehicle 8');
+    expect(screen.getByRole('textbox', { name: 'Name required' })).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Save subscription' })).toBeEnabled();
+  });
+
+  it('keeps a blank required price unknown and accepts an explicitly entered zero', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    const editor = screen.getByRole('form', { name: 'Add subscription' });
+    const price = within(editor).getByRole('spinbutton', { name: 'Price per period required' });
+    fireEvent.change(price, { target: { value: '' } });
+    expect(price).toHaveValue(null);
+    expect(editor).toHaveTextContent('Display equivalent: —');
+    expect(screen.getByRole('button', { name: 'Save subscription' })).toBeDisabled();
+    fireEvent.submit(editor);
+    expect(mockCreate().mutate).not.toHaveBeenCalled();
+    fireEvent.change(price, { target: { value: '0' } });
+    expect(screen.getByRole('button', { name: 'Save subscription' })).toBeEnabled();
+    fireEvent.submit(editor);
+    expect(mockCreate().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ price_minor: 0 }), expect.any(Object),
+    );
+  });
+
+  it('does not erase edits made after the submitted draft while its save settles', () => {
+    const mutate = vi.fn();
+    mockCreate.mockReturnValue(makeMutation({ mutate }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    const name = screen.getByRole('textbox', { name: 'Name required' });
+    fireEvent.change(name, { target: { value: 'Submitted name' } });
+    fireEvent.submit(screen.getByRole('form', { name: 'Add subscription' }));
+    fireEvent.change(name, { target: { value: 'Retained later edit' } });
+    const callbacks = mutate.mock.calls[0][1] as { onSuccess: () => void };
+    act(() => callbacks.onSuccess());
+    expect(screen.getByRole('textbox', { name: 'Name required' })).toHaveValue('Retained later edit');
+    expect(screen.getByRole('form', { name: 'Add subscription' })).toHaveTextContent('Vehicle 7');
+  });
+
+  it.each([
+    { metric: 'driving_distance', rate: 0.001, unit: 'm' },
+    { metric: 'supercharging_energy', rate: 0.1, unit: 'Wh' },
+    { metric: 'connectivity_time', rate: 0.000001, unit: 's' },
+    { metric: 'charging_sessions', rate: 0, unit: 'session' },
+    { metric: 'drive_count', rate: 3.25, unit: 'drive' },
+  ] as const)('discloses the authoritative $metric denominator without rounding $rate minor to zero', ({ metric, rate, unit }) => {
+    const subscription = makeSubscription({ usage_metric: metric, benchmark_minor_per_unit: rate });
+    mockSubs.mockReturnValue(makeQuery({ items: [subscription] }));
+    renderPage();
+    expect(card('Subscription register')).toHaveTextContent(`${rate} USD minor / ${unit}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    const metricSelect = screen.getByRole('combobox', { name: 'Usage metric' });
+    fireEvent.change(metricSelect, { target: { value: metric } });
+    expect(screen.getByRole('form', { name: 'Add subscription' })).toHaveTextContent(`USD minor / ${unit} (stored unit; not a display-unit rate)`);
+    expect(subscription.benchmark_minor_per_unit).toBe(rate);
+  });
+
+  it('retains raw ROI in chart and accessible table while formatting known verdicts and metric labels', () => {
+    const precision = getGlobalPrecision();
+    setGlobalPrecision(2);
+    translatedLabels.set('ownership.subscription.metric.connectivity_time', 'Verbindungszeit');
+    translatedLabels.set('ownership.verdict.too_early', 'Zu früh');
+    const item = makeROI({ roi_pct: 0.04, verdict: 'too_early' });
+    mockROI.mockReturnValue(makeQuery(makeReport([item])));
+    try {
+      renderPage();
+      expect(card('Return by subscription')).toHaveTextContent('+0.04%');
+      expect(card('Return by subscription')).toHaveTextContent('Zu früh');
+      expect(card('Per-subscription verdict')).toHaveTextContent('+0.04%');
+      expect(card('Subscription register')).toHaveTextContent('Verbindungszeit');
+      fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+      expect(screen.getByRole('option', { name: 'Verbindungszeit' })).toBeInTheDocument();
+      expect(item.roi_pct).toBe(0.04);
+    } finally {
+      act(() => setGlobalPrecision(precision));
+    }
+  });
+
+  it('preserves UTC business dates and explicitly discloses their midnight basis', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Add subscription' }));
+    const editor = screen.getByRole('form', { name: 'Add subscription' });
+    expect(editor).toHaveTextContent('Business dates are saved at midnight UTC; displayed instants use your saved timezone.');
+    fireEvent.change(within(editor).getByLabelText(/^Started\b/), { target: { value: '2026-01-01' } });
+    fireEvent.change(within(editor).getByLabelText('Ended'), { target: { value: '2026-03-01' } });
+    fireEvent.submit(editor);
+    expect(mockCreate().mutate).toHaveBeenCalledWith(expect.objectContaining({
+      started_at: '2026-01-01T00:00:00.000Z', ended_at: '2026-03-01T00:00:00.000Z',
+    }), expect.any(Object));
+  });
+
+  it('presents row-specific quality, population, coverage, bounds and reasons in desktop and mobile details', () => {
+    const quality = {
+      status: 'limited' as const, sample_count: 2, coverage_pct: 20,
+      window_start: '2026-02-01T00:00:00Z', window_end: '2026-02-03T00:00:00Z',
+      reasons: ['Only two observed drives support this subscription.'],
+    };
+    mockROI.mockReturnValue(makeQuery(makeReport([makeROI({ quality })])));
+    const view = renderPage();
+    const row = within(card('Per-subscription verdict')).getByText('Measured Connectivity').closest('tr');
+    expect(row).toHaveTextContent('Limited evidence');
+    expect(row).toHaveTextContent('Samples2');
+    expect(row).toHaveTextContent('Coverage20');
+    expect(row).toHaveTextContent('Observation window');
+    expect(row).toHaveTextContent(quality.reasons[0]);
+    view.unmount();
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => new DOMRect(0, 0, 375, 100));
+    renderPage();
+    fireEvent.click(within(card('Per-subscription verdict')).getByRole('button', { name: 'Quick view' }));
+    const dialog = screen.getByRole('dialog', { name: 'Measured Connectivity' });
+    expect(within(dialog).getByText('Data quality', { selector: 'dt' })).toBeInTheDocument();
+    expect(dialog).toHaveTextContent('Limited evidence');
+    expect(dialog).toHaveTextContent('Samples2');
+    expect(dialog).toHaveTextContent('Coverage20');
+    expect(dialog).toHaveTextContent(quality.reasons[0]);
+  });
+
+  it('uses saved locale and timezone for register and row-quality instants without rewriting UTC dates', () => {
+    const defaults = settingsHook.useSettings();
+    vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
+      ...defaults, locale: 'de-DE',
+      settings: { ...defaults.settings, locale: 'de-DE', tz_display_default: 'user', timezone_user: 'America/Los_Angeles' },
+    });
+    const timezone = vi.spyOn(timezoneHook, 'useTimezone').mockReturnValue('America/Los_Angeles');
+    const subscription = makeSubscription({ ended_at: '2026-03-01T00:00:00Z' });
+    const quality = {
+      ...makeROI().quality, window_start: subscription.started_at, window_end: subscription.ended_at,
+    };
+    mockSubs.mockReturnValue(makeQuery({ items: [subscription] }));
+    mockROI.mockReturnValue(makeQuery(makeReport([makeROI({ quality })])));
+    const view = renderPage();
+    const expected = formatDateTime(subscription.started_at, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    expect(card('Subscription register')).toHaveTextContent(expected);
+    expect(card('Per-subscription verdict')).toHaveTextContent(expected);
+    timezone.mockReturnValue('UTC');
+    view.rerenderPage();
+    const utc = formatDateTime(subscription.started_at, { locale: 'de-DE', tz: 'UTC' });
+    expect(card('Subscription register')).toHaveTextContent(utc);
+    expect(card('Per-subscription verdict')).toHaveTextContent(utc);
+    expect(subscription.started_at).toBe('2026-01-01T00:00:00Z');
+    expect(subscription.ended_at).toBe('2026-03-01T00:00:00Z');
   });
 });

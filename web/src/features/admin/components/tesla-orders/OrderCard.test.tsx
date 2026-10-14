@@ -42,6 +42,7 @@ import type { TeslaOrder } from '@/api/hooks/useUser';
 const { formatDate } = vi.hoisted(() => ({
   formatDate: vi.fn((value: unknown) => `fmt:${String(value)}`),
 }));
+const translatedLabels = vi.hoisted(() => ({} as Record<string, string>));
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({ formatDate }),
 }));
@@ -64,7 +65,7 @@ vi.mock('framer-motion', () => ({
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback?: string, opts?: Record<string, unknown>) => {
-      let out = fallback ?? _key;
+      let out = translatedLabels[_key] ?? fallback ?? _key;
       if (opts) {
         for (const [k, v] of Object.entries(opts)) {
           out = out.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v));
@@ -110,9 +111,18 @@ function card(): HTMLElement {
 
 beforeEach(() => {
   formatDate.mockClear();
+  for (const key of Object.keys(translatedLabels)) delete translatedLabels[key];
 });
 
 describe('OrderCard', () => {
+  it('localizes the visible status and accessible name while preserving raw order data', () => {
+    translatedLabels['admin.teslaOrders.status.readyForDelivery'] = 'Bereit zur Auslieferung';
+    const order = makeOrder({ status: 'READY_FOR_DELIVERY' });
+    render(<OrderCard order={order} />);
+    expect(screen.getByText('Bereit zur Auslieferung')).toBeInTheDocument();
+    expect(card()).toHaveAccessibleName('Model 3 order, Bereit zur Auslieferung');
+    expect(order.status).toBe('READY_FOR_DELIVERY');
+  });
   it('renders every facet of a fully-populated, upgradable order', () => {
     renderCard({
       model: 'Model Y',
@@ -145,7 +155,7 @@ describe('OrderCard', () => {
       { status: 'CANCELED', label: 'Canceled', bg: 'bg-[var(--semantic-danger-bg)]' },
       // READY_FOR_DELIVERY contains "DELIVER" but READY wins → info, not success.
       { status: 'READY_FOR_DELIVERY', label: 'Ready for delivery', bg: 'bg-[var(--semantic-info-bg)]' },
-      { status: 'WEIRD_STATE', label: 'Weird state', bg: BADGE_VARIANTS.neutral },
+      { status: 'WEIRD_STATE', label: 'WEIRD_STATE', bg: BADGE_VARIANTS.neutral },
     ] as const;
 
     for (const c of cases) {

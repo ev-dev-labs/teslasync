@@ -1,7 +1,7 @@
 import { HeartPulse } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui';
-import { type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display';
 import { BatteryEvidenceBrief } from '../operationalbrief-all/BatteryEvidenceBrief';
 import type { StatPeriod } from '@/lib/metric-reference';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -49,7 +49,10 @@ export function CareSummary({ care, state }: { care: CareScore; state: CareSecti
         'batteryCare.targets.description',
         'Observed session-end SoC; this does not measure how long the pack remained at a level',
       ),
-      context: t('batteryCare.ofSessions', 'of {{count}} sessions', { count: care.sessionsAnalyzed }),
+      context: t('batteryCare.ofSessions', 'of {{count}} sessions', {
+        count: care.sessionsAnalyzed,
+        replace: { count: state.sources[0]?.state.hasData ? care.sessionsAnalyzed : '—' },
+      }),
     },
     {
       metricId: 'percent',
@@ -63,6 +66,7 @@ export function CareSummary({ care, state }: { care: CareScore; state: CareSecti
       ),
       context: t('batteryCare.summary.arrivalEvidence', 'of {{count}} drive arrivals below 10%', {
         count: care.drivesAnalyzed,
+        replace: { count: state.sources[1]?.state.hasData ? care.drivesAnalyzed : '—' },
       }),
     },
     {

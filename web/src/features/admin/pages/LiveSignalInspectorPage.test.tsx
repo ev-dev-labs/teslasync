@@ -102,6 +102,8 @@ interface LiveResult {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
+  isPending: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: typeof refetch;
 }
@@ -114,6 +116,8 @@ function makeLive(overrides: Partial<LiveResult> = {}): LiveResult {
     isFetching: false,
     isStale: false,
     isError: false,
+    isPending: true,
+    fetchStatus: 'idle',
     dataUpdatedAt: 0,
     refetch,
     ...overrides,
@@ -353,6 +357,18 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     }
   });
 
+  it('distinguishes an initially paused live request from an empty Redis snapshot', () => {
+    setLive({ isPending: true, fetchStatus: 'paused' });
+    renderPage();
+
+    expect(screen.getByText('Live snapshot loading is paused. No data has been loaded yet.')).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading Live snapshot' })).toBeInTheDocument();
+    expect(screen.queryByText(/Redis has no live snapshot/)).toBeNull();
+    expect(screen.getByTestId('live-signals-operational-brief')).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps an unreported snapshot unknown rather than treating derived empty rows as measured zero', () => {
     setLive({ data: { vehicle_id: 1, count: 0 }, dataUpdatedAt: Date.now() });
     renderPage();
@@ -361,6 +377,64 @@ describe('LiveSignalInspectorPage — loading / empty states', () => {
     expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(6);
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(0);
     expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeEnabled();
+  });
+});
+
+describe('LiveSignalInspectorPage — fleet prerequisite', () => {
+  it('keeps fleet loading distinct from a resolved empty fleet', () => {
+    mockedUseVehicles.mockReturnValue({ data: undefined, isPending: true, isLoading: true });
+    renderPage();
+
+    expect(screen.getByRole('status', { name: 'Loading Live snapshot' })).toBeInTheDocument();
+    expect(screen.queryByText(NO_VEHICLE_TABLE_MSG)).toBeNull();
+    expect(screen.queryByText(/Redis has no live snapshot/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeDisabled();
+  });
+
+  it('retries the failed fleet prerequisite rather than the disabled live source', () => {
+    const retryFleet = vi.fn();
+    mockedUseVehicles.mockReturnValue({
+      data: undefined, isError: true, error: new Error('fleet unavailable'), refetch: retryFleet,
+    });
+    renderPage();
+
+    expect(screen.getAllByText("Can't reach server")).toHaveLength(3);
+    expect(screen.queryByText(NO_VEHICLE_TABLE_MSG)).toBeNull();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+    expect(retryFleet).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('shows paused fleet guidance without claiming an empty fleet or snapshot', () => {
+    const retryFleet = vi.fn();
+    mockedUseVehicles.mockReturnValue({
+      data: undefined, isPending: true, fetchStatus: 'paused', refetch: retryFleet,
+    });
+    renderPage();
+
+    expect(screen.getByText('Vehicles loading is paused. No data has been loaded yet.')).toBeInTheDocument();
+    expect(screen.queryByText(NO_VEHICLE_TABLE_MSG)).toBeNull();
+    expect(screen.queryByText(/Redis has no live snapshot/)).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(retryFleet).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+  });
+
+  it('retains snapshot rows and exposes fleet refresh recovery independently', () => {
+    const retryFleet = vi.fn();
+    mockedUseVehicles.mockReturnValue({
+      data: [{ id: 1, display_name: 'Falcon' }],
+      isError: true, error: new Error('fleet refresh unavailable'), refetch: retryFleet,
+    });
+    setLive({ data: readyData(), dataUpdatedAt: Date.now() });
+    renderPage();
+
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Vehicles may be out of date');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(retryFleet).toHaveBeenCalledTimes(1);
+    expect(refetch).not.toHaveBeenCalled();
+    expect(screen.getByText('a1')).toBeInTheDocument();
   });
 });
 

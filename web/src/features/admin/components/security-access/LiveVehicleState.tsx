@@ -14,9 +14,10 @@ import {
   CircleDot,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { typography } from '@/lib/tokens';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { DataProvenanceBadge } from '@/components/data-display';
+import type { DataState } from '@/api/dataState';
 import type { SecurityEvent } from '@/types/admin';
 import { asNonEmptyString } from '@/lib/typeGuards';
 import { StatusTile } from './StatusTile';
@@ -147,6 +148,7 @@ function buildLiveSignals(ev: SecurityEvent | undefined, t: (k: string, fb: stri
 /* ------------------------------------------------------------------ */
 
 interface LiveVehicleStateProps {
+  sourceState?: DataState<SecurityEvent>;
   latest: SecurityEvent | undefined;
   isLoading: boolean;
   error: unknown;
@@ -154,7 +156,7 @@ interface LiveVehicleStateProps {
   className?: string;
 }
 
-export function LiveVehicleState({ latest, isLoading, error, onRetry, className }: LiveVehicleStateProps) {
+export function LiveVehicleState({ latest, sourceState, isLoading, error, onRetry, className }: LiveVehicleStateProps) {
   const { t } = useTranslation();
   const liveSignals = useMemo(() => buildLiveSignals(latest, t), [latest, t]);
 
@@ -162,16 +164,14 @@ export function LiveVehicleState({ latest, isLoading, error, onRetry, className 
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
       <div className="mb-3 flex items-center justify-between gap-3">
         <PanelTitle>{t('admin.security.liveState', 'Live vehicle state')}</PanelTitle>
-        {latest && (
-          <span className={cn('inline-flex items-center gap-1.5 rounded-full border border-neon-green/20 bg-neon-green/10 px-2 py-0.5', typography.size.xs, typography.weight.medium, 'text-emerald-300')}>
-            <CircleDot className="h-3 w-3 animate-pulse" aria-hidden="true" />
-            {t('admin.security.live.indicator', 'Live')}
-          </span>
-        )}
+        <DataProvenanceBadge
+          provenance={sourceState?.provenance ?? 'unknown'}
+          status={sourceState?.status ?? 'initial'}
+        />
       </div>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
+      ) : isLoading && !latest ? (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 2xl:grid-cols-4">
           {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} height={92} />
@@ -183,7 +183,7 @@ export function LiveVehicleState({ latest, isLoading, error, onRetry, className 
             <StatusTile
               key={sig.key}
               icon={sig.icon}
-              tone={sig.active ? 'cyan' : 'muted'}
+              tone="muted"
               label={sig.label}
               value={sig.value}
             />

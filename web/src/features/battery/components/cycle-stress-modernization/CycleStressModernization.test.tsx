@@ -108,6 +108,27 @@ describe('cycle-stress source-preserving presentation', () => {
     expect(table.getByText('Overlapping interval')).toBeInTheDocument();
     expect(table.getAllByText('—')).toHaveLength(8);
   });
+  it('CSQA-01/02 preserves paused accounting and unknown counts in its real review drawer', () => {
+    const partial = cycleStressQueryState(true,
+      { data: [session], fetchStatus: 'paused', isSuccess: true },
+      { isPending: true });
+    render(<CycleStressAccounting result={result} state={partial.state}
+      retained={partial.retained} locale="en-US" />, { wrapper: Provider });
+    const accounting = within(screen.getByTestId('cycle-stress-accounting'));
+    expect(accounting.getByText('Retained source evidence')).toBeInTheDocument();
+    expect(accounting.getByText('available data: — drives + 1 charging')).toBeInTheDocument();
+    expect(accounting.getByText(/1 known returned = 1 included \+ 0 excluded/)).toBeInTheDocument();
+    fireEvent.click(accounting.getByRole('button', { name: 'Review details' }));
+    expect(within(screen.getByRole('dialog')).getByText('available data: — drives + 1 charging'))
+      .toBeVisible();
+    expect(screen.queryByText('available data: 0 drives + 1 charging')).not.toBeInTheDocument();
+  });
+  it('CSQA-02 preserves successful empty source counts as known zero', () => {
+    render(<CycleStressAccounting result={result} state={ready.state}
+      retained={ready.retained} locale="en-US" />, { wrapper: Provider });
+    expect(within(screen.getByTestId('cycle-stress-accounting'))
+      .getByText('available data: 0 drives + 1 charging')).toBeInTheDocument();
+  });
   it('uses the real mobile table pipeline and exposes all nine directory fields in quick view', async () => {
     class NarrowObserver implements ResizeObserver {
       constructor(private readonly callback: ResizeObserverCallback) {}

@@ -101,7 +101,6 @@ export function CoverageCategory({ category, filter }: CoverageCategoryProps) {
               enableValueFilters
               filterData={fields}
               columns={columns}
-              mobileColumns={['field', 'destination', 'subscribed']}
               keyExtractor={row => `${category.category}:${row.field}`}
               emptyMessage={t('coverage.category.empty', 'This category has no routed fields.')}
             />

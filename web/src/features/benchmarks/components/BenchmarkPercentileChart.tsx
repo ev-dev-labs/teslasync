@@ -8,19 +8,30 @@ import {
   Tooltip,
   XAxis,
   YAxis,
+  chartAnimationProps,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
-import { ChartCard } from '@/components/layout';
-import type { BenchmarkMetricName, BenchmarkRelease } from '@/api/hooks/useBenchmarks';
+import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { ChartCard, SourceContent } from '@/components/layout';
+import type { BenchmarkMetricName, BenchmarkPrivacyStatus, BenchmarkRelease, BenchmarkReleasePage } from '@/api/hooks/useBenchmarks';
+import type { DataState } from '@/api/dataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export function BenchmarkPercentileChart({
   release,
   loading = false,
+  source,
+  optedIn,
+  participationSource,
 }: {
   release: BenchmarkRelease | null;
   loading?: boolean;
+  source?: DataState<BenchmarkReleasePage>;
+  optedIn?: boolean;
+  participationSource?: DataState<BenchmarkPrivacyStatus>;
 }) {
   const { t } = useTranslation();
+  const { fmtNumber } = useNumberFormatting();
+  const fatalError = optedIn == null ? participationSource?.fatalError : source?.fatalError;
   const labels: Record<BenchmarkMetricName, string> = {
     degradation_pct: t('benchmarks.chart.degradation', 'Degradation'),
     efficiency_wh_per_km: t('benchmarks.chart.efficiency', 'Efficiency'),
@@ -40,8 +51,9 @@ export function BenchmarkPercentileChart({
       height={280}
       size="standard"
       exportable
-      loading={loading}
-      empty={data.length === 0}
+      loading={loading && !release && !fatalError}
+      empty={data.length === 0 && !fatalError && (optedIn != null || !source)}
+      footer={source && <StaleRefreshWarning state={source} />}
       ariaLabel={t(
         'benchmarks.chart.aria',
         'Performance percentile by private benchmark metric, from zero to one hundred',
@@ -49,22 +61,30 @@ export function BenchmarkPercentileChart({
       data={data}
       dataColumns={[
         { key: 'metric', label: t('benchmarks.chart.metric', 'Metric') },
-        { key: 'percentile', label: t('benchmarks.chart.percentile', 'Percentile') },
+        { key: 'percentile', label: t('benchmarks.chart.percentile', 'Percentile'), format: fmtNumber },
       ]}
     >
+      <SourceContent
+        state={fatalError ? 'error' : optedIn == null && !release && source ? 'loading' : 'ready'}
+        label={t('benchmarks.chart.title', 'Noise-adjusted performance percentiles')}
+        emptyMessage={t('benchmarks.chart.empty', 'No released percentiles to chart.')}
+        errorMessage={t('error.loadFailed', 'Failed to load data')}
+        error={fatalError}
+        errorRecovery={{ onRetry: (optedIn == null ? participationSource?.retry : source?.retry) ?? undefined }}
+      >
       {data.length > 0 ? (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>
             <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
             <XAxis dataKey="metric" />
-            <YAxis domain={[0, 100]} />
+            <YAxis domain={[0, 100]} tickFormatter={fmtNumber} />
             <Tooltip
               formatter={(value) => [
-                String(value),
+                fmtNumber(value),
                 t('benchmarks.chart.percentile', 'Percentile'),
               ]}
             />
-            <Bar dataKey="percentile" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} />
+            <Bar dataKey="percentile" fill={CHART_COLORS[0]} radius={[6, 6, 0, 0]} {...chartAnimationProps()} />
           </BarChart>
         </ResponsiveContainer>
       ) : (
@@ -74,6 +94,7 @@ export function BenchmarkPercentileChart({
           className="py-8"
         />
       )}
+      </SourceContent>
     </ChartCard>
   );
 }

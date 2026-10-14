@@ -117,7 +117,7 @@ describe('FirmwareCanaryPage restrained decision presentation', () => {
     ] }]);
     renderPage();
     const quality = screen.getByRole('region', { name: 'Data quality' });
-    expect(within(quality).getByText('limited')).toBeInTheDocument();
+    expect(within(quality).getByText('Limited evidence')).toBeInTheDocument();
     expect(within(quality).getByText('0')).toBeInTheDocument();
     expect(within(quality).getByText('—')).toBeInTheDocument();
     expect(within(quality).getByText(/2026/)).toBeInTheDocument();
@@ -323,7 +323,7 @@ describe('FirmwareCanaryPage evidence source trust', () => {
     expect(evidenceSource()).toHaveAttribute('aria-busy', String(fetchStatus === 'fetching'));
     expect(within(decision()).getByText('0.00%')).toBeInTheDocument();
     const quality = screen.getByRole('region', { name: 'Data quality' });
-    expect(within(quality).getByText('limited')).toBeInTheDocument();
+    expect(within(quality).getByText('Limited evidence')).toBeInTheDocument();
     expect(within(quality).getByText('0')).toBeInTheDocument();
     expect(within(quality).getByText('—')).toBeInTheDocument();
     expect(within(quality).getByText(/No meter coverage; do not infer a measured loss/)).toBeInTheDocument();
@@ -389,8 +389,8 @@ describe('FirmwareCanaryPage evidence source trust', () => {
     expect(screen.getAllByRole('article')).toHaveLength(2);
     expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok');
     const quality = screen.getByRole('region', { name: 'Data quality' });
-    expect(within(quality).getByText('insufficient')).toBeInTheDocument();
-    expect(within(quality).queryByText('limited')).not.toBeInTheDocument();
+    expect(within(quality).getByText('Insufficient evidence')).toBeInTheDocument();
+    expect(within(quality).queryByText('Limited evidence')).not.toBeInTheDocument();
     expect(within(quality).queryByText(/No meter coverage; do not infer a measured loss/)).not.toBeInTheDocument();
     expect(screen.getByText('No supporting evidence was returned.')).toBeInTheDocument();
     expect(screen.getByText('No additional limitations were returned.')).toBeInTheDocument();
@@ -404,8 +404,8 @@ describe('FirmwareCanaryPage evidence source trust', () => {
     expect(within(decision()).getByText('0.00%')).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent(observation.source);
     expect(screen.getByRole('region', { name: 'Limitations' })).toHaveTextContent('Matched peers are incomplete.');
-    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent('limited');
-    expect(within(screen.getByRole('region', { name: 'Data quality' })).queryByText('insufficient')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Data quality' })).toHaveTextContent('Limited evidence');
+    expect(within(screen.getByRole('region', { name: 'Data quality' })).queryByText('Insufficient evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
     expect(screen.queryByText('No additional limitations were returned.')).not.toBeInTheDocument();
     expect(state.read).toHaveBeenLastCalledWith(7, 10, 10);

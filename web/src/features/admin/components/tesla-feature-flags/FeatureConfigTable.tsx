@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListChecks, Search, Flag } from 'lucide-react';
 
-import { GlassPanel, Badge, Input, Select, DataTable, PanelTitle, Caption, Code, useSortToggle, type Column } from '@/components/ui';
+import { GlassPanel, Badge, Input, Select, DataTable, PanelTitle, Caption, Code, useSortToggle, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { EmptyState, QueryError, TableSkeleton } from '@/components/feedback';
 
 import type { FeatureFlagEntry, FeatureFlagKind } from './parseFeatureFlags';
@@ -97,7 +97,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
         sortable: true,
         visibleOnMobile: true,
         render: (row) => (
-          <Code className="block max-w-[18rem] truncate" title={row.key}>
+          <Code className="block max-w-[18rem] whitespace-normal break-all" title={row.key}>
             {row.key}
           </Code>
         ),
@@ -108,6 +108,7 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
         filterValueLabel: (_value, row) => kindLabel[row.kind],
         header: t('featureConfig.typeColumn', 'Type'),
         sortable: true,
+        visibleOnMobile: true,
         render: (row) => (
           <Badge variant={row.kind === 'configured' ? 'info' : 'neutral'} size="sm">
             {kindLabel[row.kind]}
@@ -131,8 +132,9 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
         key: 'details',
         filterValue: (row) => row.details ?? null,
         header: t('featureConfig.details', 'Details'),
+        visibleOnMobile: true,
         render: (row) => (
-          <Caption className="block max-w-[26rem] truncate" title={row.details ?? undefined}>
+          <Caption className="block max-w-[26rem] whitespace-normal break-words" title={row.details ?? undefined}>
             {row.details ?? '—'}
           </Caption>
         ),
@@ -140,12 +142,29 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
     ],
     [t, kindLabel],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<FeatureFlagEntry>>(
+    () => ({
+      roles: { key: 'title', enabled: 'badge', kind: 'meta', details: 'meta' },
+      displayValue: (row, key) => {
+        switch (key) {
+          case 'key': return row.key;
+          case 'kind': return kindLabel[row.kind];
+          case 'enabled': return row.enabled
+            ? t('featureConfig.enabled', 'Enabled')
+            : t('featureConfig.disabled', 'Disabled');
+          case 'details': return row.details ?? '—';
+          default: return null;
+        }
+      },
+    }),
+    [t, kindLabel],
+  );
 
   return (
     <GlassPanel className="min-w-0 p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <ListChecks className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('featureConfig.tableTitle', 'Feature flags')}
         </PanelTitle>
         {safeEntries.length > 0 && (
@@ -201,7 +220,9 @@ export function FeatureConfigTable({ entries, isLoading, error, onRetry }: Featu
             sortKey={sortKey}
             sortDir={sortDir}
             onSort={onSort}
-            mobileColumns={['key', 'enabled']}
+            mobileColumns={['key', 'kind', 'enabled', 'details']}
+            mobilePresentation={mobilePresentation}
+            rowLabel={(row) => row.key}
             emptyMessage={t('featureConfig.noMatch', 'No features match your filters.')}
             pagination
           />

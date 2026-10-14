@@ -108,6 +108,16 @@ function isEnvelope(raw: unknown): raw is VehicleLiveSignal {
   );
 }
 
+function knownTimestamp(timestamp: string | undefined): string | undefined {
+  if (!timestamp) return undefined;
+  const parsed = Date.parse(timestamp);
+  // Go's zero time is parseable, but carries no observation time.
+  if (!Number.isFinite(parsed) || parsed === Date.parse('0001-01-01T00:00:00Z')) {
+    return undefined;
+  }
+  return timestamp;
+}
+
 /**
  * Normalise a single `signals` entry into a flat row. Accepts both the typed
  * envelope and a bare scalar; unknown/malformed shapes degrade gracefully.
@@ -127,7 +137,7 @@ export function rowFromEntry(name: string, raw: unknown): LiveSignalRow {
         typeof env.age_ms === 'number' && Number.isFinite(env.age_ms)
           ? env.age_ms
           : undefined,
-      timestamp: env.timestamp ?? env.ts,
+      timestamp: knownTimestamp(env.timestamp) ?? knownTimestamp(env.ts),
     };
   }
   return { name, value: raw };

@@ -1,15 +1,9 @@
 import { useMemo } from 'react';
 import { ShieldCheck } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference/LayoutCard';
-import { Badge } from '@/components/ui/Badge';
-import { DataTable, type Column } from '@/components/ui/DataTable';
-import { Caption, Text } from '@/components/ui/Typography';
-import type { MobileDataTablePresentation } from '@/components/ui/MobileDataTableAdapter.types';
-import { FadeIn } from '@/components/motion/FadeIn';
-import { EmptyState } from '@/components/feedback/EmptyState';
-import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
-import { Skeleton } from '@/components/feedback/Skeleton';
-import { QueryError } from '@/components/feedback/QueryError';
+import { LayoutCard } from '@/components/layout';
+import { Badge, DataTable, Caption, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
+import { FadeIn } from '@/components/motion';
+import { DataStateNotice, EmptyState, SectionErrorBoundary, Skeleton, QueryError } from '@/components/feedback';
 import { formatDateTime, formatRelative } from '@/lib/dateFormat';
 import type { SecretRotationStatus } from '@/types/admin-operator-confidence';
 import type { useSecretRotationPage } from '../../../hooks/useSecretRotationPage';
@@ -18,7 +12,7 @@ import { SEVERITY_VARIANT, rowKey } from './helpers';
 type Props = { controller: ReturnType<typeof useSecretRotationPage> };
 
 export function SecretRotationDetails({ controller }: Props) {
-  const { fmtNumber, t, source, subsystemMissing, showError, isLoading, items, kindLabel, severityLabel, retry } = controller;
+  const { fmtNumber, locale, t, source, subsystemMissing, showError, isLoading, items, kindLabel, severityLabel, retry } = controller;
   const columns = useMemo<Column<SecretRotationStatus>[]>(
     () => [
       {
@@ -41,7 +35,7 @@ export function SecretRotationDetails({ controller }: Props) {
         render: (r) => (
           <div>
             <Text as="div" color="primary">{formatDateTime(r.last_rotated)}</Text>
-            <Caption>{formatRelative(r.last_rotated)}</Caption>
+            <Caption>{formatRelative(r.last_rotated, { locale })}</Caption>
           </div>
         ),
       },
@@ -95,7 +89,7 @@ export function SecretRotationDetails({ controller }: Props) {
         ),
       },
     ],
-    [t, severityLabel, kindLabel, fmtNumber],
+    [t, severityLabel, kindLabel, fmtNumber, locale],
   );
   const mobilePresentation = useMemo<MobileDataTablePresentation<SecretRotationStatus>>(
     () => ({
@@ -124,7 +118,11 @@ export function SecretRotationDetails({ controller }: Props) {
                 <Skeleton height={280} />
               ) : showError ? (
                 <QueryError error={source.fatalError} onRetry={retry} />
-              ) : items.length === 0 && !subsystemMissing ? (
+              ) : subsystemMissing ? (
+                <DataStateNotice state="unsupported">
+                  {t('admin.secretRotation.notConfigured', 'The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.')}
+                </DataStateNotice>
+              ) : items.length === 0 ? (
                 // no-action: rotation events are recorded automatically by the rotation tracker; no user action seeds them
                 <EmptyState
                   icon={<ShieldCheck className="h-8 w-8" />}

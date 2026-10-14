@@ -230,8 +230,8 @@ describe('VehicleCommandCenter — summary and readiness', () => {
     await waitFor(() => expect(hero).toHaveAttribute('data-source-provenance', 'live'));
     stateError = new Error('state refresh failed');
     await act(async () => { await queryClient.refetchQueries({ queryKey: vehicleKeys.state(VEHICLE_ID) }); });
-    expect(hero).toHaveAttribute('data-source-status', 'stale');
-    expect(hero).toHaveAttribute('data-source-provenance', 'cached');
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-status', 'stale'));
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-provenance', 'cached'));
     expect(within(hero).getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(within(hero).getByText('85.00%', { selector: '[data-operational-value]' })).toBeInTheDocument();
     expect(within(hero).queryByRole('alert')).not.toBeInTheDocument();
@@ -249,7 +249,7 @@ describe('VehicleCommandCenter — summary and readiness', () => {
       queryClient.getQueryCache().find({ queryKey: vehicleKeys.state(VEHICLE_ID) })!
         .setState({ fetchStatus: 'paused' });
     });
-    expect(hero).toHaveAttribute('data-source-provenance', 'cached');
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-provenance', 'cached'));
     expect(hero).toHaveAttribute('data-refresh-blocked', 'true');
     expect(within(hero).queryByText('Live state unavailable')).not.toBeInTheDocument();
     stateResponse = null;

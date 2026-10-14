@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Moon, Plus, Trash2, Pencil, X, Check } from 'lucide-react'
 import {
@@ -17,7 +17,7 @@ import {
   Select,
   type SelectOption,
 } from '@/components/ui'
-import { ListSkeleton, EmptyState, useToast } from '@/components/feedback'
+import { ListSkeleton, EmptyState } from '@/components/feedback'
 import { VisuallyHidden } from '@/components/a11y'
 import { FadeIn } from '@/components/motion'
 import { SourceContent } from '@/components/layout'
@@ -203,7 +203,6 @@ export interface QuietHoursPanelProps {
 export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const { seedDraft, onSeedConsumed } = props
   const { t } = useTranslation('settings')
-  const toast = useToast()
   const windowsQuery = useQuietHours()
   const windowsState = deriveDataState(windowsQuery)
   const { data: rawWindows } = windowsQuery
@@ -217,6 +216,13 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const [editingId, setEditingId] = useState<number | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [validationField, setValidationField] = useState<ValidationResult['field']>(undefined)
+  const currentDraft = useRef(draft)
+  const savingDraft = useRef<DraftWindow | null>(null)
+  const [saveInFlight, setSaveInFlight] = useState(false)
+  const setCurrentDraft = useCallback((next: DraftWindow | null) => {
+    currentDraft.current = next
+    setDraft(next)
+  }, [])
 
   // Apply a seedDraft from the AI advisor exactly once per
   // identity. The "Apply to form" handler in
@@ -227,36 +233,18 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   // button. The Save button is the sole write path; the AI
   // surface never persists state directly.
   const lastConsumedSeed = useRef<QuietHoursWindowInput | null>(null)
-  useEffect(() => {
-    if (!seedDraft) return
-    if (lastConsumedSeed.current === seedDraft) return
-    lastConsumedSeed.current = seedDraft
-    setEditingId(null)
-    const base = makeDraft()
-    const seededDraft = {
-      enabled: seedDraft.enabled ?? true,
-      start_local: seedDraft.start_local ?? base.start_local,
-      end_local: seedDraft.end_local ?? base.end_local,
-      timezone: seedDraft.timezone ?? base.timezone,
-      weekdays: seedDraft.weekdays ?? ALL_WEEKDAYS,
-      bypass_severities: [...(seedDraft.bypass_severities ?? DEFAULT_BYPASS)],
-    }
-    setDraft(seededDraft)
-    setInitialDraft(seededDraft)
-    setValidationError(null)
-    setValidationField(undefined)
-    onSeedConsumed?.()
-  }, [seedDraft, onSeedConsumed])
-
+  const latestSeed = useRef(seedDraft)
   const tzOptions = useMemo(
     () => listTimezones(draft?.timezone ?? 'UTC'),
     [draft?.timezone],
   )
 
-  const startEdit = (w: QuietHoursWindow) => {
+  const startEdit = async (w: QuietHoursWindow) => {
+    if (savingDraft.current || save.isPending) return
+    if (draftIsDirty && !await requestClose()) return
     const nextDraft = makeDraft(w)
     setEditingId(w.id)
-    setDraft(nextDraft)
+    setCurrentDraft(nextDraft)
     setInitialDraft(nextDraft)
     setValidationError(null)
     setValidationField(undefined)
@@ -265,19 +253,19 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const startCreate = () => {
     const nextDraft = makeDraft()
     setEditingId(null)
-    setDraft(nextDraft)
+    setCurrentDraft(nextDraft)
     setInitialDraft(nextDraft)
     setValidationError(null)
     setValidationField(undefined)
   }
 
-  const discardDraft = () => {
-    setDraft(null)
+  const discardDraft = useCallback(() => {
+    setCurrentDraft(null)
     setInitialDraft(null)
     setEditingId(null)
     setValidationError(null)
     setValidationField(undefined)
-  }
+  }, [setCurrentDraft])
   const draftIsDirty = draft != null
     && initialDraft != null
     && JSON.stringify(draft) !== JSON.stringify(initialDraft)
@@ -292,8 +280,39 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
     },
   )
 
+  useEffect(() => {
+    latestSeed.current = seedDraft
+    if (!seedDraft || saveInFlight || save.isPending) return
+    if (lastConsumedSeed.current === seedDraft) return
+    lastConsumedSeed.current = seedDraft
+    const applySeed = async () => {
+      if (draftIsDirty && !await requestClose()) {
+        if (latestSeed.current === seedDraft) onSeedConsumed?.()
+        return
+      }
+      if (latestSeed.current !== seedDraft || savingDraft.current || save.isPending) return
+      const base = makeDraft()
+      const seededDraft = {
+        enabled: seedDraft.enabled ?? true,
+        start_local: seedDraft.start_local ?? base.start_local,
+        end_local: seedDraft.end_local ?? base.end_local,
+        timezone: seedDraft.timezone ?? base.timezone,
+        weekdays: seedDraft.weekdays ?? ALL_WEEKDAYS,
+        bypass_severities: [...(seedDraft.bypass_severities ?? DEFAULT_BYPASS)],
+      }
+      setEditingId(null)
+      setCurrentDraft(seededDraft)
+      setInitialDraft(seededDraft)
+      setValidationError(null)
+      setValidationField(undefined)
+      onSeedConsumed?.()
+    }
+    void applySeed()
+  }, [seedDraft, onSeedConsumed, saveInFlight, save.isPending, draftIsDirty, requestClose, setCurrentDraft])
+
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (savingDraft.current || save.isPending) return
     if (!draft) {
       setValidationError(t('quietHours.error.missingDraft', 'The quiet-hours draft is unavailable. Reopen the editor.'))
       setValidationField(undefined)
@@ -325,17 +344,26 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
       bypass_severities: draft.bypass_severities,
     }
     if (draft.id) payload.id = draft.id
+    const submittedDraft = draft
+    savingDraft.current = submittedDraft
+    setSaveInFlight(true)
     save.mutate(payload, {
-      onSuccess: () => {
-        toast.success(
-          payload.id
-            ? t('toast.quietHours.updated', 'Quiet hours window updated')
-            : t('toast.quietHours.created', 'Quiet hours window created'),
-        )
-        discardDraft()
+      onSuccess: (savedWindow) => {
+        savingDraft.current = null
+        setSaveInFlight(false)
+        if (currentDraft.current === submittedDraft) discardDraft()
+        else if (currentDraft.current) {
+          const savedDraft = { ...submittedDraft, id: savedWindow.id }
+          setCurrentDraft({ ...currentDraft.current, id: savedWindow.id })
+          setInitialDraft(savedDraft)
+          setEditingId(savedWindow.id)
+        }
       },
-      onError: (err: Error) => {
-        toast.error(t('toast.quietHours.saveError', 'Failed to save quiet hours window'), err.message)
+      onError: () => {
+        savingDraft.current = null
+        setSaveInFlight(false)
+        setValidationError(t('toast.quietHours.save.error', 'Failed to save quiet hours window'))
+        setValidationField(undefined)
       },
     })
   }
@@ -351,19 +379,12 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
       confirmLabel: t('quietHours.delete', 'Delete'),
     })
     if (!ok) return
-    remove.mutate(w.id, {
-      onSuccess: () => {
-        toast.success(t('toast.quietHours.deleted', 'Quiet hours window removed'))
-      },
-      onError: (err: Error) => {
-        toast.error(t('toast.quietHours.deleteError', 'Failed to delete quiet hours window'), err.message)
-      },
-    })
+    remove.mutate(w.id)
   }
 
   const toggleWeekday = (bit: number) => {
     if (!draft) return
-    setDraft({ ...draft, weekdays: draft.weekdays ^ bit })
+    setCurrentDraft({ ...draft, weekdays: draft.weekdays ^ bit })
     if (validationField === 'weekdays') {
       setValidationError(null)
       setValidationField(undefined)
@@ -373,7 +394,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const toggleSeverity = (sev: string) => {
     if (!draft) return
     const has = draft.bypass_severities.includes(sev)
-    setDraft({
+    setCurrentDraft({
       ...draft,
       bypass_severities: has
         ? draft.bypass_severities.filter((s) => s !== sev)
@@ -412,6 +433,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               variant="primary"
               wrapLabel
               size="sm"
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               icon={<Plus className="h-4 w-4" />}
               onClick={startCreate}
               data-testid="quiet-hours-add"
@@ -464,8 +486,10 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                         variant="secondary"
                         wrapLabel
                         size="sm"
+                        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         icon={<Pencil className="h-3.5 w-3.5" />}
-                        onClick={() => startEdit(w)}
+                        onClick={() => void startEdit(w)}
+                        disabled={saveInFlight || save.isPending}
                       >
                         {t('quietHours.edit', 'Edit')}
                       </Button>
@@ -473,6 +497,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                         variant="danger"
                         wrapLabel
                         size="sm"
+                        className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                         icon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => void removeWindow(w)}
                         loading={remove.isPending && remove.variables === w.id}
@@ -491,24 +516,30 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                           key={bit}
                           className={
                             on
-                              ? 'inline-flex items-center rounded-md bg-purple-300/10 px-2 py-0.5 text-purple-300 ring-1 ring-purple-300/30 forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]'
+                              ? 'inline-flex items-center rounded-md bg-[var(--surface-3)] px-2 py-0.5 text-[var(--text-primary)] ring-1 ring-[var(--border-strong)] forced-colors:outline forced-colors:outline-1 forced-colors:outline-[CanvasText]'
                               : 'inline-flex items-center rounded-md px-2 py-0.5 text-[var(--text-muted)] ring-1 ring-[var(--border-subtle)]'
                           }
                           weight={on ? 'medium' : undefined}
                         >
-                          {t(key, fallback)}
+                          <span aria-hidden="true">{t(key, fallback)}</span>
+                          <VisuallyHidden>
+                            {t(key, fallback)}: {on ? t('quietHours.enabled', 'Enabled') : t('quietHours.disabled', 'Disabled')}
+                          </VisuallyHidden>
                         </Text>
                       )
                     })}
                   </div>
-                  {w.bypass_severities.length > 0 && (
+                  {(w.bypass_severities ?? []).length > 0 && (
                     <Text as="div" variant="caption">
                       {t('quietHours.bypassLabel', 'Always allow:')}{' '}
-                      {w.bypass_severities.map((s) => (
-                        <Badge key={s} variant="warning" className="ms-1">
-                          {s}
-                        </Badge>
-                      ))}
+                      {(w.bypass_severities ?? []).map((s) => {
+                        const choice = SEVERITY_CHOICES.find(({ value }) => value === s)
+                        return (
+                          <Badge key={s} variant="warning" className="ms-1">
+                            {choice ? t(choice.labelKey, choice.fallback) : s}
+                          </Badge>
+                        )
+                      })}
                     </Text>
                   )}
                 </li>
@@ -532,7 +563,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               </PanelTitle>
               <Toggle
                 checked={draft.enabled}
-                onChange={(v) => setDraft({ ...draft, enabled: v })}
+                onChange={(v) => setCurrentDraft({ ...draft, enabled: v })}
                 label={t('quietHours.form.enabled', 'Enabled')}
               />
             </div>
@@ -543,7 +574,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                 type="time"
                 value={draft.start_local}
                 onChange={(e) => {
-                  setDraft({ ...draft, start_local: e.target.value })
+                  setCurrentDraft({ ...draft, start_local: e.target.value })
                   if (validationField === 'start_local') {
                     setValidationError(null)
                     setValidationField(undefined)
@@ -556,7 +587,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                 type="time"
                 value={draft.end_local}
                 onChange={(e) => {
-                  setDraft({ ...draft, end_local: e.target.value })
+                  setCurrentDraft({ ...draft, end_local: e.target.value })
                   if (validationField === 'end_local') {
                     setValidationError(null)
                     setValidationField(undefined)
@@ -570,7 +601,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               label={t('quietHours.form.timezone', 'Timezone (IANA)')}
               value={draft.timezone}
               onChange={(e) => {
-                setDraft({ ...draft, timezone: e.target.value })
+                setCurrentDraft({ ...draft, timezone: e.target.value })
                 if (validationField === 'timezone') {
                   setValidationError(null)
                   setValidationField(undefined)
@@ -658,24 +689,26 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               <Button
                 variant="secondary"
                 size="sm"
+                className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                 wrapLabel
                 icon={<X className="h-4 w-4" />}
                 type="button"
                 onClick={requestClose}
-                disabled={save.isPending}
+                disabled={saveInFlight || save.isPending}
               >
                 {t('quietHours.form.cancel', 'Cancel')}
               </Button>
               <Button
                 variant="primary"
                 size="sm"
+                className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                 wrapLabel
                 icon={<Check className="h-4 w-4" />}
                 type="submit"
-                loading={save.isPending}
+                loading={saveInFlight || save.isPending}
                 data-testid="quiet-hours-save"
               >
-                {save.isPending
+                {saveInFlight || save.isPending
                   ? t('quietHours.form.saving', 'Saving…')
                   : editingId
                     ? t('quietHours.form.update', 'Update')

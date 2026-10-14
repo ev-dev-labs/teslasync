@@ -171,7 +171,7 @@ describe('phase6 backup write and form contracts', () => {
     const save = within(dialog).getByRole('button', { name: 'Create' });
     expect(save).toBeDisabled();
     for (const label of fields) {
-      const input = within(dialog).getByLabelText(label);
+      const input = within(dialog).getByLabelText(label, { exact: false });
       expect(input).toBeRequired();
       fireEvent.change(input, { target: { value: '   ' } });
       expect(save).toBeDisabled();
@@ -198,7 +198,7 @@ describe('phase6 backup write and form contracts', () => {
     mount();
     await loaded();
     const dialog = await createForm();
-    const field = within(dialog).getByLabelText(label);
+    const field = within(dialog).getByLabelText(label, { exact: false });
     fireEvent.change(field, { target: { value } });
     expect(field).toHaveAttribute('aria-invalid', 'true');
     expect(within(dialog).getByRole('button', { name: 'Create' })).toBeDisabled();
@@ -212,8 +212,8 @@ describe('phase6 backup write and form contracts', () => {
     await loaded();
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByLabelText('Frequency (days)')).toHaveValue(30);
-    expect(within(dialog).getByLabelText('Max retention')).toHaveValue(100);
+    expect(within(dialog).getByLabelText('Frequency (days)', { exact: false })).toHaveValue(30);
+    expect(within(dialog).getByLabelText('Max retention', { exact: false })).toHaveValue(100);
     fireEvent.click(within(dialog).getByRole('button', { name: 'Save changes' }));
     await waitFor(() => expect(writes()).toHaveLength(1));
     expect(writes()[0][0]).toBe('/backup/configs/1');

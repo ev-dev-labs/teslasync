@@ -19,6 +19,67 @@ beforeEach(() => {
 });
 
 describe('VehicleTwin localized native titles and hotspots', () => {
+  it.each([
+    { interactive: false, locked: true },
+    { interactive: false, locked: false },
+    { interactive: false, locked: null },
+    { interactive: true, locked: true },
+    { interactive: true, locked: false },
+    { interactive: true, locked: null },
+  ])('localizes security tooltips without changing controls: %j', async ({ interactive, locked }) => {
+    const user = userEvent.setup();
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'fixture',
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: english },
+        fixture: { translation: {
+          guard: { sentryActive: 'Surveillance active' },
+          common: { locked: 'Verrouillé', unlocked: 'Déverrouillé' },
+        } },
+      },
+    });
+    const twin = (sentryMode: boolean | null) => (
+      <I18nextProvider i18n={i18n}>
+        <VehicleTwin {...baseTwinState} interactive={interactive} locked={locked} sentryMode={sentryMode} />
+      </I18nextProvider>
+    );
+    const { container, rerender } = render(twin(true));
+    const sentry = container.querySelector('foreignObject[y="82"]')!;
+    const lock = container.querySelector('foreignObject[y="105"]');
+    expect(sentry.querySelector('[role="tooltip"]')).toHaveTextContent(/^Surveillance active$/);
+    expect(sentry.querySelectorAll('button')).toHaveLength(interactive ? 1 : 0);
+    expect(lock !== null).toBe(locked !== null);
+    if (lock) {
+      expect(lock.querySelectorAll('button')).toHaveLength(interactive ? 1 : 0);
+      expect(lock.querySelector(locked ? '.lucide-lock' : '.lucide-lock-open')).toBeInTheDocument();
+      if (interactive) {
+        expect(lock.querySelector('[role="tooltip"]')).toHaveTextContent(
+          locked ? /^Verrouillé$/ : /^Déverrouillé$/,
+        );
+      } else expect(lock.querySelector('[role="tooltip"]')).toBeNull();
+    }
+    for (const overlay of [sentry, lock]) {
+      const button = overlay?.querySelector('button');
+      if (!button) continue;
+      const tooltip = overlay!.querySelector('[role="tooltip"]')!;
+      expect(button).toHaveAttribute('aria-label', tooltip.textContent);
+      expect(button).toHaveAttribute('aria-describedby', tooltip.id);
+      expect(button).toHaveAttribute('type', 'button');
+      await user.click(button);
+      expect(button).toHaveFocus();
+      await user.keyboard('{Enter} ');
+      expect(button).toHaveFocus();
+      expect(tooltip).toHaveTextContent(button.getAttribute('aria-label')!);
+    }
+    for (const sentryMode of [false, null] as const) {
+      rerender(twin(sentryMode));
+      expect(container.querySelector('foreignObject[y="82"]')).toBeNull();
+      expect(container.querySelector('foreignObject[y="105"]') !== null).toBe(locked !== null);
+    }
+  });
+
   it.each([false, true, null] as const)('retains opening state %s and translated source associations', async opening => {
     const i18n = createInstance();
     await i18n.init({

@@ -48,7 +48,7 @@ describe('EvidencePanel source trust', () => {
   ])('keeps every shell and static disclosure but makes no result claims during $phase', ({ query }) => {
     render(panel({ ...query, refetch: vi.fn() }));
     expectShells();
-    expect(screen.queryByText('limited')).not.toBeInTheDocument();
+    expect(screen.queryByText('Limited evidence')).not.toBeInTheDocument();
     expect(screen.queryByText('synthetic-ledger')).not.toBeInTheDocument();
     expect(screen.queryByText('• Synthetic uncertainty.')).not.toBeInTheDocument();
     expect(screen.queryByText('Quality metadata is unsupported.')).not.toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('EvidencePanel source trust', () => {
     render(panel({ data: payload, dataUpdatedAt: Date.parse('2026-01-15T00:31:00Z'), ...state }));
     expectShells();
     const qualitySection = within(screen.getByRole('region', { name: 'Data quality' }));
-    expect(qualitySection.getByText('limited')).toBeVisible();
+    expect(qualitySection.getByText('Limited evidence')).toBeVisible();
     expect(qualitySection.getByText('0')).toBeVisible();
     expect(qualitySection.getByText('0.00%')).toBeVisible();
     expect(qualitySection.getByText('• Synthetic observation gap.')).toBeVisible();

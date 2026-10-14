@@ -4,8 +4,7 @@
  * FleetApiSection is the single export of this module; it composes an
  * onboarding wizard plus nine self-contained Fleet API tools. Each tool
  * fetches/mutates through the shared `apiFetch` helper (which wraps the
- * mocked `request()` client and, crucially, *swallows* failures into a
- * `{ error }` payload instead of rejecting). These tests drive the whole
+ * mocked `request()` client and rejects transport failures). These tests drive the whole
  * section end-to-end against a routed `request()` mock so every branch a
  * user can reach is exercised:
  *
@@ -15,7 +14,7 @@
  *   - PartnerPublicKeyTool: disabled-until-domain, verify, key registered /
  *     not-found / local-mismatch branches, PEM rendering.
  *   - PublicKeySetupTool: configured vs not, generate keypair, API-error.
- *   - VehicleKeyPairingTool: pairing URL derived from the fleet hostname.
+ *   - VehicleKeyPairingTool: unavailable configured-host provenance stays unknown.
  *   - FleetTelemetrySubscribeTool: subscribe POST body + signal modal.
  *   - FleetTelemetryConfigTool: gated buttons + the four TelemetryErrorsPanel
  *     states (rows / healthy-empty / unknown-shape / upstream-error).
@@ -23,7 +22,7 @@
  *   - VehicleDataTools: the "latest action wins" fix — a second action's
  *     result must replace the first, not be swallowed by `a ?? b ?? …`.
  *   - OnboardingWorkflow: auto-detect + persistence, step navigation,
- *     keyboard-operable step chips, and swallowed-error surfacing.
+ *     keyboard-operable step chips, and upstream-error surfacing.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
@@ -105,16 +104,18 @@ function install(cfg: RouteConfig = {}) {
   const {
     vehicles = [makeVehicle('VIN1', 'Car One'), makeVehicle('VIN2', 'Car Two')],
     fleetInfo = {
-      baseUrl: 'https://fleet.tesla.example',
-      clientId: 'cid-123',
-      authenticated: true,
-      regions: ['na', 'eu'],
-      hostname: 'app.example.com',
+      base_url: 'https://fleet.tesla.example',
+      client_id: 'cid-123',
+      has_valid_token: true,
+      regions: {
+        na: 'https://na.fleet.tesla.example',
+        eu: 'https://eu.fleet.tesla.example',
+      },
     },
     publicKeyStatus = {
       configured: true,
       fingerprint: 'AA:BB:CC:DD',
-      wellKnownUrl: 'https://app.example.com/.well-known/pub.pem',
+      well_known_path: '/.well-known/appspecific/com.tesla.3p.public-key.pem',
     },
     match,
   } = cfg
@@ -230,14 +231,16 @@ describe('FleetApiConfigTool', () => {
     expect(within(card).getByText('Authenticated')).toBeInTheDocument()
     expect(within(card).getByText('na')).toBeInTheDocument()
     expect(within(card).getByText('eu')).toBeInTheDocument()
+    expect(within(card).getByText('https://na.fleet.tesla.example')).toBeInTheDocument()
+    expect(within(card).getByText('https://eu.fleet.tesla.example')).toBeInTheDocument()
   })
 
   it('shows the not-authenticated badge and an em dash when regions are empty', async () => {
-    install({ fleetInfo: { authenticated: false, regions: [] } })
+    install({ fleetInfo: { has_valid_token: false, regions: {} } })
     const card = await findToolCard('Config')
 
     expect(within(card).getByText('Not authenticated')).toBeInTheDocument()
-    // baseUrl, clientId and regions all fall back to the em-dash placeholder.
+    // base_url, client_id and regions all fall back to the em-dash placeholder.
     expect(within(card).getAllByText('—').length).toBeGreaterThan(0)
   })
 
@@ -251,7 +254,7 @@ describe('FleetApiConfigTool', () => {
     expect(screen.queryByRole('heading', { level: 3, name: 'Config' })).toBeNull()
   })
 
-  it('surfaces a swallowed apiFetch error instead of rendering blank fields', async () => {
+  it('surfaces an upstream error payload instead of rendering blank fields', async () => {
     install({ fleetInfo: { error: 'fleet info upstream 503' } })
     renderSection()
 
@@ -360,12 +363,12 @@ describe('PartnerPublicKeyTool', () => {
 })
 
 describe('PublicKeySetupTool', () => {
-  it('renders the fingerprint, well-known URL and generates a keypair', async () => {
+  it('renders the fingerprint and well-known path and confirms keypair replacement', async () => {
     install({
       publicKeyStatus: {
         configured: true,
         fingerprint: 'AB:CD:EF:99',
-        wellKnownUrl: 'https://app.example.com/.well-known/pub.pem',
+        well_known_path: '/.well-known/appspecific/com.tesla.3p.public-key.pem',
       },
       match: (path, init) =>
         path === '/dev-tools/generate-keypair' && init?.method === 'POST'
@@ -375,10 +378,16 @@ describe('PublicKeySetupTool', () => {
     const card = await findToolCard('Public key')
 
     expect(within(card).getByText('AB:CD:EF:99')).toBeInTheDocument()
-    expect(within(card).getByText('https://app.example.com/.well-known/pub.pem')).toBeInTheDocument()
+    expect(within(card).getByText('/.well-known/appspecific/com.tesla.3p.public-key.pem')).toBeInTheDocument()
     expect(within(card).getByText('Configured')).toBeInTheDocument()
 
     fireEvent.click(within(card).getByRole('button', { name: 'Generate keypair' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('Replace the configured public key for this TeslaSync installation')
+    expect(dialog).toHaveTextContent('AB:CD:EF:99')
+    expect(mockedRequest.mock.calls.some(([path]) => path === '/dev-tools/generate-keypair')).toBe(false)
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }))
 
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith(
@@ -397,13 +406,26 @@ describe('PublicKeySetupTool', () => {
 })
 
 describe('VehicleKeyPairingTool', () => {
-  it('builds the pairing URL from the fleet hostname', async () => {
-    install({ fleetInfo: { authenticated: true, hostname: 'myfleet.example.com' } })
+  it('does not invent a pairing URL when Fleet API info omits the configured application hostname', async () => {
+    install({
+      fleetInfo: {
+        has_valid_token: true,
+        base_url: 'https://fleet.tesla.example',
+        public_key_url: 'https://YOUR_DOMAIN/.well-known/appspecific/com.tesla.3p.public-key.pem',
+      },
+    })
     const card = await findToolCard('Key pairing')
 
     expect(
-      await within(card).findByText('https://tesla.com/_ak/myfleet.example.com'),
+      await within(card).findByText(/configured application hostname is not provided/),
     ).toBeInTheDocument()
+    expect(card.textContent).not.toContain('https://tesla.com/_ak/')
+    expect(card.textContent).not.toContain('YOUR_DOMAIN')
+    expect(within(card).queryByRole('button', { name: /copy/i })).not.toBeInTheDocument()
+    expect(within(card).getByText('Pairing instructions')).toBeInTheDocument()
+    for (const step of ['Pairing step1', 'Pairing step2', 'Pairing step3']) {
+      expect(within(card).getByText(step)).toBeInTheDocument()
+    }
   })
 })
 
@@ -594,7 +616,7 @@ describe('OnboardingWorkflow', () => {
   it('auto-detects completed steps from key + auth status and persists them', async () => {
     install({
       publicKeyStatus: { configured: true },
-      fleetInfo: { authenticated: true, hostname: 'app.example.com' },
+      fleetInfo: { has_valid_token: true },
     })
     renderSection()
 
@@ -610,7 +632,7 @@ describe('OnboardingWorkflow', () => {
   it('marks the current step complete and advances the wizard', async () => {
     install({
       publicKeyStatus: { configured: false },
-      fleetInfo: { authenticated: false, hostname: 'app.example.com' },
+      fleetInfo: { has_valid_token: false },
     })
     renderSection()
 
@@ -629,7 +651,7 @@ describe('OnboardingWorkflow', () => {
   it('lets keyboard users jump to a step via the step chips', async () => {
     install({
       publicKeyStatus: { configured: false },
-      fleetInfo: { authenticated: false, hostname: 'app.example.com' },
+      fleetInfo: { has_valid_token: false },
     })
     renderSection()
 
@@ -642,7 +664,7 @@ describe('OnboardingWorkflow', () => {
     ).toBeInTheDocument()
   })
 
-  it('surfaces a swallowed status error in the wizard banner', async () => {
+  it('surfaces an upstream status error in the wizard banner', async () => {
     install({ publicKeyStatus: { error: 'key status upstream 500' } })
     renderSection()
 

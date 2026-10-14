@@ -1,6 +1,7 @@
 import { ChartCard } from '@/components/layout';
 import { Badge, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
+import { DataStateNotice } from '@/components/feedback';
 import { ChartTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
@@ -10,7 +11,7 @@ import { SEVERITY_ORDER, SEVERITY_VARIANT, SEVERITY_HEX, rowKey, truncate } from
 type Props = { controller: ReturnType<typeof useSecretRotationPage> };
 
 export function SecretRotationCharts({ controller }: Props) {
-  const { fmtNumber, t, source, showError, isLoading, severityLabel, counts, topByAge, severitySlices, retry } = controller;
+  const { fmtNumber, t, source, subsystemMissing, showError, isLoading, severityLabel, counts, topByAge, severitySlices, retry } = controller;
   const axisTick = {
     fill: chartTokens.axisStroke,
     fontFamily: getChartFontFamily(),
@@ -30,7 +31,7 @@ export function SecretRotationCharts({ controller }: Props) {
               loading={isLoading}
               error={showError ? (source.fatalError ?? undefined) : undefined}
               onRetry={retry}
-              empty={!isLoading && !showError && topByAge.length === 0}
+              empty={source.hasData && !isLoading && !showError && topByAge.length === 0}
               emptyMessage={t('admin.secretRotation.noAgeData', 'No rotation ages to chart yet.')}
               data={topByAge}
               dataColumns={[
@@ -38,7 +39,11 @@ export function SecretRotationCharts({ controller }: Props) {
                 { key: 'age_days', label: t('admin.secretRotation.colAge', 'Age (days)'), format: (v) => v == null ? '—' : `${fmtNumber(Number(v))}d` },
               ]}
             >
-              <ResponsiveContainer width="100%" height="100%">
+              {subsystemMissing ? (
+                <DataStateNotice state="unsupported">
+                  {t('admin.secretRotation.notConfigured', 'The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.')}
+                </DataStateNotice>
+              ) : <ResponsiveContainer width="100%" height="100%">
                 <BarChart layout="vertical" data={topByAge} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
                   <XAxis
@@ -68,7 +73,7 @@ export function SecretRotationCharts({ controller }: Props) {
                     ))}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </ResponsiveContainer>}
             </ChartCard>
           </div>
 
@@ -78,7 +83,7 @@ export function SecretRotationCharts({ controller }: Props) {
                 loading={isLoading}
                 error={showError ? (source.fatalError ?? undefined) : undefined}
                 onRetry={retry}
-                empty={!isLoading && !showError && severitySlices.length === 0}
+                empty={source.hasData && !isLoading && !showError && severitySlices.length === 0}
                 emptyMessage={t('admin.secretRotation.noSeverity', 'No severity data available yet.')}
                 data={severitySlices}
                 dataColumns={[
@@ -105,7 +110,11 @@ export function SecretRotationCharts({ controller }: Props) {
                 </ul>
                 )}
               >
-                <ResponsiveContainer width="100%" height="100%">
+                {subsystemMissing ? (
+                  <DataStateNotice state="unsupported">
+                    {t('admin.secretRotation.notConfigured', 'The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.')}
+                  </DataStateNotice>
+                ) : <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={severitySlices}
@@ -122,7 +131,7 @@ export function SecretRotationCharts({ controller }: Props) {
                     </Pie>
                     <Tooltip content={<ChartTooltip />} />
                   </PieChart>
-                </ResponsiveContainer>
+                </ResponsiveContainer>}
               </ChartCard>
         </section>
       </FadeIn>

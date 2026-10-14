@@ -69,6 +69,9 @@ import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
 import TeslaOrdersPage from './TeslaOrdersPage'
 import type { TeslaOrder } from '@/api/hooks/useUser'
+import { subscribeAnnouncer, __resetAnnouncerForTests } from '@/hooks/useAnnouncer'
+import { __resetStatusAnnouncerForTests } from '@/hooks/useStatusAnnouncer'
+import { __resetAnnouncePolicyForTests } from '@/lib/announcePolicy'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -210,9 +213,29 @@ const headerRefresh = () =>
 
 beforeEach(() => {
   mockedRequest.mockReset()
+  __resetStatusAnnouncerForTests()
+  __resetAnnouncerForTests()
+  __resetAnnouncePolicyForTests()
 })
 
 describe('TeslaOrdersPage — ready state', () => {
+  it('announces the initial loading completion once without hiding sections or announcing background reads', async () => {
+    const listener = vi.fn()
+    const unsubscribe = subscribeAnnouncer(listener)
+    install()
+    const { client, container } = renderPage()
+    expect(container.querySelector('[data-role="page-container"]')).toHaveAttribute('aria-busy', 'true')
+    expect(kpiRegion()).toBeInTheDocument()
+    await screen.findByRole('table', { name: 'Order details' })
+    await waitFor(() => expect(listener).toHaveBeenCalled())
+    const initialCalls = listener.mock.calls.length
+    expect(listener.mock.calls.some(([message]) => String(message).includes('Orders'))).toBe(true)
+    await act(async () => { await client.refetchQueries({ type: 'active' }) })
+    expect(listener).toHaveBeenCalledTimes(initialCalls)
+    expect(container.querySelector('[data-role="page-container"]')).not.toHaveAttribute('aria-busy', 'true')
+    expect(mockedRequest.mock.calls.filter((call) => call[0] === REFRESH_PATH)).toHaveLength(0)
+    unsubscribe()
+  })
   it('mounts the real six-metric OperationalBrief with source counts, delivery date and original controls', async () => {
     install()
     const { container } = renderPage()

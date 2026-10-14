@@ -75,7 +75,7 @@ export function CycleStressSourceCoverage({
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
           <Database
-            className="h-4 w-4 text-cyan-300"
+            className="h-4 w-4 text-[var(--text-secondary)]"
             aria-hidden="true"
           />
           {t(
@@ -96,6 +96,7 @@ export function CycleStressSourceCoverage({
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.driveReturned',
                 'Drive rows returned',
@@ -115,9 +116,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<Car className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.driveSpan',
                 'Drive evidence span',
@@ -146,9 +148,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<CalendarRange className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.chargeReturned',
                 'Charging rows returned',
@@ -171,9 +174,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<BatteryCharging className="h-5 w-5" />}
-              color="green"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.chargeSpan',
                 'Charging evidence span',
@@ -203,9 +207,10 @@ export function CycleStressSourceCoverage({
                     )
               }
               icon={<CalendarRange className="h-5 w-5" />}
-              color="purple"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.commonOverlap',
                 'Common source overlap',
@@ -229,9 +234,10 @@ export function CycleStressSourceCoverage({
                 'calendar time covered by both sources',
               )}
               icon={<GitMerge className="h-5 w-5" />}
-              color="amber"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.combinedSpan',
                 'Combined observed span',
@@ -256,9 +262,10 @@ export function CycleStressSourceCoverage({
                 { zone: result.timeZone },
               )}
               icon={<CalendarRange className="h-5 w-5" />}
-              color="blue"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.activeDays',
                 'Active local days',
@@ -272,9 +279,10 @@ export function CycleStressSourceCoverage({
                 'days with retained endpoints',
               )}
               icon={<Rows3 className="h-5 w-5" />}
-              color="cyan"
+              color="neutral"
             />
             <MetricCard
+              compact
               label={t(
                 'cycleStress.coverage.requestCaps',
                 'Per-source request cap',
@@ -306,7 +314,7 @@ export function CycleStressSourceCoverage({
                 },
               )}
               icon={<Database className="h-5 w-5" />}
-              color="red"
+              color="neutral"
             />
           </div>
           <AlertBanner className="mt-4" variant="info">

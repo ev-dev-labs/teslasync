@@ -1144,7 +1144,7 @@ function SecurityOverlay({
       )}
       {sentryMode && (
         <foreignObject x={cx - iconSize / 2} y={sentryY - iconSize / 2} width={iconSize} height={iconSize}>
-          <Tooltip content="Sentry mode active" side="top">
+          <Tooltip content={t('guard.sentryActive')} side="top">
             {interactive ? (
               <Button type="button" variant="ghost" aria-label={t('guard.sentryActive')}
                 className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">{sentryIcon}</Button>
@@ -1157,7 +1157,7 @@ function SecurityOverlay({
       {locked !== null && (
         <foreignObject x={cx - iconSize / 2} y={cy - iconSize / 2} width={iconSize} height={iconSize}>
           {interactive ? (
-            <Tooltip content={locked ? 'Locked' : 'Unlocked'} side="top">
+            <Tooltip content={t(locked ? 'common.locked' : 'common.unlocked')} side="top">
               <Button type="button" variant="ghost" aria-label={t(locked ? 'common.locked' : 'common.unlocked')} className="w-full h-full rounded-full bg-[var(--bg-app)] p-0">
                 {locked
                   ? <Lock className="w-4 h-4" fill={C.lockedGreen} stroke={C.lockedGreen} />
