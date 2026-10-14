@@ -291,12 +291,12 @@ func emptyQuerier() *fakeQuerier {
 // --- response decoding ---------------------------------------------------
 
 type highlightJSON struct {
-	DriveID      int64   `json:"DriveID"`
-	Date         string  `json:"Date"`
-	DistanceKm   float64 `json:"DistanceKm"`
-	DurationS    int64   `json:"DurationS"`
-	StartAddress string  `json:"StartAddress"`
-	EndAddress   string  `json:"EndAddress"`
+	DriveID         int64   `json:"drive_id"`
+	Date            string  `json:"date"`
+	DistanceKm      float64 `json:"distance_km"`
+	DurationMinutes float64 `json:"duration_min"`
+	StartAddress    string  `json:"start_address"`
+	EndAddress      string  `json:"end_address"`
 }
 
 type monthJSON struct {
@@ -637,14 +637,14 @@ func TestGetYearReview_Success(t *testing.T) {
 		t.Fatalf("longest_drive is null, want populated")
 	}
 	if got.LongestDrive.DriveID != 7 || got.LongestDrive.Date != "2020-06-15" ||
-		got.LongestDrive.DistanceKm != 90 || got.LongestDrive.DurationS != 3600 ||
+		got.LongestDrive.DistanceKm != 90 || got.LongestDrive.DurationMinutes != 60 ||
 		got.LongestDrive.StartAddress != "Home" || got.LongestDrive.EndAddress != "Work" {
 		t.Errorf("longest_drive = %+v", *got.LongestDrive)
 	}
 	if got.ShortestDrive == nil {
 		t.Fatalf("shortest_drive is null, want populated")
 	}
-	if got.ShortestDrive.DriveID != 8 || got.ShortestDrive.DistanceKm != 2 {
+	if got.ShortestDrive.DriveID != 8 || got.ShortestDrive.DistanceKm != 2 || got.ShortestDrive.DurationMinutes != 10 {
 		t.Errorf("shortest_drive = %+v, want id=8 dist=2", *got.ShortestDrive)
 	}
 	// efficiency-extreme highlights are intentionally always null (range
@@ -693,6 +693,50 @@ func TestGetYearReview_Success(t *testing.T) {
 	}
 	if got.Comparisons[5].Label != "Hours on the road" || got.Comparisons[5].Value != "50 hours — 25 movies!" {
 		t.Errorf("comparisons[5] = %+v, want 50 hours/25 movies", got.Comparisons[5])
+	}
+}
+
+func TestGetYearReview_HighlightWireContract(t *testing.T) {
+	fq := okQuerier()
+	fq.longestRow = fakeRow{vals: []any{
+		int64(7), mustDate("2020-06-15"), 90000.0, 3576.0, strptr("Home"), strptr("Work"),
+	}}
+	fq.shortestRow = fakeRow{vals: []any{
+		int64(8), mustDate("2020-02-01"), 2000.0, 30.0, nil, nil,
+	}}
+	rec := serve(fq, "vehicle_id=42&year=2020")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var response map[string]json.RawMessage
+	if err := json.Unmarshal(rec.Body.Bytes(), &response); err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name string
+		want string
+	}{
+		{"longest_drive", `{"drive_id":7,"date":"2020-06-15","distance_km":90,"duration_min":59.6,"start_address":"Home","end_address":"Work","efficiency_wh_km":0}`},
+		{"shortest_drive", `{"drive_id":8,"date":"2020-02-01","distance_km":2,"duration_min":0.5,"start_address":"","end_address":"","efficiency_wh_km":0}`},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			var got, want map[string]any
+			if err := json.Unmarshal(response[tt.name], &got); err != nil {
+				t.Fatal(err)
+			}
+			if err := json.Unmarshal([]byte(tt.want), &want); err != nil {
+				t.Fatal(err)
+			}
+			if len(got) != len(want) {
+				t.Fatalf("highlight keys = %v, want exactly %v", got, want)
+			}
+			for key, value := range want {
+				if got[key] != value {
+					t.Errorf("%s = %v, want %v", key, got[key], value)
+				}
+			}
+		})
 	}
 }
 

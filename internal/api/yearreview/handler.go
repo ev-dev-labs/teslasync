@@ -44,13 +44,13 @@ func NewHandler(db *database.DB) *Handler {
 }
 
 type driveHighlight struct {
-	DriveID        int64
-	Date           string
-	DistanceKm     float64
-	DurationS      int64
-	StartAddress   string
-	EndAddress     string
-	EfficiencyWhKm float64
+	DriveID         int64   `json:"drive_id"`
+	Date            string  `json:"date"`
+	DistanceKm      float64 `json:"distance_km"`
+	DurationMinutes float64 `json:"duration_min"`
+	StartAddress    string  `json:"start_address"`
+	EndAddress      string  `json:"end_address"`
+	EfficiencyWhKm  float64 `json:"efficiency_wh_km"`
 }
 
 type monthStat struct {
@@ -235,7 +235,8 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		}
 		dh.Date = startDate.Format("2006-01-02")
 		dh.DistanceKm = distM / 1000.0
-		dh.DurationS = int64(durS)
+		// This report's existing wire contract uses minutes; storage remains seconds.
+		dh.DurationMinutes = durS / 60.0
 		if startAddr != nil {
 			dh.StartAddress = *startAddr
 		}
