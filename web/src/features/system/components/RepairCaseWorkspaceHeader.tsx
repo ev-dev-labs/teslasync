@@ -41,13 +41,9 @@ export function RepairCaseWorkspaceHeader({
 
   return (
     <GlassPanel className="relative overflow-hidden p-0">
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-cyan-400/80 via-cyan-300/30 to-transparent"
-      />
       <div className="flex flex-col gap-5 p-5 sm:p-6 xl:flex-row xl:items-center xl:justify-between">
         <div className="flex min-w-0 items-start gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 shadow-e1">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] text-[var(--text-secondary)]">
             <Activity className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0">
