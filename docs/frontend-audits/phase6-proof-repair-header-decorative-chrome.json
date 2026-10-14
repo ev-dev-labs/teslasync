@@ -1,0 +1,245 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-repair-header-decorative-chrome",
+  "status": "EXTERNAL_BLOCKED_CATALOG_STARTUP",
+  "delivery": "REPORT_AND_RAW_LOG_PERSISTED",
+  "runtimeProof": "NOTRUN",
+  "applicationAcceptance": "NOT_GRANTED",
+  "nativeContrast": "NOTRUN",
+  "attemptCharge": 0,
+  "clock": {
+    "requestUtc": "2026-10-14T07:40:55.285Z",
+    "firstObservedUtc": "2026-10-14T07:41:07.4140615Z",
+    "returnByUtc": "2026-10-14T08:00:55.285Z",
+    "renewed": false,
+    "releaseUtc": "2026-10-14T07:50:11.0173114Z"
+  },
+  "authority": {
+    "rootQueue": "migration-queue.md",
+    "workerContract": "docs\\orchestrator-loop.md:237-267",
+    "acceptedSourceItem": "phase6-fix-repair-header-decorative-chrome",
+    "acceptedSourceCommit": "d27981a26a17d8621c606ba64e18ec6397eeccef",
+    "provenance": "Queue and retained source-owner log read, not independently Git-verified. Current exact header and test SHA256 values match the retained accepted-source receipt.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-proof-repair-header-decorative-chrome.json",
+      "web\\logs\\phase6-proof-repair-header-decorative-chrome.log"
+    ],
+    "sourceTestsFixturesCatalogConfigQueue": "READONLY",
+    "sourceFixes": 0,
+    "fixtureChanges": 0,
+    "queueChanges": 0,
+    "catalogChanges": 0,
+    "guardBypasses": 0
+  },
+  "historicalEvidencePreserved": {
+    "log": "web\\logs\\phase6-fix-repair-header-decorative-chrome.log",
+    "authoredExpandedCases": 13,
+    "testFileOriginallyExistedBeforeSourceFix": false,
+    "normalStartupExit": 1,
+    "normalStartupCause": "Generated locale/usage-manifest drift",
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "skipped": 0,
+    "meaning": "Authored-only, not a genuine pass. Original interrupted causal probes also had no observed exit/discovery; no original red/green proof is invented.",
+    "originalSourceLines": 116,
+    "acceptedSourceLines": 112,
+    "originalPanelOpens": 1,
+    "acceptedPanelOpens": 1,
+    "unchangedHistoricalGenuinePassesRepeated": 0
+  },
+  "selection": {
+    "testFile": "web\\src\\features\\system\\components\\RepairCaseWorkspaceHeader.test.tsx",
+    "describe": "RepairCaseWorkspaceHeader neutral chrome and preservation",
+    "selectedFiles": 1,
+    "authoredDirectCases": 7,
+    "authoredParameterizedRows": 6,
+    "authoredExpandedCases": 13,
+    "filter": "Exact previously unexecuted covering file; every one of its 13 cases selected without changing cases or assertions.",
+    "reason": "New neutral-chrome causal case and associated existing status, source-trust, responsive-class and action preservation contracts authored with accepted source. All were previously unexecuted.",
+    "DR15": "Neutral decorative tile and removed gradient; runtime proof remains blocked.",
+    "DR09": "NOT_ADDRESSED; scoped-empty claims and separate source-policy semantics are outside this item.",
+    "limitations": [
+      "Class/DOM assertions are semantic contract evidence, not computed native contrast or measured responsive geometry.",
+      "The six status rows cover header badge roles only; no broader repair-case confidence/risk policy is certified.",
+      "Existing global test setup mocks translation/settings/timezone. A successful run would not certify generated English, saved preference integration or a real API.",
+      "No selected assertion executed in this attempt; even semantic runtime proof is NOTRUN."
+    ]
+  },
+  "cases": [
+    {
+      "name": "uses neutral theme roles for decorative chrome without changing responsive layout",
+      "contract": "Neutral surface/border/secondary text, hidden Activity decoration, absent cyan/gradient/shadow/glow/neon and preserved responsive/layout class tokens.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves the title, operator-review caveat, source scope and all metric roles",
+      "contract": "Title ID, operator review caveat, four metric labels/readings, independent source scope and scan provenance.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Monitoring with its existing success status semantics",
+      "contract": "Success badge label/role with metric shell and scan action.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Refreshing with its existing info status semantics",
+      "contract": "Info badge label/role with metric shell and scan action.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Loading with its existing neutral status semantics",
+      "contract": "Neutral loading label/role with metric shell and scan action.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Metrics unavailable with its existing neutral status semantics",
+      "contract": "Neutral absent-statistics label/role with metric shell and scan action.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Metrics unavailable with its existing danger status semantics",
+      "contract": "Danger initial-error label/role with metric shell and scan action.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves Retained metrics with its existing warning status semantics",
+      "contract": "Warning retained-source label/role with metric shell and scan action.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "retains metric readings, scan provenance and independent retry after a refresh failure",
+      "contract": "Retained values/provenance, stale status/copy and source-specific Refresh callback without scan.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "keeps the metric shell unknown and offers retry on an initial failure",
+      "contract": "Four unknown readings, no fabricated zero and independent initial-error Retry callback.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "distinguishes absent statistics, authoritative zeros and an absent completed scan",
+      "contract": "Header statistics absent versus supplied zeros and no completed scan; not DR09 queue/scoped-empty policy.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves the explicit scan action, primary emphasis and read-only reason",
+      "contract": "Primary/minimum-height scan action, explicit invocation, disabled historical-scope reason and no retry cross-call.",
+      "status": "NOTRUN"
+    },
+    {
+      "name": "preserves pending scan feedback and prevents duplicate activation",
+      "contract": "Pending disabled/aria-busy scan button suppresses duplicate activation.",
+      "status": "NOTRUN"
+    }
+  ],
+  "runtime": {
+    "shellId": "phase6-proof-header-runtime",
+    "cwd": "D:\\repos\\teslasync\\web",
+    "nodeVersion": "v26.8.1",
+    "environment": {
+      "VITE_GIT_SHA": "d27981a26a17d8621c606ba64e18ec6397eeccef"
+    },
+    "environmentReason": "Use supplied accepted-source identifier to prevent automatic Git discovery, as in the source-owner receipt. No guard or test policy changed.",
+    "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseWorkspaceHeader.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "startUtc": "2026-10-14T07:42:46.5804743Z",
+    "endUtc": "2026-10-14T07:46:27.9108891Z",
+    "exit": 1,
+    "pool": "forks",
+    "maxWorkers": 2,
+    "normalConfiguration": "vite.config.ts and existing test-setup.ts unchanged",
+    "normalCatalogGuard": "scripts\\split-i18n-catalog.mjs --check",
+    "counts": {
+      "authored": 13,
+      "selectedFiles": 1,
+      "discoveredFiles": 0,
+      "discoveredCases": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "startupErrors": 1,
+      "unexecutedAuthored": 13
+    },
+    "countBasis": "Startup Error before Vitest discovery; no RUN/test summary or assertion result emitted. Authored counts come from unchanged fixture inventory, not runtime discovery.",
+    "rawOutput": "Complete normal startup error, exact guard command, stack, status1/signalnull/childPID9660 and numeric runner exit retained in matching log.",
+    "externalOnly": true,
+    "ownedAssertionFailures": [],
+    "repeatRuns": 0,
+    "meaning": "Zero execution is NOTPASS. Source accepted separately; this proof item remains unexecuted and externally blocked without charging an attempt."
+  },
+  "externalFailure": {
+    "owner": "Serialized canonical/generated English catalog integration owner",
+    "error": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+    "guardExit": 1,
+    "invalidGeneratedFiles": 25,
+    "root": "web\\src\\i18n\\en",
+    "need": "Catalog owner must reconcile canonical/generated drift through the existing generator and normal split/namespace guards. Then an explicitly assigned proof owner can run these same 13 unchanged cases under normal Vitest forks/maxWorkers2. Do not disable guards, synthesize a config, edit tests, or count authored cases as passes.",
+    "fixAttempted": false,
+    "additionalOwnedCorrectionNeeded": false,
+    "additionalOwnedCorrectionReason": "No owned assertion executed. A subsequent genuine failure requires its exact name/error and separate source/test owner; none is guessed now."
+  },
+  "preservation": {
+    "baselineUtc": "2026-10-14T07:42:46.4657555Z",
+    "postCaptureUtc": "2026-10-14T07:47:03.6769596Z",
+    "pinCount": 16,
+    "unchangedPins": 16,
+    "driftedPins": 0,
+    "hashes": [
+      {"path":"web\\src\\features\\system\\components\\RepairCaseWorkspaceHeader.tsx","sha256":"ed5a54b354e2a131fa2247f43b9963ca046e391b63ff6af79e86523e4645402b","sameBeforeAfter":true},
+      {"path":"web\\src\\features\\system\\components\\RepairCaseWorkspaceHeader.test.tsx","sha256":"d5d84718753daec02d1da3d066324e4fbaf66c6fc4d161b6a5a32911cdc41fbc","sameBeforeAfter":true},
+      {"path":"web\\src\\features\\system\\components\\RepairCaseStats.tsx","sha256":"848d7f36aaf9d1e7bed3c17843485fbe70997e523dff13a2eb46bb3de7b86a6d","sameBeforeAfter":true},
+      {"path":"web\\src\\features\\system\\components\\operationalbrief-all\\SystemSummaryBrief.tsx","sha256":"161aa955cb0e2ab4be36351242ea88041026174968ecbd5e59ae9f4bf1958891","sameBeforeAfter":true},
+      {"path":"web\\src\\hooks\\useDataState.ts","sha256":"785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b","sameBeforeAfter":true},
+      {"path":"web\\src\\components\\ui\\Badge.tsx","sha256":"99296caea1e9b136ff8493f1a85ae63d5a7aa6955c6983d095eb8460b1b84abf","sameBeforeAfter":true},
+      {"path":"web\\src\\components\\ui\\Button.tsx","sha256":"e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c","sameBeforeAfter":true},
+      {"path":"web\\src\\test-setup.ts","sha256":"fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a","sameBeforeAfter":true},
+      {"path":"web\\vite.config.ts","sha256":"7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58","sameBeforeAfter":true},
+      {"path":"web\\package.json","sha256":"8c1d55d305a1a47a6a5e7ca3dbb0452d129c4cb0dc9f95b9ed9151c9ce93ec7a","sameBeforeAfter":true},
+      {"path":"web\\package-lock.json","sha256":"626f096dfdd962204bc6d88931f60469a57dd07f2a8f6b045744bd90f29910df","sameBeforeAfter":true},
+      {"path":"web\\src\\i18n\\en.json","sha256":"4f3772fdb879f420e513ca411442d48d85b7ca2501f16f6113736e6dd89b8202","sameBeforeAfter":true},
+      {"path":"web\\src\\i18n\\en\\locale-system.json","sha256":"a46ac7a78bd89a0311831628b566d434c7a6ad77e0c7c90de7c94090222f8636","sameBeforeAfter":true},
+      {"path":"web\\src\\i18n\\en\\usage-manifest.json","sha256":"f675dfef6ee4f812a664fc41a6f27277d93f2ef3f805a91147cb96ec76a0b820","sameBeforeAfter":true},
+      {"path":"web\\scripts\\split-i18n-catalog.mjs","sha256":"cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598","sameBeforeAfter":true},
+      {"path":"web\\scripts\\audit-i18n-namespaces.mjs","sha256":"2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96","sameBeforeAfter":true}
+    ],
+    "sourceLines": 112,
+    "testLines": 144,
+    "panelOpens": 1,
+    "meaning": "Exact bounded source/test/support/config/catalog pins retained. Not a repository-wide no-write or transitive runtime acceptance claim."
+  },
+  "notRun": [
+    "Native browser, composed dark/light/custom/forced-colors contrast and responsive geometry",
+    "Full suite, global TypeScript, lint, build and violations script; proof-only task does not rerun original genuine technical passes",
+    "API/backend/hook reachability or real scan/repair/business operations",
+    "Git, queue edits, source/fixture/catalog/config edits, installs, nested agents, user-facing server or Docker",
+    "DR09 scoped-empty semantic correction"
+  ],
+  "receiptValidation": {
+    "shellId": "5898",
+    "utc": "2026-10-14T07:49:12.7081024Z",
+    "exit": 0,
+    "rawOutput": "REPORT_JSON_PARSE=PASS CASES=13 PINS=16 RAW_EXIT=1 EXECUTED=0 PASSED=0",
+    "meaning": "Persisted JSON syntax/accounting checked against raw log, not test acceptance.",
+    "inventoryProbeFailures": [
+      {"shellId":"5810","exit":1,"rawOutput":"EMPTY","exactCommand":"Retained verbatim in matching log","meaning":"No inventory evidence inferred"},
+      {"shellId":"5819","exit":1,"rawOutput":"EMPTY","exactCommand":"Retained verbatim in matching log","meaning":"No inventory evidence inferred"}
+    ],
+    "recoveredInventory": {
+      "shellId": "5837",
+      "exit": 0,
+      "utc": "2026-10-14T07:46:38.9524753Z",
+      "rawOutput": [112, 144, 1, 7, 6],
+      "meaning": "Source lines, test lines, panel opens, direct cases, parameterized rows. Exact command retained in log; no runtime discovery."
+    }
+  },
+  "release": {
+    "utc": "2026-10-14T07:50:11.0173114Z",
+    "clockBasis": "UTC captured by shell5923 for final claim-release declaration; receipt sealing and final read-only artifact verification follow.",
+    "runtimeShell": "COMPLETED exit1; no retained task-owned process",
+    "artifactClaims": "RELEASED; only the assigned report and matching log authored",
+    "sourceClaims": "NONE HELD",
+    "browserServerDocker": "NONE STARTED"
+  }
+}
