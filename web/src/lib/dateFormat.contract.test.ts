@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { formatRelative } from './dateFormat'
+import { formatDate, formatDateTime, formatRelative, formatTime } from './dateFormat'
 import {
   getGlobalLocale,
   getGlobalPrecision,
@@ -153,5 +153,82 @@ describe('formatRelative future and locale contract', () => {
     })).toBe('11. Apr. 2026')
     setGlobalLocale('de-DE')
     expect(formatRelative('2026-04-11T00:30:00Z', { tz: 'UTC' })).toBe('11. Apr. 2026')
+  })
+
+  it('formats the F06 ISO expiry one hour ahead for existing single-argument callers', () => {
+    expect(formatRelative('2026-04-04T13:00:00Z')).toBe('in 1h')
+    expect(formatRelative('2026-04-04T11:00:00Z')).toBe('1h ago')
+    setGlobalLocale('fr-FR')
+    expect(formatRelative('2026-04-04T13:00:00Z')).toBe('+1 h')
+    expect(formatRelative('2026-04-04T11:00:00Z')).toBe('-1 h')
+  })
+
+  it('keeps epoch-zero dates distinct from missing values and zero elapsed time', () => {
+    const epoch = new Date(0)
+    const iso = epoch.toISOString()
+    expect(formatRelative(epoch, { tz: 'UTC' })).toBe('Jan 1, 1970')
+    expect(formatRelative(iso, { tz: 'UTC' })).toBe('Jan 1, 1970')
+    vi.setSystemTime(0)
+    expect(formatRelative(epoch)).toBe('just now')
+    expect(formatRelative(iso)).toBe('just now')
+    expect(formatRelative(new Date(-1))).toBe('just now')
+    expect(formatRelative(new Date(1))).toBe('in 1s')
+    expect(formatRelative(null)).toBe('—')
+    expect(formatRelative(undefined)).toBe('—')
+    expect(epoch.getTime()).toBe(0)
+  })
+
+  it('floors whole future seconds without collapsing positive sub-second instants', () => {
+    expect(formatRelative(new Date(NOW + 999))).toBe('in 1s')
+    expect(formatRelative(new Date(NOW + 1_000))).toBe('in 1s')
+    expect(formatRelative(new Date(NOW + 1_001))).toBe('in 1s')
+    expect(formatRelative(new Date(NOW + 1_999))).toBe('in 1s')
+    expect(formatRelative(new Date(NOW + 2_000))).toBe('in 2s')
+    expect(formatRelative(new Date(NOW - 999))).toBe('just now')
+    expect(formatRelative(new Date(NOW - 1_000))).toBe('just now')
+  })
+
+  it.each([
+    { transition: 'spring forward', now: '2026-03-08T09:59:00Z', future: '2026-03-08T10:01:00Z' },
+    { transition: 'fall back', now: '2026-11-01T08:59:00Z', future: '2026-11-01T09:01:00Z' },
+  ])('keeps elapsed minutes correct across $transition', ({ now, future }) => {
+    const opts = { locale: 'en-US', tz: 'America/Los_Angeles' }
+    vi.setSystemTime(new Date(now))
+    expect(formatRelative(future, opts)).toBe('in 2m')
+    vi.setSystemTime(new Date(future))
+    expect(formatRelative(now, opts)).toBe('2m ago')
+  })
+
+  it('preserves absolute time, timezone and locale hour-cycle choices', () => {
+    const iso = '2026-04-04T13:00:00Z'
+    const twelveHour = Object.freeze({ locale: 'en-US-u-hc-h12', tz: 'UTC' })
+    const twentyFourHour = Object.freeze({ locale: 'en-US-u-hc-h23', tz: 'UTC' })
+    const pacific = Object.freeze({ locale: 'en-US-u-hc-h23', tz: 'America/Los_Angeles' })
+    const before = [formatTime(iso, twelveHour), formatTime(iso, twentyFourHour), formatTime(iso, pacific)]
+    expect(before).toEqual(['01:00 PM', '13:00', '06:00'])
+    expect(formatDateTime(iso, twelveHour)).toBe('Apr 4, 2026, 01:00 PM')
+    expect(formatDateTime(iso, twentyFourHour)).toBe('Apr 4, 2026, 13:00')
+    for (const opts of [twelveHour, twentyFourHour, pacific]) {
+      expect(formatRelative(iso, opts)).toBe('in 1h')
+      expect(formatRelative('2026-04-11T13:00:00Z', opts))
+        .toBe(formatDate('2026-04-11T13:00:00Z', opts))
+    }
+    expect([formatTime(iso, twelveHour), formatTime(iso, twentyFourHour), formatTime(iso, pacific)])
+      .toEqual(before)
+    expect(getGlobalLocale()).toBe('en-US')
+    expect(getGlobalPrecision()).toBe(2)
+  })
+
+  it('preserves localized absolute dates and safe malformed-locale fallback at seven days', () => {
+    const future = new Date(NOW + 604_800_000)
+    const past = new Date(NOW - 604_800_000)
+    const opts = { locale: 'en-US-u-nu-arab', tz: 'UTC' }
+    for (const precision of [0, 20]) {
+      setGlobalPrecision(precision)
+      expect(formatRelative(future, opts)).toBe(formatDate(future, opts))
+      expect(formatRelative(past, opts)).toBe(formatDate(past, opts))
+    }
+    expect(formatRelative(future, { locale: 'bad_locale', tz: 'UTC' })).toBe('Apr 11, 2026')
+    expect(formatRelative(past, { locale: 'bad_locale', tz: 'UTC' })).toBe('Mar 28, 2026')
   })
 })
