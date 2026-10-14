@@ -3,7 +3,7 @@ import { Zap, Home } from 'lucide-react';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { StatusPill, Caption, Text } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, DataSourceNotice, type DataSourceDescriptor } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { knownNumber } from '@/api/dataState';
@@ -20,10 +20,11 @@ interface RuntimeCardProps {
   isLoading: boolean;
   error: unknown;
   onRetry: () => void;
+  sources: readonly DataSourceDescriptor[];
 }
 
 export function RuntimeCard({
-  status, shareType, powerKw, hoursLeft, powerPeak, hoursPeak, isLoading, error, onRetry,
+  status, shareType, powerKw, hoursLeft, powerPeak, hoursPeak, isLoading, error, onRetry, sources,
 }: RuntimeCardProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
@@ -32,15 +33,21 @@ export function RuntimeCard({
   const power = knownNumber(powerKw);
   const hours = knownNumber(hoursLeft);
   const hasData = status != null || shareType != null || power != null || hours != null;
+  const paused = sources.some(source => source.query.fetchStatus === 'paused');
+  const retained = sources.some(source => source.query.data !== undefined);
 
   return (
-    <LayoutCard title={t('powershare.runtime.title', 'Live Session')}>
+    <LayoutCard title={t('powershare.statusSection', 'Powershare status')}>
+      <Caption as="p" className="mb-4">
+        {t('powershare.modernization.observationContext', 'Latest recorded observations; the trends show up to 48 recent readings per signal, not a complete time range.')}
+      </Caption>
+      {(paused || retained) && <DataSourceNotice sources={sources} />}
       {isLoading ? <Skeleton height={220} /> : error ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : !hasData ? (
+      ) : !hasData && !paused ? (
         <EmptyState /* no-action: session telemetry has not been reported */
           icon={<Zap className="h-8 w-8" aria-hidden="true" />}
-          message={t('powershare.runtime.noData', 'No live Powershare session. Details appear when your vehicle starts sharing power.')}
+          message={t('powershare.snapshot.noData', 'No Powershare signals received yet.')}
         />
       ) : (
         <div className="space-y-4">

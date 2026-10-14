@@ -274,7 +274,7 @@ describe('PowersharePage', () => {
 
     // None of the telemetry panels mount without a vehicle in scope.
     expect(screen.queryByText('Output Power Trend')).not.toBeInTheDocument();
-    expect(screen.queryByText('Live Session')).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Powershare status' })).not.toBeInTheDocument();
     expect(screen.queryByText('Signal Snapshot')).not.toBeInTheDocument();
     // Vehicle selection belongs to the application header, not the page.
     expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
@@ -294,7 +294,8 @@ describe('PowersharePage', () => {
     // Every section renders (titles are unique per panel; stop reason is
     // identified by its help copy which only appears on its panel).
     expect(screen.getAllByText('Output Power Trend').length).toBeGreaterThan(0);
-    expect(screen.getByText('Live Session')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
+    expect(screen.queryByText(/live session|current sharing state|runtime at current output/i)).not.toBeInTheDocument();
     expect(screen.getAllByText('Remaining Runtime Trend').length).toBeGreaterThan(0);
     expect(screen.getByText('Signal Snapshot')).toBeInTheDocument();
     expect(
@@ -308,7 +309,7 @@ describe('PowersharePage', () => {
     // a11y landmarks — the three labelled section regions.
     expect(screen.getByRole('region', { name: 'Powershare metrics' })).toBeInTheDocument();
     expect(
-      screen.getByRole('region', { name: 'Powershare output and live session' }),
+      screen.getByRole('region', { name: 'Powershare status' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: 'Powershare runtime trend and stop reason' }),
@@ -342,7 +343,7 @@ describe('PowersharePage', () => {
 
     // Shell + panel titles still render above the skeletons.
     expect(screen.getByRole('heading', { level: 1, name: 'Powershare' })).toBeInTheDocument();
-    expect(screen.getByText('Live Session')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
 
     // KPI band degrades to "—" placeholders for all four metrics (never blank).
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(4);
@@ -351,7 +352,7 @@ describe('PowersharePage', () => {
     const skeleton = '[aria-hidden="true"][class~="bg-[var(--skeleton-bg)]"]';
     expect(container.querySelectorAll(skeleton).length).toBeGreaterThanOrEqual(1);
     expect(container.querySelectorAll(skeleton)).toHaveLength(3);
-    for (const [title, height] of [['Live Session', 220], ['Stop Reason', 64], ['Signal Snapshot', 200]] as const) {
+    for (const [title, height] of [['Powershare status', 220], ['Stop Reason', 64], ['Signal Snapshot', 200]] as const) {
       const card = screen.getByRole('heading', { name: title, exact: true }).closest('[data-card]');
       expect(card?.querySelectorAll(skeleton)).toHaveLength(1);
       expect(card?.querySelector(skeleton)).toHaveStyle({ height: `${height}px` });
@@ -427,7 +428,7 @@ describe('PowersharePage', () => {
     // Each panel owns its own contextual empty copy.
     expect(screen.getByText(/No power readings yet/i)).toBeInTheDocument();
     expect(screen.getByText(/No runtime readings yet/i)).toBeInTheDocument();
-    expect(screen.getByText(/No live Powershare session/i)).toBeInTheDocument();
+    expect(screen.getAllByText('No Powershare signals received yet.')).toHaveLength(2);
     expect(screen.getByText(/No stop reason recorded/i)).toBeInTheDocument();
 
     // KPI band renders its "—" placeholders, and no error surfaces.
@@ -494,7 +495,7 @@ describe('PowersharePage', () => {
     expect(kpi.getByText('Loading source measurements')).toBeInTheDocument();
     expect(kpi.queryByText('No source measurements')).not.toBeInTheDocument();
     expect(kpi.getAllByText('—')).toHaveLength(4);
-    expect(screen.getByRole('heading', { name: 'Live Session' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Powershare status' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Signal Snapshot' })).toBeInTheDocument();
   });
 
@@ -586,6 +587,67 @@ describe('PowersharePage', () => {
     for (const name of Object.values(POWERSHARE_SIGNALS)) {
       expect(h.queries[name].refetch).toHaveBeenCalledTimes(1);
     }
+  });
+
+  it.each([false, true])('distinguishes paused-without-data from successful empty observations (loading=%s)', (isLoading) => {
+    setAll(() => makeQuery({ fetchStatus: 'paused', isLoading, dataUpdatedAt: 0 }));
+    renderPage();
+
+    const card = screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]');
+    expect(card).not.toBeNull();
+    const runtime = within(card as HTMLElement);
+    expect(runtime.getAllByText('Refresh paused').length).toBeGreaterThan(0);
+    expect(runtime.queryByText('No Powershare signals received yet.')).not.toBeInTheDocument();
+    expect(runtime.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Powershare metrics' })).not.toHaveAttribute('aria-busy');
+  });
+
+  it('preserves recorded zero output and hours without claiming live activity', () => {
+    h.queries[POWERSHARE_SIGNALS.power] = makeQuery({
+      data: [numObs(POWERSHARE_SIGNALS.power, 0, '2024-05-01T10:02:00Z')],
+    });
+    h.queries[POWERSHARE_SIGNALS.hoursLeft] = makeQuery({
+      data: [numObs(POWERSHARE_SIGNALS.hoursLeft, 0, '2024-05-01T10:02:00Z')],
+    });
+    renderPage();
+
+    const card = screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]');
+    const runtime = within(card as HTMLElement);
+    expect(runtime.getByText('Active')).toBeInTheDocument();
+    expect(runtime.getByText('Home')).toBeInTheDocument();
+    expect(runtime.getByText('0.00 kW')).toBeInTheDocument();
+    expect(runtime.getByText('0.00 h')).toBeInTheDocument();
+    expect(runtime.queryByText('No Powershare signals received yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText(/live session|current sharing state/i)).not.toBeInTheDocument();
+  });
+
+  it('retains runtime observations on refresh failure, retries only the failed source, and recovers', () => {
+    h.queries[POWERSHARE_SIGNALS.status].error = new Error('status refresh failed');
+    h.queries[POWERSHARE_SIGNALS.status].isError = true;
+    const view = renderPage();
+    const runtimeCard = () => screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]') as HTMLElement;
+    const runtime = within(runtimeCard());
+    expect(runtime.getByText('Active')).toBeInTheDocument();
+    expect(runtime.getByText('Home')).toBeInTheDocument();
+    expect(runtime.getByText('3.25 kW')).toBeInTheDocument();
+    expect(runtime.getByText('5.50 h')).toBeInTheDocument();
+    fireEvent.click(runtime.getByRole('button', { name: 'Retry unavailable sources: Status' }));
+    expect(h.queries[POWERSHARE_SIGNALS.status].refetch).toHaveBeenCalledTimes(1);
+    for (const name of [POWERSHARE_SIGNALS.type, POWERSHARE_SIGNALS.power, POWERSHARE_SIGNALS.hoursLeft, POWERSHARE_SIGNALS.stopReason]) {
+      expect(h.queries[name].refetch).not.toHaveBeenCalled();
+    }
+    h.queries[POWERSHARE_SIGNALS.status].error = null;
+    h.queries[POWERSHARE_SIGNALS.status].isError = false;
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/charging/powershare']}>
+          <ToastProvider><PowersharePage /></ToastProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(within(runtimeCard()).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
+    expect(within(runtimeCard()).getByText('Active')).toBeInTheDocument();
+    expect(screen.queryByText(/live session/i)).not.toBeInTheDocument();
   });
 });
 

@@ -71,6 +71,18 @@ export default function PowersharePage() {
     hoursQ.refetch();
     powerQ.refetch();
   };
+  const refetchRuntime = () => {
+    statusQ.refetch();
+    typeQ.refetch();
+    hoursQ.refetch();
+    powerQ.refetch();
+  };
+  const runtimeSources = [
+    { id: 'status', label: t('powershare.kpi.status', 'Status'), query: statusQ },
+    { id: 'type', label: t('powershare.runtime.typeLabel', 'Destination'), query: typeQ },
+    { id: 'power', label: t('powershare.kpi.outputPower', 'Output Power'), query: powerQ },
+    { id: 'hours', label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'), query: hoursQ },
+  ];
 
   const snapshotRows = useMemo<SnapshotRow[]>(
     () => [
@@ -97,11 +109,14 @@ export default function PowersharePage() {
   const snapshotLoading = [statusState, typeState, stopState, hoursState, powerState].every((state) => !state.hasData)
     && [statusQ, typeQ, stopQ, hoursQ, powerQ].some((q) => q.isLoading);
   const runtimeLoading = [statusState, typeState, hoursState, powerState].every((state) => !state.hasData)
-    && [statusQ, typeQ, hoursQ, powerQ].some((q) => q.isLoading);
+    && [statusQ, typeQ, hoursQ, powerQ].some((q) => q.isLoading && q.fetchStatus !== 'paused');
+  const runtimePaused = runtimeSources.some(source => source.query.fetchStatus === 'paused');
   const summaryRetained = runtimeState.status === 'stale'
     || runtimeState.refreshError != null || runtimeState.isRefreshBlocked;
   const summaryStatus = runtimeLoading
     ? t('charging.brief.loading', 'Loading source measurements')
+    : runtimePaused && runtimeSources.every(source => source.query.data === undefined)
+      ? t('dataSources.status.paused', 'Refresh paused')
     : summaryRetained
       ? t('charging.brief.retained', 'Retained source measurements')
       : runtimeState.status === 'partial'
@@ -115,8 +130,8 @@ export default function PowersharePage() {
       metricId: 'status', occurrenceId: 'status',
       label: t('powershare.kpi.status', 'Status'),
       rawValue: humanizeEnum(status, POWERSHARE_SIGNALS.status),
-      description: t('powershare.kpi.statusSub', 'Current sharing state'),
-      context: t('powershare.kpi.statusSub', 'Current sharing state'),
+      description: t('powershare.statusSection', 'Powershare status'),
+      context: t('powershare.statusSection', 'Powershare status'),
     },
     {
       metricId: 'text', occurrenceId: 'type',
@@ -130,16 +145,16 @@ export default function PowersharePage() {
       label: t('powershare.kpi.outputPower', 'Output Power'),
       rawValue: powerKw != null ? powerKw * 1000 : null,
       display: { formatter: raw => ({ value: fmtNumber(raw / 1000), unit: 'kW' }) },
-      description: t('powershare.kpi.outputPowerSub', 'Instantaneous power draw'),
-      context: t('powershare.kpi.outputPowerSub', 'Instantaneous power draw'),
+      description: t('powershare.powerTrend.title', 'Output Power Trend'),
+      context: t('powershare.powerTrend.title', 'Output Power Trend'),
     },
     {
       metricId: 'duration', occurrenceId: 'hours-remaining',
       label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
       rawValue: hoursLeft != null ? hoursLeft * 3600 : null,
       display: { formatter: raw => ({ value: fmtNumber(raw / 3600), unit: 'h' }) },
-      description: t('powershare.kpi.hoursRemainingSub', 'Runtime at current output'),
-      context: t('powershare.kpi.hoursRemainingSub', 'Runtime at current output'),
+      description: t('powershare.hoursTrend.title', 'Remaining Runtime Trend'),
+      context: t('powershare.hoursTrend.title', 'Remaining Runtime Trend'),
     },
   ];
   const recordedTimes = snapshotRows
@@ -212,10 +227,10 @@ export default function PowersharePage() {
         </section>
       </FadeIn>
 
-      {/* 2 — Hero output-power trend + live-session side panel */}
+      {/* 2 — Output-power trend + recorded observations */}
       <FadeIn delay={0.1}>
         <section
-          aria-label={t('powershare.output.sectionLabel', 'Powershare output and live session')}
+          aria-label={t('powershare.statusSection', 'Powershare status')}
         >
           <Grid cols={outputColumns}>
           <div className="min-w-0 xl:col-span-2">
@@ -238,7 +253,8 @@ export default function PowersharePage() {
             hoursPeak={hoursPeak}
             isLoading={runtimeLoading}
             error={runtimeState.fatalError}
-            onRetry={refetchAll}
+            onRetry={refetchRuntime}
+            sources={runtimeSources}
           />
           </div>
           </Grid>
