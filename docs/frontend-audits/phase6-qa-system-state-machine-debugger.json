@@ -1,0 +1,2697 @@
+{
+  "item": "phase6-qa-system-state-machine-debugger",
+  "attempt": 1,
+  "status": "PARTIAL",
+  "inputHashes": [
+    {
+      "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+      "beforeSha256": "CEF4EB59C07FFA01BB4DE86ED215E6EB880CCE8F9C1F55ED3E3F75C13864D1DE",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0562685Z",
+      "lines": 970,
+      "afterSha256": "CEF4EB59C07FFA01BB4DE86ED215E6EB880CCE8F9C1F55ED3E3F75C13864D1DE",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9602694Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/pages/StateMachineDebuggerPage.test.tsx",
+      "beforeSha256": "2C2D4EED1BE0AEAE6E87F748A292F5120477B86D0F6B564DDB413EA33E5837D4",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0691566Z",
+      "lines": 313,
+      "afterSha256": "2C2D4EED1BE0AEAE6E87F748A292F5120477B86D0F6B564DDB413EA33E5837D4",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9668112Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.test.tsx",
+      "beforeSha256": "160CD4894A76634902DBFD3722833A02DB4EDA049C024439174C24B0EE8C9EA3",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0710113Z",
+      "lines": 485,
+      "afterSha256": "160CD4894A76634902DBFD3722833A02DB4EDA049C024439174C24B0EE8C9EA3",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9670444Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.windowing.test.tsx",
+      "beforeSha256": "B601223389DBD5CCDD921BFF5E36320CFAFD22F7F508D444304902CCA744A6CD",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0730896Z",
+      "lines": 235,
+      "afterSha256": "B601223389DBD5CCDD921BFF5E36320CFAFD22F7F508D444304902CCA744A6CD",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9672055Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/state-machine/LiveControls.tsx",
+      "beforeSha256": "446C26AD1CD01BF3E88E9FAEB6420981CC9393D17823CF4EE379248215550080",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0744215Z",
+      "lines": 179,
+      "afterSha256": "446C26AD1CD01BF3E88E9FAEB6420981CC9393D17823CF4EE379248215550080",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9673565Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/state-machine/StateTimeline.tsx",
+      "beforeSha256": "71E79028F55402598D47CF72F2FC50E3A72D0AEECCA1A87B8DF956452749EF3F",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0755568Z",
+      "lines": 200,
+      "afterSha256": "71E79028F55402598D47CF72F2FC50E3A72D0AEECCA1A87B8DF956452749EF3F",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9674929Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/state-machine/SnapshotInspector.tsx",
+      "beforeSha256": "E5B21880E50F854582FA2B5A18A296FB225A833DEB275EEDD621D76DA8E1DF4B",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0766734Z",
+      "lines": 276,
+      "afterSha256": "E5B21880E50F854582FA2B5A18A296FB225A833DEB275EEDD621D76DA8E1DF4B",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9676209Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/state-machine/SnapshotInspector.test.tsx",
+      "beforeSha256": "3647EF211B0E54BAAA36AB7AABDE6B5488E56B84E457D84ECF353A2434914B41",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0883795Z",
+      "lines": 397,
+      "afterSha256": "3647EF211B0E54BAAA36AB7AABDE6B5488E56B84E457D84ECF353A2434914B41",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9677549Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/state-machine/windowTransitions.ts",
+      "beforeSha256": "BD3588CA3F346A241C462A195AEF6F3B5C16EFE0D883BB631610F9FDAC358FA5",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0904638Z",
+      "lines": 86,
+      "afterSha256": "BD3588CA3F346A241C462A195AEF6F3B5C16EFE0D883BB631610F9FDAC358FA5",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.967881Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMTimelineChart.tsx",
+      "beforeSha256": "6276F9AF546339071803E267732F708045131ADDD57CA3BC0F0BC0E5EB133655",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0913383Z",
+      "lines": 177,
+      "afterSha256": "6276F9AF546339071803E267732F708045131ADDD57CA3BC0F0BC0E5EB133655",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9680002Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMHealthPanel.tsx",
+      "beforeSha256": "239EFD8227520FEDE781DAE14C6D6E407378C541C32D5D75D0943AB8E5082015",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0921908Z",
+      "lines": 186,
+      "afterSha256": "239EFD8227520FEDE781DAE14C6D6E407378C541C32D5D75D0943AB8E5082015",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9681112Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMSubFSMPanel.tsx",
+      "beforeSha256": "3D16952D342AF7655D7F01C7DEB80BBCB50608E899F69FF974836A89390F09A4",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0930276Z",
+      "lines": 87,
+      "afterSha256": "3D16952D342AF7655D7F01C7DEB80BBCB50608E899F69FF974836A89390F09A4",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9682145Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMStateDiagram.tsx",
+      "beforeSha256": "EA0AB3466A4B3FAAEF41A4141CA658696F01D738C381F8EF79315C36A226B224",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0936384Z",
+      "lines": 168,
+      "afterSha256": "EA0AB3466A4B3FAAEF41A4141CA658696F01D738C381F8EF79315C36A226B224",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9683208Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/StateBadge.tsx",
+      "beforeSha256": "F7A7EF6AA29B875D529889465A9506C7D6975917F6B2E8640A07CA3A1AEB9298",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0943861Z",
+      "lines": 38,
+      "afterSha256": "F7A7EF6AA29B875D529889465A9506C7D6975917F6B2E8640A07CA3A1AEB9298",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9684314Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/statstrip-fsm/FSMOperationalBrief.tsx",
+      "beforeSha256": "A16FD0A0FBAE0846EB01DC4E4412A4A92E14C1BD80776061A53E889622A72935",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.0948656Z",
+      "lines": 93,
+      "afterSha256": "A16FD0A0FBAE0846EB01DC4E4412A4A92E14C1BD80776061A53E889622A72935",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9685441Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/statstrip-fsm/FSMOperationalBrief.test.tsx",
+      "beforeSha256": "DFFADBEA4D3BB696CC810F84F3F7D33B5F7CB65437CF455BF578B5787DD893BA",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1097408Z",
+      "lines": 88,
+      "afterSha256": "DFFADBEA4D3BB696CC810F84F3F7D33B5F7CB65437CF455BF578B5787DD893BA",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9686545Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.tsx",
+      "beforeSha256": "BADDDF2561258C51636E11EA79325EEB14198E101298492ABA30D37FAEF09D5E",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.111193Z",
+      "lines": 204,
+      "afterSha256": "BADDDF2561258C51636E11EA79325EEB14198E101298492ABA30D37FAEF09D5E",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9688394Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.test.tsx",
+      "beforeSha256": "A117B971DB07BBCD85871D0FA09DDA110146AB0B9E822E35ACA11FD399C599AD",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1123381Z",
+      "lines": 552,
+      "afterSha256": "A117B971DB07BBCD85871D0FA09DDA110146AB0B9E822E35ACA11FD399C599AD",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9689595Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestStateMachineDebuggerNarratorAIOnWiredCallsRoute.test.tsx",
+      "beforeSha256": "3D1B6D935924C96F44B181A36DC789712AD5249DF86BC4DA5548FD3F0C0A2504",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1140201Z",
+      "lines": 352,
+      "afterSha256": "3D1B6D935924C96F44B181A36DC789712AD5249DF86BC4DA5548FD3F0C0A2504",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9690795Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/__tests__/TestStateMachineNarratorAIOffShowsDebuggerOnly.test.tsx",
+      "beforeSha256": "1ACE436CA5735BF4C68B8531B2D89307BC9B8B2CD0BE91D3932D57F5268CA0B2",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1153175Z",
+      "lines": 190,
+      "afterSha256": "1ACE436CA5735BF4C68B8531B2D89307BC9B8B2CD0BE91D3932D57F5268CA0B2",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9691923Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useFSM.ts",
+      "beforeSha256": "352835D5BDBD53D8C3289B0075AB2C4D8843D43FB5F8F1D4195BBFFDB159E7AB",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1163751Z",
+      "lines": 139,
+      "afterSha256": "352835D5BDBD53D8C3289B0075AB2C4D8843D43FB5F8F1D4195BBFFDB159E7AB",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9692994Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useAdmin.ts",
+      "beforeSha256": "483433A3C072FA6F1B32D61C1D807F5C1F2834463EFDB08D4B5747A0A9D82B6F",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1171506Z",
+      "lines": 399,
+      "afterSha256": "483433A3C072FA6F1B32D61C1D807F5C1F2834463EFDB08D4B5747A0A9D82B6F",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9694253Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "beforeSha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1185224Z",
+      "lines": 683,
+      "afterSha256": "F536FBDB5705D3ABB19869B0B5D73E65E72FB5E992F50E664754E4FA4F76853E",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9695567Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.121131Z",
+      "lines": 168,
+      "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9696637Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1239208Z",
+      "lines": 462,
+      "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9697837Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/types/fsm/index.ts",
+      "beforeSha256": "C4F6A10C012795AE7B1E719106266138BF9E8C289BEAE9E54E9578C755694417",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1279645Z",
+      "lines": 99,
+      "afterSha256": "C4F6A10C012795AE7B1E719106266138BF9E8C289BEAE9E54E9578C755694417",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9699027Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1339367Z",
+      "lines": 17,
+      "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9700075Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/DataTable.tsx",
+      "beforeSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1367151Z",
+      "lines": 1707,
+      "afterSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9701809Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "beforeSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1496948Z",
+      "lines": 165,
+      "afterSha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9702974Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useAiStream.ts",
+      "beforeSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1508088Z",
+      "lines": 617,
+      "afterSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9704304Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.1546716Z",
+      "lines": 39002,
+      "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.973292Z",
+      "unchanged": false
+    },
+    {
+      "file": "web/src/i18n/en/locale-detail-stateMachineDebugger.json",
+      "beforeSha256": "2CD6D4A6232CDA64DB24EE61B989FB1BC9B3CFFE1EF0B76648416E5FD759063E",
+      "beforeObservedAtUtc": "2026-10-14T02:38:43.4575421Z",
+      "lines": 11,
+      "afterSha256": "2CD6D4A6232CDA64DB24EE61B989FB1BC9B3CFFE1EF0B76648416E5FD759063E",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9740581Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6253787Z",
+      "lines": 127,
+      "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9742431Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routeRegistry.ts",
+      "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6423477Z",
+      "lines": 289,
+      "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9743992Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/routePrefetch.ts",
+      "beforeSha256": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6476412Z",
+      "lines": 340,
+      "afterSha256": "63CF77FE5B5687C3C7A8D7F0F188E38767C408B1B254DA31C44859D289DF82A2",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9745344Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/App.tsx",
+      "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6519891Z",
+      "lines": 919,
+      "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9747303Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6606971Z",
+      "lines": 434,
+      "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.974855Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/lib/constants.ts",
+      "beforeSha256": "76641391606B3616C45C2F0C1EA9BDA0B130F4E190D6218E771AE1AEB64501E3",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6658322Z",
+      "lines": 191,
+      "afterSha256": "76641391606B3616C45C2F0C1EA9BDA0B130F4E190D6218E771AE1AEB64501E3",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9749753Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/types/fsm/ui-types.ts",
+      "beforeSha256": "5B59357D525BE231C761AF156E195BF8F4A018E97028EDBC0993BE74D8DEF86E",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6684901Z",
+      "lines": 68,
+      "afterSha256": "5B59357D525BE231C761AF156E195BF8F4A018E97028EDBC0993BE74D8DEF86E",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9750798Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "beforeSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6707597Z",
+      "lines": 148,
+      "afterSha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9752Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMTimelineChart.test.tsx",
+      "beforeSha256": "D7F8DC0BD94CD63F6897251813DFF785C961F28ABB42738B3BD0E644678D4545",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.6941449Z",
+      "lines": 246,
+      "afterSha256": "D7F8DC0BD94CD63F6897251813DFF785C961F28ABB42738B3BD0E644678D4545",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9753245Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMHealthPanel.test.tsx",
+      "beforeSha256": "30A32CC3AA69FB2F1A8C1F1A2425CE981167C01579488B56046FC3D58D893A56",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.7171934Z",
+      "lines": 221,
+      "afterSha256": "30A32CC3AA69FB2F1A8C1F1A2425CE981167C01579488B56046FC3D58D893A56",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9754289Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMStateDiagram.test.tsx",
+      "beforeSha256": "FECDA78238A2EE881FE9AFA3A6AE98EABD66C0BE4C2D046C3520F47E3FDC8987",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.7399985Z",
+      "lines": 192,
+      "afterSha256": "FECDA78238A2EE881FE9AFA3A6AE98EABD66C0BE4C2D046C3520F47E3FDC8987",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9755315Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/FSMSubFSMPanel.test.tsx",
+      "beforeSha256": "854D266BB7022AAC3DDC79B9741E771121D6D4EE5727132D37629A30CAA05716",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.758182Z",
+      "lines": 191,
+      "afterSha256": "854D266BB7022AAC3DDC79B9741E771121D6D4EE5727132D37629A30CAA05716",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9756315Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/features/system/components/StateBadge.test.tsx",
+      "beforeSha256": "1F61F924D4076C6915638F722615ACCDCE1CD5742BECEE97C961CE15E2245231",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.7624546Z",
+      "lines": 135,
+      "afterSha256": "1F61F924D4076C6915638F722615ACCDCE1CD5742BECEE97C961CE15E2245231",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9757337Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useFSM.test.tsx",
+      "beforeSha256": "D61592FB2C078BA4BF284D050052BE0F9A0CF0E18ADEAE720994FDC4E3BF5BB3",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.764905Z",
+      "lines": 323,
+      "afterSha256": "D61592FB2C078BA4BF284D050052BE0F9A0CF0E18ADEAE720994FDC4E3BF5BB3",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9758412Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/useAdmin.test.tsx",
+      "beforeSha256": "0685A4AF50187D1E9780DE9FB19280952F3B4E2460247594C80A97FACF5E7F42",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.7679548Z",
+      "lines": 915,
+      "afterSha256": "0685A4AF50187D1E9780DE9FB19280952F3B4E2460247594C80A97FACF5E7F42",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9759774Z",
+      "unchanged": true
+    },
+    {
+      "file": "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+      "beforeSha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.8289578Z",
+      "lines": 925,
+      "afterSha256": "9634776C9BF2FCF50D1CB876B168C8FB5426A88E4C3F3EBAA823F02AA2137D58",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9761255Z",
+      "unchanged": true
+    },
+    {
+      "file": "internal/api/router.go",
+      "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "beforeObservedAtUtc": "2026-10-14T02:40:37.8357659Z",
+      "lines": 5363,
+      "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "afterObservedAtUtc": "2026-10-14T02:49:30.9764598Z",
+      "unchanged": true
+    }
+  ],
+  "limits": [
+    "Source-only audit; tests and native/page acceptance NOTRUN.",
+    "Support baseline pins captured after initial exploratory reads, before source-reproduction/citation verification; page first pin captured in command C07.",
+    "No tests/native/page acceptance. All repros are source branch/arithmetic reasoning, not executable tests.",
+    "Pins capture baseline interval only; support/supplemental first exploratory reads preceded their pins.",
+    "Large doc outputs truncated; relevant bounded reads followed; unrelated whole historical additions/inventory not claimed read.",
+    "Queue moved194to240 from concurrent parent edits; identity authority, not line lock.",
+    "C09 nonexistent AppRoutes exited1; C18 oversized write invocation exited1 before processstart; both preserved.",
+    "PARTIAL command-log fidelity: C01-C10 full literal invocations retained; C11-C15 source probes only expressions/results/handles below, full original invocation bodies not copied before return deadline. Final self-logged validation commands literal. Source report coverage complete, command-ledger completeness partial.",
+    "Final catalog before/after drift is en.json only; no author attribution or stable catalog acceptance. Latest relevant labels reread in C21, source fallbacks/mechanisms unchanged.",
+    "Soft return deadline exceeded; final evidence/release before hard deadline. No clock renewed."
+  ],
+  "completionMeaning": "Source-QA coverage/artifacts complete; pre-log command ledger incomplete. Tests/native/page acceptance NOTRUN.",
+  "createdAtUtc": "2026-10-14T02:47:55.9301675Z",
+  "clock": {
+    "policy": "Earlier reservation wins, no reset",
+    "firstTool": "2026-10-14T02:35:33.9795387Z",
+    "returnBy": "2026-10-14T02:49:12.925Z",
+    "reserved": "2026-10-14T02:29:12.925Z",
+    "hardBy": "2026-10-14T02:54:12.925Z"
+  },
+  "writeScope": [
+    "docs/frontend-audits/phase6-qa-system-state-machine-debugger.json",
+    "web/logs/phase6-qa-system-state-machine-debugger.log"
+  ],
+  "objectiveCheck": {
+    "queueItem": "phase6-qa-system-state-machine-debugger",
+    "historicalAudit": "audit-page-195",
+    "queueAttempt": 1,
+    "queueStatus": "[~]",
+    "duplicate": false,
+    "sourceStatus": "[x]",
+    "sourceAttempt": 2,
+    "outputsAbsentAtStartup": true,
+    "lastSourceQueueLine": 2251,
+    "lastQueueLine": 240,
+    "sourceItem": "phase5-page-system-state-machine-debugger",
+    "reason": "Phase0 audit and Phase5 source acceptance are not this new Phase6 QA objective. No existing narrow debugger fix owner in latest queue probe."
+  },
+  "execution": {
+    "compiler": "NOTRUN",
+    "browser": "NOTRUN",
+    "build": "NOTRUN",
+    "git": "NOTRUN",
+    "api": "NOTRUN",
+    "installs": "NOTRUN",
+    "network": "NOTRUN",
+    "helpers": "NOTRUN",
+    "lint": "NOTRUN",
+    "tests": "NOTRUN",
+    "nativeAcceptance": "NOTRUN",
+    "pageAcceptance": "NOTRUN",
+    "server": "NOTRUN",
+    "agents": "NOTRUN",
+    "runnerDiscovery": "NOTRUN",
+    "telemetry": "NOTRUN",
+    "stateReplayVehicleActions": "NOTRUN"
+  },
+  "instructionsRead": {
+    "precedence": "Modern SI/restrained/trust contracts supersede conflicting historical neon/source-unit examples",
+    "mission": "Principles/design/states19-26/a11y-motion-data-performance30-37/definitions43-46",
+    "orchestrator": "Complete docs/orchestrator-loop.md read",
+    "design": "Core1-655, amendment headings for relevance; no unrelated whole-amendment review claim",
+    "repository": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "inventory": "Relevant246,426,536,544,550,551,1373,1374; historical audit-page-195",
+    "handoff": "Current recovery and conventions1-230"
+  },
+  "confirmedIssues": [
+    {
+      "id": "F01",
+      "severity": "high",
+      "rule": "MDC-026",
+      "title": "Snapshot failures/paused sources collapse to empty; absent previous snapshot looks unchanged",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 462,
+          "anchor": "data: selectedSnapshot"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 469,
+          "anchor": "data: previousSnapshot"
+        },
+        {
+          "file": "web/src/features/system/components/state-machine/SnapshotInspector.tsx",
+          "line": 94,
+          "endLine": 97,
+          "anchor": "previousSnapshot != null"
+        },
+        {
+          "file": "web/src/features/system/components/state-machine/SnapshotInspector.tsx",
+          "line": 222,
+          "endLine": 236,
+          "anchor": "rows.length === 0"
+        }
+      ],
+      "mechanism": "Both query error/fetchStatus/last-success/retry and previous loading discarded; only selected isFetching reaches inspector.",
+      "sourceOnlyRepro": "Selected error/no data/isFetching=false => No signals captured; previous pending/error/paused + current signals + diff=true => changed=false for all rows, dimmed as unchanged. Retained current payload still renders without refresh warning.",
+      "fix": "Thread independent existing trust/loading/retry for selected and previous; explain unavailable comparison, preserve retained signals."
+    },
+    {
+      "id": "F02",
+      "severity": "high",
+      "rule": "MDC-032",
+      "title": "Time chart loses historical workspace bounds",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 156,
+          "anchor": "startInstant, endInstantExclusive"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 829,
+          "anchor": "hours={Number(hours)}"
+        },
+        {
+          "file": "web/src/features/system/components/FSMTimelineChart.tsx",
+          "line": 89,
+          "endLine": 92,
+          "anchor": "end = now"
+        }
+      ],
+      "mechanism": "List gets exact instants; chart only calendar-derived hours and reanchors to now.",
+      "sourceOnlyRepro": "January seven-day window inspected in October: January rows remain in log but chart seeds October trailing buckets, yielding zero counts.",
+      "fix": "Thread exact start/endExclusive through existing builder/chart, preserve all-time/bucket cap/subset scope."
+    },
+    {
+      "id": "F03",
+      "severity": "medium",
+      "rule": "MDC-032",
+      "title": "Loaded-page buffer incorrectly labeled last24h; analysis scope not explicit",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 175,
+          "anchor": "transData?.data"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 703,
+          "anchor": "totalCount={visibleTransitions.length}"
+        },
+        {
+          "file": "web/src/features/system/components/state-machine/LiveControls.tsx",
+          "line": 95,
+          "endLine": 105,
+          "anchor": "in 24 h"
+        }
+      ],
+      "mechanism": "Buffer/distribution/counts use current server page, sometimes locally cleared, not full range. Only KPI explicitly explains subset.",
+      "sourceOnlyRepro": "Seven-day/custom range233total/50loaded/0inwindow => label50in24h; next server page changes same-range distribution.",
+      "fix": "Show exact range/loaded-page/filtered-buffer scope, preserve matching total; no fabricated aggregate."
+    },
+    {
+      "id": "F04",
+      "severity": "high",
+      "rule": "MDC-026",
+      "title": "Unknown/empty/incomplete evidence declared All FSMs healthy",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 573,
+          "endLine": 583,
+          "anchor": "FSMHealthPanel transitions={transitions}"
+        },
+        {
+          "file": "web/src/features/system/components/FSMHealthPanel.tsx",
+          "line": 108,
+          "anchor": "All FSMs healthy"
+        }
+      ],
+      "mechanism": "Only raw isLoading/fatal gates; empty rows lead universal all-clear; historical loaded page cannot prove current global health.",
+      "sourceOnlyRepro": "No vehicle disables hook, no data/error/rawloading => [] => allClear. Initial paused may do same; success-empty also cannot prove no current stuck session.",
+      "fix": "Distinct unknown/paused/empty evidence and qualified loaded-row verdict; do not invent authoritative health."
+    },
+    {
+      "id": "F05",
+      "severity": "high",
+      "rule": "MDC-046",
+      "title": "Historical permalink at removed before selected row resolves; range/page omitted",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 131,
+          "endLine": 132,
+          "anchor": "searchParams.get('at')"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 458,
+          "anchor": "selectedTransition?.ts"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 480,
+          "endLine": 492,
+          "anchor": "else next.delete('at')"
+        }
+      ],
+      "mechanism": "Incoming at only sets freeze boolean; snapshot timestamp needs selected row on current page. Range persists outside this permalink.",
+      "sourceOnlyRepro": "Open selected42&at=historical with initial no rows => selectedAtIso empty => at deleted/snapshot disabled; different recipient range/page may never resolve42.",
+      "fix": "Preserve validated incoming evidence/time scope until resolution; serialize supported analysis scope or label link limits, no ad-hoc fetch."
+    },
+    {
+      "id": "F06",
+      "severity": "high",
+      "rule": "MDC-043",
+      "title": "Mobile log hides detail action/FSM/trigger/index without all-details fallback",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 858,
+          "anchor": "mobileColumns={['time', 'from_state', 'to_state']}"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 505,
+          "endLine": 506,
+          "anchor": "mobilePresentation != null"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 742,
+          "endLine": 743,
+          "anchor": "hidden md:table-cell"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "line": 1177,
+          "endLine": 1184,
+          "anchor": "colHiddenClass(col.key)"
+        }
+      ],
+      "mechanism": "Adapter opt-in absent; page provides no row activation/expansion. Detail cell excluded belowmd.",
+      "sourceOnlyRepro": "375px => direct View detail control/FSM/trigger/# hidden. Recent ticks/step/jump do not preserve direct per-row log action. No browser action executed.",
+      "fix": "Adopt existing all-details mobile adapter or retain reachable per-row action/fields, no new table engine."
+    },
+    {
+      "id": "F07",
+      "severity": "medium",
+      "rule": "MDC-040",
+      "title": "Selected detail/timeline state is visual only",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 312,
+          "endLine": 327,
+          "anchor": "aria-label={t('fsm.viewDetail'"
+        },
+        {
+          "file": "web/src/features/system/components/state-machine/StateTimeline.tsx",
+          "line": 173,
+          "endLine": 192,
+          "anchor": "aria-label={t('debugger.timeline.tickAria'"
+        }
+      ],
+      "mechanism": "Detail name fixed View detail, no pressed/expanded/controls; selected tick lacks pressed/current state.",
+      "sourceOnlyRepro": "selectedId matches => only Chevron/ring/classes change, no ARIA selection state. Assistive-tech acceptance NOTRUN.",
+      "fix": "Expose appropriate selection/disclosure semantics and stable detail association; preserve names/keyboard."
+    },
+    {
+      "id": "F08",
+      "severity": "medium",
+      "rule": "MDC-044",
+      "title": "Duration/axis/freshness formatting bypasses effective preferences",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 54,
+          "endLine": 62,
+          "anchor": "return m > 0"
+        },
+        {
+          "file": "web/src/features/system/components/FSMTimelineChart.tsx",
+          "line": 52,
+          "endLine": 60,
+          "anchor": "d.getHours()"
+        },
+        {
+          "file": "web/src/features/system/components/statstrip-fsm/FSMOperationalBrief.tsx",
+          "line": 64,
+          "endLine": 66,
+          "anchor": "toLocaleString()"
+        },
+        {
+          "file": "web/src/features/system/components/state-machine/StateTimeline.tsx",
+          "line": 114,
+          "anchor": "formatRelative(lastTransition!.ts)"
+        },
+        {
+          "file": "web/src/features/system/components/state-machine/SnapshotInspector.tsx",
+          "line": 146,
+          "anchor": "formatRelative(lastTransition.ts)"
+        }
+      ],
+      "mechanism": "ASCII duration s/m/h; browser-local fixed MM/DD HH:MM axes and toLocaleString freshness; old relative-date fallback receives no selected timezone.",
+      "sourceOnlyRepro": "Saved locale/timezone differs from browser => labels follow browser/fixed strings; relative helper already uses global locale, so no English-only accusation.",
+      "fix": "Existing preference-aware caller formatting; preserve SI/raw values/rounding/null. Shared dateFormat future-date root already owned; do not overlap."
+    },
+    {
+      "id": "F09",
+      "severity": "medium",
+      "rule": "MDC-042",
+      "title": "Three semantic status dots pulse perpetually",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/state-machine/LiveControls.tsx",
+          "line": 126,
+          "anchor": "animate-pulse"
+        },
+        {
+          "file": "web/src/features/system/components/FSMSubFSMPanel.tsx",
+          "line": 70,
+          "anchor": "animate-pulse"
+        },
+        {
+          "file": "web/src/features/system/components/FSMStateDiagram.tsx",
+          "line": 111,
+          "anchor": "animate-pulse"
+        }
+      ],
+      "mechanism": "Live/current labels select unbounded decorative pulse, not transient feedback.",
+      "sourceOnlyRepro": "Live/nonterminal/current states add animate-pulse without event lifecycle. Reduced-motion CSS does not justify normal-mode decoration.",
+      "fix": "Static semantic dot/text/selected cues without changing states."
+    },
+    {
+      "id": "F10",
+      "severity": "low",
+      "rule": "MDC-034",
+      "title": "Timeline area fill30% exceeds contract8% cap",
+      "citations": [
+        {
+          "file": "web/src/features/system/components/FSMTimelineChart.tsx",
+          "line": 167,
+          "anchor": "fillOpacity={0.3}"
+        }
+      ],
+      "mechanism": "All Area series use static .3 tint.",
+      "sourceOnlyRepro": "Every Area gets0.3 independent of state; source presentation violation, not composed contrast measurement.",
+      "fix": "Restrained existing renderer roles, preserve series/data/axes/palettes."
+    },
+    {
+      "id": "F11",
+      "severity": "medium",
+      "rule": "MDC-026",
+      "title": "Missing mode evidence becomes Idle; declared live provenance ignored",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 65,
+          "endLine": 69,
+          "anchor": "live?: boolean"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 138,
+          "anchor": "provenance: 'live'"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 639,
+          "endLine": 647,
+          "anchor": "t('fsm.modeIdle', 'Idle')"
+        }
+      ],
+      "mechanism": "Absent charging/speed plus not-asleep always falls through Idle. Declared live/data_source omitted; HTTP fetch time not telemetry observation freshness.",
+      "sourceOnlyRepro": "Declared unexpected_state with missing speed/charging/livefalse => badge+Idle+hardwired live provenance. Actual backend observation capabilities remain unknown.",
+      "fix": "Unknown mode for insufficient evidence; reconcile actual existing envelope type/provenance before claiming live."
+    },
+    {
+      "id": "F12",
+      "severity": "medium",
+      "rule": "test-contract-drift",
+      "title": "Two original assertions still require detail heading absent",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.test.tsx",
+          "line": 368,
+          "endLine": 370,
+          "anchor": "queryByText('Transition detail')"
+        },
+        {
+          "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.test.tsx",
+          "line": 396,
+          "anchor": "queryByText('Transition detail')"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 882,
+          "endLine": 892,
+          "anchor": "fsm.detailTitle"
+        }
+      ],
+      "mechanism": "Always-present title/empty shell contradicts old before/after selection toBeNull expectations; new colocated test requires visible shell.",
+      "sourceOnlyRepro": "Read unconditional title outside selectedTransition ternary versus original two absence assertions; NOT an executed failure.",
+      "fix": "Narrow original-test-only expectation repair, preserve all17 declarations/other behaviors."
+    },
+    {
+      "id": "F13",
+      "severity": "medium",
+      "rule": "MDC-026",
+      "title": "Initial transition load exposed as empty mini/time timelines",
+      "citations": [
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 684,
+          "endLine": 706,
+          "anchor": "transError ?"
+        },
+        {
+          "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx",
+          "line": 824,
+          "endLine": 829,
+          "anchor": "FSMTimelineChart"
+        }
+      ],
+      "mechanism": "These sections gate fatal only; transition loading not forwarded; [] is rendered as definitive empty.",
+      "sourceOnlyRepro": "State/stats ready + transLoading/no data => overallloadingfalse; log/counts/health skeleton but sections6/9 empty. snapshotFetching unrelated/false with no selection.",
+      "fix": "Transition source-shaped initial/paused state in dependent sections; keep retained timelines on refresh and independent neighbors."
+    }
+  ],
+  "confirmedIssueCount": 13,
+  "summary": {
+    "byRule": [
+      {
+        "count": 4,
+        "rule": "MDC-026"
+      },
+      {
+        "count": 2,
+        "rule": "MDC-032"
+      },
+      {
+        "count": 1,
+        "rule": "MDC-034"
+      },
+      {
+        "count": 1,
+        "rule": "MDC-040"
+      },
+      {
+        "count": 1,
+        "rule": "MDC-042"
+      },
+      {
+        "count": 1,
+        "rule": "MDC-043"
+      },
+      {
+        "count": 1,
+        "rule": "MDC-044"
+      },
+      {
+        "count": 1,
+        "rule": "MDC-046"
+      },
+      {
+        "count": 1,
+        "rule": "test-contract-drift"
+      }
+    ],
+    "priority": [
+      "snapshot trust/initial loading",
+      "exact historical bounds",
+      "unknown versus healthy/subset scope",
+      "permalink/mobile detail/selected ARIA",
+      "formatting/presentation/original test drift"
+    ]
+  },
+  "conditionalCandidates": [
+    {
+      "id": "C01",
+      "title": "Freeze semantics",
+      "condition": "Clarify selection-freeze versus feed-freeze before promotion; timers/native acceptance NOTRUN",
+      "evidence": "Page132/407/691: isLive affects selection/URL, not hook polling/retained buffer/window anchor; useFSM137 continues polling"
+    },
+    {
+      "id": "C02",
+      "title": "Dense ticks/wrapping/contrast/chart alternative equivalence",
+      "condition": "Actual320/375/390/430/768/1024/1280/1440/1920/2560 widths, allocated containers,200%text,RTL,longlabels,keyboard,forced-colors/computed contrast NOTRUN",
+      "evidence": "StateTimeline181 timestamp-positioned touch-target-overlay; SnapshotInspector256 opacity40%; FSMTimelineChart141 raw-log alternative waiver"
+    },
+    {
+      "id": "C03",
+      "title": "Raw snapshot SI versus user conversion",
+      "condition": "Technical raw diagnostic representation may be intentional; no signal unit metadata supplied. Establish raw-label/display contract before changing measurements; hooks/copy remain SI/raw",
+      "evidence": "SnapshotInspector55-57 String(v), raw copy payload"
+    },
+    {
+      "id": "C04",
+      "title": "AI bounds/privacy/scope acceptance",
+      "condition": "Comment alone does not prove endpoint extra row; actual auth/privacy/boundary and scope cancellation NOTRUN; no AI/provider action",
+      "evidence": "Page601-603 passes endExclusive; narrator91-97 comment says inclusive end; narrator169-173 scopeKey"
+    },
+    {
+      "id": "C05",
+      "title": "Invalid FSM URL/navigation synchronization",
+      "condition": "Need backend validation and intended same-route navigation contract; no query invoked",
+      "evidence": "Page90 casts unvalidated initial URL token"
+    }
+  ],
+  "conditionalCandidateCount": 5,
+  "sections": [
+    {
+      "lines": "526-530",
+      "name": "KPI/review",
+      "number": 1,
+      "evidence": "Four raw/null-preserving metrics; explicit page/total/flap versus live/range provenance, retained status, retry; F08 freshness"
+    },
+    {
+      "lines": "532-571",
+      "name": "FSM/per-page filters",
+      "number": 2,
+      "evidence": "Localized shared Select/help, page reset, emptyfleet; header owns vehicle/range; independent timeline zoom"
+    },
+    {
+      "lines": "573-584",
+      "name": "Health",
+      "number": 3,
+      "evidence": "Loading/fatal/retained declarations; empty/disabled/page-scope verdict F04"
+    },
+    {
+      "lines": "586-605",
+      "name": "Optional AI narrator",
+      "number": 4,
+      "evidence": "Off/feature omission is intentional consent/capability gate; finite positive scope, explicit opt-in, prefix-free route, stream identity; never invoked"
+    },
+    {
+      "lines": "608-679",
+      "name": "Live hero/sub-FSM",
+      "number": 5,
+      "evidence": "Independent sources/loading/fatal/retry/retained; unknown badge preserved; missing-mode F11; nonvehicle subs intentionally omitted"
+    },
+    {
+      "lines": "681-735",
+      "name": "Controls/timeline/snapshot",
+      "number": 6,
+      "evidence": "Live/freeze/step/window/clearlocalbuffer/tick/widen/jump/diff/copy preserved; F01/F07/F13; no action invoked"
+    },
+    {
+      "lines": "737-740",
+      "name": "State diagram",
+      "number": 7,
+      "evidence": "Registered states/observed counts/latest/accessible summary; static initial diagram intentional; existing edge-top10 preserved; F09"
+    },
+    {
+      "lines": "742-822",
+      "name": "Distribution/counts",
+      "number": 8,
+      "evidence": "Shared frame/data alternative, loading/fatal/retry/empty/retained; loaded-page counts/intervals F03; dynamic palette style allowed"
+    },
+    {
+      "lines": "824-831",
+      "name": "Time chart",
+      "number": 9,
+      "evidence": "Series/bucket cap/alltime retained; exact historical scope F02, loading F13, preference F08, tint F10"
+    },
+    {
+      "lines": "833-879",
+      "name": "Log/pagination",
+      "number": 10,
+      "evidence": "Seven desktop fields/stabletableId/25-50-100 pages/total/retries preserved; mobile detail/FSM/trigger/index F06"
+    },
+    {
+      "lines": "881-899",
+      "name": "Selected detail",
+      "number": 11,
+      "evidence": "Always-present shell/empty fallback; rawID/vehicle/FSM/from/to/trigger/guard/duration/timestamps/arbitrarydetails retained; original assertions F12. Zero duration still present in raw details, not counted as data loss"
+    }
+  ],
+  "actions": {
+    "limit": "Declarations only; no UI/network/state action",
+    "preserved": [
+      "sharepermalink",
+      "independent retries",
+      "KPI retry live+transitions",
+      "FSM/perpage/page resets",
+      "live clears selection",
+      "freeze",
+      "prev/next",
+      "window",
+      "local buffer clear",
+      "tick select",
+      "widen/jump",
+      "diff",
+      "copy raw snapshot",
+      "page/pagesize",
+      "desktop Viewdetail",
+      "KPI reviewdrawer",
+      "opt-in AI stream/card cancel"
+    ],
+    "executed": 0
+  },
+  "narrowOwnerNeeds": [
+    {
+      "id": "N01",
+      "issues": [
+        "F01",
+        "F13"
+      ],
+      "scope": "Page/SnapshotInspector + existing matching tests; coordinate chart loading with N02"
+    },
+    {
+      "id": "N02",
+      "issues": [
+        "F02",
+        "F10"
+      ],
+      "scope": "Page/FSMTimelineChart + existing matching tests, exactbounds/opacity only"
+    },
+    {
+      "id": "N03",
+      "issues": [
+        "F03",
+        "F04"
+      ],
+      "scope": "Page captions/LiveControls/FSMHealthPanel + existing tests; any precise new canonical strings parent serialized catalog closure"
+    },
+    {
+      "id": "N04",
+      "issues": [
+        "F05",
+        "F06",
+        "F07",
+        "F11"
+      ],
+      "scope": "Bounded page interaction/trust owner + StateTimeline selected ARIA/existing covering tests; split further if too large; actual envelope capability integration unknown"
+    },
+    {
+      "id": "N05",
+      "issues": [
+        "F08"
+      ],
+      "dedup": "Shared dateFormat future handling already phase6-fix-relative-future-dates queue627 [~], never overlap its two files. Advanced-evidence date-preference completed scope is other pages, not these callers",
+      "scope": "Only affected caller formatting/page/chart/brief/timeline/inspector, reuse existing useDateFormat"
+    },
+    {
+      "id": "N06",
+      "issues": [
+        "F09"
+      ],
+      "scope": "Only three indicator owners LiveControls/SubFSMPanel/StateDiagram + existing tests"
+    },
+    {
+      "id": "N07",
+      "issues": [
+        "F12"
+      ],
+      "scope": "Only original pages/__tests__/StateMachineDebuggerPage.test.tsx two obsolete absence assertions, preserve all17 declarations"
+    }
+  ],
+  "narrowOwnerNeedCount": 7,
+  "ownerCoordination": "No narrow debugger fix owner found in latest queue; needs proposed not claims. Completed Phase5 is not redispatched. N01-N05 overlap page/support paths and must be combined/serialized by orchestrator. Catalog/router/types/sharedUI untouched. Candidates are not unconditional fix items.",
+  "tests": {
+    "skipped": "NOTRUN",
+    "files": 16,
+    "limit": "Declaration lines include it.each and unrelated cases in imported hook suites, not runner-discovered expanded case counts",
+    "declarationLines": 255.0,
+    "executed": 0,
+    "inventory": [
+      {
+        "declarations": [
+          {
+            "line": 156,
+            "text": "it('shows skeletons (not zeroed cards) while the queries are in flight', () => {"
+          },
+          {
+            "line": 167,
+            "text": "it('surfaces the transitions failure in every dependent section with working retries', () => {"
+          },
+          {
+            "line": 194,
+            "text": "it('surfaces the live-state failure in the state panel and the KPI band', () => {"
+          },
+          {
+            "line": 212,
+            "text": "it('surfaces the stats failure in the sub-FSM panel without touching the rest', () => {"
+          },
+          {
+            "line": 229,
+            "text": "it('retains prior transitions and state when a background refresh fails', () => {"
+          },
+          {
+            "line": 249,
+            "text": "it('renders honest zeros and empty states (no retries) when the queries succeed empty', () => {"
+          },
+          {
+            "line": 261,
+            "text": "it.each(['driving', 'charging', 'unexpected_state'])('uses the canonical non-pulsing vehicle badge for %s', (state) => {"
+          },
+          {
+            "line": 275,
+            "text": "it('keeps the detail section visible before a transition is selected', () => {"
+          },
+          {
+            "line": 284,
+            "text": "it('preserves selected transition identifiers, guard, rounded duration and arbitrary raw details', () => {"
+          },
+          {
+            "line": 303,
+            "text": "it('retains header-owned vehicle scope and half-open transition bounds', () => {"
+          }
+        ],
+        "file": "web/src/features/system/pages/StateMachineDebuggerPage.test.tsx",
+        "declarationLines": 10,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 218,
+            "text": "it('renders the derived page/total/flap/current-state metrics', () => {"
+          },
+          {
+            "line": 236,
+            "text": "it('falls back to an em dash for the current state when no live state is loaded', () => {"
+          },
+          {
+            "line": 246,
+            "text": "it('shows the resolved state name and \"Charging\" mode when charging', () => {"
+          },
+          {
+            "line": 261,
+            "text": "it('resolves \"Drive\" mode from a positive speed even when not charging', () => {"
+          },
+          {
+            "line": 274,
+            "text": "it('resolves \"Sleep\" mode for an asleep vehicle with no speed', () => {"
+          },
+          {
+            "line": 287,
+            "text": "it('resolves \"Idle\" mode for a parked vehicle with no speed', () => {"
+          },
+          {
+            "line": 300,
+            "text": "it('shows the empty branch when no live state data is available', () => {"
+          },
+          {
+            "line": 310,
+            "text": "it('hides the FSM-type filter and shows the no-vehicles empty copy', () => {"
+          },
+          {
+            "line": 322,
+            "text": "it('renders rows, triggers, and one detail toggle per row', () => {"
+          },
+          {
+            "line": 337,
+            "text": "it('shows the range-aware empty copy across sections when there are no transitions', () => {"
+          },
+          {
+            "line": 353,
+            "text": "it('expands the detail panel and formats duration_in_state_ms without a \"1h 60m\" artefact', () => {"
+          },
+          {
+            "line": 384,
+            "text": "it('collapses the detail panel again when the toggle is clicked twice', () => {"
+          },
+          {
+            "line": 401,
+            "text": "it('summarises transitions by to_state and rolls a 7199s avg interval up to 2h', () => {"
+          },
+          {
+            "line": 423,
+            "text": "it('lets the user pick a different FSM type', () => {"
+          },
+          {
+            "line": 437,
+            "text": "it('lets the user change the per-page size', () => {"
+          },
+          {
+            "line": 453,
+            "text": "it('copies the permalink URL to the clipboard when the share control is used', async () => {"
+          },
+          {
+            "line": 473,
+            "text": "it('shows a full-page spinner while every data source is loading', () => {"
+          }
+        ],
+        "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.test.tsx",
+        "declarationLines": 17,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 172,
+            "text": "it('reads \"0 in window · 23 in 24 h\" when 23 transitions exist outside the 10-min window', () => {"
+          },
+          {
+            "line": 197,
+            "text": "it('after clicking \"Widen window\", the counter renders ticks and reflects the new window size', () => {"
+          },
+          {
+            "line": 221,
+            "text": "it('renders the legacy \"{{n}} buffered\" copy when in-window equals total (steady state)', () => {"
+          }
+        ],
+        "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.windowing.test.tsx",
+        "declarationLines": 3,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 71,
+            "text": "it('shows the \"select a transition\" empty state when nothing is selectable', () => {"
+          },
+          {
+            "line": 90,
+            "text": "it('shows the loading placeholder when loading and no transition is selected', () => {"
+          },
+          {
+            "line": 109,
+            "text": "it('surfaces the \"jump to last transition\" affordance when the window is empty but a last transition exists', () => {"
+          },
+          {
+            "line": 131,
+            "text": "it('does NOT offer the jump affordance while transitions are still inside the window', () => {"
+          },
+          {
+            "line": 151,
+            "text": "it('renders the from/to states, trigger and formatted duration', () => {"
+          },
+          {
+            "line": 171,
+            "text": "it('renders an em-dash for a missing trigger and a missing duration', () => {"
+          },
+          {
+            "line": 185,
+            "text": "it('formats every signal value type and annotates it with a source badge', () => {"
+          },
+          {
+            "line": 208,
+            "text": "it('sorts signals alphabetically by name regardless of insertion order', () => {"
+          },
+          {
+            "line": 229,
+            "text": "it('exposes the signals list as a labelled region for assistive tech', () => {"
+          },
+          {
+            "line": 244,
+            "text": "it('shows the \"no signals\" empty state for a snapshot with an empty signal map', () => {"
+          },
+          {
+            "line": 273,
+            "text": "it('does not compute diffs until diff mode is toggled on', () => {"
+          },
+          {
+            "line": 289,
+            "text": "it('dims unchanged signals and highlights changed ones with a strikethrough previous value', () => {"
+          },
+          {
+            "line": 319,
+            "text": "it('shows a loading state — not \"no signals\" — while a selected transition is fetching its snapshot', () => {"
+          },
+          {
+            "line": 336,
+            "text": "it('keeps rendering the existing signals during a background refetch (loading with a snapshot present)', () => {"
+          },
+          {
+            "line": 365,
+            "text": "it('hides the copy affordance until a snapshot is available', () => {"
+          },
+          {
+            "line": 377,
+            "text": "it('copies the transition + signals + timestamp as pretty-printed JSON', async () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/state-machine/SnapshotInspector.test.tsx",
+        "declarationLines": 16,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 37,
+            "text": "it('retains numeric page versus total, detector-backed flaps and textual current state', () => {"
+          },
+          {
+            "line": 51,
+            "text": "it('preserves measured zero without substituting for unknown page, total or state', () => {"
+          },
+          {
+            "line": 57,
+            "text": "it('renders the accepted strip, explicit selected range and independent retained live state', () => {"
+          },
+          {
+            "line": 79,
+            "text": "it('opens the shared review drawer with page-versus-total and independently sourced live state', async () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/statstrip-fsm/FSMOperationalBrief.test.tsx",
+        "declarationLines": 4,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 190,
+            "text": "it('renders nothing when ai_mode=off even with the per-feature toggle on', () => {"
+          },
+          {
+            "line": 213,
+            "text": "it('renders nothing when ai_mode!=off but the per-feature toggle is false', () => {"
+          },
+          {
+            "line": 233,
+            "text": "it('renders nothing when the ai_features map is entirely absent', () => {"
+          },
+          {
+            "line": 248,
+            "text": "it('renders the gated section (positive control) with title, badge, description and an enabled button when mode + toggle + scope are all present', () => {"
+          },
+          {
+            "line": 287,
+            "text": "it('disables the Narrate button and shows the empty-state hint when no scope props are supplied', () => {"
+          },
+          {
+            "line": 328,
+            "text": "it('does not open a stream when the (disabled) button is clicked without a scope', async () => {"
+          },
+          {
+            "line": 342,
+            "text": "it('enables the Narrate button once a full valid scope resolves via rerender', () => {"
+          },
+          {
+            "line": 365,
+            "text": "it('POSTs exactly once to the registered route with the in-scope (vehicle_id, from_unix, to_unix) triple and renders the first delta', async () => {"
+          },
+          {
+            "line": 411,
+            "text": "it('accumulates multiple delta frames in arrival order into the output panel', async () => {"
+          },
+          {
+            "line": 436,
+            "text": "it('shows the thinking indicator and disables the button while streaming', async () => {"
+          },
+          {
+            "line": 454,
+            "text": "it('guards against double-submit: a second click while streaming issues no new request', async () => {"
+          },
+          {
+            "line": 477,
+            "text": "it('re-enables the Narrate button and keeps the narrative visible after the stream completes', async () => {"
+          },
+          {
+            "line": 503,
+            "text": "it('surfaces an HTTP error in the output panel when the stream route returns non-2xx', async () => {"
+          },
+          {
+            "line": 525,
+            "text": "it('surfaces a terminal SSE error frame in the output panel', async () => {"
+          },
+          {
+            "line": 547,
+            "text": "it('exposes a stable displayName for the gated component', () => {"
+          }
+        ],
+        "file": "web/src/components/ai/AIStateMachineDebuggerNarrator.test.tsx",
+        "declarationLines": 15,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 118,
+            "text": "it('TestStateMachineDebuggerNarratorAIOnWiredCallsRoute: clicking Narrate transitions POSTs once to /api/v1/ai/system/fsm/narrate and renders the first delta', async () => {"
+          },
+          {
+            "line": 203,
+            "text": "it('TestStateMachineDebuggerNarratorAIOnWiredCallsRoute: a second click while streaming is a no-op (double-submit guard)', async () => {"
+          },
+          {
+            "line": 255,
+            "text": "it('TestStateMachineDebuggerNarratorAIOnWiredCallsRoute: Narrate transitions button is disabled when vehicleId is missing (computed, not literal)', () => {"
+          },
+          {
+            "line": 279,
+            "text": "it('TestStateMachineDebuggerNarratorAIOnWiredCallsRoute: Narrate transitions button is disabled when the window is invalid (computed, not literal)', () => {"
+          }
+        ],
+        "file": "web/src/features/system/__tests__/TestStateMachineDebuggerNarratorAIOnWiredCallsRoute.test.tsx",
+        "declarationLines": 4,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 92,
+            "text": "it('TestStateMachineNarratorAIOffShowsDebuggerOnly: AIStateMachineDebuggerNarrator renders nothing when ai_mode=off even with the state-machine-debugger-narrator toggle on', () => {"
+          },
+          {
+            "line": 129,
+            "text": "it('TestStateMachineNarratorAIOffShowsDebuggerOnly: AIStateMachineDebuggerNarrator renders nothing when ai_mode is non-off but the state-machine-debugger-narrator toggle is false', () => {"
+          },
+          {
+            "line": 156,
+            "text": "it('TestStateMachineNarratorAIOffShowsDebuggerOnly: AIStateMachineDebuggerNarrator renders the section when ai_mode=cloud AND state-machine-debugger-narrator toggle is on (positive control)', () => {"
+          }
+        ],
+        "file": "web/src/features/system/__tests__/TestStateMachineNarratorAIOffShowsDebuggerOnly.test.tsx",
+        "declarationLines": 3,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 95,
+            "text": "it('returns an empty timeline for empty, null, or undefined input', () => {"
+          },
+          {
+            "line": 101,
+            "text": "it('de-duplicates and alphabetically sorts the series keys', () => {"
+          },
+          {
+            "line": 111,
+            "text": "it('tallies each in-window transition into a zero-filled per-series bucket', () => {"
+          },
+          {
+            "line": 126,
+            "text": "it('excludes transitions that fall before the window or in the future', () => {"
+          },
+          {
+            "line": 136,
+            "text": "it('skips malformed rows (unparseable ts, empty fsm_name) without counting them', () => {"
+          },
+          {
+            "line": 148,
+            "text": "it('spans the real data span for \"all time\" (hours <= 0) instead of one trailing bucket', () => {"
+          },
+          {
+            "line": 167,
+            "text": "it('never hangs on a non-finite window and stays bounded on a pathological one', () => {"
+          },
+          {
+            "line": 185,
+            "text": "it('date-prefixes labels for a multi-day window so ticks never collide', () => {"
+          },
+          {
+            "line": 197,
+            "text": "it('keeps bare HH:MM labels inside a single-day window', () => {"
+          },
+          {
+            "line": 205,
+            "text": "it('renders the labelled chart figure when there is data to plot', () => {"
+          },
+          {
+            "line": 221,
+            "text": "it('shows the default empty state when there are no transitions', () => {"
+          },
+          {
+            "line": 229,
+            "text": "it('prefers a caller-supplied emptyMessage over the default copy', () => {"
+          },
+          {
+            "line": 238,
+            "text": "it('renders (never hangs) with a non-finite hours prop by falling back to all-time', () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/FSMTimelineChart.test.tsx",
+        "declarationLines": 13,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 57,
+            "text": "it('returns an empty set for empty or nullish input (null safety)', () => {"
+          },
+          {
+            "line": 63,
+            "text": "it('flags every transition in a >5-per-minute same-FSM burst', () => {"
+          },
+          {
+            "line": 72,
+            "text": "it('does not flap at the threshold boundary (exactly 5 in a window)', () => {"
+          },
+          {
+            "line": 77,
+            "text": "it('does not flap when six transitions are spread across multiple windows', () => {"
+          },
+          {
+            "line": 83,
+            "text": "it('groups by fsm_name — mixed FSMs under the threshold do not flap', () => {"
+          },
+          {
+            "line": 91,
+            "text": "it('aggregates flapping across every FSM, not just the first one', () => {"
+          },
+          {
+            "line": 100,
+            "text": "it('ignores malformed timestamps without throwing or truncating the window', () => {"
+          },
+          {
+            "line": 115,
+            "text": "it('shows the all-clear status and no alert cards when nothing is wrong', () => {"
+          },
+          {
+            "line": 125,
+            "text": "it('renders a flapping warning with an accessible, aria-hidden-decorated card', () => {"
+          },
+          {
+            "line": 140,
+            "text": "it('flags a session whose latest state is stuck in active for over four hours', () => {"
+          },
+          {
+            "line": 155,
+            "text": "it('does NOT flag a session as stuck once a later transition resolves it', () => {"
+          },
+          {
+            "line": 171,
+            "text": "it('reports pod recoveries as an informational alert', () => {"
+          },
+          {
+            "line": 189,
+            "text": "it('renders multiple distinct alerts side by side', () => {"
+          },
+          {
+            "line": 198,
+            "text": "it('aggregates the flap count across FSMs into a single warning card', () => {"
+          },
+          {
+            "line": 208,
+            "text": "it('renders the all-clear state without throwing when every timestamp is malformed', () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/FSMHealthPanel.test.tsx",
+        "declarationLines": 15,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 44,
+            "text": "it('renders the select-a-type placeholder for the aggregate \"all\" view', () => {"
+          },
+          {
+            "line": 59,
+            "text": "it('renders the placeholder for an FSM type with no registered states', () => {"
+          },
+          {
+            "line": 66,
+            "text": "it('renders every registered state node and hides the edge summary with no data', () => {"
+          },
+          {
+            "line": 77,
+            "text": "it('marks the decorative arrows and status dots as aria-hidden', () => {"
+          },
+          {
+            "line": 86,
+            "text": "it('tallies how many times each state participates (as source and target)', () => {"
+          },
+          {
+            "line": 100,
+            "text": "it('flags the target of the newest transition as current (by timestamp, not array order)', () => {"
+          },
+          {
+            "line": 121,
+            "text": "it('ignores transitions whose fsm_name does not match the selected type', () => {"
+          },
+          {
+            "line": 142,
+            "text": "it('sorts the edge summary by descending frequency', () => {"
+          },
+          {
+            "line": 161,
+            "text": "it('caps the edge summary at the ten most frequent edges', () => {"
+          },
+          {
+            "line": 186,
+            "text": "it('does not crash when the transitions prop is omitted', () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/FSMStateDiagram.test.tsx",
+        "declarationLines": 10,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 50,
+            "text": "it('renders nothing unless viewing vehicle-level FSMs (vehicle | all)', () => {"
+          },
+          {
+            "line": 61,
+            "text": "it('shows the empty state (heading + status message) when there are no active subs', () => {"
+          },
+          {
+            "line": 71,
+            "text": "it('treats a missing activeSubs prop as empty without crashing (null-safety + \"all\" scope)', () => {"
+          },
+          {
+            "line": 80,
+            "text": "it('renders an active drive session: label, drive_session badge, Live cue and forwarded start_time', () => {"
+          },
+          {
+            "line": 104,
+            "text": "it('marks the decorative session icon aria-hidden so screen readers skip it', () => {"
+          },
+          {
+            "line": 116,
+            "text": "it('renders a terminal charge session (done) as idle: charge_session badge and no Live cue', () => {"
+          },
+          {
+            "line": 132,
+            "text": "it('treats drive states completed and recovered as terminal (no Live cue)', () => {"
+          },
+          {
+            "line": 143,
+            "text": "it('treats charge states done and recovered as terminal (no Live cue)', () => {"
+          },
+          {
+            "line": 153,
+            "text": "it('shows the Live cue for every non-terminal drive and charge state', () => {"
+          },
+          {
+            "line": 169,
+            "text": "it('renders both a drive and a charge sub-FSM together, in order', () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/FSMSubFSMPanel.test.tsx",
+        "declarationLines": 10,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 39,
+            "text": "it('renders the state label and applies that state\\'s themed bg/text/dot classes', () => {"
+          },
+          {
+            "line": 50,
+            "text": "it('themes each state distinctly — parked resolves the purple override, not green', () => {"
+          },
+          {
+            "line": 62,
+            "text": "it('matches state colour case-insensitively while preserving the original label casing', () => {"
+          },
+          {
+            "line": 73,
+            "text": "it('trims surrounding whitespace so a padded state still resolves its colour', () => {"
+          },
+          {
+            "line": 84,
+            "text": "it('falls back to the neutral default for an unknown state name', () => {"
+          },
+          {
+            "line": 93,
+            "text": "it('falls back to the vehicle FSM when the fsmType is unknown', () => {"
+          },
+          {
+            "line": 102,
+            "text": "it('renders an em-dash placeholder (neutral) for a null state without throwing', () => {"
+          },
+          {
+            "line": 115,
+            "text": "it('renders the placeholder for undefined and blank/whitespace-only states', () => {"
+          },
+          {
+            "line": 126,
+            "text": "it('marks the leading status dot as decorative so the label carries the meaning', () => {"
+          }
+        ],
+        "file": "web/src/features/system/components/StateBadge.test.tsx",
+        "declarationLines": 9,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 102,
+            "text": "it('builds the stats key from the entity id', () => {"
+          },
+          {
+            "line": 106,
+            "text": "it('builds the full transitions tuple and coalesces omitted instants to empty strings', () => {"
+          },
+          {
+            "line": 119,
+            "text": "it('threads explicit instants through so distinct windows key distinctly', () => {"
+          },
+          {
+            "line": 132,
+            "text": "it('accepts positive-integer strings (including leading zeros)', () => {"
+          },
+          {
+            "line": 138,
+            "text": "it('rejects the empty string and the zero sentinel', () => {"
+          },
+          {
+            "line": 144,
+            "text": "it('rejects non-numeric, padded, fractional, and negative ids', () => {"
+          },
+          {
+            "line": 158,
+            "text": "it('emits a prefix-free snake_case URL (request() adds /api/v1)', () => {"
+          },
+          {
+            "line": 171,
+            "text": "it('omits fsm_name for the \"all\" pseudo-type', () => {"
+          },
+          {
+            "line": 177,
+            "text": "it('includes fsm_name for a concrete FSM type', () => {"
+          },
+          {
+            "line": 184,
+            "text": "it('appends and percent-encodes the half-open window when BOTH instants are present', () => {"
+          },
+          {
+            "line": 200,
+            "text": "it('drops a lone bound — the window is meaningless without both edges', () => {"
+          },
+          {
+            "line": 213,
+            "text": "it('GETs /fsm/stats for a valid id, threads the abort signal, and surfaces the payload', async () => {"
+          },
+          {
+            "line": 226,
+            "text": "it('stays idle (no request) for the empty-string \"no vehicle\" state', async () => {"
+          },
+          {
+            "line": 235,
+            "text": "it('stays idle for the \"0\" sentinel instead of firing a doomed request', async () => {"
+          },
+          {
+            "line": 243,
+            "text": "it('surfaces a request failure as isError', async () => {"
+          },
+          {
+            "line": 258,
+            "text": "it('GETs /fsm/transitions with all params, threads the signal, and surfaces the rows', async () => {"
+          },
+          {
+            "line": 276,
+            "text": "it('sends the encoded [start, end) window when both instants are supplied', async () => {"
+          },
+          {
+            "line": 300,
+            "text": "it('stays idle for the \"0\" sentinel — never fires the backend 400 path', async () => {"
+          },
+          {
+            "line": 312,
+            "text": "it('surfaces a request failure as isError', async () => {"
+          }
+        ],
+        "file": "web/src/api/hooks/useFSM.test.tsx",
+        "declarationLines": 19,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 113,
+            "text": "it('exposes stable static key tuples', () => {"
+          },
+          {
+            "line": 122,
+            "text": "it('derives per-argument key tuples that vary with their input', () => {"
+          },
+          {
+            "line": 145,
+            "text": "it('retains every list predicate, the server envelope, page offset, cache key and 10s polling', async () => {"
+          },
+          {
+            "line": 161,
+            "text": "it('separates each page/filter/range cache while preserving empty-filter keys', () => {"
+          },
+          {
+            "line": 171,
+            "text": "it('includes server row size in the offset and query cache identity', async () => {"
+          },
+          {
+            "line": 180,
+            "text": "it('forwards both stats bounds and signal, retaining 30s polling and the old scoped key', async () => {"
+          },
+          {
+            "line": 194,
+            "text": "it('keeps unbounded stats supported and rejects partial bounds', async () => {"
+          },
+          {
+            "line": 207,
+            "text": "it('keeps runtime errors process-wide and forwards the cancellation signal with 30s polling', async () => {"
+          },
+          {
+            "line": 221,
+            "text": "it('aborts obsolete list requests when server filters change', async () => {"
+          },
+          {
+            "line": 238,
+            "text": "it.each(['stats', 'runtime'] as const)('aborts pending %s requests on unmount', async (kind) => {"
+          },
+          {
+            "line": 252,
+            "text": "it('retains cached evidence after a refresh fails without masking the error', async () => {"
+          },
+          {
+            "line": 267,
+            "text": "it('GETs /api-keys and threads the AbortSignal', async () => {"
+          },
+          {
+            "line": 281,
+            "text": "it('coerces a non-array payload to [] via safeArray', async () => {"
+          },
+          {
+            "line": 292,
+            "text": "it('POSTs the name/permissions body and invalidates the list', async () => {"
+          },
+          {
+            "line": 317,
+            "text": "it('rejects and surfaces the error when the POST fails', async () => {"
+          },
+          {
+            "line": 331,
+            "text": "it('DELETEs /api-keys/{id} and invalidates the list', async () => {"
+          },
+          {
+            "line": 347,
+            "text": "it('does not report a dismissed step-up dialog as a delete failure', async () => {"
+          },
+          {
+            "line": 360,
+            "text": "it('POSTs /api-keys/{id}/revoke', async () => {"
+          },
+          {
+            "line": 374,
+            "text": "it('does not report a dismissed step-up dialog as a revoke failure', async () => {"
+          },
+          {
+            "line": 391,
+            "text": "it('GETs the paged /api-logs endpoint with the fixed limit', async () => {"
+          },
+          {
+            "line": 401,
+            "text": "it('scopes its query key to the page so pages cache independently', () => {"
+          },
+          {
+            "line": 407,
+            "text": "it('GETs /api-logs/stats and returns the stats object', async () => {"
+          },
+          {
+            "line": 430,
+            "text": "it('GETs /backup/configs and passes an array through', async () => {"
+          },
+          {
+            "line": 442,
+            "text": "it('GETs /backup/runs and coerces a missing payload to []', async () => {"
+          },
+          {
+            "line": 458,
+            "text": "it('GETs /system/health and returns the resolved status view', async () => {"
+          },
+          {
+            "line": 479,
+            "text": "it('surfaces transport failures as isError', async () => {"
+          },
+          {
+            "line": 490,
+            "text": "it('does not request diagnostics until the admin surface enables it', async () => {"
+          },
+          {
+            "line": 517,
+            "text": "it('GETs the always-200 component snapshot used by global degraded-mode UI', async () => {"
+          },
+          {
+            "line": 546,
+            "text": "it('GETs /admin/maintenance and returns the system_state row', async () => {"
+          },
+          {
+            "line": 564,
+            "text": "it('POSTs the normalized body and invalidates BOTH maintenance and health', async () => {"
+          },
+          {
+            "line": 595,
+            "text": "it('defaults an omitted message to \"\" and an omitted until to null', async () => {"
+          },
+          {
+            "line": 620,
+            "text": "it('GETs /system/audit and passes the array through safeArray', async () => {"
+          },
+          {
+            "line": 634,
+            "text": "it('GETs /admin/web-errors/summary and returns the rolling summary', async () => {"
+          },
+          {
+            "line": 658,
+            "text": "it('sends exact workspace bounds, keeps all returned history, and isolates both range keys', async () => {"
+          },
+          {
+            "line": 689,
+            "text": "it('GETs /security with a snake_case vehicle_id query param', async () => {"
+          },
+          {
+            "line": 700,
+            "text": "it('preserves the live query key, five-second polling, payload and abort signal', async () => {"
+          },
+          {
+            "line": 713,
+            "text": "it('does not request live state without a selected vehicle', async () => {"
+          },
+          {
+            "line": 721,
+            "text": "it('URL-encodes a vehicle id that carries reserved characters', async () => {"
+          },
+          {
+            "line": 731,
+            "text": "it('is disabled (never fires) when the vehicle id is empty', async () => {"
+          },
+          {
+            "line": 741,
+            "text": "it('coerces a non-array payload to [] via safeArray', async () => {"
+          },
+          {
+            "line": 756,
+            "text": "it('GETs /dev-tools/db-stats', async () => {"
+          },
+          {
+            "line": 768,
+            "text": "it('GETs /dev-tools/migration-status', async () => {"
+          },
+          {
+            "line": 786,
+            "text": "it('GETs /dev-tools/runtime-info', async () => {"
+          },
+          {
+            "line": 809,
+            "text": "it('GETs /export/jobs and passes the array through', async () => {"
+          },
+          {
+            "line": 821,
+            "text": "it('POSTs /exports with the camelCase body the backend DTO expects', async () => {"
+          },
+          {
+            "line": 850,
+            "text": "it('GETs /vehicles/{id}/state when a vehicle id is present', async () => {"
+          },
+          {
+            "line": 860,
+            "text": "it('URL-encodes the vehicle id in the path segment', async () => {"
+          },
+          {
+            "line": 869,
+            "text": "it('is disabled when the vehicle id is empty', async () => {"
+          },
+          {
+            "line": 880,
+            "text": "it('GETs the timeline endpoint with the default 7-day window', async () => {"
+          },
+          {
+            "line": 890,
+            "text": "it('threads a custom day window and encodes the vehicle id', async () => {"
+          },
+          {
+            "line": 899,
+            "text": "it('is disabled when the vehicle id is empty', async () => {"
+          },
+          {
+            "line": 907,
+            "text": "it('surfaces the deprecated route 404 gracefully via error', async () => {"
+          }
+        ],
+        "file": "web/src/api/hooks/useAdmin.test.tsx",
+        "declarationLines": 52,
+        "execution": "NOTRUN"
+      },
+      {
+        "declarations": [
+          {
+            "line": 159,
+            "text": "it('builds stable, domain-scoped query keys', () => {"
+          },
+          {
+            "line": 189,
+            "text": "it('produces distinct keys for distinct signals/hours (cache isolation)', () => {"
+          },
+          {
+            "line": 198,
+            "text": "it('GETs /signals/{id}/live and threads the abort signal through', async () => {"
+          },
+          {
+            "line": 206,
+            "text": "it('passes signal: undefined when opts are omitted', async () => {"
+          },
+          {
+            "line": 216,
+            "text": "it('extracts names from the rich post-Phase-42 catalog shape', async () => {"
+          },
+          {
+            "line": 231,
+            "text": "it('accepts the legacy bare string[] shape and drops malformed entries', async () => {"
+          },
+          {
+            "line": 238,
+            "text": "it('returns [] when the signals key is missing', async () => {"
+          },
+          {
+            "line": 245,
+            "text": "it('is disabled for vehicleId 0', async () => {"
+          },
+          {
+            "line": 255,
+            "text": "it('fetches the live snapshot for a vehicle', async () => {"
+          },
+          {
+            "line": 263,
+            "text": "it('does not fetch when vehicleId is undefined', async () => {"
+          },
+          {
+            "line": 269,
+            "text": "it('does not fetch when explicitly disabled', async () => {"
+          },
+          {
+            "line": 279,
+            "text": "it('hits /signals/{id}/stats', async () => {"
+          },
+          {
+            "line": 287,
+            "text": "it('is disabled for vehicleId 0', async () => {"
+          },
+          {
+            "line": 297,
+            "text": "it('puts the signal NAME — not the AbortSignal — in the history URL', async () => {"
+          },
+          {
+            "line": 312,
+            "text": "it('is disabled when the signal name is empty', async () => {"
+          },
+          {
+            "line": 318,
+            "text": "it('is disabled when vehicleId is 0', async () => {"
+          },
+          {
+            "line": 326,
+            "text": "it('requests the maximum analytical limit and encodes the signal name', async () => {"
+          },
+          {
+            "line": 340,
+            "text": "it('bounds custom hours and limits and stays disabled without a signal', async () => {"
+          },
+          {
+            "line": 359,
+            "text": "it('preserves pending identities and distinguishes measured zero from a resolved empty history', async () => {"
+          },
+          {
+            "line": 395,
+            "text": "it('retains independently stale histories and retries only the failed source', async () => {"
+          },
+          {
+            "line": 438,
+            "text": "it('loads unique encoded signals with independent cancellation contexts', async () => {"
+          },
+          {
+            "line": 463,
+            "text": "it('caps the bundle at eight signals and bounds hours and limit', async () => {"
+          },
+          {
+            "line": 481,
+            "text": "it('surfaces a partial request failure instead of returning success-shaped data', async () => {"
+          },
+          {
+            "line": 503,
+            "text": "it('does not fetch when the vehicle or signal set is unavailable', async () => {"
+          },
+          {
+            "line": 525,
+            "text": "it('includes the signal name, page and page_size in the URL', async () => {"
+          },
+          {
+            "line": 536,
+            "text": "it('is disabled without a signal name', async () => {"
+          },
+          {
+            "line": 546,
+            "text": "it('includes the signal name and the from/to window in the URL', async () => {"
+          },
+          {
+            "line": 558,
+            "text": "it('stays disabled until both from and to are supplied', async () => {"
+          },
+          {
+            "line": 568,
+            "text": "it('builds the snapshot URL with url-encoded at + signals params', async () => {"
+          },
+          {
+            "line": 582,
+            "text": "it('omits the query string entirely for a live snapshot (empty at, no csv)', async () => {"
+          },
+          {
+            "line": 589,
+            "text": "it('respects the enabled:false option', async () => {"
+          },
+          {
+            "line": 599,
+            "text": "it('builds the server-diff URL with at_a, at_b and signals', async () => {"
+          },
+          {
+            "line": 614,
+            "text": "it('is disabled until both endpoints are provided', async () => {"
+          },
+          {
+            "line": 624,
+            "text": "it('unwraps the live signals map from /signals/{id}/live', async () => {"
+          },
+          {
+            "line": 632,
+            "text": "it('defaults to an empty object when signals is absent', async () => {"
+          },
+          {
+            "line": 643,
+            "text": "it('normalizes a Record<vin, state> into a vehicles array with camelCase counts', async () => {"
+          },
+          {
+            "line": 662,
+            "text": "it('passes an already-array vehicles payload through unchanged', async () => {"
+          },
+          {
+            "line": 672,
+            "text": "it('falls back to streaming_vehicles and defaults missing counts to 0', async () => {"
+          },
+          {
+            "line": 685,
+            "text": "it('yields an empty vehicles array when none are present', async () => {"
+          },
+          {
+            "line": 710,
+            "text": "it('requests /signals/catalog and preserves canonical observed, unobserved and zero metadata', async () => {"
+          },
+          {
+            "line": 721,
+            "text": "it('propagates the actual request error without success-shaped fallback data', async () => {"
+          },
+          {
+            "line": 730,
+            "text": "it('accepts an authoritative successful empty catalog envelope', async () => {"
+          },
+          {
+            "line": 762,
+            "text": "it.each(malformed)('rejects %s rather than succeeding or silently dropping rows', async (_label, payload) => {"
+          },
+          {
+            "line": 771,
+            "text": "it('retains the last valid canonical cache when a malformed refresh fails validation', async () => {"
+          },
+          {
+            "line": 790,
+            "text": "it('sends field= (never signal_name=) on the wire', async () => {"
+          },
+          {
+            "line": 803,
+            "text": "it('unwraps the envelope and routes ValueKinds into legacy columns', async () => {"
+          },
+          {
+            "line": 822,
+            "text": "it('coerces a null numeric to null (never 0) and defaults source', async () => {"
+          },
+          {
+            "line": 832,
+            "text": "it('does not query when vehicleId is undefined', async () => {"
+          },
+          {
+            "line": 842,
+            "text": "it('lists error VINs from /tesla/fleet-telemetry/error-vins', async () => {"
+          },
+          {
+            "line": 852,
+            "text": "it('lists all errors when no vin filter is given', async () => {"
+          },
+          {
+            "line": 860,
+            "text": "it('appends the vin query param when filtering', async () => {"
+          },
+          {
+            "line": 871,
+            "text": "it('POSTs the refresh endpoint, invalidates the list, and toasts success', async () => {"
+          },
+          {
+            "line": 886,
+            "text": "it('toasts a contextual error message on failure', async () => {"
+          },
+          {
+            "line": 900,
+            "text": "it('POSTs the errors refresh endpoint, invalidates, and toasts success', async () => {"
+          },
+          {
+            "line": 915,
+            "text": "it('toasts a contextual error message on failure', async () => {"
+          }
+        ],
+        "file": "web/src/api/hooks/__tests__/useTelemetry.test.tsx",
+        "declarationLines": 55,
+        "execution": "NOTRUN"
+      }
+    ],
+    "passed": 0,
+    "runnerDiscovery": "NOTRUN",
+    "failed": 0
+  },
+  "guidelineScan": {
+    "exceptions": [
+      "Both inline styles dynamic percentage/palette lookup",
+      "RawHTML initial matches commentSelect/Button; corrected0",
+      "Camelcase initial matches lowercase due case-insensitive scan; corrected0",
+      "Prefix matches comments only",
+      "Effects only paging/URL, not fetching",
+      "PageLayout delegates PageContainer at11",
+      "Raw identifiers/state/trigger/signal/details/booleans are technical values",
+      "AIoff/subFSM scope gates intentional",
+      "Relative helper already global-locale aware; no duplicate sharedfuture bug"
+    ],
+    "fetch": 0,
+    "oldApiImports": 0,
+    "staticVarInlineStyle": 0,
+    "hookPrefixText": 3,
+    "inlineStyleRawMatches": 2,
+    "camelCaseInitialCaseInsensitive": 11,
+    "rawHtmlCorrectedCaseSensitive": 0,
+    "directLibraryImports": 0,
+    "hiddenPanelPattern": 0,
+    "camelCaseCorrectedCaseSensitive": 0,
+    "useEffect": 2,
+    "backendRules": "Only route reads, not backend-wide SQL/log/panic/context audit",
+    "rawHtmlInitialCaseInsensitive": 2
+  },
+  "routeEvidence": [
+    {
+      "anchor": "state-debugger",
+      "line": 738,
+      "file": "web/src/App.tsx"
+    },
+    {
+      "anchor": "StateMachineDebugger",
+      "line": 240,
+      "file": "web/src/lib/routeRegistry.ts"
+    },
+    {
+      "anchor": "StateMachineDebugger",
+      "line": 113,
+      "file": "web/src/lib/routeLoaders.ts"
+    },
+    {
+      "anchor": "state-debugger",
+      "line": 138,
+      "file": "web/src/lib/routePrefetch.ts"
+    },
+    {
+      "anchor": "state-debugger",
+      "line": 68,
+      "file": "web/src/lib/workspaceScope.ts"
+    },
+    {
+      "anchor": "vehicleHandler.CurrentState",
+      "line": 3376,
+      "file": "internal/api/router.go"
+    },
+    {
+      "anchor": "/fsm",
+      "line": 4286,
+      "file": "internal/api/router.go"
+    },
+    {
+      "anchor": "/transitions",
+      "line": 4324,
+      "file": "internal/api/router.go"
+    }
+  ],
+  "countPolicy": "One confirmed finding per explicit defect group; citations/threepulse occurrences not additional findings; candidate/native needs separate.",
+  "validation": {
+    "changedInputs": [
+      "web/src/i18n/en.json"
+    ],
+    "sectionCount": 11,
+    "testsExecution": "NOTRUN",
+    "needCount": 7,
+    "citationCorrections": [
+      {
+        "anchor": "startInstant, endInstantExclusive",
+        "correctedLine": 156,
+        "originalLine": 158,
+        "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx"
+      },
+      {
+        "anchor": "transData?.data",
+        "correctedLine": 175,
+        "originalLine": 176,
+        "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx"
+      },
+      {
+        "anchor": "All FSMs healthy",
+        "correctedLine": 108,
+        "originalLine": 101,
+        "file": "web/src/features/system/components/FSMHealthPanel.tsx"
+      },
+      {
+        "anchor": "selectedTransition?.ts",
+        "correctedLine": 458,
+        "originalLine": 457,
+        "file": "web/src/features/system/pages/StateMachineDebuggerPage.tsx"
+      },
+      {
+        "anchor": "queryByText('Transition detail')",
+        "correctedLine": 396,
+        "originalLine": 395,
+        "file": "web/src/features/system/pages/__tests__/StateMachineDebuggerPage.test.tsx"
+      }
+    ],
+    "candidateCount": 5,
+    "changedInputCount": 1,
+    "inputPins": 49,
+    "validatedAtUtc": "2026-10-14T02:49:30.9772851Z",
+    "confirmedIssueCount": 13,
+    "citationCount": 46
+  },
+  "release": {
+    "artifacts": "RELEASE",
+    "atUtc": "2026-10-14T02:50:31.1926072+00:00",
+    "source": "None claimed; source/test/catalog/queue/Git readonly",
+    "commands": "RELEASE; all audit commands finish on this invocation; no services started",
+    "beforeHardDeadline": true
+  },
+  "postWriteValidation": {
+    "citationsChecked": 46,
+    "nativePage": "NOTRUN",
+    "baselineChanged": [
+      "web/src/i18n/en.json"
+    ],
+    "inputPins": 49,
+    "atUtc": "2026-10-14T02:50:08.8462706Z",
+    "numericExit": 0,
+    "tests": "NOTRUN",
+    "testDeclarations": 255.0,
+    "candidateCount": 5,
+    "hardDeadlineMet": true,
+    "needCount": 7,
+    "sections": 11,
+    "postComparisonDrift": [],
+    "invalidCitations": 0,
+    "softDeadlineMet": false,
+    "baselineMatches": 48,
+    "issueCount": 13,
+    "jsonParse": "PASS",
+    "clockCorrection": "C21 used mixed UTC/local DateTime comparison; C22 reparsed automatic ConvertFrom-Json DateTime through culture string and again lost zone. C23 compares actual C21 UTC literal 2026-10-14T02:50:08.8462706Z against UTC hard deadline02:54:12.925Z, true. Soft deadline genuinely exceeded. Prior false clock results retained in log."
+  },
+  "dispositionContinuation": {
+    "status": "DISPOSITIONS_COMPLETE",
+    "attempt": 1,
+    "purpose": "Complete the retained findings' missing queue dispositions only; not another audit, implementation, test run or page acceptance.",
+    "noChangeCheck": {
+      "result": "AMENDMENT_NEEDED",
+      "reason": "The retained report has 13 findings and seven proposed need groups, but no per-finding queue disposition or exact fix-owner scopes. None of those debugger fix objectives has a matching narrow queue owner in the inspected snapshot.",
+      "completedWorkPreserved": "Do not redispatch audit-page-195, phase5-page-system-state-machine-debugger, the shared relative-date root, or the accepted mobile adapter."
+    },
+    "clock": {
+      "authority": "Current queue continuation reservation is earlier than this request; original report clock and release remain unchanged.",
+      "reservationUtc": "2026-10-14T05:06:00Z",
+      "returnByUtc": "2026-10-14T05:26:00Z",
+      "hardByUtc": "2026-10-14T05:31:00Z",
+      "queueActor": "af84f63c-5b7e-4cc2-a6bd-8064ddecc585",
+      "queueActorEvidence": "migration-queue.md:350; queue declaration, not a new lifecycle census"
+    },
+    "preservation": {
+      "historicalReportSha256": "7D93135F16FE446C5696686CEDBE9C901BD756794C3ED1A22F80C16BCEB6CB72",
+      "historicalReportSemanticSha256": "70BA709FBD6E1F5EA591E2F4938CF60F00635DA1B4D6D058614192B165AC67B8",
+      "historicalLogSha256": "FE8B16FF76A49926495BAFAFA422E247F1259B059B70B559DBD8BBE04D2E23D3",
+      "policy": "Every original top-level property is retained. Original PARTIAL status, command-ledger gaps, deadlines, catalog drift, hashes, citations, findings, candidates, tests and native NOTRUN remain historical evidence, not refreshed results.",
+      "sourceCurrency": "NOT_REAUDITED; no source or test file read/hash/scan during this continuation. Fix owners must check current claimed inputs before implementation."
+    },
+    "queueSnapshot": {
+      "observedAtUtc": "2026-10-14T05:09:13.6883099Z",
+      "sha256": "A2D3EC0FF19F823D5AA844D1D975D873A720618AA184B6C509AC89BD077A22C5",
+      "method": "Read-only queue identity/file-claim search, followed by structured primary-row filtering for exact debugger/support paths and relevant shared roots. No queue writes.",
+      "item": { "line": 350, "status": "[~]", "attempt": 1, "dependsOn": "phase5-page-system-state-machine-debugger" },
+      "matchingDebuggerFixOwners": [],
+      "relatedCompletedObjectives": [
+        { "item": "audit-page-195", "line": 1107, "status": "[x]", "commit": "1f8d71bb20", "disposition": "KEEP_COMPLETED; historical inventory audit, not the missing Phase6 fix objectives" },
+        { "item": "phase5-page-system-state-machine-debugger", "line": 2361, "status": "[x]", "commit": "607d5091c614b204ec4edf5ab453f2dfc45da1f3", "disposition": "KEEP_COMPLETED; source migration is not complete native/page QA" },
+        { "item": "phase6-fix-relative-future-dates", "line": 737, "status": "[x]", "commit": "pending exact fixture receipt", "disposition": "EXCLUDE_DUPLICATE_SHARED_ROOT; preserve its recorded 23 passes, do not rerun or edit dateFormat.ts/dateFormat.contract.test.ts" },
+        { "item": "phase6-fix-advanced-evidence-date-preferences", "line": 772, "status": "[x]", "commit": "22ba090e530fcd3ed24df169aaf2a322c6989eb4", "disposition": "KEEP_COMPLETED; different domain callers, does not cover F08 debugger callers" },
+        { "item": "phase3-mobile-data-table-adapter", "line": 1757, "status": "[x]", "commit": "b2712c75c0", "disposition": "REUSE_COMPLETED_CAPABILITY; F06 is local adoption, not another adapter implementation" },
+        { "item": "phase3-full-test-fsm-badge-semantic-fixture", "line": 1592, "status": "[x]", "commit": "see archived receipts", "disposition": "KEEP_COMPLETED; badge fixture does not cover F09's three other indicator owners" }
+      ],
+      "concurrencyLimit": "Snapshot authority only. Queue line numbers/statuses can move; orchestrator must reread exact identities and claims before creating or dispatching any proposed item."
+    },
+    "findingDispositions": [
+      { "finding": "F01", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N01", "owner": null, "reason": "Selected and previous snapshot trust/comparison absence require the local page/inspector fix; no matching queue owner." },
+      { "finding": "F02", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N02", "owner": null, "reason": "Exact historical chart bounds need page-to-chart integration, not a new range picker or backend aggregate." },
+      { "finding": "F03", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N03", "owner": null, "reason": "Loaded-page/window captions must not claim last24h or whole-range aggregate coverage." },
+      { "finding": "F04", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N03", "owner": null, "reason": "Empty/unknown/paused/page-limited evidence is not authoritative all-FSM health; share the loaded-evidence qualification owner with F03." },
+      { "finding": "F05", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N04a", "owner": null, "reason": "Preserve incoming historical evidence and supported scope through initial resolution; do not add an unproved transition-by-id API." },
+      { "finding": "F06", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N04b", "owner": null, "reason": "The accepted mobile adapter already exists; adopt locally so direct detail action and all fields remain reachable." },
+      { "finding": "F07", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N04b", "owner": null, "reason": "Selection/disclosure semantics belong to the same local row-detail/tick interaction owner, not a shared table-engine rewrite." },
+      { "finding": "F08", "disposition": "CONFIRMED_CALLER_NEEDS_QUEUE_OWNER_SHARED_ROOT_EXCLUDED", "need": "N05", "owner": null, "excludedDuplicateOwner": "phase6-fix-relative-future-dates", "reason": "Confirmed preference bypass remains in the five named debugger callers. Shared future-date handling is already owned/completed; advanced EvidencePanel/AnalysisBrief completion is not coverage of these callers." },
+      { "finding": "F09", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N06", "owner": null, "reason": "Remove only the three retained source-confirmed decorative loops; do not reopen the completed vehicle badge or global motion work." },
+      { "finding": "F10", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N02", "owner": null, "reason": "Static 0.3 area tint at the same chart owner exceeds the source contract; composed contrast remains unmeasured." },
+      { "finding": "F11", "disposition": "CONFIRMED_LOCAL_MODE_NEEDS_QUEUE_OWNER_CONDITIONAL_ENVELOPE_REMAINDER", "need": "N04c", "owner": null, "reason": "Missing charging/speed facts must not establish Idle. Reconcile only provenance actually supported by current typed evidence; the optional local live/data_source declaration is not proof that the backend emits those fields.", "conditionalRemainder": "Actual endpoint freshness/provenance capabilities remain an integration unknown. No unconditional hook/type/router/backend repair owner is requested." },
+      { "finding": "F12", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N07", "owner": null, "reason": "Exactly two old heading-absence assertions contradict the retained detail shell. Source-contract drift, not an executed failing test; preserve every original declaration/body except the justified expectations." },
+      { "finding": "F13", "disposition": "CONFIRMED_NEEDS_QUEUE_OWNER", "need": "N01", "owner": null, "reason": "Transition-dependent mini/time timelines need independent initial/paused state and retained refresh evidence; combine with F01 at the page trust boundary." }
+    ],
+    "confirmedOwnerRequests": [
+      {
+        "need": "N01",
+        "proposedItem": "phase6-fix-debugger-snapshot-and-timeline-trust",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F01", "F13"],
+        "actualOwner": null,
+        "role": "Exclusive local debugger query-trust integration owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.test.tsx"
+        ],
+        "acceptanceNeed": "Independent selected/previous pending, paused, fatal, retained-error/retry and unavailable-comparison presentation; independent initial/paused mini/time timeline state; do not dim unknown comparisons as unchanged or clear retained signals.",
+        "boundary": "Use existing hooks/source-state contracts. Page supplies timeline trust presentation; chart data/bounds/tint belongs to N02. No hook/type/shared-source-state edits."
+      },
+      {
+        "need": "N02",
+        "proposedItem": "phase6-fix-debugger-timeline-bounds-and-tint",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F02", "F10"],
+        "actualOwner": null,
+        "role": "Exclusive debugger time-chart integration owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx",
+          "web\\src\\features\\system\\components\\FSMTimelineChart.tsx",
+          "web\\src\\features\\system\\components\\FSMTimelineChart.test.tsx"
+        ],
+        "acceptanceNeed": "Exact [startInstant,endInstantExclusive) historical buckets, end exclusivity, existing all-time/nonfinite/bucket-cap behavior and loaded-subset truth; area tint at most8% without changing series/axes/palette/data.",
+        "boundary": "No new aggregate, range control, date helper or renderer. Coordinate page trust with N01 and caller formatting with N05."
+      },
+      {
+        "need": "N03",
+        "proposedItem": "phase6-fix-debugger-loaded-page-scope-and-health",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F03", "F04"],
+        "actualOwner": null,
+        "role": "Exclusive loaded-evidence scope/health owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx",
+          "web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.windowing.test.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\LiveControls.tsx",
+          "web\\src\\features\\system\\components\\FSMHealthPanel.tsx",
+          "web\\src\\features\\system\\components\\FSMHealthPanel.test.tsx"
+        ],
+        "acceptanceNeed": "Distinguish loaded page, local window/cleared buffer and matching server total; qualify health to available rows and show unknown/disabled/paused/success-empty separately. Retain actual detector behavior and pagination.",
+        "boundary": "No fabricated full-range health/analytics endpoint, new thresholds or telemetry/FSM actions. Old last24h/all-clear copy assertions may be repaired only where this confirmed scope contract requires it."
+      },
+      {
+        "need": "N04a",
+        "parentHistoricalNeed": "N04",
+        "proposedItem": "phase6-fix-debugger-historical-permalink",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F05"],
+        "actualOwner": null,
+        "role": "Exclusive debugger historical-link state owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx"
+        ],
+        "acceptanceNeed": "Do not erase valid incoming at while rows resolve; preserve supported URL scope and express unresolved/off-page selection/link limits honestly, using existing snapshot capability.",
+        "boundary": "No new fetch, endpoint, global workspace owner or changed freeze/feed contract. C01/C05 remain conditional."
+      },
+      {
+        "need": "N04b",
+        "parentHistoricalNeed": "N04",
+        "proposedItem": "phase6-fix-debugger-mobile-detail-and-selection-semantics",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F06", "F07"],
+        "actualOwner": null,
+        "role": "Exclusive debugger row-detail/tick interaction owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\StateTimeline.tsx"
+        ],
+        "acceptanceNeed": "Local existing mobile presentation must preserve seven log fields and direct per-row detail action; appropriate selected/disclosure ARIA and stable detail association for both row control and timeline tick. Keep labels, keyboard and always-visible detail shell.",
+        "boundary": "Existing page coverage is the named test owner; any needed dedicated tick test requires an explicit additional claim. No DataTable/MobileDataTableAdapter/barrel/global CSS edits or second table engine. C02 composed native geometry remains NOTRUN."
+      },
+      {
+        "need": "N04c",
+        "parentHistoricalNeed": "N04",
+        "proposedItem": "phase6-fix-debugger-unknown-mode",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F11"],
+        "actualOwner": null,
+        "role": "Exclusive debugger local evidence/mode owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx"
+        ],
+        "acceptanceNeed": "Missing facts remain unknown while explicit driving/charging/asleep/parked facts keep intended mode. Do not represent HTTP refresh time as sensor observation time; use only actual typed evidence for provenance.",
+        "boundary": "Read current response contract before choosing provenance. If required observation metadata is unavailable, report that integration gap instead of adding imagined fields or backend work."
+      },
+      {
+        "need": "N05",
+        "proposedItem": "phase6-fix-debugger-effective-format-preferences",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F08"],
+        "actualOwner": null,
+        "role": "Exclusive debugger display-boundary preference owner",
+        "files": [
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.tsx",
+          "web\\src\\features\\system\\pages\\StateMachineDebuggerPage.test.tsx",
+          "web\\src\\features\\system\\components\\FSMTimelineChart.tsx",
+          "web\\src\\features\\system\\components\\FSMTimelineChart.test.tsx",
+          "web\\src\\features\\system\\components\\statstrip-fsm\\FSMOperationalBrief.tsx",
+          "web\\src\\features\\system\\components\\statstrip-fsm\\FSMOperationalBrief.test.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\StateTimeline.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.tsx",
+          "web\\src\\features\\system\\components\\state-machine\\SnapshotInspector.test.tsx"
+        ],
+        "acceptanceNeed": "Effective locale/numbering/timezone/hour-cycle at the five existing duration/date/freshness callers; preserve raw SI/copy payloads/rounding/null and reactivity.",
+        "boundary": "Reuse existing useDateFormat/display formatters. Do not edit dateFormat.ts/dateFormat.contract.test.ts/useDateFormat/shared types/catalogs, rerun shared future-date proof or call deprecated converters. Existing relative helper is already global-locale aware."
+      },
+      {
+        "need": "N06",
+        "proposedItem": "phase6-fix-debugger-static-status-indicators",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F09"],
+        "actualOwner": null,
+        "role": "Exclusive three-indicator presentation owner",
+        "files": [
+          "web\\src\\features\\system\\components\\state-machine\\LiveControls.tsx",
+          "web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.windowing.test.tsx",
+          "web\\src\\features\\system\\components\\FSMSubFSMPanel.tsx",
+          "web\\src\\features\\system\\components\\FSMSubFSMPanel.test.tsx",
+          "web\\src\\features\\system\\components\\FSMStateDiagram.tsx",
+          "web\\src\\features\\system\\components\\FSMStateDiagram.test.tsx"
+        ],
+        "acceptanceNeed": "Static live/current indicators instead of the three indefinite decorative pulses, preserving source labels, session states, selected cues and all diagram nodes/edges.",
+        "boundary": "No global motion/CSS/token/badge change; coordinate LiveControls and its windowing fixture with N03."
+      },
+      {
+        "need": "N07",
+        "proposedItem": "phase6-fix-debugger-original-detail-shell-assertions",
+        "queueDisposition": "NOT_QUEUED_NEEDS_ORCHESTRATOR",
+        "findings": ["F12"],
+        "actualOwner": null,
+        "role": "Exclusive original-test expectation owner",
+        "files": ["web\\src\\features\\system\\pages\\__tests__\\StateMachineDebuggerPage.test.tsx"],
+        "acceptanceNeed": "Repair only the two obsolete heading-absence expectations at retained lines368-370/396 to assert the existing visible detail shell and selection/content behavior. Preserve all17 original declarations and unrelated behaviors.",
+        "boundary": "No page edit, deletion/skip of original tests, global fixture campaign or claim of an executed failure. Do not rerun unchanged accepted Phase5 proof."
+      }
+    ],
+    "conditionalDispositions": [
+      { "candidate": "C01", "disposition": "CONDITIONAL_NOT_QUEUED", "actualOwner": null, "reason": "Selection-freeze versus feed-freeze product semantics are unresolved; polling continuation alone does not prove the intended contract.", "promotionRequires": "Existing debugger product/interaction authority establishes intended freeze behavior, followed by authorized causal coverage. No FSM/replay/vehicle action is authorized here." },
+      { "candidate": "C02", "disposition": "CONDITIONAL_NATIVE_ACCEPTANCE_NOT_QUEUED_AS_DEFECT", "actualOwner": null, "reason": "Dense ticks, wrapping, opacity contrast and chart-alternative equivalence were not measured. F06/F07/F10 confirmed source defects are assigned separately and do not prove these candidate failures.", "promotionRequires": "Authorized synthetic read-only browser/assistive acceptance with existing locks and prescribed widths/containers/text scaling/RTL/keyboard/forced-colors/composed contrast; native NOTRUN preserved." },
+      { "candidate": "C03", "disposition": "CONDITIONAL_RAW_DIAGNOSTIC_CONTRACT_NOT_QUEUED", "actualOwner": null, "reason": "Raw snapshot values may be intentional diagnostics; unit metadata/display contract is missing, so String(v) alone is not a confirmed conversion defect.", "promotionRequires": "Raw-versus-display contract and actual signal-unit metadata; keep SI/raw hooks and raw copy. No speculative converter or schema owner." },
+      { "candidate": "C04", "disposition": "CONDITIONAL_AI_INTEGRATION_NOT_QUEUED", "actualOwner": null, "reason": "An inclusive-end comment does not establish actual endpoint bounds. Auth/privacy/boundary/scope cancellation remain unproved; opt-in/AI-off gates are intentional, not missing sections.", "promotionRequires": "Authorized existing endpoint/consent/privacy/bounds contract evidence and matching scope-cancellation coverage; no provider/network/AI action here." },
+      { "candidate": "C05", "disposition": "CONDITIONAL_URL_CONTRACT_NOT_QUEUED", "actualOwner": null, "reason": "Unvalidated initial token alone does not settle backend validation or intended same-route navigation synchronization.", "promotionRequires": "Existing validation/navigation contract evidence; keep separate from F05's confirmed initial at deletion and do not invent an API defect." }
+    ],
+    "coordination": {
+      "queueAuthority": "Orchestrator alone may create/assign the nine proposed items. They are needs, not queue rows, completed fixes or running actors.",
+      "historicalNeedMapping": "Original seven N01-N07 groups remain intact. Historical broad N04 is refined into N04a permalink, N04b mobile/detail selection semantics and N04c unknown mode: nine final bounded owner requests covering all13 findings exactly once.",
+      "serialization": [
+        "N01/N02/N03/N04a/N04b/N04c/N05 overlap StateMachineDebuggerPage.tsx and its colocated test: combine only within the time box or dispatch serially under exact file claims.",
+        "N01/N05 overlap SnapshotInspector; N02/N05 overlap FSMTimelineChart; N04b/N05 overlap StateTimeline.",
+        "N03/N06 overlap LiveControls and the original windowing test; serialize those claims.",
+        "N07 has only the original pages/__tests__/StateMachineDebuggerPage.test.tsx write scope; require a stable page contract when verifying it. No artificial whole-phase dependency."
+      ],
+      "sharedOwnersReadonly": "Catalogs, queue, types, router, hooks, date utilities, shared UI, barrels, CSS/tokens and all source files remain read-only in this QA continuation.",
+      "catalogNeed": "Only if a confirmed fix needs new/changed canonical human copy: implementing owner must report exact keys/fallbacks to the serialized parent catalog owner. No unproved missing-key finding or generic translation campaign.",
+      "integrationRemainders": "F11 actual observation envelope and C01-C05 conditions are not additional confirmed fix requests.",
+      "noAcceptancePromotion": "Disposition closure does not resolve any defect or establish source currency, browser/native/full-page/FSM/AI/backend acceptance."
+    },
+    "counts": {
+      "originalFindings": 13,
+      "findingDispositions": 13,
+      "originalNeedGroups": 7,
+      "confirmedOwnerRequests": 9,
+      "matchingExistingDebuggerFixOwners": 0,
+      "conditionalCandidates": 5,
+      "conditionalDispositions": 5,
+      "excludedDuplicateSharedRoots": 1,
+      "newQueueRowsWritten": 0,
+      "newSourceChanges": 0,
+      "testsExecuted": 0
+    },
+    "execution": {
+      "sourceAudit": "NOTRUN",
+      "auditScript": "NOTRUN; audit skill was loaded, but prohibited rerun was not executed",
+      "sourceHashOrCitationRevalidation": "NOTRUN",
+      "tests": "NOTRUN",
+      "lint": "NOTRUN",
+      "compiler": "NOTRUN",
+      "browser": "NOTRUN",
+      "nativeAcceptance": "NOTRUN",
+      "pageAcceptance": "NOTRUN",
+      "network": "NOTRUN",
+      "FSMReplayVehicleBusinessActions": "NOTRUN",
+      "Git": "NOTRUN",
+      "helpersServerInstallsDockerNestedAgents": "NOTRUN",
+      "artifactValidation": "JSON/count/cross-reference/original-report semantic validation PASS, exit0. Subsequent original-log byte-prefix check FAILED, exit1; LF/CRLF/BOM reconstruction also FAILED, exit1. Failures are disclosed below, not promoted to a pass. Not an application test."
+    },
+    "artifactValidation": {
+      "atUtc": "2026-10-14T05:14:09.0803542Z",
+      "shellId": "4323",
+      "numericExit": 0,
+      "jsonParse": "PASS",
+      "originalTopLevelPropertiesSemanticallyUnchanged": true,
+      "historicalReportSemanticSha256": "70BA709FBD6E1F5EA591E2F4938CF60F00635DA1B4D6D058614192B165AC67B8",
+      "findingDispositions": "13/13",
+      "uniqueRequestFindingCoverage": "13/13",
+      "confirmedOwnerRequests": 9,
+      "candidateDispositions": "5/5",
+      "queueRecheck": {
+        "line": 350,
+        "status": "[~]",
+        "attempt": 1,
+        "sha256": "7D486E556799A3765B4655E7A051BAF28570737955D972961B9FB411E65784F3",
+        "matchingDebuggerFixOwners": 0,
+        "limit": "Queue changed since initial pin; no attribution or stable whole-queue claim. Exact item and absent matching fix owners were rechecked."
+      },
+      "beforeSoftDeadline": true,
+      "beforeHardDeadline": true,
+      "sourceOrNativeValidation": "NOTRUN",
+      "logBytePreservation": {
+        "status": "FAILED_NOT_A_PASS",
+        "shellId": "4360",
+        "numericExit": 1,
+        "error": "Historical log byte prefix not preserved",
+        "followupShellId": "4369",
+        "followupNumericExit": 1,
+        "followupError": "Historical log content reconstruction failed",
+        "observedAtUtc": "2026-10-14T05:17:28.7293905Z",
+        "currentLineEndings": "LF; CRLF count0",
+        "limit": "The authorized append-only textual patch normalized the log's line representation; original byte-prefix hash did not match, including bounded uniform LF/CRLF/BOM reconstructions. Exact original byte representation is not recovered or certified. Original displayed evidence was retained by the append-only patch; original report's entire semantic hash still matches. No failed preservation check is claimed passing."
+      }
+    },
+    "release": {
+      "state": "RELEASE_ARTIFACT_CLAIMS_ON_TERMINAL_RETURN",
+      "files": [
+        "docs\\frontend-audits\\phase6-qa-system-state-machine-debugger.json",
+        "web\\logs\\phase6-qa-system-state-machine-debugger.log"
+      ],
+      "needs": "Nine proposed exact owner scopes, not queued; shared future-date root excluded and five conditional candidates held. Parent alone queues/intakes.",
+      "source": "No source lease or source writes; all code remains read-only.",
+      "commands": "Only bounded read-only artifact/queue commands; no service, helper, runner, browser, business action or agent started.",
+      "acceptance": "Disposition completion only. Historical PARTIAL command ledger and native/page/tests NOTRUN are not repaired or promoted."
+    }
+  }
+}
