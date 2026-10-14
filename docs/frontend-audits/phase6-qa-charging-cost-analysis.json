@@ -54,7 +54,10 @@
       "mechanism": "Calendar start/end are sent instead of startInstant/endInstantExclusive. Header supports rolling 24h/live, so these are workspace bounds, NOT independent business form dates. useRangeState.ts:117-124 defines precise/timezone-exclusive instants; useCharging.ts:40-43 forwards supplied strings unchanged; internal/api/charging/handler.go:142-143 parses date range; internal/api/apiparams/params.go:96-104 documents date-only UTC versus RFC3339 exclusive end.",
       "sourceRepro": "Select a non-UTC local calendar day or rolling 24h ending mid-day: request contains YYYY-MM-DD bounds and loses offset/time-of-day. Source trace only, no API executed.",
       "fix": "Thread existing exact instant bounds through typed hook; keep aliases, selected vehicle, shared picker and server semantics.",
-      "dedup": "Reconfirmed audit-page-086 architectureIssues MDC-032; no exact cost corrective queue row found. Do not create another broad range/root campaign."
+      "dedup": "Reconfirmed audit-page-086 architectureIssues MDC-032; no exact cost corrective queue row found. Do not create another broad range/root campaign.",
+      "line": 60,
+      "owner": "integration",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA02",
@@ -70,7 +73,10 @@
       "mechanism": "Sums cost_decimal without cost_currency; api/types.ts:178-179 exposes both. useFormatting.ts:54-56 prefixes saved currency symbol, not FX. Derived types.ts:9-11 explicitly carry raw amount under display denomination.",
       "sourceRepro": "Synthetic one USD amount and one EUR amount become one summed total and one saved-symbol display. Changing display currency does not convert amounts. No personal data used.",
       "fix": "Retain denomination and mixed/unknown status; do not sum unlike currencies or invent exchange rates.",
-      "dedup": "Existing audit-page-086 source-currency root; related Phase6 report matches are references, not evidence of an assigned shared fix."
+      "dedup": "Existing audit-page-086 source-currency root; related Phase6 report matches are references, not evidence of an assigned shared fix.",
+      "line": 43,
+      "owner": "integration",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA03",
@@ -92,7 +98,10 @@
       "mechanism": "Unknown cost/energy/distance is zeroed; blended denominator includes all energy while numerator includes only known prices. Nonempty all-unpriced history yields numeric zero spend/rate and modeled savings. Zero denominator returns zero rate, not unavailable. ForecastDetails.tsx:35-36 likewise coerces absent share leaves to zero when parent breakdown exists.",
       "sourceRepro": "Synthetic priced 10-unit/10-kWh session plus unpriced 10-kWh session produces 10/20=0.5 instead of priced coverage 1 or partial unknown; a nonempty missing-energy history produces rate0. Source arithmetic only, not an executed test.",
       "fix": "Preserve priced/energy coverage and genuine zero/free; expose unknown/partial rates and propagate raw missingness before render.",
-      "dedup": "Existing audit-page-086 unknown-as-zero root; forecast nullable-leaf chart site is an additional mechanism under the same root, not another finding."
+      "dedup": "Existing audit-page-086 unknown-as-zero root; forecast nullable-leaf chart site is an additional mechanism under the same root, not another finding.",
+      "line": 43,
+      "owner": "feature derivation",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA04",
@@ -112,7 +121,10 @@
       "mechanism": "distanceAddedM from charging-curve/helpers.ts:27-30 uses end_odometer_m minus start_odometer_m DURING charging, not distance driven between charges or energy-added range. Stationary paid charging with equal odometers gives null then0, zero cost-per-distance and zero gas-distance equivalent.",
       "sourceRepro": "Synthetic paid positive-energy stationary session with equal start/end odometers produces totalDistanceM0, costPerDist0 and gasoline comparison0 although charging spend is positive. No actual hook/test executed.",
       "fix": "Do not present stationary charging odometer delta as driven-distance denominator; retain unavailable status until verified distance evidence is available.",
-      "dedup": "Related to existing missing-distance root but distinct physical denominator mechanism; no narrow queued corrective cost scope found."
+      "dedup": "Related to existing missing-distance root but distinct physical denominator mechanism; no narrow queued corrective cost scope found.",
+      "line": 50,
+      "owner": "integration/domain denominator",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA05",
@@ -126,7 +138,10 @@
       "mechanism": "gas_unit=liter changes displayed price suffix to L while gasPrice, KWH_PER_GALLON and calculator assumptions remain US-gallon based.",
       "sourceRepro": "Change preference to liter: unchanged gasPrice is displayed per L in summary but per gal in calculator:55; no conversion is applied.",
       "fix": "Keep model basis explicit or use verified existing volume conversion; preserve defaults and raw assumption values.",
-      "dedup": "Reconfirmed audit-page-086 gas unit root."
+      "dedup": "Reconfirmed audit-page-086 gas unit root.",
+      "line": 31,
+      "owner": "feature presentation",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA06",
@@ -142,7 +157,10 @@
       "mechanism": "Inputs hardcode $/gal and $/kWh while currency metrics use saved symbol/ISO preferences. Model defaults are documented USD, but no denomination conversion or display reconciliation exists.",
       "sourceRepro": "Set a non-dollar display currency: assumptions retain dollar suffix while outputs use that display denomination.",
       "fix": "Disclose actual assumption currency and localize labels; do not silently relabel USD assumptions as converted values.",
-      "dedup": "Reconfirmed audit-page-086 fixed calculator suffix root, separate from source-currency aggregation."
+      "dedup": "Reconfirmed audit-page-086 fixed calculator suffix root, separate from source-currency aggregation.",
+      "line": 52,
+      "owner": "feature presentation/assumption denomination",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA07",
@@ -160,7 +178,10 @@
       "mechanism": "Month and hour groupings use browser-local Date getters and trend dates use formatter defaults; no selected/vehicle display timezone is passed. HH:00 labels ignore 12h preference. No independent accounting/business calendar selector exists to justify divergence from workspace scope.",
       "sourceRepro": "An instant near month/day boundary groups differently in browser UTC versus saved/vehicle America/Los_Angeles; fixed hourly labels stay 24h regardless of preference. Source-only mechanism, no timezone runtime probe.",
       "fix": "Use existing authoritative timezone/date formatting owner and disclose accounting timezone; retain all session counts and business boundaries.",
-      "dedup": "Reconfirmed audit-page-086 browser-calendar/timezone root."
+      "dedup": "Reconfirmed audit-page-086 browser-calendar/timezone root.",
+      "line": 75,
+      "owner": "integration/timezone owner",
+      "confidence": "high for browser-local getters/fixed 24h labels; intended saved/vehicle timezone integration medium/unknown. No proven difference from the current header default browser timezone is asserted."
     },
     {
       "id": "CA08",
@@ -175,7 +196,10 @@
       "mechanism": "Cheapest/priciest rank average cost PER SESSION, not currency per energy or utility tariff. stat-modernization/TimeOfUseAnalysis.tsx:41 calls it Electricity Rate Analysis; fixed classifyHour thresholds at cost-analysis/TimeOfUseAnalysis.tsx:38-43 are not tariff evidence.",
       "sourceRepro": "Synthetic 1-kWh session costing1 and 20-kWh session costing4 rank first hour cheapest per session even though second is0.2/kWh versus1/kWh. Arithmetic reasoning, no executed test.",
       "fix": "Label per-session spend honestly or obtain valid energy-paired rate denominator; show fixed off-peak periods as assumptions, not actual utility rates.",
-      "dedup": "Existing audit-page-086 fixed-TOU assumption context retained; newly explicit ranking denominator detail, not a backend tariff task."
+      "dedup": "Existing audit-page-086 fixed-TOU assumption context retained; newly explicit ranking denominator detail, not a backend tariff task.",
+      "line": 152,
+      "owner": "feature label/denominator",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA09",
@@ -193,7 +217,10 @@
       "mechanism": "Total Savings uses gasCost minus ACTUAL totalCost; Monthly/Yearly Savings uses gasCost minus MODELED energy*electricityRate divided by count of occupied monthly buckets. Adjacent calculator outputs therefore use different EV costs; inactive months and partial calendar months are absent from denominator.",
       "sourceRepro": "Hold actual sessions/gas/MPG fixed and change electricityRate: Monthly Savings changes while EV Cost(actual) and Total Savings do not. Sparse long selected range is annualized from active buckets, not complete elapsed months. Source-only reproducible dependency trace.",
       "fix": "Disclose separate modeled versus actual savings and observed-window coverage; do not silently change accepted calculation semantics or claim complete accounting months.",
-      "dedup": "No exact existing cost corrective row found; linked to existing returned-session/complete-window limitation, not counted as missing-lifetime UI."
+      "dedup": "No exact existing cost corrective row found; linked to existing returned-session/complete-window limitation, not counted as missing-lifetime UI.",
+      "line": 182,
+      "owner": "feature model disclosure",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA10",
@@ -209,7 +236,10 @@
       "mechanism": "Billing keeps own refetch and retained data, but uses raw isLoading/error, omits DataState/offline warning, and is absent from page.tsx:116-119 source descriptors. Paused retained reconciliation can still show reconciled/source status without equivalent offline freshness disclosure.",
       "sourceRepro": "Trace retained data plus paused query: no error/isLoading condition signals offline state here, unlike sessions/forecast StaleRefreshWarning at page:121-122. Runtime offline behavior NOTRUN.",
       "fix": "Reuse existing DataState warning for billing independently; preserve reconciliation reporting window and individual retry.",
-      "dedup": "Reconfirmed audit-page-086 independent billing trust root; retained payload is NOT erased and this is not a blanket section gate finding."
+      "dedup": "Reconfirmed audit-page-086 independent billing trust root; retained payload is NOT erased and this is not a blanket section gate finding.",
+      "line": 28,
+      "owner": "feature billing trust",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA11",
@@ -222,7 +252,10 @@
       "mechanism": "Chart says 95% Confidence while AICostForecastNarration.tsx:141-145 describes same band as APPROXIMATE prediction interval, not strict 95% confidence. Calibration itself not established by source audit.",
       "sourceRepro": "Compare the two source labels with AI feature enabled; contradictory descriptions exist without requiring backend execution.",
       "fix": "Use source-verified interval terminology consistently; keep all bounds/series and do not invent model calibration.",
-      "dedup": "Reconfirmed audit-page-086 interval wording root."
+      "dedup": "Reconfirmed audit-page-086 interval wording root.",
+      "line": 105,
+      "owner": "integration/model wording",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA12",
@@ -238,7 +271,10 @@
       "mechanism": "Forecast purple and rate cyan are fixed despite useChartPalette; actual area tint0.3 and confidence tint0.15 exceed design target. ForecastDetails.tsx:70-71 also fixes category fills. Dynamic swatch inline styles are acceptable and NOT this rule.",
       "sourceRepro": "Choose another saved palette: fixed forecast/rate and breakdown series colors stay unchanged by source dependency trace. Effective composed contrast/geometry not measured.",
       "fix": "Reuse existing palette and chart role tokens while preserving series identity, confidence band, legends, export and all numeric data.",
-      "dedup": "Reconfirmed audit-page-086 palette/surface root; no shared theme rewrite or effective glow claim."
+      "dedup": "Reconfirmed audit-page-086 palette/surface root; no shared theme rewrite or effective glow claim.",
+      "line": 98,
+      "owner": "feature chart preference adoption",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
     },
     {
       "id": "CA13",
@@ -254,7 +290,32 @@
       "mechanism": "categorizeCharger returns four English display labels; useCostAnalysisData.ts:125 passes name to stat-modernization/ChargerTypeBreakdown.tsx:72,83 directly, without t(). Chart fallback table uses same name.",
       "sourceRepro": "Non-English locale still shows Supercharger/Public DC/Work / L2/Home as category names. Static source proof, no mounted locale test.",
       "fix": "Keep stable category identity but translate display label at render boundary; do not mutate category accounting keys/colors.",
-      "dedup": "One localization root with four exact code occurrences; not four independent repair scopes."
+      "dedup": "One localization root with four exact code occurrences; not four independent repair scopes.",
+      "line": 6,
+      "owner": "feature category render/i18n integration",
+      "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN"
+    },
+    {
+      "id": "CA14",
+      "rule": "mobile-monthly-field-reachability",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+      "line": 129,
+      "lines": [
+        24,
+        34,
+        41,
+        57,
+        64,
+        125,
+        129
+      ],
+      "mechanism": "The page uses mobileColumns=[month,cost,savings] without mobilePresentation or renderExpanded. DataTable mobileEnabled is mobilePresentation!=null at506; colHiddenClass at742-743 assigns hidden md:table-cell to the other four headers and cells, used at1180 and1535. The shared detail adapter is mounted only at1404 when mobileActive AND mobilePresentation. Column visibility/reorder do not change the fixed mobile allow-list. Therefore this caller provides no narrow-width UI path for sessions, energy, avgCostPerKwh or gasEquiv.",
+      "sourceRepro": "Trace this caller at below the existing md breakpoint: the four non-allowlisted cells and headers receive hidden, and the detail-adapter branch is disabled by omitted props. No rendered browser/OS/viewport interaction was executed.",
+      "fix": "Adopt the existing caller-owned MobileDataTablePresentation with full details, or an existing reachable expansion/contained full-column table strategy. Preserve all seven fields, sorting, persistence tableId, pagination, source numeric/currency values and loaded-row export scope. Do not rewrite DataTable, remove the columns, or create a new adapter.",
+      "owner": "feature caller; separately queued source/test adoption needed",
+      "confidence": "high for source branch and absence of a caller-provided UI path; actual CSS rectangles, touch and screen-reader behavior NOTRUN",
+      "dedup": "Historical audit-page-086 responsive evidence explicitly left omitted metadata reachability unexercised, not a confirmed root. Current exact Phase6 queue item/file search found no MonthlyCostTable/cost-monthly corrective owner; other Phase6 report path search found zero mentions. Added as one root with four affected fields, not four issues."
     }
   ],
   "candidates": [
@@ -267,7 +328,10 @@
         98
       ],
       "mechanism": "Forecast DTO declares kwh and avg_km_per_month; ForecastDetails.tsx:140 and displayBoundary.ts:15-16 assume km conversion. Wire SI contract and handler model units were not traced sufficiently to confirm a conversion defect.",
-      "disposition": "INTEGRATION_UNKNOWN, already listed in audit-page-086; do not remigrate DTO/backend or invent dual-shape adapter"
+      "disposition": "INTEGRATION_UNKNOWN, already listed in audit-page-086; do not remigrate DTO/backend or invent dual-shape adapter",
+      "line": 73,
+      "confidence": "unpromoted; source observation only, interpretation/runtime evidence insufficient",
+      "currentReview": "Retained as candidate; no new wire-contract or rendering acceptance."
     },
     {
       "id": "CP02",
@@ -278,7 +342,10 @@
         80
       ],
       "mechanism": "Signed refunds/credits remain signed in StatGroup but pie cost slices and clamped0..100 bars may not faithfully convey negative shares. No Recharts/browser/native rendering executed.",
-      "disposition": "UNPROMOTED_RENDERING_CANDIDATE; valid monetary signs are preserved in source metrics; no claimed visual failure"
+      "disposition": "UNPROMOTED_RENDERING_CANDIDATE; valid monetary signs are preserved in source metrics; no claimed visual failure",
+      "line": 56,
+      "confidence": "unpromoted; source observation only, interpretation/runtime evidence insufficient",
+      "currentReview": "Retained as candidate; no new wire-contract or rendering acceptance."
     },
     {
       "id": "CP03",
@@ -288,7 +355,10 @@
         111
       ],
       "mechanism": "Static fallback/catalog comparison produced62 textual differences:6 in unmounted legacy TOU body,1 Unicode escape equivalent,55 mounted capitalization-only differences. Canonical keys all exist; cold-load translation behavior and dynamic/plural/object-form fallback validation not executed.",
-      "disposition": "NORMALIZATION_CANDIDATE_NOT_62_BUGS; preserve canonical catalog owner and read-only restriction"
+      "disposition": "NORMALIZATION_CANDIDATE_NOT_62_BUGS; preserve canonical catalog owner and read-only restriction",
+      "line": 43,
+      "confidence": "unpromoted; source observation only, interpretation/runtime evidence insufficient",
+      "currentReview": "Retained as candidate, not counted as a confirmed violation; CP03 catalog comparison remains historical and was not rerun."
     }
   ],
   "preservation": {
@@ -310,14 +380,15 @@
     "exceptions": "Dynamic entry.color/fallback, computed widths and TOU_PERIOD_COLORS lookups are valid inline styles. Recharts props are not raw HTML/direct-import violations. PageLayout wraps PageContainer. AI off-mode absence intentional. Fixed kWh/km/min labels are documented specialist display contracts, not automatically SI defects. Retained sessions/forecast fatal-vs-refresh split remains intact."
   },
   "counts": {
-    "confirmedRoots": 13,
+    "confirmedRoots": 14,
     "candidates": 3,
     "hardcodedStringOccurrences": 4,
     "newRepairItemsCreated": 0,
     "sourceFilesPinned": 27,
     "sourceDrift": 0,
     "literalTranslationKeys": 155,
-    "missingCanonicalKeys": 0
+    "missingCanonicalKeys": 0,
+    "newSourceRootsThisReview": 1
   },
   "ruleCounts": {
     "static-inline-style": 0,
@@ -331,12 +402,13 @@
     "missing-page-container": 0,
     "fetch-useeffect": 0
   },
-  "countBasis": "13 deduplicated semantic finding roots, including1 hardcoded-string root with4 occurrences. Do not sum guideline occurrence counts and semantic root counts. Grep zeros are scoped candidate scans plus source classification, not proof of application correctness. Backend11-14 OUT_OF_SCOPE; backend read only for route/date mechanism.",
+  "countBasis": "14 distinct confirmed source roots (13 retained + one CA14 mobile caller gap), 3 unpromoted candidates, four hardcoded category display occurrences under one CA13 root. Current action count is15 families, not dynamic DOM button count. Historical27 pins plus30 supplemental snapshots are distinct from mounted/test acceptance.",
   "priorityFixes": [
     "CA01-04 money/window/coverage/physical denominators",
     "CA05-09 assumptions/calendar/rate and modeled savings meanings",
     "CA10-11 independent trust and interval wording",
-    "CA12-13 preference/localization boundaries"
+    "CA12-13 preference/localization boundaries",
+    "CA14 restore all four omitted monthly fields through existing mobile detail/expansion strategy; no full-page remigration"
   ],
   "deduplication": {
     "historicalRootReport": "docs/frontend-audits/audit-page-086.json",
@@ -363,7 +435,7 @@
     "api": "NOTRUN",
     "browser": "NOTRUN",
     "auditWrapper": "NOTRUN",
-    "Git": "NOTRUN",
+    "Git": "Current invocation ran two unauthorized read-only Git commands in shell19; previous NOTRUN receipt preserved under previousReportReceipt.checks. No further Git.",
     "serversHelpersExtensionsAgentsParentHealth": "NOTRUN"
   },
   "commandExits": [
@@ -466,7 +538,7 @@
       "exit": 0
     }
   ],
-  "evidenceLimits": "Source dependency/arithmetic repro descriptions were not executed as app/tests. No runtime, native, model calibration, full-range completeness or financial user data inspected. Accepted commit is queue authority, not fresh Git proof. Read-only preservation claims are limited to compared source pins, not whole-repository state. Some large read outputs were tool-truncated and inspected in explicit ranges; failed checks retained honestly.",
+  "evidenceLimits": "Source dependency/arithmetic repro descriptions were not executed as app/tests. No runtime, native, model calibration, full-range completeness or financial user data inspected. Accepted commit is queue authority, not fresh Git proof. Read-only preservation claims are limited to compared source pins, not whole-repository state. Some large read outputs were tool-truncated and inspected in explicit ranges; failed checks retained honestly. Current run details, current exact rows/pins/counts, failures and Git incident are in currentSourceReview; earlier release/commands/catalog receipts are historical, not fresh acceptance.",
   "timeLimits": {
     "targetMinutes": "5-10",
     "maxMinutes": 20,
@@ -672,5 +744,1480 @@
       "sha256": "4AAC95B09653BE1A787AD3692955002529C2B4650D8008CFA57A4529CB487DD0",
       "match": true
     }
-  ]
+  ],
+  "filesRead": [
+    "migration-queue.md",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    ".agents/state.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".gitignore",
+    "docs/frontend-audits/audit-page-086.json",
+    "docs/frontend-audits/phase6-qa-charging-cost-analysis.json",
+    "web/src/features/charging/pages/CostAnalysisPage.tsx",
+    "web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx",
+    "web/src/features/charging/components/cost-analysis/CostPerKwhChart.tsx",
+    "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+    "web/src/features/charging/components/cost-analysis/CostSection.tsx",
+    "web/src/features/charging/components/cost-analysis/helpers.ts",
+    "web/src/features/charging/components/cost-analysis/constants.ts",
+    "web/src/features/charging/components/cost-analysis/types.ts",
+    "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+    "web/src/features/charging/components/cost-analysis/index.ts",
+    "web/src/features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx",
+    "web/src/features/charging/components/stat-modernization/BillVarianceCard.tsx",
+    "web/src/features/charging/components/stat-modernization/ChargerTypeBreakdown.tsx",
+    "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
+    "web/src/features/charging/components/stat-modernization/CostStatSection.tsx",
+    "web/src/features/charging/components/stat-modernization/CostSummaryCards.tsx",
+    "web/src/features/charging/components/stat-modernization/displayBoundary.ts",
+    "web/src/features/charging/components/stat-modernization/EnvironmentalImpact.tsx",
+    "web/src/features/charging/components/stat-modernization/ForecastDetails.tsx",
+    "web/src/features/charging/components/stat-modernization/index.ts",
+    "web/src/features/charging/components/stat-modernization/LifetimeSummary.tsx",
+    "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+    "web/src/features/charging/components/stat-modernization/TimeOfUseAnalysis.tsx",
+    "web/src/features/charging/components/stat-modernization/useSourceStatPeriod.ts",
+    "web/src/features/charging/components/stat-modernization/useStatFormatting.ts",
+    "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+    "web/src/components/ai/AICostForecastNarration.tsx",
+    "web/src/App.tsx",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/api/types.ts",
+    "web/src/types/charging.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useSavedViewUrl.ts",
+    "web/src/components/ui/PrintButton.tsx",
+    "web/src/features/charging/components/charging-curve/helpers.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/ui/MobileDataTableAdapter.tsx",
+    "web/src/components/data-display/SavedViewMenu.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/components/ai/AIFeatureCard.tsx",
+    "web/src/hooks/useAiStream.ts",
+    "web/src/components/ai/withAiFeature.tsx",
+    "web/src/lib/constants.ts",
+    "internal/api/router.go",
+    "internal/api/charging/handler.go",
+    "internal/api/apiparams/params.go"
+  ],
+  "routes": [
+    "/cost-analysis",
+    "/charging/costs"
+  ],
+  "previousReportReceipt": {
+    "sha256": "BA19EDF87CA9CDFA969FBD940D2E5E337A4CCE1155A97BD7DA65E228C8488457",
+    "bytes": 34492,
+    "status": "DONE",
+    "counts": {
+      "confirmedRoots": 13,
+      "candidates": 3,
+      "hardcodedStringOccurrences": 4,
+      "newRepairItemsCreated": 0,
+      "sourceFilesPinned": 27,
+      "sourceDrift": 0,
+      "literalTranslationKeys": 155,
+      "missingCanonicalKeys": 0
+    },
+    "ruleCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 4,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "checks": {
+      "builtinSourceScans": "RUN numeric0 after correction",
+      "catalogJsonReparse": "RUN numeric0 with -AsHashtable",
+      "reportJsonReparse": "RUN: in-memory serialized JSON reparsed then disk reparse below",
+      "sourcePinComparison": "RUN numeric0,27 same hashes",
+      "tests": "NOTRUN",
+      "native": "NOTRUN",
+      "typescript": "NOTRUN",
+      "build": "NOTRUN",
+      "lint": "NOTRUN",
+      "fullSuite": "NOTRUN",
+      "api": "NOTRUN",
+      "browser": "NOTRUN",
+      "auditWrapper": "NOTRUN",
+      "Git": "NOTRUN",
+      "serversHelpersExtensionsAgentsParentHealth": "NOTRUN"
+    },
+    "releaseUtc": "2026-10-13T23:36:43.9156071Z",
+    "sourcePins": [
+      {
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "finalSha256": "AE1C5648A1A92BADDE43EC9CE436CC8E4A16A1F622780353EF6048A4A3A11C0F",
+        "lineCount": 263,
+        "sha256": "AE1C5648A1A92BADDE43EC9CE436CC8E4A16A1F622780353EF6048A4A3A11C0F",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx",
+        "finalSha256": "E5109B2D0CD1EF94476C2B7270592BEBB2BEF5E2D8D02445E394A6A2636D2FBD",
+        "lineCount": 123,
+        "sha256": "E5109B2D0CD1EF94476C2B7270592BEBB2BEF5E2D8D02445E394A6A2636D2FBD",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/CostPerKwhChart.tsx",
+        "finalSha256": "721CCAA6A37E4FA0DFF12F688324F60D0FE9FDA5834DA0EE0770FA6A4CD98020",
+        "lineCount": 97,
+        "sha256": "721CCAA6A37E4FA0DFF12F688324F60D0FE9FDA5834DA0EE0770FA6A4CD98020",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+        "finalSha256": "15DDDEEED9983ED9B9F26E14AD1A1146ED0FA349B282E794E13DA7781AE989F7",
+        "lineCount": 141,
+        "sha256": "15DDDEEED9983ED9B9F26E14AD1A1146ED0FA349B282E794E13DA7781AE989F7",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/CostSection.tsx",
+        "finalSha256": "2145D62680BF21AE60484B64533DFDD72D78C6337FA4EA9CDCF066A317AE10A6",
+        "lineCount": 93,
+        "sha256": "2145D62680BF21AE60484B64533DFDD72D78C6337FA4EA9CDCF066A317AE10A6",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+        "finalSha256": "6A204D3F86456F3BAF6EE68CF2DE946902C59BAE185E34FE17EF99FDF2AABC4B",
+        "lineCount": 28,
+        "sha256": "6A204D3F86456F3BAF6EE68CF2DE946902C59BAE185E34FE17EF99FDF2AABC4B",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/constants.ts",
+        "finalSha256": "8968328F051C59861EC6C807F4F4098C12337CB7A7579B7371867F6993689DB8",
+        "lineCount": 30,
+        "sha256": "8968328F051C59861EC6C807F4F4098C12337CB7A7579B7371867F6993689DB8",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/types.ts",
+        "finalSha256": "9822A8CAFE1A073F2E4172485A9511A632A667CFE16A1270F735D9230693D4F2",
+        "lineCount": 143,
+        "sha256": "9822A8CAFE1A073F2E4172485A9511A632A667CFE16A1270F735D9230693D4F2",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "finalSha256": "CF785F9662FFD89292DC15E691A8601A9F137EC6C26E1401A6AFA8D461CAAE6A",
+        "lineCount": 234,
+        "sha256": "CF785F9662FFD89292DC15E691A8601A9F137EC6C26E1401A6AFA8D461CAAE6A",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/index.ts",
+        "finalSha256": "60F0639B92FE284F44600F69FBA71E888541D49E9A96C091A205C7CDCD12403E",
+        "lineCount": 13,
+        "sha256": "60F0639B92FE284F44600F69FBA71E888541D49E9A96C091A205C7CDCD12403E",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx",
+        "finalSha256": "75A1E4D3C32B3D29686F8FD37BBDCA7E7C03BCA296B425BF72AA1A86E3326012",
+        "lineCount": 200,
+        "sha256": "75A1E4D3C32B3D29686F8FD37BBDCA7E7C03BCA296B425BF72AA1A86E3326012",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/BillVarianceCard.tsx",
+        "finalSha256": "967077077A1597D4C942CADFCA8A8E230FDE6165EE3A8B9BE8ED816806BC3BFD",
+        "lineCount": 75,
+        "sha256": "967077077A1597D4C942CADFCA8A8E230FDE6165EE3A8B9BE8ED816806BC3BFD",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/ChargerTypeBreakdown.tsx",
+        "finalSha256": "7733C0DEF9DEA0A2F05AB16B9AC4DEE4C1119F44B9F2A15088CE3CF4B82816D8",
+        "lineCount": 110,
+        "sha256": "7733C0DEF9DEA0A2F05AB16B9AC4DEE4C1119F44B9F2A15088CE3CF4B82816D8",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
+        "finalSha256": "121B5025F9AA79BB90EC4994E3F6ED6BCB184005FA3A84027729E14729AA7BF6",
+        "lineCount": 156,
+        "sha256": "121B5025F9AA79BB90EC4994E3F6ED6BCB184005FA3A84027729E14729AA7BF6",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/CostStatSection.tsx",
+        "finalSha256": "21CAF4F3C9CF53B8133BD2646BD2A14DB1BDB379F90DC917A52088DA66DA8079",
+        "lineCount": 74,
+        "sha256": "21CAF4F3C9CF53B8133BD2646BD2A14DB1BDB379F90DC917A52088DA66DA8079",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/CostSummaryCards.tsx",
+        "finalSha256": "D6CEC3D89400E332DD586A3147FDDAD8851E22C309D9BB91BEF9F3DCC52BD484",
+        "lineCount": 83,
+        "sha256": "D6CEC3D89400E332DD586A3147FDDAD8851E22C309D9BB91BEF9F3DCC52BD484",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/displayBoundary.ts",
+        "finalSha256": "BE41C12F4B6D9B74A7509BDDB58DC3C6611B3BA2D83E6EBFAE6003E8119F40F5",
+        "lineCount": 21,
+        "sha256": "BE41C12F4B6D9B74A7509BDDB58DC3C6611B3BA2D83E6EBFAE6003E8119F40F5",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/EnvironmentalImpact.tsx",
+        "finalSha256": "FE56B627CEFA76A3C561036419EE32B798F1619D985C1C61EDEC26169BA3AC1C",
+        "lineCount": 68,
+        "sha256": "FE56B627CEFA76A3C561036419EE32B798F1619D985C1C61EDEC26169BA3AC1C",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/ForecastDetails.tsx",
+        "finalSha256": "F0AC73F5B4003E62C695E13B8E19ADC199978435D6C2880A34FCA778F6AC3C14",
+        "lineCount": 166,
+        "sha256": "F0AC73F5B4003E62C695E13B8E19ADC199978435D6C2880A34FCA778F6AC3C14",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/index.ts",
+        "finalSha256": "5EFE515CEDD7602E187563ACF8EC3EEA31AFCE092EF35E7FC0655F7F1302628F",
+        "lineCount": 11,
+        "sha256": "5EFE515CEDD7602E187563ACF8EC3EEA31AFCE092EF35E7FC0655F7F1302628F",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/LifetimeSummary.tsx",
+        "finalSha256": "49E4604D027E86BBB3AD4C2883D1138DE968A7E996E89F37A2958B90631FE366",
+        "lineCount": 81,
+        "sha256": "49E4604D027E86BBB3AD4C2883D1138DE968A7E996E89F37A2958B90631FE366",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "finalSha256": "181FD3815C726DC5B0E26394D213CBE02803D9CF53AD84CEFC42E82D8A942F05",
+        "lineCount": 111,
+        "sha256": "181FD3815C726DC5B0E26394D213CBE02803D9CF53AD84CEFC42E82D8A942F05",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/TimeOfUseAnalysis.tsx",
+        "finalSha256": "368AC6A1133A10C51803BF4B94E7F3F62E6A73C2A7B3C5E0CECB8330C3A7CC64",
+        "lineCount": 111,
+        "sha256": "368AC6A1133A10C51803BF4B94E7F3F62E6A73C2A7B3C5E0CECB8330C3A7CC64",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/useSourceStatPeriod.ts",
+        "finalSha256": "1E75F88F345B7B229D45F921E504D84391E0D2929305E5FBBFC26DA2F6E283C7",
+        "lineCount": 27,
+        "sha256": "1E75F88F345B7B229D45F921E504D84391E0D2929305E5FBBFC26DA2F6E283C7",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/useStatFormatting.ts",
+        "finalSha256": "F488D22FB098B7DEC11257D6823B4ECC67807D2C5F424A0737FC69E242928551",
+        "lineCount": 15,
+        "sha256": "F488D22FB098B7DEC11257D6823B4ECC67807D2C5F424A0737FC69E242928551",
+        "match": true
+      },
+      {
+        "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+        "finalSha256": "B2F42B47F208133F9336395242A7308D7D01B99D6B23ACF3041E97248637326C",
+        "lineCount": 73,
+        "sha256": "B2F42B47F208133F9336395242A7308D7D01B99D6B23ACF3041E97248637326C",
+        "match": true
+      },
+      {
+        "file": "web/src/components/ai/AICostForecastNarration.tsx",
+        "finalSha256": "4AAC95B09653BE1A787AD3692955002529C2B4650D8008CFA57A4529CB487DD0",
+        "lineCount": 165,
+        "sha256": "4AAC95B09653BE1A787AD3692955002529C2B4650D8008CFA57A4529CB487DD0",
+        "match": true
+      }
+    ]
+  },
+  "currentSourceReview": {
+    "item": "phase6-qa-charging-cost-analysis",
+    "mode": "READ_ONLY_SOURCE_QA_NO_REMIGRATION",
+    "startUtc": "2026-10-14T00:48:09.5716844Z",
+    "reviewUtc": "2026-10-14T00:58:16.914497Z",
+    "firstExistingReportCheck": "Preexisting DONE source-only report found before audit writes. All27 previous source pins match current. No replacement audit, source remigration or duplicate repair rows. One newly traced mobile omission plus current metadata/line-confidence validation added to the same artifact.",
+    "queue": {
+      "file": "migration-queue.md",
+      "line": 370,
+      "rawRow": "| [~] | 6 | phase6-qa-charging-cost-analysis | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-charging-cost-analysis.json | phase5-page-charging-cost-analysis | 1 | actor=88f44a52-c144-4d02-9f82-9d2c614435ef; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | Accepted5893efafe sourceonly/currentCostAnalysisPage/directparts, actualcalendarbusinessdates versus headerrange/accounting/loaded-fullrangeprovenance/costenergy denominators/unknownzero/rawSI-sign/preferences/independenttrust/actions/sections/i18n/sourcea11y. NoexistingderivedPhase6QA row; verifyactualroute/identity/noduplicate. Source-onlyreport/log, no realfinancialdata/API/source/tests/browser/native/fullsuite/helpers/remigration. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 88f44a52-c144-4d02-9f82-9d2c614435ef, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |",
+      "matches": 1,
+      "sameRecoveredAttempt": 1,
+      "sourceDependency": "phase5-page-charging-cost-analysis",
+      "acceptedSourceCommitQueueReceipt": "5893efafe8737591c5812f15d9b32c016a543c37",
+      "treeComparison": "NOTRUN; source acceptance is queue receipt, not Git tree proof"
+    },
+    "routeEvidence": [
+      {
+        "file": "web/src/App.tsx",
+        "line": 58,
+        "detail": "lazy(routeLoaders.CostAnalysis)"
+      },
+      {
+        "file": "web/src/lib/routeLoaders.ts",
+        "line": 18,
+        "detail": "actual page import"
+      },
+      {
+        "file": "web/src/App.tsx",
+        "line": 803,
+        "route": "/cost-analysis"
+      },
+      {
+        "file": "web/src/App.tsx",
+        "line": 809,
+        "route": "/charging/costs"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "line": 32,
+        "detail": "/charging/costs range registered"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "line": 37,
+        "detail": "/cost-analysis range registered"
+      }
+    ],
+    "dataSources": [
+      {
+        "hook": "useChargingSessionsPaginated",
+        "file": "web/src/api/hooks/useCharging.ts",
+        "line": 122,
+        "endpoint": "GET /charging?vehicle_id=&limit=1000&offset=0&start=calendar-date&end=calendar-date",
+        "routerFile": "internal/api/router.go",
+        "routerLine": 3546,
+        "completeness": "only returned array; no full-range completion or server total consumed"
+      },
+      {
+        "hook": "useCostForecast",
+        "file": "web/src/api/hooks/useCharging.ts",
+        "line": 135,
+        "endpoint": "GET /analytics/cost-forecast?vehicle_id=&months=6",
+        "routerFile": "internal/api/router.go",
+        "routerLine": 3938,
+        "period": "independent returned forecast/history, not header range or lifetime"
+      },
+      {
+        "hook": "useBillVariance",
+        "file": "web/src/api/hooks/useCharging.ts",
+        "line": 608,
+        "endpoint": "GET /charging/bill-variance?vehicle_id=",
+        "routerFile": "internal/api/router.go",
+        "routerLine": 3547,
+        "period": "independent reconciliation period unknown"
+      }
+    ],
+    "businessDateDecision": "No independent business/accounting date form or year navigation exists in this page. startDate/endDate alias header-owned useRangeState calendar leaves; they are not exempt business dates. useRangeState:656-669 provides rolling/exclusive instants and timezone. Billing/forecast are intentionally independent source periods, not substitutes for header session window.",
+    "accountingEvidence": "CA02 source denomination, CA03 priced-energy and unknown coverage, CA04 stationary odometer delta, CA08 per-session versus tariff-rate meaning, and CA09 occupied-month/model-versus-actual savings remain distinct existing roots. Zero-cost equality is retained; no unknown-price session is asserted to be a genuine free session. API types declare energy nonnullable; missing-energy robustness examples do not establish actual nullable backend energy.",
+    "rawSIAndSigns": "API hook returns raw Wh/m amounts unchanged. Local feature derives display kWh and bridges it back to canonical StatMetric Wh exactly at display adapter; signed finite currency/energy are not blanket-clamped by formatMetric. Pie/bar negative-share visual adequacy stays CP02, not a confirmed SI/sign violation. No raw financial payload read or calculation/test executed.",
+    "independentTrust": "sessions and forecast use fatalError without retained payload plus separate StaleRefreshWarning/retry; PageLayout does not receive a whole-page loading/error gate. Billing retains data but omits equivalent paused/stale DataState disclosure (CA10). All baseline section callsites remain; AI absence off-mode is an explicit exception.",
+    "preferences": "Unit preference conversion, saved number precision/locale and saved chart identities retained in source. Existing gas-volume/denomination, fixed forecast palette and browser-local calendar/24h labels remain recorded issues; actual saved preference rendering NOTRUN.",
+    "i18n": "CA13 four categorical display returns at6,7,9,10 verified through mounted captions. Localized labels/fallbacks and technical unit strings are distinguished from untranslated display categories. Previous155-key/missing-key0/catalog fallback observations are HISTORICAL, not freshly rerun; no catalog writes or catalog guard bypass.",
+    "accessibility": "Localized page regions, chart dataColumns/ariaLabel and labeled shared inputs/Buttons are present. No positive tabindex introduced. Mobile table CA14 is source-proven omitted access, not a measured viewport failure. All keyboard/screen-reader/focus/contrast/RTL/200% text/forced-colors/reduced-motion/device/touch acceptance NOTRUN.",
+    "mobile": "Source uses min-w-0, stacked base grids, wrapping action rails, existing lg/xl breaks and mobile chart heights. CA14 traces four hidden monthly fields without detail path. 320/375/390/430/768/1024/1280/1440/1920/2560 and allocated-container geometry all NOTRUN.",
+    "sections": [
+      {
+        "component": "CostSummaryCards",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 126,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "BillVarianceCard",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 142,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "MonthlyCostChart",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 153,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "CostPerKwhChart",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 161,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "ChargerTypeBreakdown",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 173,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "SavingsCalculator",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 185,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "MonthlyCostTable",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 203,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "TimeOfUseAnalysis",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 213,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "AICostForecastNarration",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 224,
+        "sourcePresence": "unconditional page JSX; AI visibility is explicit consent/feature exception"
+      },
+      {
+        "component": "CostForecastSection",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 228,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "LifetimeSummary",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 243,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      },
+      {
+        "component": "EnvironmentalImpact",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 251,
+        "sourcePresence": "unconditional page JSX with independent section state; NOT mounted acceptance"
+      }
+    ],
+    "actions": [
+      {
+        "family": "saved views apply/save/rename/pin/default/delete/clear",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 100,
+        "owner": "SavedViewMenu + useSavedViewUrl; canonical route /cost-analysis on both aliases"
+      },
+      {
+        "family": "print",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 105,
+        "owner": "PrintButton native window.print; not invoked"
+      },
+      {
+        "family": "header range and vehicle selection",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 57,
+        "owner": "useSelectedVehicle/useRangeState + registered workspace routes, no duplicate business-date picker"
+      },
+      {
+        "family": "reset selected range",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 135,
+        "owner": "CostSummaryCards empty-state action/resetRange"
+      },
+      {
+        "family": "sessions retry",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 81,
+        "owner": "sessionsQuery.refetch; all session sections share this source"
+      },
+      {
+        "family": "forecast retry",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 89,
+        "owner": "forecastQuery.refetch; independent from sessions"
+      },
+      {
+        "family": "billing retry",
+        "file": "web/src/features/charging/components/stat-modernization/BillVarianceCard.tsx",
+        "line": 33,
+        "owner": "billing refetch; independent"
+      },
+      {
+        "family": "gas-price input",
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "line": 50,
+        "owner": "controlled local assumption; no API write"
+      },
+      {
+        "family": "MPG input",
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "line": 57,
+        "owner": "controlled local assumption"
+      },
+      {
+        "family": "electricity-rate input",
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "line": 64,
+        "owner": "controlled local assumption"
+      },
+      {
+        "family": "reset calculator defaults",
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "line": 71,
+        "owner": "all three defaults retained"
+      },
+      {
+        "family": "monthly table sort/pagination/column visibility/reorder and matching-loaded export",
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+        "line": 125,
+        "owner": "DataTable; stable charging:cost-monthly; not fullResult; omitted mobile details are CA14"
+      },
+      {
+        "family": "monthly annotations plus chart export/fullscreen/legend capabilities",
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx",
+        "line": 93,
+        "owner": "existing ChartContainer; no annotation creation invoked"
+      },
+      {
+        "family": "deterministic forecast export/fullscreen/series legend",
+        "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
+        "line": 70,
+        "owner": "existing EmbeddedChart; preserve bounds and series identities"
+      },
+      {
+        "family": "opt-in AI narration request/cancellation",
+        "file": "web/src/components/ai/AICostForecastNarration.tsx",
+        "line": 119,
+        "owner": "withAiFeature + AIFeatureCard + useAiStream; vehicle/horizon scope identity, AbortController and duplicate latch; no stream opened"
+      }
+    ],
+    "counts": {
+      "confirmedRoots": 14,
+      "retainedPreviouslyRecordedRoots": 13,
+      "newSourceRoots": 1,
+      "candidates": 3,
+      "hardcodedStringOccurrences": 4,
+      "affectedMobileFields": 4,
+      "pageFeatureInstances": 12,
+      "baselineNonAiInstances": 11,
+      "semanticSectionLandmarks": 3,
+      "forecastSubpanels": 5,
+      "actionFamilies": 15,
+      "filesRead": 73,
+      "currentSourceFilesPinned": 57,
+      "preexistingPinsMatched": 27,
+      "preexistingPinDrift": 0,
+      "exactQueueItemMatches": 1,
+      "exactCostRepairQueueMatches": 0,
+      "newQueueItemsCreated": 0,
+      "executedApplicationTests": null
+    },
+    "issuesByPrimaryFile": {
+      "web/src/features/charging/pages/CostAnalysisPage.tsx": 1,
+      "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts": 6,
+      "web/src/features/charging/components/stat-modernization/CostSummaryCards.tsx": 1,
+      "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx": 1,
+      "web/src/features/charging/components/stat-modernization/BillVarianceCard.tsx": 1,
+      "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx": 2,
+      "web/src/features/charging/components/cost-analysis/helpers.ts": 1,
+      "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx": 1
+    },
+    "issuesByRule": {
+      "workspace-instant-bounds": 1,
+      "accounting-source-currency": 1,
+      "unknown-zero-and-cost-energy-coverage": 1,
+      "distance-denominator-accounting": 1,
+      "gas-volume-display-identity": 1,
+      "assumption-currency-labels": 1,
+      "business-calendar-timezone": 1,
+      "time-of-use-denominator-meaning": 1,
+      "savings-basis-and-annualization": 1,
+      "independent-billing-trust": 1,
+      "forecast-interval-trust-wording": 1,
+      "saved-chart-palette-bypass": 1,
+      "hardcoded-string": 1,
+      "mobile-monthly-field-reachability": 1
+    },
+    "scanEvidence": {
+      "inline-style-candidates": {
+        "regex": "style\\s*=\\s*\\{\\{",
+        "candidateCount": 3,
+        "matches": [
+          {
+            "file": "web/src/features/charging/components/stat-modernization/ChargerTypeBreakdown.tsx",
+            "line": 71,
+            "match": "style={{"
+          },
+          {
+            "file": "web/src/features/charging/components/stat-modernization/ChargerTypeBreakdown.tsx",
+            "line": 85,
+            "match": "style={{"
+          },
+          {
+            "file": "web/src/features/charging/components/stat-modernization/TimeOfUseAnalysis.tsx",
+            "line": 75,
+            "match": "style={{"
+          }
+        ],
+        "classification": "All three are accepted dynamic styles: entry.color nullish fallback, computed barWidth plus entry.color, TOU_PERIOD_COLORS[ratePeriod]. No static-inline-style violation."
+      },
+      "raw-html": {
+        "regex": "<(?:button|input|textarea|select|table)\\b",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "direct-library-import": {
+        "regex": "(?:from\\s*|import\\s*)[\\x27\\x22](?:recharts|react-leaflet|framer-motion)[\\x27\\x22]",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "old-api-import": {
+        "regex": "from\\s*[\\x27\\x22](?:\\.\\./)+api[\\x27\\x22]",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "double-prefix": {
+        "regex": "(?:request(?:<[^\\n]+?>)?\\s*\\(|url\\s*:)\\s*[\\x27\\x22`]/api/v1/",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "camelcase-param": {
+        "regex": "(?:[?&]|params\\.(?:set|append)\\([\\x27\\x22])[a-z]+[A-Z][A-Za-z]*",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "hidden-section": {
+        "regex": "\\{\\s*(?:data|sessions|forecastData|coreStats)\\s*&&\\s*<(?:GlassPanel|section|CostSection|CostStatSection|ChartContainer)",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "fetch-useeffect": {
+        "regex": "\\b(?:fetch|useEffect)\\s*\\(",
+        "candidateCount": 0,
+        "matches": []
+      },
+      "hardcoded-string": {
+        "regex": "return '([^']+)'",
+        "confirmedOccurrenceCount": 4,
+        "matches": [
+          {
+            "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+            "line": 6,
+            "label": "Supercharger"
+          },
+          {
+            "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+            "line": 7,
+            "label": "Public DC"
+          },
+          {
+            "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+            "line": 9,
+            "label": "Work / L2"
+          },
+          {
+            "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+            "line": 10,
+            "label": "Home"
+          }
+        ],
+        "classification": "Four categorical English display values traced to mounted category captions and chart alternatives; one existing CA13 root, not four repair scopes."
+      },
+      "missing-page-container": {
+        "pageMatches": [
+          {
+            "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+            "line": 110,
+            "component": "PageLayout"
+          }
+        ],
+        "delegation": {
+          "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+          "line": 11,
+          "component": "PageContainer"
+        },
+        "confirmedViolationCount": 0
+      },
+      "scope": "27 existing pinned graph files, legacy TOU only definitions lines1-49; API only getChargingSessions/useChargingSessionsPaginated/useCostForecast/useBillVariance definitions. Shared UI implementations are not raw-HTML/import violations; useAiStream imperative cancellable SSE is not page fetch/useEffect loading. Regex candidates plus manual source classification are not compiler or lint proof."
+    },
+    "ruleCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 4,
+      "missing-page-container": 0,
+      "fetch-useeffect": 0
+    },
+    "currentSourcePins": [
+      {
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "sha256": "AE1C5648A1A92BADDE43EC9CE436CC8E4A16A1F622780353EF6048A4A3A11C0F",
+        "lineCount": 263,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostChart.tsx",
+        "sha256": "E5109B2D0CD1EF94476C2B7270592BEBB2BEF5E2D8D02445E394A6A2636D2FBD",
+        "lineCount": 123,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/CostPerKwhChart.tsx",
+        "sha256": "721CCAA6A37E4FA0DFF12F688324F60D0FE9FDA5834DA0EE0770FA6A4CD98020",
+        "lineCount": 97,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+        "sha256": "15DDDEEED9983ED9B9F26E14AD1A1146ED0FA349B282E794E13DA7781AE989F7",
+        "lineCount": 141,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/CostSection.tsx",
+        "sha256": "2145D62680BF21AE60484B64533DFDD72D78C6337FA4EA9CDCF066A317AE10A6",
+        "lineCount": 93,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+        "sha256": "6A204D3F86456F3BAF6EE68CF2DE946902C59BAE185E34FE17EF99FDF2AABC4B",
+        "lineCount": 28,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/constants.ts",
+        "sha256": "8968328F051C59861EC6C807F4F4098C12337CB7A7579B7371867F6993689DB8",
+        "lineCount": 30,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/types.ts",
+        "sha256": "9822A8CAFE1A073F2E4172485A9511A632A667CFE16A1270F735D9230693D4F2",
+        "lineCount": 143,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "sha256": "CF785F9662FFD89292DC15E691A8601A9F137EC6C26E1401A6AFA8D461CAAE6A",
+        "lineCount": 234,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/index.ts",
+        "sha256": "60F0639B92FE284F44600F69FBA71E888541D49E9A96C091A205C7CDCD12403E",
+        "lineCount": 13,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/cost-analysis/TimeOfUseAnalysis.tsx",
+        "sha256": "75A1E4D3C32B3D29686F8FD37BBDCA7E7C03BCA296B425BF72AA1A86E3326012",
+        "lineCount": 200,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/BillVarianceCard.tsx",
+        "sha256": "967077077A1597D4C942CADFCA8A8E230FDE6165EE3A8B9BE8ED816806BC3BFD",
+        "lineCount": 75,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/ChargerTypeBreakdown.tsx",
+        "sha256": "7733C0DEF9DEA0A2F05AB16B9AC4DEE4C1119F44B9F2A15088CE3CF4B82816D8",
+        "lineCount": 110,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
+        "sha256": "121B5025F9AA79BB90EC4994E3F6ED6BCB184005FA3A84027729E14729AA7BF6",
+        "lineCount": 156,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/CostStatSection.tsx",
+        "sha256": "21CAF4F3C9CF53B8133BD2646BD2A14DB1BDB379F90DC917A52088DA66DA8079",
+        "lineCount": 74,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/CostSummaryCards.tsx",
+        "sha256": "D6CEC3D89400E332DD586A3147FDDAD8851E22C309D9BB91BEF9F3DCC52BD484",
+        "lineCount": 83,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/displayBoundary.ts",
+        "sha256": "BE41C12F4B6D9B74A7509BDDB58DC3C6611B3BA2D83E6EBFAE6003E8119F40F5",
+        "lineCount": 21,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/EnvironmentalImpact.tsx",
+        "sha256": "FE56B627CEFA76A3C561036419EE32B798F1619D985C1C61EDEC26169BA3AC1C",
+        "lineCount": 68,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/ForecastDetails.tsx",
+        "sha256": "F0AC73F5B4003E62C695E13B8E19ADC199978435D6C2880A34FCA778F6AC3C14",
+        "lineCount": 166,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/index.ts",
+        "sha256": "5EFE515CEDD7602E187563ACF8EC3EEA31AFCE092EF35E7FC0655F7F1302628F",
+        "lineCount": 11,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/LifetimeSummary.tsx",
+        "sha256": "49E4604D027E86BBB3AD4C2883D1138DE968A7E996E89F37A2958B90631FE366",
+        "lineCount": 81,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "sha256": "181FD3815C726DC5B0E26394D213CBE02803D9CF53AD84CEFC42E82D8A942F05",
+        "lineCount": 111,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/TimeOfUseAnalysis.tsx",
+        "sha256": "368AC6A1133A10C51803BF4B94E7F3F62E6A73C2A7B3C5E0CECB8330C3A7CC64",
+        "lineCount": 111,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/useSourceStatPeriod.ts",
+        "sha256": "1E75F88F345B7B229D45F921E504D84391E0D2929305E5FBBFC26DA2F6E283C7",
+        "lineCount": 27,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/stat-modernization/useStatFormatting.ts",
+        "sha256": "F488D22FB098B7DEC11257D6823B4ECC67807D2C5F424A0737FC69E242928551",
+        "lineCount": 15,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+        "sha256": "B2F42B47F208133F9336395242A7308D7D01B99D6B23ACF3041E97248637326C",
+        "lineCount": 73,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/ai/AICostForecastNarration.tsx",
+        "sha256": "4AAC95B09653BE1A787AD3692955002529C2B4650D8008CFA57A4529CB487DD0",
+        "lineCount": 165,
+        "previousReportPinMatch": true,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "lineCount": 919,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/lib/routeLoaders.ts",
+        "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+        "lineCount": 127,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "lineCount": 168,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/api/hooks/useCharging.ts",
+        "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+        "lineCount": 643,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+        "lineCount": 4194,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/types/charging.ts",
+        "sha256": "225CBAFAFD597261ABE9222B68F7578565280625602863BA10ADE878268B0720",
+        "lineCount": 355,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useRangeState.ts",
+        "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+        "lineCount": 694,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useFormatting.ts",
+        "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+        "lineCount": 106,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+        "lineCount": 194,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+        "lineCount": 24,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/lib/metric-reference/formatMetric.ts",
+        "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+        "lineCount": 137,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "lineCount": 17,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+        "lineCount": 259,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "lineCount": 174,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useSavedViewUrl.ts",
+        "sha256": "50640771B85C0CCEDB524ADF2DF98F07A306576E914736A71BA72792AB60F644",
+        "lineCount": 51,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/ui/PrintButton.tsx",
+        "sha256": "357CF230C352A17BD68FEDC26DDFD197101BA9066A467DE7924E046A2D64E6E6",
+        "lineCount": 98,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+        "sha256": "F4874D1B839614D71B4797DFB07EDD5353898FE0A8FD48810A1EFD35FFC3FBAB",
+        "lineCount": 76,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "lineCount": 462,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "sha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "lineCount": 1707,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/ui/MobileDataTableAdapter.tsx",
+        "sha256": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+        "lineCount": 165,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/data-display/SavedViewMenu.tsx",
+        "sha256": "95CE705EE657F4AAD8346072FC963930140FC144AE911A01DA286297F71A0FC3",
+        "lineCount": 687,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+        "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+        "lineCount": 115,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "lineCount": 65,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/ai/AIFeatureCard.tsx",
+        "sha256": "F1E5D2DB44DCB81540068C17891F74399694740A22B90080C064002BEBC52016",
+        "lineCount": 352,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/hooks/useAiStream.ts",
+        "sha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+        "lineCount": 617,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/components/ai/withAiFeature.tsx",
+        "sha256": "B97831BCF65326FCF17F77FA6501BDA8C42C40A23575EDBF35DA222E9882FA57",
+        "lineCount": 60,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "web/src/lib/constants.ts",
+        "sha256": "76641391606B3616C45C2F0C1EA9BDA0B130F4E190D6218E771AE1AEB64501E3",
+        "lineCount": 191,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "internal/api/router.go",
+        "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+        "lineCount": 5363,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "internal/api/charging/handler.go",
+        "sha256": "DDC7B1E020421F6F914CF6E6B1BC9FE884AAD42F005B7C601105082C34D58FDD",
+        "lineCount": 481,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      },
+      {
+        "file": "internal/api/apiparams/params.go",
+        "sha256": "5526C81EAFF016243772398B88B003112F3D0C0921B484C0DE3008B7D2656ADD",
+        "lineCount": 142,
+        "previousReportPinMatch": null,
+        "readOnly": true
+      }
+    ],
+    "fixNeeds": [
+      {
+        "issueId": "CA01",
+        "rule": "workspace-instant-bounds",
+        "file": "web/src/features/charging/pages/CostAnalysisPage.tsx",
+        "line": 60,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 architectureIssues MDC-032; no exact cost corrective queue row found. Do not create another broad range/root campaign.",
+        "needs": "Thread existing exact instant bounds through typed hook; keep aliases, selected vehicle, shared picker and server semantics.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA02",
+        "rule": "accounting-source-currency",
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "line": 43,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Existing audit-page-086 source-currency root; related Phase6 report matches are references, not evidence of an assigned shared fix.",
+        "needs": "Retain denomination and mixed/unknown status; do not sum unlike currencies or invent exchange rates.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA03",
+        "rule": "unknown-zero-and-cost-energy-coverage",
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "line": 43,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Existing audit-page-086 unknown-as-zero root; forecast nullable-leaf chart site is an additional mechanism under the same root, not another finding.",
+        "needs": "Preserve priced/energy coverage and genuine zero/free; expose unknown/partial rates and propagate raw missingness before render.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA04",
+        "rule": "distance-denominator-accounting",
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "line": 50,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Related to existing missing-distance root but distinct physical denominator mechanism; no narrow queued corrective cost scope found.",
+        "needs": "Do not present stationary charging odometer delta as driven-distance denominator; retain unavailable status until verified distance evidence is available.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA05",
+        "rule": "gas-volume-display-identity",
+        "file": "web/src/features/charging/components/stat-modernization/CostSummaryCards.tsx",
+        "line": 31,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 gas unit root.",
+        "needs": "Keep model basis explicit or use verified existing volume conversion; preserve defaults and raw assumption values.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA06",
+        "rule": "assumption-currency-labels",
+        "file": "web/src/features/charging/components/stat-modernization/SavingsCalculator.tsx",
+        "line": 52,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 fixed calculator suffix root, separate from source-currency aggregation.",
+        "needs": "Disclose actual assumption currency and localize labels; do not silently relabel USD assumptions as converted values.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA07",
+        "rule": "business-calendar-timezone",
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "line": 75,
+        "confidence": "high for browser-local getters/fixed 24h labels; intended saved/vehicle timezone integration medium/unknown. No proven difference from the current header default browser timezone is asserted.",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 browser-calendar/timezone root.",
+        "needs": "Use existing authoritative timezone/date formatting owner and disclose accounting timezone; retain all session counts and business boundaries.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA08",
+        "rule": "time-of-use-denominator-meaning",
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "line": 152,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Existing audit-page-086 fixed-TOU assumption context retained; newly explicit ranking denominator detail, not a backend tariff task.",
+        "needs": "Label per-session spend honestly or obtain valid energy-paired rate denominator; show fixed off-peak periods as assumptions, not actual utility rates.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA09",
+        "rule": "savings-basis-and-annualization",
+        "file": "web/src/features/charging/components/cost-analysis/useCostAnalysisData.ts",
+        "line": 182,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "No exact existing cost corrective row found; linked to existing returned-session/complete-window limitation, not counted as missing-lifetime UI.",
+        "needs": "Disclose separate modeled versus actual savings and observed-window coverage; do not silently change accepted calculation semantics or claim complete accounting months.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA10",
+        "rule": "independent-billing-trust",
+        "file": "web/src/features/charging/components/stat-modernization/BillVarianceCard.tsx",
+        "line": 28,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 independent billing trust root; retained payload is NOT erased and this is not a blanket section gate finding.",
+        "needs": "Reuse existing DataState warning for billing independently; preserve reconciliation reporting window and individual retry.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA11",
+        "rule": "forecast-interval-trust-wording",
+        "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
+        "line": 105,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 interval wording root.",
+        "needs": "Use source-verified interval terminology consistently; keep all bounds/series and do not invent model calibration.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA12",
+        "rule": "saved-chart-palette-bypass",
+        "file": "web/src/features/charging/components/stat-modernization/CostForecastSection.tsx",
+        "line": 98,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Reconfirmed audit-page-086 palette/surface root; no shared theme rewrite or effective glow claim.",
+        "needs": "Reuse existing palette and chart role tokens while preserving series identity, confidence band, legends, export and all numeric data.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA13",
+        "rule": "hardcoded-string",
+        "file": "web/src/features/charging/components/cost-analysis/helpers.ts",
+        "line": 6,
+        "confidence": "high for cited source mechanism; runtime incidence and mounted application behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "One localization root with four exact code occurrences; not four independent repair scopes.",
+        "needs": "Keep stable category identity but translate display label at render boundary; do not mutate category accounting keys/colors.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      },
+      {
+        "issueId": "CA14",
+        "rule": "mobile-monthly-field-reachability",
+        "file": "web/src/features/charging/components/cost-analysis/MonthlyCostTable.tsx",
+        "line": 129,
+        "confidence": "high for source branch and absence of a caller-provided UI path; actual CSS rectangles, touch and screen-reader behavior NOTRUN",
+        "existingExactQueueRepair": null,
+        "queueMatchBasis": "Current Phase6 item/files scan: no exact cost-analysis/CostAnalysis/MonthlyCostTable corrective row. Related broad roots are not assumed equivalent or assigned.",
+        "historicalDedup": "Historical audit-page-086 responsive evidence explicitly left omitted metadata reachability unexercised, not a confirmed root. Current exact Phase6 queue item/file search found no MonthlyCostTable/cost-monthly corrective owner; other Phase6 report path search found zero mentions. Added as one root with four affected fields, not four issues.",
+        "needs": "Adopt the existing caller-owned MobileDataTablePresentation with full details, or an existing reachable expansion/contained full-column table strategy. Preserve all seven fields, sorting, persistence tableId, pagination, source numeric/currency values and loaded-row export scope. Do not rewrite DataTable, remove the columns, or create a new adapter.",
+        "authorization": "Recommendation only. Parent must reserve one narrow corrective scope; serialize overlapping useCostAnalysisData/caller files; no queue/source/test/catalog writes made."
+      }
+    ],
+    "filesReadCoverage": {
+      "fullDesignContract": "docs/frontend-design-contract.md lines1-2539 in explicit ranges; full playbook lines1-296",
+      "latestHandoff": "current new-machine receipt lines1-43 plus bounded prior history, not all2448 lines",
+      "queue": "current lifecycle1-56, dispatch contract224-246, exact item and source/history rows plus exact dedup searches; queue never edited",
+      "mission": "0-4,14-28,30-37,40,43-45 relevant sections read",
+      "legacyTOU": "only imported definitions lines1-52; its visual body not audited or counted",
+      "sharedLargeFiles": "only cited/read ranges and source searches; hashes cover file bytes, not a claim of full shared-source audit"
+    },
+    "commandReceipts": [
+      {
+        "shellId": "19",
+        "exit": 0
+      },
+      {
+        "shellId": "39",
+        "exit": 0
+      },
+      {
+        "shellId": "71",
+        "exit": 0
+      },
+      {
+        "shellId": "92",
+        "exit": 0
+      },
+      {
+        "shellId": "116",
+        "exit": 1
+      },
+      {
+        "shellId": "153",
+        "exit": 0
+      },
+      {
+        "shellId": "172",
+        "exit": 0
+      },
+      {
+        "shellId": "206",
+        "exit": 0
+      },
+      {
+        "shellId": "225",
+        "exit": 0
+      },
+      {
+        "shellId": "255",
+        "exit": 0
+      },
+      {
+        "shellId": "279",
+        "exit": 0
+      },
+      {
+        "shellId": "357",
+        "exit": 0,
+        "description": "Existing receipt checked; current source-only artifact/log write and raw scoped scans"
+      }
+    ],
+    "checkFailures": [
+      {
+        "shellId": "116",
+        "exit": 1,
+        "reason": "UnicodeEncodeError printing non-ASCII copilot headings with default cp1252; dependent dedup output did not run in that call; UTF-8 corrected in later exact checks."
+      },
+      {
+        "shellId": "225",
+        "exit": 0,
+        "reason": "Category line scanner used wrong source buffer for two line numbers12/13; corrected and rerun at255 to exact9/10. Counts were still4; erroneous citations not accepted."
+      },
+      {
+        "shellIds": [
+          "71",
+          "153"
+        ],
+        "reason": "Oversized console output tool-truncated; required identity/pins/dedup/historical roots reread in compact commands92/172/279. No complete inspection claimed from preview."
+      }
+    ],
+    "instructionComplianceIncident": {
+      "type": "unauthorized-read-only-Git-in-initial-probe",
+      "shellId": "19",
+      "commands": [
+        "git --no-pager status --short",
+        "git check-ignore -- web/logs/phase6-qa-charging-cost-analysis.log"
+      ],
+      "actualGitCommandsCount": 2,
+      "note": "User forbade Git. These two read-only commands were run by mistake and disclosed immediately; no further Git, staging, commits, reset, checkout or source writes. The user-facing initial disclosure said three; exact command text shows TWO Git commands, corrected here."
+    },
+    "evidenceLimits": [
+      "SOURCE_ONLY_NOT_FULL_PAGE_ACCEPTANCE",
+      "No tests/TypeScript/build/lint/full suite/browser/API/native/servers/Docker/installs/subagents/heartbeat run. Native test discovery/execution/pass/fail/skip counts unavailable, not zero-pass claims.",
+      "Arithmetic/source reproduction descriptions are reasoning only, not executed financial tests. No real financial data/identities/credentials read.",
+      "Current exact queue dedup is item/file scoped; related/global root equivalence or ownership is not inferred. No new queue row created.",
+      "Previous report command/test/catalog receipts are historical and retained separately; only current source hashes/counts/branches and exact scans are fresh.",
+      "One initial Git prohibition breach and one failed console encoding check remain explicit. Sourcepin preservation does not prove whole-repository cleanliness or visual/native acceptance."
+    ],
+    "native": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "checks": {
+      "tests": "NOTRUN",
+      "typescript": "NOTRUN",
+      "build": "NOTRUN",
+      "lint": "NOTRUN",
+      "fullSuite": "NOTRUN",
+      "browser": "NOTRUN",
+      "api": "NOTRUN",
+      "native": "NOTRUN",
+      "server": "NOTRUN",
+      "Docker": "NOTRUN",
+      "installs": "NOTRUN",
+      "subagents": "NOTRUN",
+      "heartbeat": "NOTRUN",
+      "catalogGenerator": "NOTRUN",
+      "sourceScans": "RUN; exact raw regex candidate evidence plus source classification",
+      "queueDedup": "RUN; exact item/file scopes only",
+      "sourcePins": "RUN postwrite;57 current hashes matched, including27 earlier pins; no drift",
+      "reportJson": "RUN disk reparse and final serialized/disk reparse; valid JSON, counts/IDs/paths checked"
+    },
+    "allowedWrites": [
+      "docs/frontend-audits/phase6-qa-charging-cost-analysis.json",
+      "web/logs/phase6-qa-charging-cost-analysis.log"
+    ],
+    "actualWrites": [
+      "docs/frontend-audits/phase6-qa-charging-cost-analysis.json",
+      "web/logs/phase6-qa-charging-cost-analysis.log"
+    ],
+    "ignoreEvidence": ".gitignore:80 logs/ and initial read-only check-ignore matched this exact log path. No subsequent Git.",
+    "returnDeadlineUtc": "2026-10-14T01:05:28Z",
+    "hardDeadlineUtc": "2026-10-14T01:10:28Z",
+    "postWriteValidation": {
+      "reportJsonParsed": true,
+      "countsAndUniqueIdsValidated": true,
+      "filesReadExist": true,
+      "sourcePinsCompared": 57,
+      "sourcePinsMatched": 57,
+      "sourceDrift": 0,
+      "exactIssueLineRangesValidated": true,
+      "mobileCallerAssertionsValidated": true,
+      "testsExecuted": null,
+      "status": "SOURCE_RECEIPT_VALIDATED_NOT_APPLICATION_ACCEPTANCE"
+    },
+    "sourceWriteClaim": "NONE; application files always read-only",
+    "claimsReleased": true,
+    "commandRelease": "All commands synchronous/bounded. Write claim and command ownership released at completion of final validation command; no background command/service/agent launched; no post-return writes.",
+    "releaseUtc": "2026-10-14T00:59:39.204798Z",
+    "timeLimits": {
+      "observedElapsedSeconds": 689.633,
+      "returnDeadlineUtc": "2026-10-14T01:05:28Z",
+      "hardDeadlineUtc": "2026-10-14T01:10:28Z",
+      "beforeReturnDeadline": true,
+      "beforeHardDeadline": true,
+      "actualActorCreationAvailable": false,
+      "clockBasis": "original supplied absolute deadlines unchanged; first tool UTC observation for elapsed only"
+    },
+    "sourceWrites": [],
+    "writeScopeRelease": {
+      "released": true,
+      "files": [
+        "docs/frontend-audits/phase6-qa-charging-cost-analysis.json",
+        "web/logs/phase6-qa-charging-cost-analysis.log"
+      ],
+      "noPostReturnWrites": true,
+      "applicationFilesReadOnly": true
+    },
+    "finalVerificationCommand": {
+      "description": "Root-only Python postwrite JSON/count/identity/line/hash/mobile checks and release, no app/test commands",
+      "numericChecksStatus": 0,
+      "shellExitEvidence": "PowerShell tool exit is authoritative; final response will only claim release after command terminates.",
+      "rawOutput": "All57 MATCH lines, numeric counts, exact line assertions and release are emitted to caller and recorded below in ignored log."
+    }
+  }
 }
