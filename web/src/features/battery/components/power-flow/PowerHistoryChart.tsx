@@ -10,7 +10,9 @@ import {
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { cn } from '@/lib/cn';
-import { formatDateShort } from '@/lib/dateFormat';
+import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
+import { useTimezone } from '@/lib/timezone';
 import { fmtWatts } from './helpers';
 import { FLOW_COLORS } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -38,24 +40,34 @@ const CHART_HEIGHT = 320;
 
 /** Hero stacked-area chart of solar / battery / grid / home power over time. */
 export function PowerHistoryChart({ data, loading, error, onRetry, className }: PowerHistoryChartProps) {
-  const { precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { precision: displayPrecision, locale: displayLocale, fmtPercent } = useNumberFormatting();
+  const timezone = useTimezone('user');
   const { t } = useTranslation();
 
   // The API layer is untyped at runtime and can transiently omit the series;
   // guard so `.length` below (and recharts' own `.map`) never throw on a
   // nullish/garbage `data` prop.
   const rows = Array.isArray(data) ? data : [];
-  const evidence = rows.map(({ time, solar, battery, grid, load }) => ({ time, solar, battery, grid, load }));
+  const evidence = rows.map(({ time, solar, battery, grid, load, soc }) => ({ time, solar, battery, grid, load, soc }));
 
   // Format the epoch X value through a Date object rather than
   // `new Date(v).toISOString()`, which throws `RangeError: Invalid time value`
   // for a NaN/undefined sample. `formatDateShort` already renders the "—"
   // placeholder for unparseable input, so the axis stays crash-safe.
   const formatTimeTick = useCallback(
-    (value: number) => formatDateShort(new Date(value)),
-    [],
+    (value: unknown) => formatDateShort(isFiniteNumber(value) ? new Date(value) : undefined, { locale: displayLocale, tz: timezone }),
+    [displayLocale, timezone],
+  );
+  const formatTimeLabel = useCallback(
+    (value: unknown) => formatDateTime(isFiniteNumber(value) ? new Date(value) : undefined, { locale: displayLocale, tz: timezone }),
+    [displayLocale, timezone],
   );
   const formatWattTick = useCallback((value: number) => fmtWatts(value), [displayPrecision, displayLocale]);
+  const formatValue = useCallback(
+    (value: unknown, _name: string, unit?: string) =>
+      !isFiniteNumber(value) ? '—' : unit === '%' ? fmtPercent(value) : fmtWatts(value),
+    [fmtPercent, displayPrecision, displayLocale],
+  );
 
   if (error) {
     return (
@@ -80,11 +92,12 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
       data={evidence}
       exportData={evidence}
       dataColumns={[
-        { key: 'time', label: t('powerFlow.lastUpdate', 'Updated'), format: value => value != null ? formatDateShort(new Date(Number(value))) : '—' },
-        { key: 'solar', label: t('powerFlow.solar', 'Solar'), format: value => value != null ? fmtWatts(Number(value)) : '—' },
-        { key: 'battery', label: t('powerFlow.batteryLabel', 'Battery'), format: value => value != null ? fmtWatts(Number(value)) : '—' },
-        { key: 'grid', label: t('powerFlow.grid', 'Grid'), format: value => value != null ? fmtWatts(Number(value)) : '—' },
-        { key: 'load', label: t('powerFlow.home', 'Home'), format: value => value != null ? fmtWatts(Number(value)) : '—' },
+        { key: 'time', label: t('powerFlow.lastUpdate', 'Updated'), format: formatTimeLabel },
+        { key: 'solar', label: t('powerFlow.solar', 'Solar'), format: value => formatValue(value, '', 'W') },
+        { key: 'battery', label: t('powerFlow.batteryLabel', 'Battery'), format: value => formatValue(value, '', 'W') },
+        { key: 'grid', label: t('powerFlow.grid', 'Grid'), format: value => formatValue(value, '', 'W') },
+        { key: 'load', label: t('powerFlow.home', 'Home'), format: value => formatValue(value, '', 'W') },
+        { key: 'soc', label: t('powerFlow.stateOfCharge', 'State of charge'), format: value => formatValue(value, '', '%') },
       ]}
     >
       {({ hiddenSeries }) => (
@@ -103,11 +116,12 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
             {...axisTick}
           />
           <YAxis tickFormatter={formatWattTick} {...axisTick} />
-          <Tooltip content={<ChartTooltip />} />
+          <Tooltip content={<ChartTooltip labelFormatter={formatTimeLabel} valueFormatter={formatValue} />} />
           <ChartLegend />
           <Area
             {...AREA_DEFAULTS}
             dataKey="solar"
+            unit="W"
             name={t('powerFlow.solar', 'Solar')}
             stroke={FLOW_COLORS.solar}
             fill="url(#pfGradSolar)"
@@ -116,6 +130,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
           <Area
             {...AREA_DEFAULTS}
             dataKey="battery"
+            unit="W"
             name={t('powerFlow.batteryLabel', 'Battery')}
             stroke={FLOW_COLORS.battery}
             fill="url(#pfGradBattery)"
@@ -124,6 +139,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
           <Area
             {...AREA_DEFAULTS}
             dataKey="grid"
+            unit="W"
             name={t('powerFlow.grid', 'Grid')}
             stroke={FLOW_COLORS.grid}
             fill="url(#pfGradGrid)"
@@ -132,6 +148,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
           <Area
             {...AREA_DEFAULTS}
             dataKey="load"
+            unit="W"
             name={t('powerFlow.home', 'Home')}
             stroke={FLOW_COLORS.home}
             fill="url(#pfGradHome)"

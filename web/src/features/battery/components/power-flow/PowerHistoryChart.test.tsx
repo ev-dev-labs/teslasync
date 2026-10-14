@@ -39,11 +39,28 @@
  *      (error).
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
 import { FLOW_COLORS } from './constants';
+import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+
+const captured = vi.hoisted(() => ({
+  timezone: 'UTC',
+  axis: undefined as undefined | ((value: unknown) => string),
+  label: undefined as undefined | ((value: unknown) => ReactNode),
+  value: undefined as undefined | ((value: unknown, name: string, unit?: string) => ReactNode),
+  columns: [] as { key: string; format: (value: unknown) => ReactNode }[],
+}));
+
+vi.mock('@/lib/timezone', () => ({
+  useTimezone: (mode: string) => {
+    expect(mode).toBe('user');
+    return captured.timezone;
+  },
+}));
 
 /* ── i18n: resolve t(key, fallback) → fallback so copy is deterministic and
  *    locale-file independent. Applies to QueryError's copy too. ─────────── */
@@ -77,6 +94,7 @@ vi.mock('@/components/charts', () => ({
     className,
     data,
     exportData,
+    dataColumns,
     children,
   }: {
     title?: string;
@@ -88,10 +106,12 @@ vi.mock('@/components/charts', () => ({
     className?: string;
     data?: unknown[];
     exportData?: unknown[];
+    dataColumns?: typeof captured.columns;
     children?: ReactNode | ((context: {
       hiddenSeries: { isHidden: (key: string) => boolean };
     }) => ReactNode);
   }) => {
+    captured.columns = dataColumns ?? [];
     const content = typeof children === 'function'
       ? children({ hiddenSeries: { isHidden: () => false } })
       : children;
@@ -130,7 +150,7 @@ vi.mock('@/components/charts', () => ({
     data?: unknown[];
     children?: ReactNode;
   }) => (
-    <div data-testid="area-chart" data-count={String((data ?? []).length)}>
+    <div data-testid="area-chart" data-count={String((data ?? []).length)} data-rows={JSON.stringify(data)}>
       {children}
     </div>
   ),
@@ -139,11 +159,13 @@ vi.mock('@/components/charts', () => ({
     name,
     stroke,
     fill,
+    unit,
   }: {
     dataKey?: string;
     name?: string;
     stroke?: string;
     fill?: string;
+    unit?: string;
   }) => (
     <div
       data-testid="area"
@@ -151,6 +173,7 @@ vi.mock('@/components/charts', () => ({
       data-name={String(name)}
       data-stroke={String(stroke)}
       data-fill={String(fill)}
+      data-unit={unit}
     />
   ),
   ChartGradient: ({ id, color }: { id?: string; color?: string }) => (
@@ -161,15 +184,18 @@ vi.mock('@/components/charts', () => ({
     tickFormatter,
   }: {
     dataKey?: string;
-    tickFormatter?: (v: number) => string;
-  }) => (
+    tickFormatter?: (v: unknown) => string;
+  }) => {
+    captured.axis = tickFormatter;
+    return (
     <div
       data-testid="x-axis"
       data-key={String(dataKey)}
       data-sample={tickFormatter ? tickFormatter(VALID_TICK) : ''}
       data-sample-bad={tickFormatter ? tickFormatter(Number.NaN) : ''}
     />
-  ),
+    );
+  },
   YAxis: ({ tickFormatter }: { tickFormatter?: (v: number) => string }) => (
     <div
       data-testid="y-axis"
@@ -177,9 +203,16 @@ vi.mock('@/components/charts', () => ({
       data-sample-w={tickFormatter ? tickFormatter(500) : ''}
     />
   ),
-  Tooltip: () => <div data-testid="tooltip" />,
+  Tooltip: ({ content }: { content: ReactNode }) => <div data-testid="tooltip">{content}</div>,
   Legend: () => <div data-testid="legend" />,
-  ChartTooltip: () => null,
+  ChartTooltip: ({ labelFormatter, valueFormatter }: {
+    labelFormatter: typeof captured.label;
+    valueFormatter: typeof captured.value;
+  }) => {
+    captured.label = labelFormatter;
+    captured.value = valueFormatter;
+    return null;
+  },
   // Non-component barrel values the source spreads / renders inline.
   chartGrid: <div data-testid="chart-grid" />,
   axisTick: {},
@@ -228,6 +261,9 @@ function renderChart(overrides: Partial<ChartProps> = {}) {
 
 afterEach(() => {
   cleanup();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+  captured.timezone = 'UTC';
 });
 
 describe('PowerHistoryChart — error state', () => {
@@ -432,10 +468,50 @@ describe('PowerHistoryChart — styling passthrough', () => {
     ] });
     const frame = screen.getByTestId('chart-container');
     const expected = [
-      { time: VALID_TICK, solar: null, battery: -800, grid: 0, load: 3700 },
-      { time: VALID_TICK + 1000, solar: 4200, battery: null, grid: -200, load: null },
+      { time: VALID_TICK, solar: null, battery: -800, grid: 0, load: 3700, soc: 82 },
+      { time: VALID_TICK + 1000, solar: 4200, battery: null, grid: -200, load: null, soc: 82 },
     ];
     expect(JSON.parse(frame.getAttribute('data-rows') ?? '[]')).toEqual(expected);
     expect(JSON.parse(frame.getAttribute('data-export-rows') ?? '[]')).toEqual(expected);
+  });
+
+  describe('PowerHistoryChart — saved display preferences', () => {
+    it('formats axes, tooltip and table in the saved locale and timezone across a day boundary', () => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(1);
+      captured.timezone = 'America/Los_Angeles';
+      const time = Date.UTC(2026, 6, 5, 0, 30);
+      const rows = [point({ time, soc: 82.5 })];
+      renderChart({ data: rows });
+      const options = { locale: 'de-DE', tz: captured.timezone };
+      expect(captured.axis?.(time)).toBe(formatDateShort(new Date(time), options));
+      expect(captured.axis?.(time)).not.toBe(formatDateShort(new Date(time), { ...options, tz: 'UTC' }));
+      expect(captured.label?.(time)).toBe(formatDateTime(new Date(time), options));
+      expect(captured.columns.find(column => column.key === 'time')?.format(time)).toBe(captured.label?.(time));
+      expect(captured.value?.(-1500, 'Battery', 'W')).toBe('-1,5 kW');
+      expect(captured.value?.(500, 'Solar', 'W')).toBe('500,0 W');
+      expect(captured.value?.(82.5, 'SOC', '%')).toBe('82,5%');
+      expect(captured.columns.find(column => column.key === 'soc')?.format(82.5)).toBe('82,5%');
+      for (const area of screen.getAllByTestId('area')) expect(area).toHaveAttribute('data-unit', 'W');
+      expect(JSON.parse(screen.getByTestId('area-chart').getAttribute('data-rows') ?? '[]')).toEqual(rows);
+      const evidence = [{ time, solar: 4200, battery: -800, grid: 300, load: 3700, soc: 82.5 }];
+      const frame = screen.getByTestId('chart-container');
+      expect(JSON.parse(frame.getAttribute('data-rows') ?? '[]')).toEqual(evidence);
+      expect(JSON.parse(frame.getAttribute('data-export-rows') ?? '[]')).toEqual(evidence);
+      act(() => setGlobalLocale('fr-FR'));
+      expect(captured.label?.(time)).toBe(formatDateTime(new Date(time), { ...options, locale: 'fr-FR' }));
+    });
+
+    it('renders placeholders for missing or invalid dates and values without treating them as epoch or zero', () => {
+      renderChart({ data: [point()] });
+      for (const value of [undefined, null, NaN, Infinity, 'invalid', '']) {
+        expect(captured.axis?.(value)).toBe('—');
+        expect(captured.label?.(value)).toBe('—');
+        expect(captured.columns.find(column => column.key === 'time')?.format(value)).toBe('—');
+        expect(captured.value?.(value, 'Solar', 'W')).toBe('—');
+        expect(captured.value?.(value, 'SOC', '%')).toBe('—');
+      }
+      expect(captured.label?.(0)).toBe(formatDateTime(new Date(0), { locale: 'en-US', tz: 'UTC' }));
+    });
   });
 });
