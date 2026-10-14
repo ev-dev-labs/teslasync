@@ -5,8 +5,8 @@
  *
  * Wired controls:
  *   - Severity chips (info/warn/critical) — multi-select
- *   - Vehicle <Select> (single, "All vehicles" option)
- *   - Rule <Select>    (single, "All rules" option)
+ *   - Vehicle <Select> (single-choice edits, all URL members disclosed)
+ *   - Rule <Select>    (single-choice edits, all URL members disclosed)
  *   - Source <Select>  (all sources / rule triggers)
  *   - SearchInput      (debounced, message text search)
  *   - Optional read state for the combined mobile header
@@ -99,20 +99,34 @@ export function NotificationFilterBar({
     [filters.severity],
   );
 
+  const vehicleSummary = (filters.vehicle_id ?? [])
+    .map(id => (vehicles ?? []).find(v => v.id === id)?.display_name || `#${id}`)
+    .join(', ');
+  const ruleSummary = (filters.rule_id ?? [])
+    .map(id => (rules ?? []).find(r => r.id === id)?.name || `#${id}`)
+    .join(', ');
+
   const vehicleOptions = useMemo(
     () => [
       { value: '', label: t('notifications.inbox.filter.allVehicles', 'All vehicles') },
+      // URL filters can contain several IDs even though edits choose one.
+      ...(filters.vehicle_id && filters.vehicle_id.length > 1
+        ? [{ value: filters.vehicle_id.join(','), label: vehicleSummary, disabled: true }]
+        : []),
       ...(vehicles ?? []).map(v => ({ value: String(v.id), label: v.display_name || `#${v.id}` })),
     ],
-    [vehicles, t],
+    [filters.vehicle_id, vehicleSummary, vehicles, t],
   );
 
   const ruleOptions = useMemo(
     () => [
       { value: '', label: t('notifications.inbox.filter.allRules', 'All rules') },
+      ...(filters.rule_id && filters.rule_id.length > 1
+        ? [{ value: filters.rule_id.join(','), label: ruleSummary, disabled: true }]
+        : []),
       ...(rules ?? []).map(r => ({ value: String(r.id), label: r.name })),
     ],
-    [rules, t],
+    [filters.rule_id, ruleSummary, rules, t],
   );
 
   const activeFilterChips = useMemo<FilterChipDescriptor[]>(() => {
@@ -132,22 +146,18 @@ export function NotificationFilterBar({
       });
     }
     if (filters.vehicle_id?.length) {
-      const id = filters.vehicle_id[0];
-      const match = (vehicles ?? []).find(v => v.id === id);
       chips.push({
         key: 'vehicle_id',
         label: t('notifications.inbox.filter.vehicle', 'Vehicle'),
-        value: match?.display_name || `#${id}`,
+        value: vehicleSummary,
         onRemove: () => onChange({ ...filters, vehicle_id: undefined }),
       });
     }
     if (filters.rule_id?.length) {
-      const id = filters.rule_id[0];
-      const match = (rules ?? []).find(r => r.id === id);
       chips.push({
         key: 'rule_id',
         label: t('notifications.inbox.filter.rule', 'Rule'),
-        value: match?.name || `#${id}`,
+        value: ruleSummary,
         onRemove: () => onChange({ ...filters, rule_id: undefined }),
       });
     }
@@ -176,7 +186,7 @@ export function NotificationFilterBar({
       });
     }
     return chips;
-  }, [filters, vehicles, rules, onChange, t, includeReadState]);
+  }, [filters, vehicleSummary, ruleSummary, onChange, t, includeReadState]);
 
   const handleClearAll = useCallback(() => {
     onChange({
@@ -221,7 +231,8 @@ export function NotificationFilterBar({
         <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={vehicleOptions}
-          value={filters.vehicle_id?.[0] ? String(filters.vehicle_id[0]) : ''}
+          value={(filters.vehicle_id ?? []).join(',')}
+          title={vehicleSummary || undefined}
           onChange={e => setVehicle(e.target.value)}
           aria-label={t('notifications.inbox.filter.vehicle', 'Vehicle')}
           className="min-w-0 max-w-full"
@@ -231,7 +242,8 @@ export function NotificationFilterBar({
         <div className="min-w-0 w-full max-w-full sm:w-40">
         <Select
           options={ruleOptions}
-          value={filters.rule_id?.[0] ? String(filters.rule_id[0]) : ''}
+          value={(filters.rule_id ?? []).join(',')}
+          title={ruleSummary || undefined}
           onChange={e => setRule(e.target.value)}
           aria-label={t('notifications.inbox.filter.rule', 'Rule')}
           className="min-w-0 max-w-full"

@@ -15,6 +15,8 @@
  *      and Clear-all preserves the shared date preference.
  *   6. Null-safety / a11y — empty filters render no chips and no pressed chip;
  *      an unknown vehicle id degrades to a #id chip label.
+ *   7. Multi-ID URL scope — every member is disclosed without rewriting IDs;
+ *      explicit edits still replace one filter with a single choice.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -146,6 +148,151 @@ describe('NotificationFilterBar — search', () => {
 
     await waitFor(() => expect(onChange).toHaveBeenCalled());
     expect(onChange.mock.calls.at(-1)![0].q).toBeUndefined();
+  });
+});
+
+describe('NotificationFilterBar — multi-ID URL scope', () => {
+  const filters = {
+    vehicle_id: [2, 999, 1],
+    rule_id: [20, 888, 10],
+    severity: ['warn'] as const,
+    source: 'rule' as const,
+    q: 'brake',
+    read: false,
+    archived: true,
+    from: '2026-01-01T00:00:00Z',
+    to_exclusive: '2026-02-01T00:00:00Z',
+  };
+  const scopedFilters = () => ({
+    ...filters,
+    vehicle_id: [...filters.vehicle_id],
+    rule_id: [...filters.rule_id],
+    severity: [...filters.severity],
+  });
+
+  it.each(['all', 'source'] as const)('discloses every selected ID in the %s controls without changing URL scope', section => {
+    const original = scopedFilters();
+    const { onChange } = renderBar({ section, filters: original });
+
+    const vehicles = screen.getByRole('combobox', { name: 'Vehicle' });
+    const rules = screen.getByRole('combobox', { name: 'Rule' });
+    expect(vehicles).toHaveValue('2,999,1');
+    expect(rules).toHaveValue('20,888,10');
+    expect(within(vehicles).getByRole('option', { selected: true })).toHaveTextContent('Model Y, #999, Model 3');
+    expect(within(rules).getByRole('option', { selected: true })).toHaveTextContent('Battery Cold, #888, Tire pressure Low');
+    expect(within(vehicles).getByRole('option', { selected: true })).toBeDisabled();
+    expect(within(rules).getByRole('option', { selected: true })).toBeDisabled();
+    if (section === 'all') {
+      const chips = screen.getByTestId('active-filter-chips');
+      expect(within(chips).getByText('Model Y, #999, Model 3')).toBeInTheDocument();
+      expect(within(chips).getByText('Battery Cold, #888, Tire pressure Low')).toBeInTheDocument();
+    } else {
+      expect(screen.queryByTestId('active-filter-chips')).not.toBeInTheDocument();
+    }
+    expect(onChange).not.toHaveBeenCalled();
+    expect(original).toEqual(scopedFilters());
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expect(screen.getAllByRole('combobox', { name: 'Vehicle' })).toHaveLength(1);
+  });
+
+  it('keeps unknown and nameless members visible when lookup lists are incomplete', () => {
+    renderBar({
+      filters: { vehicle_id: [999, 7, 2], rule_id: [888, 30, 20] },
+      vehicles: [vehicle(7, '')],
+      rules: [rule(30, '')],
+    });
+    const chips = screen.getByTestId('active-filter-chips');
+    expect(within(chips).getByText('#999, #7, #2')).toBeInTheDocument();
+    expect(within(chips).getByText('#888, #30, #20')).toBeInTheDocument();
+    expect(within(screen.getByRole('combobox', { name: 'Vehicle' })).getByRole('option', { selected: true }))
+      .toHaveTextContent('#999, #7, #2');
+    expect(within(screen.getByRole('combobox', { name: 'Rule' })).getByRole('option', { selected: true }))
+      .toHaveTextContent('#888, #30, #20');
+  });
+
+  it.each([
+    ['Vehicle', '1', 'vehicle_id', [1]],
+    ['Vehicle', '', 'vehicle_id', undefined],
+    ['Rule', '10', 'rule_id', [10]],
+    ['Rule', '', 'rule_id', undefined],
+  ] as const)('preserves sibling scope when %s changes to "%s"', (label, value, key, next) => {
+    const original = scopedFilters();
+    const { onChange } = renderBar({ filters: original });
+    fireEvent.change(screen.getByRole('combobox', { name: label }), { target: { value } });
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ ...original, [key]: next });
+    expect(original).toEqual(scopedFilters());
+  });
+
+  it('retains every URL member when an unrelated filter changes', () => {
+    const original = scopedFilters();
+    const { onChange } = renderBar({ filters: original, includeReadState: true });
+    fireEvent.click(screen.getByRole('button', { name: /^critical$/i }));
+    expect(onChange).toHaveBeenLastCalledWith({ ...original, severity: ['warn', 'critical'] });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Source' }), { target: { value: '' } });
+    expect(onChange).toHaveBeenLastCalledWith({ ...original, source: undefined });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Filter by read state' }), { target: { value: 'read' } });
+    expect(onChange).toHaveBeenLastCalledWith({ ...original, read: true });
+    expect(original).toEqual(scopedFilters());
+  });
+
+  it('preserves all URL IDs through a debounced search edit', async () => {
+    const original = scopedFilters();
+    const { onChange } = renderBar({ filters: original });
+    fireEvent.change(screen.getByPlaceholderText(/search messages/i), { target: { value: 'battery' } });
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    expect(onChange).toHaveBeenLastCalledWith({ ...original, q: 'battery' });
+    expect(original).toEqual(scopedFilters());
+  });
+
+  it('retains URL order, duplicate members and raw identifier spelling in summaries', () => {
+    const { onChange } = renderBar({
+      filters: { vehicle_id: [999, 999, 1], rule_id: [888, 888, 10] },
+    });
+    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('999,999,1');
+    expect(screen.getByRole('combobox', { name: 'Rule' })).toHaveValue('888,888,10');
+    const chips = screen.getByTestId('active-filter-chips');
+    expect(within(chips).getByText('#999, #999, Model 3')).toBeInTheDocument();
+    expect(within(chips).getByText('#888, #888, Tire pressure Low')).toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it.each(['Vehicle', 'Rule'] as const)('removes the whole %s chip while preserving all other members and workspace bounds', label => {
+    const original = scopedFilters();
+    const { onChange } = renderBar({ filters: original });
+    fireEvent.click(screen.getByRole('button', { name: `Remove filter ${label}` }));
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({
+      ...original,
+      [label === 'Vehicle' ? 'vehicle_id' : 'rule_id']: undefined,
+    });
+  });
+
+  it('clears multi-ID business filters without altering archive or shared range state', () => {
+    const original = scopedFilters();
+    const { onChange } = renderBar({ filters: original });
+    fireEvent.click(screen.getByRole('button', { name: 'Clear all' }));
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({
+      ...original,
+      vehicle_id: undefined,
+      rule_id: undefined,
+      severity: undefined,
+      source: undefined,
+      q: undefined,
+    });
+  });
+
+  it('updates disclosure on controlled URL changes without emitting a change', () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <NotificationFilterBar filters={{ vehicle_id: [1], rule_id: [10] }} vehicles={VEHICLES} rules={RULES} onChange={onChange} />,
+    );
+    rerender(<NotificationFilterBar filters={{ vehicle_id: [2, 1], rule_id: [20, 10] }} vehicles={VEHICLES} rules={RULES} onChange={onChange} />);
+    expect(within(screen.getByTestId('active-filter-chips')).getByText('Model Y, Model 3')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Rule' })).toHaveValue('20,10');
+    rerender(<NotificationFilterBar filters={{ vehicle_id: [2], rule_id: [20] }} vehicles={VEHICLES} rules={RULES} onChange={onChange} />);
+    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('2');
+    expect(screen.getByRole('combobox', { name: 'Rule' })).toHaveValue('20');
+    expect(screen.queryByRole('option', { name: 'Battery Cold, Tire pressure Low' })).not.toBeInTheDocument();
+    expect(onChange).not.toHaveBeenCalled();
   });
 });
 
