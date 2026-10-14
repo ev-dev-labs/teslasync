@@ -29,11 +29,11 @@
  * is stubbed locally so the English fallbacks render deterministically.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { render, screen, fireEvent, waitFor, within, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter, useSearchParams } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { Button } from '@/components/ui'
 import { containerPolicy } from '@/components/layout/layout-reference'
@@ -213,17 +213,116 @@ function renderPage(path = '/timeline?from=2025-03-01&to=2025-03-02') {
 
 function HeaderVehicleSwitch() {
   const { setVehicleId } = useSelectedVehicle()
-  return <Button onClick={() => setVehicleId(2)}>Select Model Y in header</Button>
+  const [params, setParams] = useSearchParams()
+  return <>
+    <Button onClick={() => setVehicleId(2)}>Select Model Y in header</Button>
+    <Button onClick={() => setVehicleId(1)}>Select Model 3 in header</Button>
+    <Button onClick={() => {
+      const next = new URLSearchParams(params)
+      next.set('from', '2025-03-02')
+      next.set('to', '2025-03-02')
+      setParams(next)
+    }}>Change window in header</Button>
+  </>
 }
 
 beforeEach(() => {
+  onlineManager.setOnline(true)
   timezoneFixture.value = 'UTC'
   mockedRequest.mockReset()
   window.localStorage.clear()
   install()
 })
 
+afterEach(() => {
+  onlineManager.setOnline(true)
+})
+
 describe('TimelinePage', () => {
+  it.each(['vehicle', 'window'] as const)('clears preview evidence and actions on a header %s change before the next source resolves', async scope => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect transition asleep to driving' }))
+    const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
+    expect(within(drawer).getByText('1h')).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/1')
+
+    install({ timelinePending: true, summaryPending: true })
+    fireEvent.click(screen.getByRole('button', {
+      name: scope === 'vehicle' ? 'Select Model Y in header' : 'Change window in header',
+    }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.getByRole('status', { name: 'Loading State transitions' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Telemetry evidence' })).toBeNull()
+    if (scope === 'vehicle') {
+      fireEvent.click(screen.getByRole('button', { name: 'Select Model 3 in header' }))
+      await screen.findByRole('table', { name: 'State transitions' })
+      expect(screen.queryByRole('dialog')).toBeNull()
+    }
+  })
+
+  it.each(['vehicle', 'window'] as const)('clears the shared mobile quick view when the header %s changes', async scope => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 44))
+    try {
+      renderPage()
+      const inspect = await screen.findByRole('button', { name: 'Inspect transition asleep to driving' })
+      const mobile = inspect.closest('[data-mobile-table]')!
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0])
+      expect(screen.getByRole('dialog')).toHaveTextContent('shift_state')
+      fireEvent.click(screen.getByRole('button', {
+        name: scope === 'vehicle' ? 'Select Model Y in header' : 'Change window in header',
+      }))
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    } finally {
+      bounds.mockRestore()
+    }
+  })
+
+  it('resets the summary evidence drawer instead of rebinding an open review to another vehicle', async () => {
+    renderPage()
+    await screen.findByText('10', {}, { timeout: 8000 })
+    fireEvent.click(within(screen.getByTestId('timeline-summary')).getByRole('button', { name: 'Review details' }))
+    expect(await screen.findByRole('dialog')).toHaveTextContent('Operational metrics')
+    fireEvent.click(screen.getByRole('button', { name: 'Select Model Y in header' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(await within(screen.getByTestId('timeline-summary')).findByText('7')).toBeInTheDocument()
+  })
+
+  it('keeps paused first loads distinct from successful empty or zero evidence and recovers', async () => {
+    onlineManager.setOnline(false)
+    install({ emptyTimeline: true, emptySummary: true })
+    renderPage()
+    expect(await screen.findByText('State transitions is paused while the connection is unavailable')).toBeInTheDocument()
+    expect(screen.queryByText('No state transitions recorded')).toBeNull()
+    expect(screen.queryByText('No daily transition activity yet')).toBeNull()
+    const brief = screen.getByTestId('timeline-summary')
+    expect(within(brief).queryByText('0', { exact: true })).toBeNull()
+    expect(within(brief).queryByText('0m')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Refresh timeline' })).toBeDisabled()
+    await act(async () => onlineManager.setOnline(true))
+    expect(await screen.findByText('No state transitions recorded')).toBeInTheDocument()
+    expect(screen.getByText('No daily transition activity yet')).toBeInTheDocument()
+    expect(within(brief).getByText('0', { exact: true })).toBeInTheDocument()
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+  })
+
+  it('preserves originating preview evidence through same-scope refresh failure and recovery', async () => {
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Inspect transition asleep to driving' }))
+    install({ timelineError: true })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh timeline' }))
+    expect(await screen.findByText(/Showing retained State transitions after a refresh failed/)).toHaveTextContent('timeline boom')
+    const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
+    expect(within(drawer).getByText('1h')).toBeInTheDocument()
+    expect(within(drawer).getByText('D')).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' })).toHaveAttribute('href', '/vehicles/1')
+    install()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh timeline' }))
+    await waitFor(() => expect(screen.queryByText(/Showing retained State transitions after a refresh failed/)).toBeNull())
+    expect(screen.getByRole('dialog', { name: 'asleep → driving' })).toHaveTextContent('shift_state')
+    expect(screen.getByRole('table', { name: 'State transitions' })).toHaveTextContent('shift_state')
+  })
+
   it('preserves bounded mobile durations, complete quick-view fields, and keyboard inspection', async () => {
     const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
       .mockReturnValue(new DOMRect(0, 0, 375, 44))

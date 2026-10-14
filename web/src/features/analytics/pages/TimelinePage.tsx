@@ -148,7 +148,13 @@ export default function TimelinePage() {
     defaultPresetId: '7d',
     timezone,
   });
+  const previewScope = JSON.stringify([activeId, startInstant, endInstantExclusive, timezone]);
+  const [retainedPreviewScope, setRetainedPreviewScope] = useState(previewScope);
   const [previewTransition, setPreviewTransition] = useState<TransitionRow | null>(null);
+  if (retainedPreviewScope !== previewScope) {
+    setRetainedPreviewScope(previewScope);
+    setPreviewTransition(null);
+  }
   const previewDay = localDayKey(previewTransition?.ts, timezone);
 
   const { error: vehiclesError } = useVehicles();
@@ -424,7 +430,7 @@ export default function TimelinePage() {
       )}
       {/* Independent summary source: unknown never masquerades as a zero. */}
       <FadeIn>
-        <OperationalBrief compact testId="timeline-summary"
+        <OperationalBrief key={previewScope} compact testId="timeline-summary"
           eyebrow={t('timeline.title', 'Timeline')}
           title={t('timeline.kpis', 'Summary metrics')}
           description={t('timeline.summary.provenance', 'Vehicle FSM summary for the requested window; continuous observation coverage is unknown')}
@@ -620,6 +626,7 @@ export default function TimelinePage() {
           content: <LayoutCard title={t('timeline.stateTransitions', 'State transitions')}>
             <TimelineSource source={timelineSource} label={t('timeline.stateTransitions', 'State transitions')}>
           <DataTable
+            key={previewScope}
             variant="embedded"
             name={t('timeline.stateTransitions', 'State transitions')}
             enableValueFilters
