@@ -77,6 +77,7 @@ export default function ColdStartPage() {
 
   const sectionState: ColdStartSectionState = {
     isLoading: sourceState.status === 'initial',
+    retained: sourceState.status === 'stale' || sourceState.refreshError != null,
     error: sourceState.fatalError,
     onRetry: () => {
       void drivesQuery.refetch();
@@ -106,7 +107,7 @@ export default function ColdStartPage() {
               end: `${formatDateTime(endInstantExclusive)} ${tzAbbreviation(endInstantExclusive, timezone)}`,
             },
           )}
-          retained={sourceState.status === 'stale' || sourceState.refreshError != null}
+          retained={sectionState.retained ?? false}
         />
       </FadeIn>
 

@@ -4,10 +4,11 @@ import type { ReactNode } from 'react';
 import type { Drive } from '@/types/driving';
 import type { ComponentProps } from 'react';
 import type { ColdStartBrief } from '../components/operationalbrief-a-m/ColdStartBrief';
+import type { NestedDrivingBrief } from '../components/operationalbrief-a-m/NestedDrivingBrief';
 
 const { useDrivesMock,
 sharedRange, selectedVehicleMock, pageTitleMock, rangeOptionsMock,
-timezoneMock, briefPropsMock, formatCurrencyMock, formatting } = vi.hoisted(() => ({
+timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, formatCurrencyMock, formatting } = vi.hoisted(() => ({
   useDrivesMock: vi.fn(),
   sharedRange: {
     set: (_range: {
@@ -22,6 +23,8 @@ timezoneMock, briefPropsMock, formatCurrencyMock, formatting } = vi.hoisted(() =
   rangeOptionsMock: vi.fn(),
   timezoneMock: vi.fn(),
   briefPropsMock: vi.fn(),
+  nestedBriefPropsMock: vi.fn(),
+  comparisonPropsMock: vi.fn(),
   formatCurrencyMock: vi.fn(),
   formatting: { costPerKwh: 0.2 as number | null },
 }));
@@ -155,7 +158,10 @@ vi.mock('@/components/data-display', async () => ({
 }));
 
 vi.mock('../components/operationalbrief-a-m/NestedDrivingBrief', () => ({
-  NestedDrivingBrief: () => null,
+  NestedDrivingBrief: (props: ComponentProps<typeof NestedDrivingBrief>) => {
+    nestedBriefPropsMock(props);
+    return null;
+  },
 }));
 
 vi.mock('../components/cold-start/useColdStartDisplay', () => ({
@@ -181,8 +187,10 @@ vi.mock('../components/cold-start', () => {
   return {
     ColdStartKpis: (props: { isLoading: boolean; error: unknown }) =>
       section('cold-start-kpis', props),
-    ColdWarmComparison: (props: { state: { isLoading: boolean; error: unknown } }) =>
-      section('cold-start-comparison', props.state),
+    ColdWarmComparison: (props: ComponentProps<typeof ColdWarmComparison>) => {
+      comparisonPropsMock(props);
+      return section('cold-start-comparison', props.state);
+    },
     ColdStartMethodology: (props: { state: { isLoading: boolean; error: unknown } }) =>
       section('cold-start-method', props.state),
     MonthlyColdStartChart: (props: { state: { isLoading: boolean; error: unknown } }) =>
@@ -208,6 +216,7 @@ vi.mock('../components/operationalbrief-a-m/ColdStartBrief', async () => {
 
 import ColdStartPage from './ColdStartPage';
 import { ColdWarmComparison } from '../components/cold-start/ColdWarmComparison';
+import { ColdStartMethodology } from '../components/cold-start/ColdStartMethodology';
 import { summarizeColdStarts } from '../lib/coldStart';
 
 function query(overrides: Record<string, unknown> = {}) {
@@ -291,6 +300,62 @@ describe('ColdStartPage', () => {
       end: '2026-08-08T07:00:00.000Z',
       limit: 1000,
     });
+  });
+
+    describe('ColdStartMethodology confidence', () => {
+      it.each([
+        { name: 'initial loading', isLoading: true, error: null, label: 'Loading cold-start analysis' },
+        { name: 'fatal failure', isLoading: false, error: new Error('unavailable'), label: 'Unavailable' },
+        { name: 'fatal failure during loading', isLoading: true, error: new Error('unavailable'), label: 'Unavailable' },
+      ])('prioritizes $name over sample confidence and retains the shell', ({ isLoading, error, label }) => {
+        const summary = summarizeColdStarts(supportedDrives());
+        const onRetry = vi.fn();
+        render(
+          <ColdStartMethodology
+            summary={summary}
+            observedDrives={11}
+            windowLimit={1000}
+            state={{ isLoading, error, onRetry }}
+          />,
+        );
+
+        expect(screen.getByRole('region', { name: 'Confidence and methodology' })).toBeInTheDocument();
+        expect(screen.getByText('Confidence & method')).toBeInTheDocument();
+        expect(screen.getByText(label)).toBeInTheDocument();
+        expect(screen.queryByText('Penalty claim supported')).not.toBeInTheDocument();
+        expect(screen.queryByText('More samples needed')).not.toBeInTheDocument();
+        if (error) {
+          fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+          expect(onRetry).toHaveBeenCalledTimes(1);
+        } else {
+          expect(screen.getByRole('status', { name: 'Loading cold-start analysis' })).toBeInTheDocument();
+        }
+      });
+
+      it.each([
+        { name: 'supported', count: 11, label: 'Penalty claim supported', cold: '5/5', classified: '10' },
+        { name: 'insufficient', count: 10, label: 'More samples needed', cold: '4/5', classified: '9' },
+      ])('preserves $name populated confidence and readings', ({ count, label, cold, classified }) => {
+        render(
+          <ColdStartMethodology
+            summary={summarizeColdStarts(supportedDrives().slice(0, count))}
+            observedDrives={count}
+            windowLimit={1000}
+            state={{ isLoading: false, error: null, onRetry: vi.fn() }}
+          />,
+        );
+
+        expect(screen.getByText(label)).toBeInTheDocument();
+        expect(screen.getAllByText(cold).length).toBeGreaterThan(0);
+        expect(screen.getAllByText('5/5').length).toBeGreaterThan(0);
+        expect(screen.getByText(classified)).toBeInTheDocument();
+        for (const reading of ['Cold evidence', 'Warm evidence', 'Classified']) {
+          expect(screen.getByText(reading)).toBeInTheDocument();
+        }
+        expect(screen.getByText(/1 usable drives could not be classified/)).toBeInTheDocument();
+        expect(screen.getByText(`This analysis uses ${count} drives returned for the selected observed window (up to 1000). Consumption is distance-weighted; only drives of at least 1 km with measured energy qualify.`)).toBeInTheDocument();
+      });
+    });
 
     describe('ColdWarmComparison efficiency readings', () => {
       const readings = [
@@ -339,6 +404,84 @@ describe('ColdStartPage', () => {
         });
       });
 
+  it.each([
+      { name: 'active loading', result: query({ data: undefined, isPending: true, isFetching: true, fetchStatus: 'fetching' }), loading: true, retained: false },
+      { name: 'paused without data', result: query({ data: undefined, isPending: true, fetchStatus: 'paused' }), loading: true, retained: false },
+      { name: 'successful empty', result: query(), loading: false, retained: false },
+      { name: 'successful zero penalty', result: query({ data: supportedDrives().map(drive => ({ ...drive, energyUsedWh: 200 })) }), loading: false, retained: false },
+      { name: 'retained refresh failure', result: query({ data: supportedDrives(), isError: true, error: new Error('refresh failed') }), loading: false, retained: true },
+  ])('threads existing trust into comparison section state for $name', ({ result, loading, retained }) => {
+      useDrivesMock.mockReturnValue(result);
+      render(<ColdStartPage />);
+
+      expect(comparisonPropsMock.mock.lastCall?.[0].state).toMatchObject({
+        isLoading: loading, retained, error: null,
+      });
+      expect(briefPropsMock.mock.lastCall?.[0].retained).toBe(retained);
+  });
+
+  it('preserves cohort operands and clears nested retained trust after recovery', () => {
+      const retained = query({ data: supportedDrives() });
+      useDrivesMock.mockReturnValue(retained);
+      const page = render(<ColdStartPage />);
+      const comparison = render(<ColdWarmComparison {...comparisonPropsMock.mock.lastCall?.[0]} />);
+      const originalMetrics = nestedBriefPropsMock.mock.lastCall?.[0].metrics;
+      expect(nestedBriefPropsMock.mock.lastCall?.[0]).toMatchObject({
+        retained: false, loading: false, unavailable: false,
+      });
+
+      useDrivesMock.mockReturnValue({ ...retained, isError: true, error: new Error('refresh failed') });
+      page.rerender(<ColdStartPage />);
+      comparison.rerender(<ColdWarmComparison {...comparisonPropsMock.mock.lastCall?.[0]} />);
+      expect(nestedBriefPropsMock.mock.lastCall?.[0]).toMatchObject({
+        retained: true, loading: false, unavailable: false,
+      });
+      expect(nestedBriefPropsMock.mock.lastCall?.[0].metrics.map((metric: { rawValue: number | null }) => metric.rawValue))
+        .toEqual(originalMetrics.map((metric: { rawValue: number | null }) => metric.rawValue));
+
+      useDrivesMock.mockReturnValue({ ...retained, isFetching: true, fetchStatus: 'fetching', isError: true, error: new Error('refresh failed') });
+      page.rerender(<ColdStartPage />);
+      comparison.rerender(<ColdWarmComparison {...comparisonPropsMock.mock.lastCall?.[0]} />);
+      expect(nestedBriefPropsMock.mock.lastCall?.[0].retained).toBe(true);
+
+      useDrivesMock.mockReturnValue({ ...retained, dataUpdatedAt: 2 });
+      page.rerender(<ColdStartPage />);
+      comparison.rerender(<ColdWarmComparison {...comparisonPropsMock.mock.lastCall?.[0]} />);
+      expect(nestedBriefPropsMock.mock.lastCall?.[0]).toMatchObject({
+        retained: false, loading: false, unavailable: false,
+      });
+      expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each([
+      { name: 'active loading', state: { isLoading: true, error: null, onRetry: vi.fn(), retained: false }, empty: false },
+      { name: 'paused without data', state: { isLoading: true, error: null, onRetry: vi.fn(), retained: false }, empty: false },
+      { name: 'successful empty', state: { isLoading: false, error: null, onRetry: vi.fn(), retained: false }, empty: true },
+  ])('does not invent nested cohort evidence for $name', ({ state, empty }) => {
+      render(<ColdWarmComparison summary={summarizeColdStarts([])} penaltyCostLabel={null} state={state} />);
+      expect(screen.getByTestId('cold-start-comparison')).toBeInTheDocument();
+      expect(nestedBriefPropsMock).not.toHaveBeenCalled();
+      if (empty) {
+        expect(screen.getByText('This window has no drives in the warm or cold parking-gap groups.')).toBeInTheDocument();
+      } else {
+        expect(screen.getByRole('status', { name: 'Loading cold-start analysis' })).toBeInTheDocument();
+      }
+  });
+
+  it('passes successful measured zero to the nested brief as returned evidence', () => {
+      const summary = summarizeColdStarts(supportedDrives().map(drive => ({ ...drive, energyUsedWh: 200 })));
+      render(<ColdWarmComparison summary={summary} penaltyCostLabel={null}
+        state={{ isLoading: false, error: null, retained: false, onRetry: vi.fn() }} />);
+      expect(nestedBriefPropsMock.mock.lastCall?.[0]).toMatchObject({
+        retained: false, loading: false, unavailable: false,
+        metrics: [
+          expect.objectContaining({ rawValue: 0 }),
+          expect.objectContaining({ rawValue: 0.2 }),
+          expect.objectContaining({ rawValue: 0.2 }),
+        ],
+      });
+  });
+
       it('retains the minimum max guard while distinguishing missing from measured zero', () => {
         const summary = summarizeColdStarts([]);
         summary.cold = { drives: 5, distanceM: 5_000, whPerKm: null };
@@ -362,7 +505,6 @@ describe('ColdStartPage', () => {
         expect(warm).toHaveTextContent('0 Wh/km');
       });
     });
-  });
 
   it('re-queries with the newly selected range', async () => {
     render(<ColdStartPage />);

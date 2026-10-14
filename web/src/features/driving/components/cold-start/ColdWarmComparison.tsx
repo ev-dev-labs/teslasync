@@ -118,6 +118,7 @@ export function ColdWarmComparison({
                 <NestedDrivingBrief metrics={metrics}
                   title={t('coldStart.brief.cohortTitle', 'Distance-weighted cohort consumption')}
                   description={deltaLabel} loading={state.isLoading}
+                  retained={state.retained}
                   unavailable={state.error != null}
                   period={{ kind: 'unknown', label: cohortContext,
                     reason: t('coldStart.comparison.help', 'A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.') }} />
