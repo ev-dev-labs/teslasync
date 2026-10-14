@@ -13,7 +13,7 @@
 //   - the four refresh mutations — POST path, cache invalidation, and
 //     success/error toast wiring.
 //
-// Network is stubbed at the request() boundary except for the profile live-mode
+// Network is stubbed at the request() boundary except for the guarded live-mode
 // cases, which use the real request() with mocked fetch. The mutation-toast bridge is
 // replaced with spies so onSuccess/onError assertions are exact and no
 // ToastProvider / i18n instance is required.
@@ -388,9 +388,10 @@ describe('useRefreshTeslaFeatureConfig', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/tesla/user/feature-config/refresh');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: userKeys.teslaFeatureConfig });
     expect(successToast).toHaveBeenCalledWith(
-      'toast.user.featureConfig.success',
+      'toast.featureConfigRefreshed',
       'Feature config refreshed',
     );
   });
@@ -404,7 +405,7 @@ describe('useRefreshTeslaFeatureConfig', () => {
     await expect(result.current.mutateAsync(undefined)).rejects.toThrow('rate limit');
     expect(errorToast).toHaveBeenCalledWith(
       expect.any(Error),
-      'toast.user.featureConfig.error',
+      'toast.featureConfigFailed',
       'Failed to refresh feature config',
     );
     expect(invalidate).not.toHaveBeenCalled();
@@ -423,8 +424,9 @@ describe('useRefreshTeslaRegion', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/tesla/user/region/refresh');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: userKeys.teslaRegion });
-    expect(successToast).toHaveBeenCalledWith('toast.user.region.success', 'Region refreshed');
+    expect(successToast).toHaveBeenCalledWith('toast.regionRefreshed', 'Region info refreshed');
   });
 
   it('toasts the error on failure', async () => {
@@ -435,7 +437,7 @@ describe('useRefreshTeslaRegion', () => {
     await expect(result.current.mutateAsync(undefined)).rejects.toThrow('down');
     expect(errorToast).toHaveBeenCalledWith(
       expect.any(Error),
-      'toast.user.region.error',
+      'toast.regionFailed',
       'Failed to refresh region',
     );
   });
@@ -683,6 +685,199 @@ describe('useRefreshTeslaProfile guarded transport', () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, options] = fetchMock.mock.calls[0];
     expect(url).toBe('/api/v1/tesla/user/profile');
+    expect(options?.method ?? 'GET').toBe('GET');
+    expect(options?.signal).toBeInstanceOf(AbortSignal);
+    expect(options).not.toHaveProperty('requiresLiveMode');
+    expect(successToast).not.toHaveBeenCalled();
+    expect(errorToast).not.toHaveBeenCalled();
+  });
+});
+
+describe.each([
+  {
+    label: 'feature config',
+    useRefresh: useRefreshTeslaFeatureConfig,
+    useRead: useTeslaFeatureConfig,
+    key: userKeys.teslaFeatureConfig,
+    path: '/tesla/user/feature-config',
+    retained: { data: { location_streaming: true }, fetched_at: null },
+    successKey: 'toast.featureConfigRefreshed',
+    successMessage: 'Feature config refreshed',
+    errorKey: 'toast.featureConfigFailed',
+    errorMessage: 'Failed to refresh feature config',
+  },
+  {
+    label: 'region',
+    useRefresh: useRefreshTeslaRegion,
+    useRead: useTeslaUserRegion,
+    key: userKeys.teslaRegion,
+    path: '/tesla/user/region',
+    retained: { data: { region: 'eu', fleet_api_base_url: 'https://example.test' }, fetched_at: null },
+    successKey: 'toast.regionRefreshed',
+    successMessage: 'Region info refreshed',
+    errorKey: 'toast.regionFailed',
+    errorMessage: 'Failed to refresh region',
+  },
+])('$label guarded transport', (scenario) => {
+  const fetchMock = vi.fn<typeof fetch>();
+  const clients: QueryClient[] = [];
+  const originalUrl = window.location.href;
+
+  function setMode(online: boolean, asOf: string | null = null) {
+    vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(online);
+    window.history.replaceState({}, '', asOf
+      ? `/tesla-account?as_of=${encodeURIComponent(asOf)}`
+      : '/tesla-account');
+  }
+
+  function setupMutation() {
+    const qc = createQueryClient();
+    clients.push(qc);
+    const { Wrapper } = makeWrapper(qc);
+    qc.setQueryData(scenario.key, scenario.retained);
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const writeCache = vi.spyOn(qc, 'setQueryData');
+    const hook = renderHook(() => scenario.useRefresh(), { wrapper: Wrapper });
+    return { ...hook, qc, invalidate, writeCache };
+  }
+
+  function expectRejected(fixture: ReturnType<typeof setupMutation>) {
+    expect(fixture.result.current.isSuccess).toBe(false);
+    expect(fixture.result.current.isPending).toBe(false);
+    expect(fixture.result.current.data).toBeUndefined();
+    expect(fixture.invalidate).not.toHaveBeenCalled();
+    expect(fixture.writeCache).not.toHaveBeenCalled();
+    expect(fixture.qc.getQueryData(scenario.key)).toBe(scenario.retained);
+    expect(fixture.qc.getQueryState(scenario.key)?.isInvalidated).toBe(false);
+    expect(successToast).not.toHaveBeenCalled();
+    expect(errorToast).toHaveBeenCalledExactlyOnceWith(
+      fixture.result.current.error, scenario.errorKey, scenario.errorMessage,
+    );
+  }
+
+  beforeEach(async () => {
+    const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
+    vi.mocked(request).mockImplementation(actual.request);
+    __resetSudoStateForTests();
+    fetchMock.mockReset();
+    fetchMock.mockRejectedValue(new Error('Unexpected mocked transport call'));
+    vi.stubGlobal('fetch', fetchMock);
+    setMode(true);
+  });
+
+  afterEach(() => {
+    cleanup();
+    for (const client of clients.splice(0)) client.clear();
+    __resetSudoStateForTests();
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+    window.history.replaceState({}, '', originalUrl);
+  });
+
+  it('live refresh uses POST and success-only invalidation with the accepted toast', async () => {
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(scenario.retained), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const fixture = setupMutation();
+
+    await act(async () => {
+      expect(await fixture.result.current.mutateAsync(undefined)).toMatchObject(scenario.retained);
+    });
+    await waitFor(() => expect(fixture.result.current.isSuccess).toBe(true));
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe(`/api/v1${scenario.path}/refresh`);
+    expect(options).toMatchObject({ method: 'POST' });
+    expect(options).not.toHaveProperty('requiresLiveMode');
+    expect(fixture.invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: scenario.key });
+    expect(fixture.qc.getQueryState(scenario.key)?.isInvalidated).toBe(true);
+    expect(fixture.writeCache).not.toHaveBeenCalled();
+    expect(fixture.qc.getQueryData(scenario.key)).toBe(scenario.retained);
+    expect(successToast).toHaveBeenCalledExactlyOnceWith(scenario.successKey, scenario.successMessage);
+    expect(errorToast).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { label: 'historical snapshot', online: true, asOf: '2025-06-01T00:00:00Z', mode: 'as_of' },
+    { label: 'historical replay instant', online: true, asOf: '2025-06-01T00:00:01Z', mode: 'as_of' },
+    { label: 'offline cached view', online: false, asOf: null, mode: 'cached' },
+    { label: 'offline historical replay', online: false, asOf: '2025-06-01T00:00:01Z', mode: 'as_of' },
+  ] as const)('$label rejects before transport and retains cache without false success', async ({ online, asOf, mode }) => {
+    setMode(online, asOf);
+    const fixture = setupMutation();
+    expect(readOperationalModeFromEnvironment()).toMatchObject({ mode, online, isReadOnly: true });
+
+    await act(async () => {
+      await expect(fixture.result.current.mutateAsync(undefined)).rejects.toBeInstanceOf(OperationalModeWriteError);
+    });
+    await waitFor(() => expect(fixture.result.current.isError).toBe(true));
+
+    expect(fixture.result.current.error).toMatchObject({ code: OPERATIONAL_MODE_READ_ONLY_CODE, mode });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expectRejected(fixture);
+  });
+
+  it('checks mode at dispatch even when the hook rendered live', async () => {
+    const fixture = setupMutation();
+    setMode(true, '2025-06-01T00:00:00Z');
+
+    await act(async () => {
+      await expect(fixture.result.current.mutateAsync(undefined)).rejects.toBeInstanceOf(OperationalModeWriteError);
+    });
+    await waitFor(() => expect(fixture.result.current.isError).toBe(true));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expectRejected(fixture);
+  });
+
+  it('does not queue rejected offline refreshes; only an explicit live retry succeeds', async () => {
+    setMode(false);
+    const fixture = setupMutation();
+    await act(async () => {
+      await expect(fixture.result.current.mutateAsync(undefined)).rejects.toBeInstanceOf(OperationalModeWriteError);
+    });
+    await waitFor(() => expect(fixture.result.current.isError).toBe(true));
+    expectRejected(fixture);
+
+    setMode(true);
+    await act(async () => {
+      window.dispatchEvent(new Event('online'));
+      await Promise.resolve();
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expectRejected(fixture);
+
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(scenario.retained), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    await act(async () => { await fixture.result.current.mutateAsync(undefined); });
+    await waitFor(() => expect(fixture.result.current.isSuccess).toBe(true));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fixture.invalidate).toHaveBeenCalledExactlyOnceWith({ queryKey: scenario.key });
+    expect(successToast).toHaveBeenCalledExactlyOnceWith(scenario.successKey, scenario.successMessage);
+    expect(errorToast).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    { label: 'historical snapshot', online: true, asOf: '2025-06-01T00:00:00Z' },
+    { label: 'offline cached view', online: false, asOf: null },
+    { label: 'offline historical replay', online: false, asOf: '2025-06-01T00:00:01Z' },
+  ] as const)('$label still permits GET and forwards cancellation', async ({ online, asOf }) => {
+    setMode(online, asOf);
+    fetchMock.mockResolvedValueOnce(new Response(JSON.stringify(scenario.retained), {
+      headers: { 'Content-Type': 'application/json' },
+    }));
+    const qc = createQueryClient();
+    clients.push(qc);
+    const { Wrapper } = makeWrapper(qc);
+    const { result } = renderHook(() => scenario.useRead(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toMatchObject(scenario.retained);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, options] = fetchMock.mock.calls[0];
+    expect(url).toBe(`/api/v1${scenario.path}`);
     expect(options?.method ?? 'GET').toBe('GET');
     expect(options?.signal).toBeInstanceOf(AbortSignal);
     expect(options).not.toHaveProperty('requiresLiveMode');
