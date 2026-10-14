@@ -15,7 +15,7 @@
  *      elevation fixes: 7199s must render "2h" (never "1h 60m") and 3599s must
  *      render "1h" (never "60m").
  *   3. Empty payloads → every section shows its explicit EmptyState copy and
- *      the KPI band still renders zeroed values (never a hidden section).
+ *      the KPI band retains zero transition counts and unknown absent dwell.
  *   4. Both state queries pending → independent loading shells remain,
  *      without fabricated KPI measurements.
  *   5. A timeline fetch failure → section-specific error text and recovery,
@@ -432,10 +432,99 @@ describe('TimelinePage', () => {
     // Shared copy used by BOTH the distribution bar and the time-by-state panel.
     expect(screen.getAllByText('No state distribution available yet').length).toBe(2)
 
-    // The KPI band still renders zeroed values rather than vanishing.
+    // An authoritative empty count is zero; absent dwell is not measured zero.
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
     expect(within(kpiBand).getByText('Total transitions')).toBeInTheDocument()
-    expect(within(kpiBand).getAllByText('0m').length).toBe(3)
+    expect(within(kpiBand).getByText('0', { exact: true })).toBeInTheDocument()
+    expect(kpiBand.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+    expect(within(kpiBand).queryByText('0m')).toBeNull()
+  })
+
+  it.each([
+    { name: 'missing', value: undefined, state: 'missing', text: null },
+    { name: 'null', value: null, state: 'missing', text: null },
+    { name: 'NaN', value: NaN, state: 'invalid', text: null },
+    { name: 'infinity', value: Infinity, state: 'invalid', text: null },
+    { name: 'numeric string', value: '0', state: 'invalid', text: null },
+    { name: 'measured zero', value: 0, state: 'value', text: '0m' },
+    { name: 'signed duration', value: -90.5, state: 'value', text: '-2m' },
+    { name: 'fractional duration', value: 90.5, state: 'value', text: '2m' },
+  ])('distinguishes $name dwell from fabricated zero across all dwell metrics', async ({ value, state, text }) => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({ transitions: [] })
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve({
+        total_seconds: 0,
+        by_state: ['driving', 'charging', 'online'].map(state => ({
+          state, total_seconds: value, percentage: 0, transition_count: 0,
+        })),
+      })
+      return Promise.resolve({})
+    })
+    renderPage()
+    await screen.findByText('No state transitions recorded')
+    const brief = screen.getByTestId('timeline-summary')
+    await waitFor(() => expect(brief.querySelectorAll(`[data-value-state="${state}"]`))
+      .toHaveLength(state === 'value' ? 4 : 3))
+    expect(within(brief).getByText('0', { exact: true })).toBeInTheDocument()
+    if (text) expect(within(brief).getAllByText(text)).toHaveLength(3)
+    else expect(within(brief).queryByText('0m')).toBeNull()
+    expect(screen.getAllByText('No state distribution available yet')).toHaveLength(
+      typeof value === 'number' && value > 0 ? 1 : 2,
+    )
+  })
+
+  it('keeps composition and transition-list emptiness independent', async () => {
+    install({ emptySummary: true })
+    renderPage()
+    await screen.findByRole('table', { name: 'State transitions' })
+    expect(screen.getAllByText('No state distribution available yet')).toHaveLength(2)
+    expect(screen.queryByText('No state transitions recorded')).toBeNull()
+    const brief = screen.getByTestId('timeline-summary')
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+  })
+
+  it('retains explicit zero for one state without inventing dwell for absent states', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({ transitions: [] })
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve({
+        total_seconds: 0,
+        by_state: [{ state: 'online', total_seconds: 0, percentage: 0, transition_count: 0 }],
+      })
+      return Promise.resolve({})
+    })
+    renderPage()
+    await screen.findByText('No state transitions recorded')
+    const brief = screen.getByTestId('timeline-summary')
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2)
+    expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2)
+    expect(within(brief).getByText('0m')).toBeInTheDocument()
+  })
+
+  it.each([
+    { value: null, state: 'missing' },
+    { value: '0', state: 'invalid' },
+    { value: NaN, state: 'invalid' },
+  ])('does not hide a $state operand inside combined idle / sleep dwell', async ({ value, state }) => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({ transitions: [] })
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve({
+        total_seconds: 60,
+        by_state: [
+          { state: 'online', total_seconds: 60, percentage: 100, transition_count: 1 },
+          { state: 'asleep', total_seconds: value, percentage: 0, transition_count: 0 },
+        ],
+      })
+      return Promise.resolve({})
+    })
+    renderPage()
+    await screen.findByText('No state transitions recorded')
+    const brief = screen.getByTestId('timeline-summary')
+    expect(brief.querySelectorAll(`[data-value-state="${state}"]`))
+      .toHaveLength(state === 'missing' ? 3 : 1)
+    expect(within(brief).queryByText('1m')).toBeNull()
   })
 
   it('shows the page-level loading shell while both state queries are pending', async () => {

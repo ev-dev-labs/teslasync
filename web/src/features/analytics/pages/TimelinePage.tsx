@@ -81,16 +81,26 @@ const STATE_BADGE: Record<string, 'success' | 'info' | 'warning' | 'neutral' | '
 };
 
 function formatHoursFromSeconds(seconds: number): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return '0m';
+  if (!Number.isFinite(seconds)) return '—';
   // Round to whole minutes ONCE, then split into h/m. Flooring the hours and
   // rounding the leftover minutes independently used to emit "60m" (e.g.
   // 3599s) or "1h 60m" (e.g. 7199s) at the boundary where the residual
   // minutes rounded up to a full hour.
-  const totalMinutes = Math.round(seconds / 60);
+  const totalMinutes = Math.round(Math.abs(seconds) / 60);
+  const sign = seconds < 0 && totalMinutes > 0 ? '-' : '';
   const h = Math.floor(totalMinutes / 60);
   const m = totalMinutes % 60;
-  if (h === 0) return `${m}m`;
-  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  if (h === 0) return `${sign}${m}m`;
+  return m > 0 ? `${sign}${h}h ${m}m` : `${sign}${h}h`;
+}
+
+function sumDwell(rows: ByStateRow[], states: readonly string[]): number | null {
+  const matching = rows.filter(row => states.includes(row.state));
+  if (matching.length === 0 || matching.some(row => row.total_seconds == null)) return null;
+  if (matching.some(row => typeof row.total_seconds !== 'number' || !Number.isFinite(row.total_seconds))) {
+    return NaN;
+  }
+  return matching.reduce((sum, row) => sum + row.total_seconds, 0);
 }
 
 function formatDurationFromSeconds(seconds: number): string {
@@ -251,19 +261,6 @@ export default function TimelinePage() {
     return Array.from(buckets.values()).sort((a, b) => a.day.localeCompare(b.day));
   }, [transitions]);
 
-  // Derive summary metrics from the raw summary rows
-  const summaryByState = useMemo(() => {
-    const m: Record<string, { transitionCount: number; totalSeconds: number; percentage: number }> = {};
-    for (const row of summaryRows) {
-      m[row.state] = {
-        transitionCount: row.transition_count,
-        totalSeconds: row.total_seconds,
-        percentage: row.percentage,
-      };
-    }
-    return m;
-  }, [summaryRows]);
-
   // Per-state dwell time for the bento side panel — same summary payload as the
   // KPIs, sorted so dominant states surface first, with a display color.
   const timeByState = useMemo(
@@ -275,15 +272,14 @@ export default function TimelinePage() {
     [summaryRows],
   );
 
-  const totalTransitions = summaryRows.reduce((s, r) => s + (r.transition_count ?? 0), 0);
-  const drivingSec = summaryByState.driving?.totalSeconds ?? 0;
-  const chargingSec = summaryByState.charging?.totalSeconds ?? 0;
-  const idleSec = (summaryByState.online?.totalSeconds ?? 0) +
-    (summaryByState.parked?.totalSeconds ?? 0) +
-    (summaryByState.idle?.totalSeconds ?? 0);
-  const sleepingSec = (summaryByState.asleep?.totalSeconds ?? 0) +
-    (summaryByState.sleeping?.totalSeconds ?? 0) +
-    (summaryByState.offline?.totalSeconds ?? 0);
+  const totalTransitions = summaryRows.some(row => row.transition_count == null)
+    ? null
+    : summaryRows.some(row => !Number.isSafeInteger(row.transition_count) || row.transition_count < 0)
+      ? NaN
+      : summaryRows.reduce((sum, row) => sum + row.transition_count, 0);
+  const drivingSec = sumDwell(summaryRows, ['driving']);
+  const chargingSec = sumDwell(summaryRows, ['charging']);
+  const idleSleepSec = sumDwell(summaryRows, ['online', 'parked', 'idle', 'asleep', 'sleeping', 'offline']);
   const summaryMetrics: StatMetric[] = [
     { metricId: 'count', occurrenceId: 'timeline-total-transitions',
       label: t('timeline.totalTransitions', 'Total transitions'),
@@ -302,7 +298,7 @@ export default function TimelinePage() {
     { metricId: 'duration', occurrenceId: 'timeline-idle-sleep-time',
       label: t('timeline.idleSleepTime', 'Idle / sleep time'),
       description: t('timeline.summary.idleSleepDescription', 'Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes'),
-      rawValue: summarySource.available ? idleSec + sleepingSec : null,
+      rawValue: summarySource.available ? idleSleepSec : null,
       display: { formatter: raw => ({ value: formatHoursFromSeconds(raw), unit: '' }) } },
   ];
   const summaryOperationalMetrics = useOperationalMetrics(summaryMetrics.map(metric => ({
