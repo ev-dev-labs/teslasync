@@ -129,11 +129,11 @@ describe('real DataTable mobile bridge', () => {
       expect(stringCell).toHaveTextContent('string:0/1')
       expect(stringExpanded).toHaveTextContent('string:0/1')
       const stringRow = screen.getByText('String zero').closest('tr') as HTMLElement
-      fireEvent.click(within(stringRow).getByRole('button', { name: 'Collapse row' }))
+      fireEvent.click(within(stringRow).getByRole('button', { name: 'Collapse row: String zero' }))
       expect(screen.getByLabelText('Native expanded keys')).toHaveTextContent('[0]')
       expect(view.container.querySelectorAll('[data-expanded-content]')).toHaveLength(1)
       expect(screen.getByRole('button', { name: 'expanded Zero' })).toHaveTextContent('number:0/0')
-      fireEvent.click(within(stringRow).getByRole('button', { name: 'Expand row' }))
+      fireEvent.click(within(stringRow).getByRole('button', { name: 'Expand row: String zero' }))
       expect(screen.getByLabelText('Native expanded keys')).toHaveTextContent('[0,"0"]')
       expect(screen.getByRole('button', { name: 'expanded String zero' })).toHaveTextContent('string:0/0')
       resize(375)

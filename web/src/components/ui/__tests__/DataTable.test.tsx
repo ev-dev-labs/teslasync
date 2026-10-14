@@ -1,7 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
+import { createInstance } from 'i18next'
+import { I18nextProvider } from 'react-i18next'
 import '@/i18n'
 import { DataTable, type Column } from '../DataTable'
+
+vi.unmock('react-i18next')
 
 interface Row {
   id: number
@@ -290,7 +294,7 @@ describe('DataTable — expansion', () => {
         onSort={onSort}
       />,
     )
-    const expand = screen.getAllByRole('button', { name: 'Expand row' })[0]
+    const expand = screen.getByRole('button', { name: 'Expand row: Alpha' })
     expect(expand).toHaveAttribute('type', 'button')
     expect(expand).toHaveAccessibleDescription('Alpha')
     expect(expand).toHaveAttribute('aria-expanded', 'false')
@@ -311,9 +315,77 @@ describe('DataTable — expansion', () => {
         expandable expandedKeys={[1]} onExpandedChange={onExpand}
         renderExpanded={r => <span>{r.detail}</span>} />,
     )
-    expect(screen.getByRole('button', { name: 'Collapse row' }))
+    expect(screen.getByRole('button', { name: 'Collapse row: 1' }))
       .toHaveAccessibleDescription('1')
     expect(screen.getByText('first row detail')).toBeInTheDocument()
+  })
+
+  it('names each disclosure with its supplied rowLabel and preserves controlled row keys', () => {
+    const onChange = vi.fn()
+    const props = {
+      columns: COLS.slice(0, 3),
+      data: ROWS.slice(0, 2),
+      keyExtractor: (row: Row) => row.id,
+      rowLabel: (row: Row) => `Feedback: ${row.name}`,
+      expandable: true,
+      onExpandedChange: onChange,
+      renderExpanded: (row: Row) => <span>{row.detail}</span>,
+    }
+    const view = render(<DataTable {...props} expandedKeys={[]} />)
+    const alpha = screen.getByRole('button', { name: 'Expand row: Feedback: Alpha' })
+    expect(screen.getByRole('button', { name: 'Expand row: Feedback: Bravo' }))
+      .toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(alpha)
+    expect(onChange).toHaveBeenLastCalledWith([1])
+    view.rerender(<DataTable {...props} expandedKeys={[1]} />)
+    const collapse = screen.getByRole('button', { name: 'Collapse row: Feedback: Alpha' })
+    expect(collapse).toBe(alpha)
+    expect(collapse).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText('first row detail')).toBeVisible()
+    fireEvent.click(collapse)
+    expect(onChange).toHaveBeenLastCalledWith([])
+  })
+
+  it('keeps generic disclosure names when no meaningful row label is available', () => {
+    const onChange = vi.fn()
+    const props = {
+      columns: [{ key: 'name', header: 'Name', render: () => null }],
+      data: ROWS.slice(0, 1),
+      keyExtractor: (row: Row) => row.id,
+      rowLabel: () => '   ',
+      expandable: true,
+      onExpandedChange: onChange,
+      renderExpanded: (row: Row) => <span>{row.detail}</span>,
+    }
+    const view = render(<DataTable {...props} expandedKeys={[]} />)
+    const expand = screen.getByRole('button', { name: 'Expand row' })
+    expect(expand).not.toHaveAttribute('title')
+    fireEvent.click(expand)
+    expect(onChange).toHaveBeenLastCalledWith([1])
+    view.rerender(<DataTable {...props} expandedKeys={[1]} />)
+    expect(screen.getByRole('button', { name: 'Collapse row' }))
+      .toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('preserves localized expand and collapse actions alongside the row label', async () => {
+    const i18n = createInstance()
+    await i18n.init({
+      lng: 'de',
+      resources: { de: { translation: {
+        table: { expand: { expand: 'Zeile ausklappen', collapse: 'Zeile einklappen' } },
+      } } },
+    })
+    render(
+      <I18nextProvider i18n={i18n}>
+        <DataTable columns={COLS} data={ROWS.slice(0, 2)} keyExtractor={row => row.id}
+          rowLabel={row => row.name} expandable expandedKeys={[2]}
+          onExpandedChange={() => {}} renderExpanded={row => <span>{row.detail}</span>} />
+      </I18nextProvider>,
+    )
+    expect(screen.getByRole('button', { name: 'Zeile ausklappen: Alpha' }))
+      .toHaveAttribute('aria-expanded', 'false')
+    expect(screen.getByRole('button', { name: 'Zeile einklappen: Bravo' }))
+      .toHaveAttribute('aria-expanded', 'true')
   })
 })
 

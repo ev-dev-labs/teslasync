@@ -274,7 +274,7 @@ interface DataTableProps<T> {
   /** Controlled list of selected row keys. */
   selectedKeys?: RowKey[]
   /**
-   * Row-identifying text for the selection checkbox's accessible name,
+   * Row-identifying text for selection and expansion accessible names,
    * so screen-reader users hear "Select Model 3 — 12 Mar" instead of
    * forty identical "Select row" checkboxes.
    *
@@ -948,7 +948,7 @@ export function DataTable<T>({
     caption ?? name ?? tableId ?? t('table.genericName', 'Data table')
 
   /**
-   * Row-identifying label for the selection checkbox.
+   * Row-identifying label for selection and expansion controls.
    *
    * "Select row" repeated 40 times is useless: the user cannot tell which
    * row they are about to toggle without leaving the checkbox to read the
@@ -1084,7 +1084,8 @@ export function DataTable<T>({
           openMenu(items, e.clientX, e.clientY)
         }
       : undefined
-    const selectedRowLabel = isSelectable ? rowLabelFor(row, rowKey) : null
+    const accessibleRowLabel = isSelectable || expandable ? rowLabelFor(row, rowKey) : null
+    const selectedRowLabel = isSelectable ? accessibleRowLabel : null
     const selectionLabel = selectedRowLabel
       ? selected
         ? t('table.selection.deselectRowNamed', 'Deselect {{row}}', { row: selectedRowLabel })
@@ -1151,12 +1152,13 @@ export function DataTable<T>({
               size="sm"
               onClick={() => toggleExpand(rowKey)}
               aria-expanded={expanded}
-              title={rowLabelFor(row, rowKey) ?? undefined}
-              aria-label={
+              title={accessibleRowLabel ?? undefined}
+              aria-label={[
                 expanded
                   ? t('table.expand.collapse', 'Collapse row')
-                  : t('table.expand.expand', 'Expand row')
-              }
+                  : t('table.expand.expand', 'Expand row'),
+                accessibleRowLabel,
+              ].filter(Boolean).join(': ')}
               className={cn(
                 'h-11 w-11 shrink-0 p-0 md:h-6 md:w-6',
                 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
