@@ -20,14 +20,10 @@ import {
   Caption,
   ErrorText,
 } from '@/components/ui';
-import { DataStateNotice, QueryError, Skeleton } from '@/components/feedback';
+import { DataSourceNotice, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
-import {
-  useStormguardStatus,
-  useStormguardEvents,
-  useSaveStormguardConfig,
-} from '@/api/hooks/useStormguard';
-import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useStormguardStatus, useStormguardEvents, useSaveStormguardConfig } from '@/api/hooks/useStormguard';
+import { useUnits } from '@/hooks/useUnits';
 import { StormGuardActivity } from './StormGuardActivity';
 import { stormLevelLabel, stormLevelVariant } from './stormguardPresentation';
 
@@ -43,19 +39,16 @@ const defaultDraft: StormGuardDraft = {
 };
 
 export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
-  const { fmtNumber } = useNumberFormatting();
+  const { formatSpeed } = useUnits();
   const { t } = useTranslation();
-
   const statusQuery = useStormguardStatus(vehicleId);
   const statusState = useDataState(statusQuery);
   const eventsQuery = useStormguardEvents(vehicleId);
   const saveMutation = useSaveStormguardConfig();
-
   const stored = statusQuery.data?.config;
   const [drafts, setDrafts] = useState<Record<number, StormGuardDraft>>({});
   const { enabled, lat, lng, targetSoc } = (vehicleId != null && drafts[vehicleId]) || defaultDraft;
   const { reset } = saveMutation;
-
   useEffect(() => {
     // Detach the mutation observer from work submitted in the previous scope.
     reset();
@@ -84,7 +77,6 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const currentSoc = matchingStatus?.current_soc;
   const matchingSave = vehicleId != null && saveMutation.variables?.vehicle_id === vehicleId;
   const savePending = matchingSave && saveMutation.isPending;
-
   const handleSave = () => {
     if (!vehicleId) return;
     saveMutation.mutate({
@@ -105,15 +97,17 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <Icons.cloudLightning className="h-4 w-4 text-amber-300" aria-hidden="true" />
+          <Icons.cloudLightning className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('stormguard.title', 'Storm guardian')}
         </PanelTitle>
         {assessment && (
           <Badge variant={stormLevelVariant(assessment.level)} size="sm" className="gap-1">
             {assessment.level === 'none' ? (
               <Icons.securityCheck className="h-3.5 w-3.5" aria-hidden="true" />
-            ) : (
+            ) : assessment.level === 'watch' || assessment.level === 'warning' ? (
               <Icons.warning className="h-3.5 w-3.5" aria-hidden="true" />
+            ) : (
+              <Icons.info className="h-3.5 w-3.5" aria-hidden="true" />
             )}
             {stormLevelLabel(t, assessment.level)}
           </Badge>
@@ -124,24 +118,34 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
         <Text variant="bodySm" color="secondary">
           {t('stormguard.noVehicle', 'Select a vehicle to configure storm protection.')}
         </Text>
-      ) : statusQuery.isLoading && !statusState.hasData ? (
-        <Skeleton height={180} />
-      ) : statusState.fatalError || !assessment ? (
-        statusState.fatalError ? (
-          <QueryError error={statusState.fatalError} onRetry={() => statusState.retry?.()} />
+      ) : statusState.fatalError ? (
+        <QueryError error={statusState.fatalError} onRetry={() => statusState.retry?.()} />
+      ) : statusState.status === 'initial' ? (
+        statusState.isRefreshBlocked ? (
+          <DataSourceNotice sources={[{
+            id: 'stormguard-status',
+            label: t('stormguard.title', 'Storm guardian'),
+            query: statusQuery,
+          }]} />
+        ) : statusQuery.isLoading || statusQuery.isFetching || statusQuery.fetchStatus === 'fetching' ? (
+          <div role="status" aria-busy="true" aria-label={t('dataSources.status.loading', 'Loading')}>
+            <Skeleton height={180} />
+          </div>
         ) : (
-          <ErrorText>{t('stormguard.statusError', 'Weather assessment unavailable.')}</ErrorText>
+          <Text variant="bodySm" color="secondary" role="status">
+            {t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+          </Text>
         )
+      ) : !assessment ? (
+        <ErrorText>{t('stormguard.statusError', 'Weather assessment unavailable.')}</ErrorText>
       ) : (
         <>
-          {statusState.status === 'stale' && (
-            <DataStateNotice state="stale" preserveSeverity />
-          )}
+          <StaleRefreshWarning state={statusState} />
           <Text variant="bodySm">{assessment.reason}</Text>
           <div className="flex flex-wrap gap-x-6 gap-y-1">
             <Caption className="tabular-nums">
-              {t('stormguard.peakGust', 'Peak gust {{gust}} m/s', {
-                gust: fmtNumber(assessment.peak_gust_ms),
+              {t('stormguard.peakGustFormatted', 'Peak gust {{gust}}', {
+                gust: formatSpeed(assessment.peak_gust_ms),
               })}
             </Caption>
             {currentSoc != null && (
