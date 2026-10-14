@@ -88,7 +88,7 @@ describe('computePeriodStats calendar ranges', () => {
     });
     expect(computePeriodStats(drives, new Date('2026-03-11T12:00:00Z'))).toEqual({
       thisWeekAvg: null, lastWeekAvg: null, thisMonthAvg: null, lastMonthAvg: null,
-      bestWeek: { avg: 0, label: '—' }, bestMonth: { avg: 0, label: '—' },
+      bestWeek: { avg: null, label: '—' }, bestMonth: { avg: null, label: '—' },
       totalDrives: 4, aOrBetter: 4,
     });
   });
@@ -107,7 +107,71 @@ describe('computePeriodStats calendar ranges', () => {
     expect(computePeriodStats([scored(new Date(2026, 2, 8).toISOString(), 0, 'F')], now))
       .toMatchObject({
         thisWeekAvg: 0, thisMonthAvg: 0, totalDrives: 1, aOrBetter: 0,
-        bestWeek: { avg: 0, label: '—' }, bestMonth: { avg: 0, label: '—' },
+        bestWeek: { avg: 0, label: '2026-03-W2' }, bestMonth: { avg: 0, label: '2026-03' },
       });
+
+  });
+});
+
+describe('computePeriodStats best bucket regression', () => {
+  const now = new Date('2026-10-14T12:00:00Z');
+  const opts = { tz: 'UTC' };
+  const october = '2026-10-12T12:00:00Z';
+  const september = '2026-09-01T12:00:00Z';
+
+  it.each([NaN, Infinity, -Infinity])('excludes invalid totals (%s), not measured zero', (total) => {
+    const invalid = scored(october, total);
+    expect(computePeriodStats([invalid], now, opts)).toMatchObject({
+thisWeekAvg: null, thisMonthAvg: null,
+bestWeek: { avg: null, label: '—' }, bestMonth: { avg: null, label: '—' },
+    });
+    expect(computePeriodStats([invalid, scored(october, 0)], now, opts)).toMatchObject({
+thisWeekAvg: 0, thisMonthAvg: 0,
+bestWeek: { avg: 0, label: '2026-10-W3' },
+bestMonth: { avg: 0, label: '2026-10' },
+    });
+  });
+
+  it.each([null, undefined])('excludes missing runtime totals (%s)', (total) => {
+    const invalid = scored(october, 0);
+    // Exercise malformed wire data without widening the production score type.
+    Object.assign(invalid.score, { total });
+    expect(computePeriodStats([invalid], now, opts)?.bestMonth.avg).toBeNull();
+    expect(computePeriodStats([invalid, scored(october, 8)], now, opts)?.bestMonth.avg).toBe(8);
+  });
+
+  it.each([0, -7, 7, -2.6, 2.6])('retains the real bucket for signed/fractional total %s', (total) => {
+    expect(computePeriodStats([scored(october, total)], now, opts)).toMatchObject({
+thisWeekAvg: Math.round(total), thisMonthAvg: Math.round(total),
+bestWeek: { avg: Math.round(total), label: '2026-10-W3' },
+bestMonth: { avg: Math.round(total), label: '2026-10' },
+    });
+  });
+
+  it('selects the greatest real negative bucket rather than the zero sentinel', () => {
+    expect(computePeriodStats([
+scored(september, -9), scored(october, -3),
+    ], now, opts)).toMatchObject({
+bestWeek: { avg: -3, label: '2026-10-W3' },
+bestMonth: { avg: -3, label: '2026-10' },
+    });
+  });
+
+  it('averages fractional measurements before existing integer rounding', () => {
+    expect(computePeriodStats([scored(october, 0.2), scored(october, 0.6)], now, opts))
+.toMatchObject({
+  thisWeekAvg: 0, bestWeek: { avg: 0, label: '2026-10-W3' },
+  bestMonth: { avg: 0, label: '2026-10' },
+});
+  });
+
+  it.each([0, -4, 12.2])('keeps first-seen bucket identity for ties (%s)', (total) => {
+    const first = scored(october, total);
+    const second = scored(september, total);
+    const stats = computePeriodStats([first, second], now, opts);
+    expect(stats?.bestWeek).toEqual({ avg: Math.round(total), label: '2026-10-W3' });
+    expect(stats?.bestMonth).toEqual({ avg: Math.round(total), label: '2026-10' });
+    expect(computePeriodStats([first, second], now, opts)).toEqual(stats);
+    expect(computePeriodStats([second, first], now, opts)?.bestMonth.label).toBe('2026-09');
   });
 });

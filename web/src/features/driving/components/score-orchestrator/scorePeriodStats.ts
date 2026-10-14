@@ -8,8 +8,8 @@ export interface PeriodStats {
   lastWeekAvg: number | null;
   thisMonthAvg: number | null;
   lastMonthAvg: number | null;
-  bestWeek: { avg: number; label: string };
-  bestMonth: { avg: number; label: string };
+  bestWeek: { avg: number | null; label: string };
+  bestMonth: { avg: number | null; label: string };
   totalDrives: number;
   aOrBetter: number;
 }
@@ -24,6 +24,8 @@ export interface PeriodStats {
  * Pass the saved display formatter options to use its timezone. Periods are
  * half-open calendar ranges; locale never changes the canonical bucket labels.
  * Undated drives retain their total/grade counts but have no calendar bucket.
+ * Non-finite or missing totals have no average; measured zero remains valid.
+ * Averages retain integer rounding, and tied buckets keep first-seen identity.
  */
 export function computePeriodStats(
   scoredDrives: ScoredDrive[],
@@ -57,10 +59,12 @@ export function computePeriodStats(
       ? datedDrives.filter(({ day }) => day >= start && day < end).map(({ sd }) => sd)
       : [];
 
-  const avg = (items: ScoredDrive[]): number | null =>
-    items.length > 0
-      ? Math.round(items.reduce((s, d) => s + d.score.total, 0) / items.length)
+  const avg = (items: ScoredDrive[]): number | null => {
+    const totals = items.map((sd) => sd.score.total).filter(Number.isFinite);
+    return totals.length > 0
+      ? Math.round(totals.reduce((sum, total) => sum + total, 0) / totals.length)
       : null;
+  };
 
   const thisWeekDrives = inPeriod(weekStart, nextWeekStart);
   const lastWeekDrives = inPeriod(lastWeekStart, weekStart);
@@ -87,16 +91,14 @@ export function computePeriodStats(
     monthMap.get(mo)!.push(sd);
   });
 
-  let bestWeek = { avg: 0, label: '—' };
-  weekMap.forEach((items, label) => {
-    const a = avg(items);
-    if (a != null && a > bestWeek.avg) bestWeek = { avg: a, label };
-  });
-  let bestMonth = { avg: 0, label: '—' };
-  monthMap.forEach((items, label) => {
-    const a = avg(items);
-    if (a != null && a > bestMonth.avg) bestMonth = { avg: a, label };
-  });
+  const bestPeriod = (buckets: Map<string, ScoredDrive[]>): PeriodStats['bestWeek'] => {
+    let best: { avg: number; label: string } | null = null;
+    buckets.forEach((items, label) => {
+      const a = avg(items);
+      if (a != null && (best == null || a > best.avg)) best = { avg: a, label };
+    });
+    return best ?? { avg: null, label: '—' };
+  };
 
   const aOrBetter = scoredDrives.filter(
     (sd) => sd.score.grade === 'A+' || sd.score.grade === 'A',
@@ -107,8 +109,8 @@ export function computePeriodStats(
     lastWeekAvg: avg(lastWeekDrives),
     thisMonthAvg: avg(thisMonthDrives),
     lastMonthAvg: avg(lastMonthDrives),
-    bestWeek,
-    bestMonth,
+    bestWeek: bestPeriod(weekMap),
+    bestMonth: bestPeriod(monthMap),
     totalDrives: scoredDrives.length,
     aOrBetter,
   };
