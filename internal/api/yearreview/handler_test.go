@@ -332,9 +332,9 @@ type yrResponse struct {
 	ShortestDrive         *highlightJSON   `json:"shortest_drive"`
 	MostEfficientDrive    json.RawMessage  `json:"most_efficient_drive"`
 	LeastEfficientDrive   json.RawMessage  `json:"least_efficient_drive"`
-	FastestSpeedKmh       float64          `json:"fastest_speed_kmh"`
-	ColdestDriveTempC     float64          `json:"coldest_drive_temp_c"`
-	HottestDriveTempC     float64          `json:"hottest_drive_temp_c"`
+	FastestSpeedKmh       *float64         `json:"fastest_speed_kmh"`
+	ColdestDriveTempC     *float64         `json:"coldest_drive_temp_c"`
+	HottestDriveTempC     *float64         `json:"hottest_drive_temp_c"`
 	MonthlyStats          []monthJSON      `json:"monthly_stats"`
 	MostActiveDayOfWeek   string           `json:"most_active_day_of_week"`
 	MostActiveHour        int              `json:"most_active_hour"`
@@ -601,13 +601,13 @@ func TestGetYearReview_Success(t *testing.T) {
 	if got.Co2OffsetKg != 384 {
 		t.Errorf("co2_offset_kg = %v, want 384", got.Co2OffsetKg)
 	}
-	if got.FastestSpeedKmh != 180 {
+	if got.FastestSpeedKmh == nil || *got.FastestSpeedKmh != 180 {
 		t.Errorf("fastest_speed_kmh = %v, want 180", got.FastestSpeedKmh)
 	}
-	if got.ColdestDriveTempC != -5 {
+	if got.ColdestDriveTempC == nil || *got.ColdestDriveTempC != -5 {
 		t.Errorf("coldest_drive_temp_c = %v, want -5", got.ColdestDriveTempC)
 	}
-	if got.HottestDriveTempC != 38 {
+	if got.HottestDriveTempC == nil || *got.HottestDriveTempC != 38 {
 		t.Errorf("hottest_drive_temp_c = %v, want 38", got.HottestDriveTempC)
 	}
 	if got.MostActiveDayOfWeek != "Friday" {
@@ -768,8 +768,8 @@ func TestGetYearReview_EmptyYear(t *testing.T) {
 	if got.Co2OffsetKg != 0 {
 		t.Errorf("co2_offset_kg = %v, want 0", got.Co2OffsetKg)
 	}
-	if got.FastestSpeedKmh != 0 || got.ColdestDriveTempC != 0 || got.HottestDriveTempC != 0 {
-		t.Errorf("null extremes should deref to 0: %+v", got)
+	if got.FastestSpeedKmh != nil || got.ColdestDriveTempC != nil || got.HottestDriveTempC != nil {
+		t.Errorf("missing extremes should remain null: %+v", got)
 	}
 	if got.LongestDrive != nil || got.ShortestDrive != nil {
 		t.Errorf("highlights should be null when no drives")
@@ -1120,17 +1120,46 @@ func TestSafeFloat(t *testing.T) {
 	}
 }
 
-func TestDerefFloat(t *testing.T) {
-	if got := derefFloat(nil); got != 0 {
-		t.Errorf("derefFloat(nil) = %v, want 0", got)
+func TestGetYearReview_ExtremeWireContract(t *testing.T) {
+	tests := []struct {
+		name  string
+		input any
+		want  string
+	}{
+		{"missing", nil, "null"},
+		{"typed missing", (*float64)(nil), "null"},
+		{"nan", math.NaN(), "null"},
+		{"positive infinity", math.Inf(1), "null"},
+		{"negative infinity", math.Inf(-1), "null"},
+		{"rounding overflow", math.MaxFloat64, "null"},
+		{"measured zero", 0.0, "0"},
+		{"positive", 38.0, "38"},
+		{"negative", -5.0, "-5"},
+		{"positive fraction", 38.26, "38.3"},
+		{"negative fraction", -5.26, "-5.3"},
+		{"fraction rounds to zero", 0.04, "0"},
 	}
-	v := 3.14
-	if got := derefFloat(&v); got != 3.14 {
-		t.Errorf("derefFloat(&3.14) = %v, want 3.14", got)
-	}
-	zero := 0.0
-	if got := derefFloat(&zero); got != 0 {
-		t.Errorf("derefFloat(&0) = %v, want 0", got)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.driveStatsRow = fakeRow{vals: []any{100, 2000.0, 3000.0, tt.input, tt.input, tt.input}}
+			rec := serve(fq, "vehicle_id=7&year=2020")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+			}
+			var raw map[string]json.RawMessage
+			if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
+				t.Fatalf("decode response: %v", err)
+			}
+			for _, key := range []string{"fastest_speed_kmh", "coldest_drive_temp_c", "hottest_drive_temp_c"} {
+				if string(raw[key]) != tt.want {
+					t.Errorf("%s = %s, want %s", key, raw[key], tt.want)
+				}
+			}
+			if !strings.Contains(fq.queries[1], "MAX(max_speed_mps) * 3.6") {
+				t.Fatal("speed display conversion changed")
+			}
+		})
 	}
 }
 

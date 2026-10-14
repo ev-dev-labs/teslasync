@@ -475,9 +475,9 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"shortest_drive":        shortestDrive,
 		"most_efficient_drive":  mostEfficient,
 		"least_efficient_drive": leastEfficient,
-		"fastest_speed_kmh":     roundYR(derefFloat(fastestSpeed), 1),
-		"coldest_drive_temp_c":  roundYR(derefFloat(coldestTemp), 1),
-		"hottest_drive_temp_c":  roundYR(derefFloat(hottestTemp), 1),
+		"fastest_speed_kmh":     roundNullableYR(fastestSpeed, 1),
+		"coldest_drive_temp_c":  roundNullableYR(coldestTemp, 1),
+		"hottest_drive_temp_c":  roundNullableYR(hottestTemp, 1),
 
 		"monthly_stats": monthlyStats,
 
@@ -500,11 +500,17 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, result)
 }
 
-func derefFloat(p *float64) float64 {
+// Missing or invalid extremes remain null, distinct from measured zero.
+func roundNullableYR(p *float64, decimals int) *float64 {
 	if p == nil {
-		return 0
+		return nil
 	}
-	return *p
+	scale := math.Pow(10, float64(decimals))
+	v := math.Round(*p*scale) / scale
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return nil
+	}
+	return &v
 }
 
 func safeFloat(v float64) float64 {
