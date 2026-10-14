@@ -38,8 +38,16 @@ export function TotpKpiBand({ data, isLoading, retained = false }: TotpKpiBandPr
   const session = data && data.mode === 'session' ? data : null
   const isOpen = !data || data.mode === 'open'
   const activated = session?.activated === true
-  const backupRemaining = knownNumber(session?.backup_codes_remaining)
+  const knownBackupRemaining = knownNumber(session?.backup_codes_remaining)
+  const backupRemaining = knownBackupRemaining != null
+    && Number.isSafeInteger(knownBackupRemaining)
+    && knownBackupRemaining >= 0
+    ? knownBackupRemaining
+    : null
   const lastUsedAt = session?.last_used_at
+  const hasLastUsed = typeof lastUsedAt === 'string'
+    && lastUsedAt.trim().length > 0
+    && Number.isFinite(Date.parse(lastUsedAt))
   const dash = t('common.dash', '—')
 
   const statusCell: KpiCell = isOpen
@@ -66,10 +74,8 @@ export function TotpKpiBand({ data, isLoading, retained = false }: TotpKpiBandPr
           icon: <ShieldQuestion className="h-5 w-5" aria-hidden="true" />,
         }
 
-  const lastUsedValue = activated
-    ? lastUsedAt
-      ? formatDateTime(lastUsedAt)
-      : t('totp.lastUsed.never', 'Never')
+  const lastUsedValue = activated && hasLastUsed
+    ? formatDateTime(lastUsedAt)
     : dash
 
   const cells: KpiCell[] = [
@@ -102,7 +108,7 @@ export function TotpKpiBand({ data, isLoading, retained = false }: TotpKpiBandPr
     occurrenceId: `totp-${cell.key}`,
     label: cell.label,
     rawValue: isLoading ? null : cell.key === 'backup'
-      ? activated ? session?.backup_codes_remaining : null
+      ? activated ? backupRemaining : null
       : cell.value === dash ? null : cell.value,
     context: <>{cell.icon}{cell.subtitle}</>,
   }))

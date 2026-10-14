@@ -37,12 +37,14 @@ export function TotpStatusHero({
   const { formatDateTime } = useDateFormat()
 
   const knownBackupRemaining = knownNumber(backupRemaining)
-  const safeBackupRemaining = knownBackupRemaining == null
-    ? t('common.dash', '—')
-    : Math.max(0, knownBackupRemaining)
-  // A blank/whitespace timestamp is treated as "never used" rather than being
-  // formatted into an "Invalid Date" string.
-  const hasLastUsed = typeof lastUsedAt === 'string' && lastUsedAt.trim().length > 0
+  const safeBackupRemaining = knownBackupRemaining != null
+    && Number.isSafeInteger(knownBackupRemaining)
+    && knownBackupRemaining >= 0
+    ? knownBackupRemaining
+    : t('common.dash', '—')
+  const hasLastUsed = typeof lastUsedAt === 'string'
+    && lastUsedAt.trim().length > 0
+    && Number.isFinite(Date.parse(lastUsedAt))
 
   return (
     <GlassPanel className="h-full space-y-5 p-4 sm:p-5" data-testid="totp-section">
@@ -74,7 +76,7 @@ export function TotpStatusHero({
             <div className="space-y-0.5">
               <Text variant="label">{t('totp.lastUsed.label', 'Last used')}</Text>
               <Text variant="bodySm" as="p">
-                {hasLastUsed ? formatDateTime(lastUsedAt) : t('totp.lastUsed.never', 'Never')}
+                {hasLastUsed ? formatDateTime(lastUsedAt) : t('common.dash', '—')}
               </Text>
             </div>
             <div className="space-y-0.5">

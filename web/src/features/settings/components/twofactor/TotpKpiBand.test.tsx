@@ -15,7 +15,7 @@
  *   • an activated session renders "Active", forwards its raw `last_used_at`
  *     ISO string to `formatDateTime` verbatim, and renders the formatter's
  *     result as the "Last verified" cell;
- *   • an activated session with no recorded use shows "Never" and never
+ *   • an activated session with missing or invalid use evidence stays unknown and never
  *     calls the formatter;
  *   • a session that exists but is not activated renders "Not enrolled" and
  *     dashes out the two per-user cells;
@@ -169,13 +169,17 @@ describe('TotpKpiBand', () => {
     expect(screen.getByText('7')).toBeInTheDocument()
   })
 
-  it('shows "Never" and never calls the formatter when an activated session has no recorded use', () => {
-    render(<TotpKpiBand data={sessionStatus({ last_used_at: undefined })} isLoading={false} />)
+  it.each([undefined, '', '   ', 'not-a-date', '2026-13-01T10:00:00Z'])(
+    'keeps missing or invalid verification evidence %s unknown rather than claiming never-used',
+    last_used_at => {
+      render(<TotpKpiBand data={sessionStatus({ last_used_at })} isLoading={false} />)
 
-    expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(formatDateTime).not.toHaveBeenCalled()
-  })
+      expect(screen.getByText('Active')).toBeInTheDocument()
+      expect(screen.getByText('—')).toBeInTheDocument()
+      expect(screen.queryByText('Never')).not.toBeInTheDocument()
+      expect(formatDateTime).not.toHaveBeenCalled()
+    },
+  )
 
   it('renders "Not enrolled" and dashes the per-user cells for a session that is not activated', () => {
     render(<TotpKpiBand data={sessionStatus({ activated: false })} isLoading={false} />)
@@ -221,9 +225,20 @@ describe('TotpKpiBand', () => {
 
     expect(screen.getByText('Active')).toBeInTheDocument()
     expect(screen.queryByText('0')).toBeNull()
-    expect(screen.getByText('Never')).toBeInTheDocument()
-    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('Never')).not.toBeInTheDocument()
+    expect(screen.getAllByText('—')).toHaveLength(2)
     expect(formatDateTime).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    -5, -0.5, 0.5, 7.5, Number.NaN, Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY, Number.MAX_SAFE_INTEGER + 1, Number.MIN_SAFE_INTEGER,
+  ])('keeps invalid backup balance %s unknown in the summary', backup_codes_remaining => {
+    render(<TotpKpiBand data={sessionStatus({ backup_codes_remaining })} isLoading={false} />)
+
+    expect(screen.getByText('—')).toBeInTheDocument()
+    expect(screen.queryByText('0')).not.toBeInTheDocument()
+    expect(screen.getByText('fmt:2026-02-01T10:00:00Z')).toBeInTheDocument()
   })
 
   it('renders an exhausted backup balance as "0" — distinct from the "—" of a disabled credential', () => {
