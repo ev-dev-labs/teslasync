@@ -1,4 +1,5 @@
 import type { ThermalTaxSample, ThermalPhase } from '../../lib/chargingThermalTax';
+import type { DateFormatter } from '@/hooks/useDateFormat';
 
 /** Presentation evidence only. Never changes the specialist's operands or summary. */
 export function heaterEvidence(samples: readonly ThermalTaxSample[]) {
@@ -14,7 +15,7 @@ export function heaterEvidence(samples: readonly ThermalTaxSample[]) {
 }
 
 /** Nulls are gaps, not measurements of zero. Raw watts stay raw watts. */
-export function thermalPowerRows(samples: readonly ThermalTaxSample[], locale: string) {
+export function thermalPowerRows(samples: readonly ThermalTaxSample[], locale: string, formatTime?: DateFormatter) {
   return samples
     .map(sample => {
       const ac = finiteNumber(sample.ac_charging_power_w);
@@ -28,7 +29,10 @@ export function thermalPowerRows(samples: readonly ThermalTaxSample[], locale: s
     .filter(row => Number.isFinite(row.tMs))
     .sort((a, b) => a.tMs - b.tMs)
     .map(row => ({
-      time: new Date(row.tMs).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
+      tMs: row.tMs,
+      time: formatTime
+        ? formatTime(new Date(row.tMs))
+        : new Date(row.tMs).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' }),
       heaterW: row.heaterW,
       chargeW: row.chargeW,
     }));

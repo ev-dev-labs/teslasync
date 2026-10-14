@@ -1,11 +1,13 @@
 import { createElement, type ComponentProps, type PropsWithChildren, type ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import type { DataStateSource } from '@/api/dataState';
+import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { ChargingThermalTaxSummary, ThermalTaxSample } from '../lib/chargingThermalTax';
-import type { ThermalTaxStats } from '../components/charging-thermal-tax-modernization/ThermalTaxStats';
+import { ThermalTaxStats } from '../components/charging-thermal-tax-modernization/ThermalTaxStats';
 import type { ThermalPowerChart } from '../components/charging-thermal-tax-modernization/ThermalPowerChart';
-import type { ThermalPhases } from '../components/charging-thermal-tax-modernization/ThermalPhases';
+import { ThermalPhases } from '../components/charging-thermal-tax-modernization/ThermalPhases';
+import { analyzeChargingThermalTax } from '../lib/chargingThermalTax';
+import type { ChargingSession } from '@/types/charging';
 import ChargingThermalTaxPage from './ChargingThermalTaxPage';
 
 interface SessionFixture {
@@ -18,6 +20,8 @@ interface SessionFixture {
 
 const sources = vi.hoisted(() => ({
   locale: 'fr-FR',
+  timezone: 'UTC',
+  language: 'en-US',
   history: {} as DataStateSource<SessionFixture[]>,
   telemetry: {} as DataStateSource<ThermalTaxSample[]>,
   historyHook: vi.fn(),
@@ -28,8 +32,35 @@ const sources = vi.hoisted(() => ({
   t: (_key: string, fallback?: string) => fallback ?? _key,
 }));
 
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    locale: sources.locale,
+    settings: { tz_display_default: 'user' },
+  }),
+}));
+vi.mock('@/lib/timezone', () => ({ useTimezone: () => sources.timezone }));
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({ formatPower: (value: number) => `${value} W` }),
+}));
+vi.mock('../components/operationalbrief-all/ChargingSummaryBrief', () => ({
+  ChargingSummaryBrief: ({ period }: { period: { start?: string; end?: string | null } }) =>
+    createElement('section', { 'aria-label': 'Summary timestamps' }, period.start, ' – ', period.end),
+}));
+vi.mock('@/components/layout/layout-reference', () => ({
+  LayoutCard: ({ title, children }: PropsWithChildren<{ title: string }>) =>
+    createElement('section', { 'aria-label': title }, children),
+}));
+vi.mock('@/components/ui', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/ui')>(),
+  DataTable: ({ columns, data }: {
+    columns: { key: string; render?: (row: unknown) => ReactNode }[];
+    data: unknown[];
+  }) => createElement('div', null, data.map((row, index) =>
+    createElement('div', { key: index }, columns.map(column =>
+      createElement('div', { key: column.key }, column.render?.(row)))))),
+}));
 vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: sources.t, i18n: { language: sources.locale } }),
+  useTranslation: () => ({ t: sources.t, i18n: { language: sources.language } }),
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
@@ -99,6 +130,8 @@ const samples: ThermalTaxSample[] = [
 beforeEach(() => {
   vi.clearAllMocks();
   sources.locale = 'fr-FR';
+  sources.timezone = 'UTC';
+  sources.language = 'en-US';
   sources.history = { data: [session], fetchStatus: 'idle', isLoading: false, dataUpdatedAt: 1 };
   sources.telemetry = { data: samples, fetchStatus: 'idle', isLoading: false, dataUpdatedAt: 1 };
 });
@@ -156,5 +189,111 @@ describe('ChargingThermalTaxPage locale adoption', () => {
     expect(sources.telemetryHook).toHaveBeenLastCalledWith(null);
     expect(sources.stats).toHaveBeenLastCalledWith(expect.objectContaining({ selected: false, samples: [] }));
     expect(screen.getAllByRole('region')).toHaveLength(4);
+  });
+
+  it('updates the selector and short chart labels across a saved-timezone day boundary without changing raw instants', () => {
+    const boundarySession = { ...session, started_at: '2026-10-01T00:30:00Z' };
+    const boundarySamples = samples.map((sample, index) => ({
+      ...sample, ts: `2026-10-01T00:3${index}:00Z`,
+    }));
+    sources.history = { ...sources.history, data: [boundarySession] };
+    sources.telemetry = { ...sources.telemetry, data: boundarySamples };
+    sources.timezone = 'America/Los_Angeles';
+    const result = render(<ChargingThermalTaxPage />);
+    const selector = screen.getByRole('combobox', { name: 'Inspect session' });
+    expect(within(selector).getByRole('option', { name: '30 sept. · DC' })).toHaveValue('42');
+    fireEvent.change(selector, { target: { value: '42' } });
+    expect(sources.chart).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: expect.arrayContaining([expect.objectContaining({
+        time: '17:30', tMs: Date.parse(boundarySamples[0].ts),
+      })]),
+    }));
+    sources.timezone = 'Asia/Tokyo';
+    result.rerender(<ChargingThermalTaxPage />);
+    expect(within(selector).getByRole('option', { name: '1 oct. · DC' })).toHaveValue('42');
+    expect(selector).toHaveValue('42');
+    expect(sources.chart).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: expect.arrayContaining([expect.objectContaining({
+        time: '09:30', tMs: Date.parse(boundarySamples[0].ts),
+      })]),
+    }));
+    expect(sources.stats).toHaveBeenLastCalledWith(expect.objectContaining({
+      session: boundarySession, samples: boundarySamples,
+      summary: analyzeChargingThermalTax(boundarySamples),
+    }));
+    expect(boundarySession.started_at).toBe('2026-10-01T00:30:00Z');
+  });
+
+  it('keeps missing selector dates explicit and excludes unusable chart instants', () => {
+    sources.history = { ...sources.history, data: [{ ...session, started_at: '' }] };
+    sources.telemetry = { ...sources.telemetry, data: [
+      { ...samples[0], ts: '' }, { ...samples[0], ts: 'invalid' }, samples[0],
+    ] };
+    render(<ChargingThermalTaxPage />);
+    expect(screen.getByRole('option', { name: '— · DC' })).toHaveValue('42');
+    expect(sources.chart).toHaveBeenLastCalledWith(expect.objectContaining({
+      data: [{ tMs: Date.parse(samples[0].ts), time: '12:00', heaterW: 1000, chargeW: 5000 }],
+    }));
+  });
+
+  it('updates directly rendered summary timestamps and phase bounds on preference-only changes', () => {
+    const boundarySession: ChargingSession = {
+      ...session, start_soc_pct: 20, end_soc_pct: null, total_energy_added_wh: 1000,
+      peak_power_w: null, cost_decimal: null,
+      started_at: '2026-10-01T00:30:00Z', ended_at: '2026-10-01T00:32:00Z',
+      start_ts: '2026-10-01T00:30:00Z', startedAt: '2026-10-01T00:30:00Z', duration_min: 2,
+    };
+    const boundarySamples = samples.map((sample, index) => ({
+      ...sample, ts: `2026-10-01T00:3${index}:00Z`,
+    }));
+    const summary = analyzeChargingThermalTax(boundarySamples);
+    function Sections() {
+      const props = {
+        selected: true, loading: false, samples: boundarySamples, summary,
+        state: deriveDataState(sources.telemetry),
+      };
+      return <>
+        <ThermalTaxStats {...props} session={boundarySession} />
+        <ThermalPhases {...props} />
+      </>;
+    }
+    sources.timezone = 'America/Los_Angeles';
+    const result = render(<Sections />);
+    expect(screen.getByRole('region', { name: 'Summary timestamps' })).toHaveTextContent(
+      '30 sept. 2026, 17:30 – 30 sept. 2026, 17:32',
+    );
+    expect(screen.getAllByText('30 sept. 2026, 17:30')).toHaveLength(1);
+    sources.locale = 'de-DE';
+    sources.timezone = 'Asia/Tokyo';
+    result.rerender(<Sections />);
+    expect(screen.getByRole('region', { name: 'Summary timestamps' })).toHaveTextContent(
+      '1. Okt. 2026, 09:30 – 1. Okt. 2026, 09:32',
+    );
+    expect(screen.getAllByText('1. Okt. 2026, 09:30')).toHaveLength(1);
+    expect(summary.phases[0].startMs).toBe(Date.parse(boundarySamples[0].ts));
+    expect(boundarySession.started_at).toBe('2026-10-01T00:30:00Z');
+  });
+
+  it('renders invalid summary and phase dates as placeholders and leaves an absent end absent', () => {
+    const invalidSession: ChargingSession = {
+      ...session, started_at: 'invalid', ended_at: null,
+      start_ts: 'invalid', startedAt: 'invalid', duration_min: 2,
+      start_soc_pct: 20, end_soc_pct: null, total_energy_added_wh: 1000,
+      peak_power_w: null, cost_decimal: null,
+    };
+    const summary = analyzeChargingThermalTax(samples);
+    summary.phases = [{ ...summary.phases[0], startMs: NaN, endMs: NaN }];
+    const props = {
+      selected: true, loading: false, samples, summary,
+      state: deriveDataState(sources.telemetry),
+    };
+    render(<>
+      <ThermalTaxStats {...props} session={invalidSession} />
+      <ThermalPhases {...props} />
+    </>);
+    expect(screen.getByRole('region', { name: 'Summary timestamps' })).toHaveTextContent('— –');
+    const phases = screen.getByRole('region', { name: 'Thermal Phases' });
+    expect(within(phases).getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/Invalid Date|NaN/)).not.toBeInTheDocument();
   });
 });

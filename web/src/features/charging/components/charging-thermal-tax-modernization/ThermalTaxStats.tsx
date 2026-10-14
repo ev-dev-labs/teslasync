@@ -2,9 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { Flame, Gauge, Timer, Zap } from 'lucide-react';
 import { Badge, Button, Text } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
-import { type StatMetric, type StatPeriod } from '@/components/data-display/stat-reference';
+import { type StatMetric, type StatPeriod } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataState } from '@/api/dataState';
 import type { ChargingSession } from '@/types/charging';
 import type { ChargingThermalTaxSummary, ThermalTaxSample } from '../../lib/chargingThermalTax';
@@ -21,6 +22,7 @@ interface ThermalTaxStatsProps {
 
 export function ThermalTaxStats({ session, selected, summary, samples, state, loading }: ThermalTaxStatsProps) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const evidence = heaterEvidence(samples);
   const hasIntegral = selected && evidence.hasIntegral;
   const missingReason = selected
@@ -97,7 +99,11 @@ export function ThermalTaxStats({ session, selected, summary, samples, state, lo
     id="charging-thermal-tax-metrics"
     title={t('chargingThermalTax.kpis', 'Charging thermal tax metrics')}
     metrics={metrics}
-    period={period}
+    period={period.kind === 'event' ? {
+      ...period,
+      start: formatDateTime(period.start),
+      end: period.end == null ? null : formatDateTime(period.end),
+    } : period}
     loading={loading}
     retained={selected && state.hasData && state.status === 'stale'}
     secondary={selected && evidence.incomplete ? (

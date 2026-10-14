@@ -9,14 +9,15 @@ import { useChargingHistory, useChargeTelemetry } from '@/api/hooks/useCharging'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { analyzeChargingThermalTax } from '../lib/chargingThermalTax';
 import {
   ThermalTaxStats, ThermalPowerChart, ThermalPhases, thermalPowerRows,
 } from '../components/charging-thermal-tax-modernization';
 
 export default function ChargingThermalTaxPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDateShort, formatTime, locale } = useDateFormat();
   usePageTitle(t('chargingThermalTax.title', 'Charging Thermal Tax'));
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
@@ -40,13 +41,13 @@ export default function ChargingThermalTaxPage() {
   const sessionOptions = useMemo(
     () => sessions.map(session => ({
       value: String(session.id),
-      label: `${formatDateShort(session.started_at, { locale: i18n.language })} \u00b7 ${session.charger_type ?? t('chargingThermalTax.unknownCharger', 'Unknown charger')}`,
+      label: `${formatDateShort(session.started_at)} \u00b7 ${session.charger_type ?? t('chargingThermalTax.unknownCharger', 'Unknown charger')}`,
     })),
-    [sessions, t, i18n.language],
+    [sessions, t, formatDateShort],
   );
   const chartData = useMemo(
-    () => thermalPowerRows(telemetryQuery.data ?? [], i18n.language),
-    [telemetryQuery.data, i18n.language],
+    () => thermalPowerRows(telemetryQuery.data ?? [], locale, formatTime),
+    [telemetryQuery.data, locale, formatTime],
   );
 
   if (vehicleId == null) {

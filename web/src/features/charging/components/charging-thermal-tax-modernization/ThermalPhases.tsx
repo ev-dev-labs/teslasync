@@ -1,10 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Flame } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { Badge, HelpTooltip, DataTable, Text, type Column } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime, formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { DataState } from '@/api/dataState';
 import type { ChargingThermalTaxSummary, ThermalEnergySource, ThermalPhase, ThermalTaxSample } from '../../lib/chargingThermalTax';
 import { phaseHasMissingHeater } from './thermalPresentation';
@@ -24,7 +25,8 @@ interface ThermalPhasesProps {
 }
 
 export function ThermalPhases({ selected, loading, state, summary, samples }: ThermalPhasesProps) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const { formatPower } = useUnits();
   const rows = summary.phases.map((phase, index) => ({ ...phase, key: `${phase.startMs}-${index}` }));
   type PhaseRow = typeof rows[number];
@@ -40,8 +42,8 @@ export function ThermalPhases({ selected, loading, state, summary, samples }: Th
       case 'analysisState': return algorithmPhaseLabel(phase);
       case 'duration': return formatDurationSecondsAsMinutes(phase.durationS);
       case 'power': return phase.state === 'heater_on' ? formatPower(phase.avgHeaterW) : '—';
-      case 'start': return formatDateTime(new Date(phase.startMs), { locale: i18n.language });
-      case 'end': return formatDateTime(new Date(phase.endMs), { locale: i18n.language });
+      case 'start': return formatDateTime(new Date(phase.startMs));
+      case 'end': return formatDateTime(new Date(phase.endMs));
       case 'quality': return phaseHasMissingHeater(phase, samples)
         ? t('chargingThermalTax.phases.uncertain', 'Heater readings missing; phase state is uncertain.')
         : t('chargingThermalTax.phases.sampled', 'Phase boundaries are sampled estimates.');
