@@ -31,10 +31,11 @@ function DriveCalendarContent() {
   const { t } = useTranslation();
   usePageTitle(t('driveCalendar.title', 'Drive calendar'));
   const { start, end, startInstant, endInstantExclusive, timezone } = useRangeState();
-  const { vehicleId } = useSelectedVehicle();
+  const { vehicleId, vehiclesState } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const drivesQuery = useDriveCalendarHistory(vehicleIdStr, startInstant, endInstantExclusive);
-  const source = deriveDataState(drivesQuery, { provenance: 'historical' });
+  const historyState = deriveDataState(drivesQuery, { provenance: 'historical' });
+  const source = vehicleId == null ? vehiclesState : historyState;
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const todayMs = today.getTime();
@@ -45,15 +46,16 @@ function DriveCalendarContent() {
   );
   const compactHeatmap = calendar.weeks.length <= COMPACT_HEATMAP_MAX_WEEKS;
 
-  if (vehicleId == null) {
+  if (vehicleId == null && vehiclesState.status === 'unavailable') {
     return <NoVehicleSelected pageTitle={t('driveCalendar.title', 'Drive calendar')} />;
   }
 
   const sectionState: DriveCalendarSectionState = {
-    isLoading: source.status === 'initial',
+    isLoading: source.status === 'initial' || (vehicleId == null && !source.fatalError),
     error: source.fatalError,
     onRetry: () => {
-      void drivesQuery.refetch();
+      if (vehicleId == null) vehiclesState.retry?.();
+      else void drivesQuery.refetch();
     },
   };
 
@@ -68,7 +70,14 @@ function DriveCalendarContent() {
           sources={[{
             id: 'drive-history',
             label: t('driveCalendar.title', 'Drive calendar'),
-            query: drivesQuery,
+            query: vehicleId == null ? {
+              data: vehiclesState.data,
+              isPending: vehiclesState.status === 'initial',
+              isError: vehiclesState.fatalError != null,
+              error: vehiclesState.fatalError,
+              fetchStatus: vehiclesState.isRefreshBlocked ? 'paused' : 'idle',
+              refetch: vehiclesState.retry ?? undefined,
+            } : drivesQuery,
           }]}
         />
       ) : (

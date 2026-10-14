@@ -3,6 +3,8 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { useRangeState, SHARED_RANGE_STORAGE_KEY } from '@/hooks/useRangeState';
+import { deriveDataState } from '@/api/dataState';
+import { Button } from '@/components/ui';
 
 const { useHistoryMock, selectedVehicleMock, pageTitleMock } = vi.hoisted(() => ({
   useHistoryMock: vi.fn(),
@@ -75,11 +77,14 @@ vi.mock('../components/drive-calendar', () => {
     CalendarSummaryCards: (props: {
       isLoading: boolean;
       error: unknown;
+      onRetry: () => void;
       calendar: { totalDrives: number; totalDistanceM: number; currentStreak: number; days: unknown[] };
     }) => (
       <section data-testid="calendar-summary" data-drives={props.calendar.totalDrives}
         data-distance-m={props.calendar.totalDistanceM} data-streak={props.calendar.currentStreak}
-        data-days={props.calendar.days.length}>{status(props)}</section>
+        data-days={props.calendar.days.length}>{status(props)}
+        {props.error ? <Button onClick={props.onRetry}>Retry calendar source</Button> : null}
+      </section>
     ),
     DriveCalendarHeatmap: (props: { isLoading: boolean; error: unknown; className?: string }) => (
       <section className={props.className} data-testid="calendar-heatmap">{status(props)}</section>
@@ -146,7 +151,10 @@ function renderCalendar(path = '/drive-calendar') {
 beforeEach(() => {
   vi.clearAllMocks();
   window.localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
-  selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
+  selectedVehicleMock.mockReturnValue({
+    vehicleId: 42,
+    vehiclesState: deriveDataState({ data: [{ id: 42 }], isSuccess: true }),
+  });
   useHistoryMock.mockReturnValue(query());
 });
 
@@ -246,12 +254,97 @@ describe('DriveCalendarPage', () => {
     expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '1000');
   });
 
-  it('preserves the no-vehicle selection state', () => {
-    selectedVehicleMock.mockReturnValue({ vehicleId: null });
+  it('preserves onboarding only for an authoritatively resolved empty fleet', () => {
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: null,
+      vehiclesState: deriveDataState({ data: [], isSuccess: true }, { unavailable: true }),
+    });
     renderCalendar();
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Drive calendar');
     expect(screen.queryByTestId('calendar-heatmap')).not.toBeInTheDocument();
+    expect(useHistoryMock).toHaveBeenCalledWith(undefined, expect.any(String), expect.any(String));
+  });
+
+  it.each(['fetching', 'idle', 'paused'] as const)(
+    'keeps unresolved fleet sections loading when the prerequisite is %s, then renders the resolved vehicle',
+    (fetchStatus) => {
+      const retry = vi.fn();
+      selectedVehicleMock.mockReturnValue({
+        vehicleId: null,
+        vehiclesState: deriveDataState({ isPending: true, fetchStatus, refetch: retry }),
+      });
+      const view = renderCalendar();
+      expect(screen.queryByTestId('no-vehicle')).not.toBeInTheDocument();
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('loading');
+      expect(useHistoryMock).toHaveBeenLastCalledWith(undefined, expect.any(String), expect.any(String));
+      if (fetchStatus === 'paused') {
+        expect(screen.getByRole('alert')).toHaveTextContent('Refresh paused');
+        fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive calendar' }));
+        expect(retry).toHaveBeenCalledOnce();
+      }
+
+      selectedVehicleMock.mockReturnValue({
+        vehicleId: 42,
+        vehiclesState: deriveDataState({ data: [{ id: 42 }], isSuccess: true }),
+      });
+      useHistoryMock.mockReturnValue(query({
+        data: [{ id: 1, startTs: new Date().toISOString(), distanceM: 1000 }],
+      }));
+      view.rerender(<MemoryRouter><DriveCalendarPage /></MemoryRouter>);
+      expect(screen.queryByTestId('no-vehicle')).not.toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+      expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '1000');
+      expect(useHistoryMock).toHaveBeenLastCalledWith('42', expect.any(String), expect.any(String));
+    },
+  );
+
+  it('surfaces fatal fleet failure in every section and retries the fleet rather than disabled history', () => {
+    const retry = vi.fn();
+    const historyRetry = vi.fn();
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: null,
+      vehiclesState: deriveDataState({ isError: true, error: new Error('fleet unavailable'), refetch: retry }),
+    });
+    useHistoryMock.mockReturnValue(query({ refetch: historyRetry }));
+    renderCalendar();
+
+    expect(screen.queryByTestId('no-vehicle')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('error');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry calendar source' }));
+    expect(retry).toHaveBeenCalledOnce();
+    expect(historyRetry).not.toHaveBeenCalled();
+  });
+
+  it('does not treat a failed refresh of an empty fleet as confirmed onboarding or empty history', () => {
+    selectedVehicleMock.mockReturnValue({
+      vehicleId: null,
+      vehiclesState: deriveDataState({
+        data: [], isError: true, error: new Error('fleet refresh unavailable'),
+      }, { unavailable: true }),
+    });
+    renderCalendar();
+
+    expect(screen.queryByTestId('no-vehicle')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('loading');
+  });
+
+  it.each([42, 84])('consumes the existing resolved URL/store ID %s even before fleet loading succeeds', (vehicleId) => {
+    selectedVehicleMock.mockReturnValue({
+      vehicleId,
+      vehiclesState: deriveDataState({ isError: true, error: new Error('fleet unavailable') }),
+    });
+    useHistoryMock.mockReturnValue(query({
+      data: [{ id: 1, startTs: new Date().toISOString(), distanceM: 2000 }],
+    }));
+    renderCalendar();
+
+    expect(screen.queryByTestId('no-vehicle')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '2000');
+    expect(useHistoryMock).toHaveBeenCalledWith(String(vehicleId), expect.any(String), expect.any(String));
   });
 
   it('translates a bookmarked year into shared range URLs and preserves the vehicle parameter', () => {
