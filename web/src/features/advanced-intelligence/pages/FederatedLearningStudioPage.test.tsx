@@ -378,7 +378,14 @@ describe('Federated learning studio scoped adoption', () => {
     expect(container).toHaveAttribute('data-source-status', status);
     expect(container).toHaveAttribute('data-source-provenance', 'unknown');
     expect(container).toHaveAttribute('aria-busy', busy);
-    expect(evidence.getAllByText('Unknown')).toHaveLength(3);
+    if (busy === 'true') {
+      ['Data quality', 'Evidence sources', 'Limitations'].forEach(label => {
+        expect(evidence.getByRole('status', { name: `Loading ${label}` })).toBeInTheDocument();
+      });
+      expect(evidence.queryByText('Unknown')).not.toBeInTheDocument();
+    } else {
+      expect(evidence.getAllByText('Unknown')).toHaveLength(3);
+    }
     ['Quality metadata is unsupported.', 'No supporting evidence was returned.', 'No additional limitations were returned.']
       .forEach(text => expect(evidence.queryByText(text)).not.toBeInTheDocument());
     expect(evidence.queryByRole('button', { name: /Refresh|Retry/ })).not.toBeInTheDocument();
