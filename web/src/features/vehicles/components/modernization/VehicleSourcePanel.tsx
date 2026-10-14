@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { SourceContent, type SourceState } from '@/components/layout';
-import { GlassPanel, Heading } from '@/components/ui';
+import { GlassPanel, Heading, Text } from '@/components/ui';
 import { QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import type { DataStateSource } from '@/api/dataState';
@@ -22,11 +23,13 @@ export function VehicleSourcePanel({
   query, label, emptyMessage, errorMessage, children, available,
   renderEmpty = true, resourceName,
 }: VehicleSourcePanelProps) {
+  const { t } = useTranslation();
   const trust = useDataState(query);
   const contentAvailable = available ?? trust.hasData;
-  const initialLoading = !contentAvailable && Boolean(query.isPending || query.isLoading);
+  const initialBlocked = !trust.hasData && trust.isRefreshBlocked;
+  const initialLoading = !contentAvailable && !initialBlocked && Boolean(query.isPending || query.isLoading);
   const sourceFailed = trust.fatalError != null || query.error != null || query.isError === true;
-  const canRender = contentAvailable || (renderEmpty && !initialLoading && !sourceFailed);
+  const canRender = contentAvailable || (renderEmpty && !initialBlocked && !initialLoading && !sourceFailed);
   const state: SourceState = canRender ? 'ready' : initialLoading
     ? 'loading' : sourceFailed ? 'error' : 'empty';
   // SourceContent's reference-only retained prose is deliberately not used
@@ -38,6 +41,10 @@ export function VehicleSourcePanel({
         <SourceContent state="ready" label={label} emptyMessage={emptyMessage} errorMessage={errorMessage}>
           {children}
         </SourceContent>
+      ) : initialBlocked ? (
+        <Text role="status" variant="bodySm">
+          {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
+        </Text>
       ) : (
         <GlassPanel padding="md" className="h-full min-w-0 space-y-3">
           <Heading level="panel">{label}</Heading>

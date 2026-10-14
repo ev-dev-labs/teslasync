@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Zap } from 'lucide-react';
 
-import { Badge, Button, GlassPanel, PanelTitle, Caption } from '@/components/ui';
+import { Badge, Button, GlassPanel, PanelTitle, Caption, Text } from '@/components/ui';
 import { OperationalBrief, type StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { SourceContent } from '@/components/layout';
@@ -55,7 +55,11 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
       </div>
 
       <StaleRefreshWarning state={trust} label={t('nextCharge.resource', 'Next charge decision')} />
-      {isLoading && !trust.hasData ? (
+      {trust.isRefreshBlocked && !trust.hasData && !trust.fatalError ? (
+        <Text role="status" variant="bodySm">
+          {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
+        </Text>
+      ) : isLoading && !trust.hasData ? (
         <Skeleton lines={3} height={18} />
       ) : trust.fatalError ? (
         <QueryError
@@ -119,11 +123,11 @@ function DecisionBody({
     time: waitAt,
     home: formatCurrency(data.home_now_cost ?? 0),
     sc: formatCurrency(data.supercharger_cost ?? 0),
-    soc: data.current_soc,
-    target: data.target_soc,
+    soc: fmtNumber(data.current_soc),
+    target: fmtNumber(data.target_soc),
   });
   const socLine = t('nextCharge.socLine', '{{soc}}% → {{target}}% · {{kwh}} kWh needed', {
-    soc: data.current_soc, target: data.target_soc, kwh: fmtNumber(data.kwh_needed),
+    soc: fmtNumber(data.current_soc), target: fmtNumber(data.target_soc), kwh: fmtNumber(data.kwh_needed),
   });
   const currencyDisplay = (raw: number) => ({ value: formatCurrency(raw), unit: '' });
   const rawMetrics: readonly StatMetric[] = [

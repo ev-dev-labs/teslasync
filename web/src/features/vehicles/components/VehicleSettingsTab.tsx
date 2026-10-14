@@ -16,9 +16,11 @@
  * useUpsertVehicleSetting.
  *
  * Initial failures replace rows; refresh failures keep rows and drafts
- * mounted beside the shared trust warning and retry.
+ * mounted beside the shared trust warning and retry. Paused reads keep
+ * drafts but block mutations until the query can resume. Vehicle changes
+ * discard local drafts; only matching successful mutations clear edits.
  */
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge, Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui'
@@ -156,12 +158,15 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
         <div data-testid="vehicle-settings-loading" className="space-y-3">
           {trust.isRefreshBlocked ? (
             <Text role="status" variant="bodySm">
-              {t('dataSources.status.paused', 'Refresh paused')}
+              {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
             </Text>
-          ) : null}
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
+          ) : (
+            <>
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+              <Skeleton className="h-12 rounded-lg" />
+            </>
+          )}
         </div>
       ) : (
         <ul className="divide-y divide-[var(--border-subtle)]" data-testid="vehicle-settings-rows">
@@ -169,10 +174,11 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
             const effective = findEffectiveSetting(data, desc.key)
             return (
               <VehicleSettingRow
-                key={desc.key}
+                key={`${vehicleId}:${desc.key}`}
                 vehicleId={vehicleId}
                 descriptor={desc}
                 effective={effective}
+                refreshBlocked={trust.isRefreshBlocked}
               />
             )
           })}
@@ -207,9 +213,10 @@ interface VehicleSettingRowProps {
   vehicleId: number
   descriptor: VehicleSettingDescriptor
   effective: EffectiveSetting | undefined
+  refreshBlocked: boolean
 }
 
-function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingRowProps) {
+function VehicleSettingRow({ vehicleId, descriptor, effective, refreshBlocked }: VehicleSettingRowProps) {
   const { t } = useTranslation()
   const upsert = useUpsertVehicleSetting(vehicleId)
   const reset = useResetVehicleSetting(vehicleId)
@@ -217,22 +224,33 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
   const source: EffectiveSettingSource = effective?.source ?? 'default'
   const isOverride = source === 'override'
 
-  // Local draft state — initialised from the effective value, kept in
-  // sync when the effective value changes from outside (e.g. another
-  // tab saved an override). The draft is always a string so the
-  // input components can be rendered uniformly.
+  // Rows remount for vehicleId + key. Untouched inputs follow the server;
+  // edited drafts survive refreshes until their matching mutation succeeds.
   const initialDraft = useMemo(() => effectiveToDraft(descriptor, effective), [descriptor, effective])
-  const [draft, setDraft] = useState<string>(initialDraft)
+  const [localDraft, setDraft] = useState<string | null>(null)
+  const draftRevision = useRef(0)
   const [validationError, setValidationError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setDraft(initialDraft)
-    setValidationError(null)
-  }, [initialDraft])
-
+  const draft = localDraft ?? initialDraft
   const dirty = draft !== initialDraft
+  const pending = upsert.isPending || reset.isPending
+
+  const handleChange = (value: string) => {
+    draftRevision.current += 1
+    setDraft(value)
+    setValidationError(null)
+  }
+
+  const matchingSuccess = () => {
+    const revision = draftRevision.current
+    return () => {
+      if (draftRevision.current !== revision) return
+      setDraft(null)
+      setValidationError(null)
+    }
+  }
 
   const handleSave = () => {
+    if (pending || refreshBlocked) return
     setValidationError(null)
     const parsed = parseDraft(descriptor, draft)
     if (parsed.kind === 'invalid') {
@@ -243,12 +261,15 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
       setValidationError(t('vehicleSettings.validation.required', 'Value is required.'))
       return
     }
-    upsert.mutate({ key: descriptor.key, value: parsed.value })
+    upsert.mutate(
+      { key: descriptor.key, value: parsed.value },
+      { onSuccess: matchingSuccess() },
+    )
   }
 
   const handleReset = () => {
-    if (!isOverride) return
-    reset.mutate(descriptor.key)
+    if (!isOverride || pending || refreshBlocked) return
+    reset.mutate(descriptor.key, { onSuccess: matchingSuccess() })
   }
 
   return (
@@ -267,7 +288,7 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
         </div>
 
         <div className="lg:col-span-5">
-          {renderInput(descriptor, draft, setDraft)}
+          {renderInput(descriptor, draft, handleChange)}
           {validationError ? (
             <Text
               variant="error"
@@ -283,7 +304,7 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
           <Button
             variant="primary"
             size="sm"
-            disabled={!dirty || upsert.isPending}
+            disabled={!dirty || pending || refreshBlocked}
             onClick={handleSave}
             data-testid={`vehicle-settings-save-${descriptor.key}`}
           >
@@ -294,7 +315,7 @@ function VehicleSettingRow({ vehicleId, descriptor, effective }: VehicleSettingR
           <Button
             variant="secondary"
             size="sm"
-            disabled={!isOverride || reset.isPending}
+            disabled={!isOverride || pending || refreshBlocked}
             onClick={handleReset}
             data-testid={`vehicle-settings-reset-${descriptor.key}`}
           >

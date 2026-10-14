@@ -7,6 +7,50 @@ import { VehiclePanelGrid } from './VehiclePanelGrid';
 import { VehicleSourcePanel } from './VehicleSourcePanel';
 
 describe('independent production vehicle sources', () => {
+  it.each([true, false])('waits without empty content or actions for a paused initial read (renderEmpty=%s)', (renderEmpty) => {
+    const view = (query: DataStateSource<unknown>) => (
+      <VehicleSourcePanel query={query} label="Decision source" renderEmpty={renderEmpty}
+        emptyMessage="No decisions" errorMessage="Decision failed">
+        <GlassPanel><Button>Apply decision</Button></GlassPanel>
+      </VehicleSourcePanel>
+    );
+    const { rerender } = render(view({ isPending: true, isLoading: false, fetchStatus: 'paused' }));
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.queryByText('No decisions')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Apply decision' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    rerender(view({ isPending: true, isLoading: true, fetchStatus: 'fetching' }));
+    expect(screen.getByRole('status', { name: 'Loading Decision source' })).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    rerender(view({ data: [], isSuccess: true, fetchStatus: 'idle' }));
+    expect(screen.getByRole('button', { name: 'Apply decision' })).toBeVisible();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('renders a confirmed zero and recovers retained content without remounting it', () => {
+    const retry = vi.fn();
+    const view = (query: DataStateSource<number>) => (
+      <VehicleSourcePanel query={{ ...query, refetch: retry }} label="Zero source"
+        emptyMessage="No observation" errorMessage="Observation failed">
+        <GlassPanel><Button>Inspect zero</Button><span>Observation {query.data}</span></GlassPanel>
+      </VehicleSourcePanel>
+    );
+    const { rerender } = render(view({ data: 0, isSuccess: true }));
+    const control = screen.getByRole('button', { name: 'Inspect zero' });
+    control.focus();
+    expect(screen.getByText('Observation 0')).toBeVisible();
+    rerender(view({ data: 0, isError: true, error: new Error('Refresh failed') }));
+    expect(screen.getByTestId('stale-refresh-warning')).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(retry).toHaveBeenCalledOnce();
+    rerender(view({ data: 0, isSuccess: true, fetchStatus: 'idle' }));
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Inspect zero' })).toBe(control);
+    expect(control).toHaveFocus();
+    expect(screen.getByText('Observation 0')).toBeVisible();
+  });
+
   it('keeps neighboring evidence and both panel shells through first-load, empty and fatal error', () => {
     const retry = vi.fn();
     const view = (query: DataStateSource<unknown>) => (

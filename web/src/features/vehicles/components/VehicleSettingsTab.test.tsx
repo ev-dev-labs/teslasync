@@ -64,16 +64,17 @@ function renderTab(vehicleId = 42) {
       mutations: { retry: false },
     },
   })
-  const view = render(
+  const tree = (id: number) => (
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
-          <VehicleSettingsTab vehicleId={vehicleId} />
+          <VehicleSettingsTab vehicleId={id} />
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   )
-  return { ...view, qc }
+  const view = render(tree(vehicleId))
+  return { ...view, qc, rerenderVehicle: (id: number) => view.rerender(tree(id)) }
 }
 
 interface SettingPayloadShape {
@@ -129,9 +130,41 @@ describe('VehicleSettingsTab — loading + error states', () => {
       expect(screen.getByTestId('vehicle-settings-loading')).toBeInTheDocument()
       expect(screen.queryByTestId('vehicle-settings-rows')).not.toBeInTheDocument()
       expect(screen.queryByTestId('vehicle-settings-error')).not.toBeInTheDocument()
+      expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument()
       expect(mockedRequest).not.toHaveBeenCalled()
       act(() => onlineManager.setOnline(true))
       expect(await screen.findByTestId('vehicle-settings-rows')).toBeInTheDocument()
+    } finally {
+      onlineManager.setOnline(true)
+    }
+  })
+
+  it('keeps drafts but blocks mutations during a paused refresh and restores actions on recovery', async () => {
+    mockedRequest.mockResolvedValue(DEFAULT_PAYLOAD)
+    const { qc } = renderTab()
+    const input = await screen.findByTestId('vehicle-settings-input-nickname')
+    fireEvent.change(input, { target: { value: 'Paused draft' } })
+    onlineManager.setOnline(false)
+    try {
+      act(() => { void qc.refetchQueries({ queryKey: vehicleSettingsKeys.detail(42) }) })
+      await waitFor(() => expect(screen.getByTestId('stale-refresh-warning'))
+        .toHaveAttribute('data-refresh-blocked', 'true'))
+      const save = screen.getByTestId('vehicle-settings-save-nickname')
+      const reset = screen.getByTestId('vehicle-settings-reset-nickname')
+      expect(save).toBeDisabled()
+      expect(reset).toBeDisabled()
+      fireEvent.click(save)
+      fireEvent.click(reset)
+      expect(mockedRequest).toHaveBeenCalledTimes(1)
+      expect(input).toHaveValue('Paused draft')
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument()
+      act(() => onlineManager.setOnline(true))
+      await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+      expect(screen.getByTestId('vehicle-settings-input-nickname')).toBe(input)
+      expect(input).toHaveValue('Paused draft')
+      expect(save).toBeEnabled()
+      expect(reset).toBeEnabled()
     } finally {
       onlineManager.setOnline(true)
     }
@@ -258,6 +291,183 @@ describe('VehicleSettingsTab — save flow', () => {
       expect(delCall).toBeTruthy()
       expect(delCall![0]).toBe('/vehicles/42/settings/nickname')
     })
+  })
+})
+
+describe('VehicleSettingsTab — draft and settlement identity', () => {
+  function pendingMutation(method: 'PUT' | 'DELETE') {
+    let resolve!: () => void
+    let reject!: (error: Error) => void
+    const completion = new Promise<void>((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+    let payload = DEFAULT_PAYLOAD
+    mockedRequest.mockImplementation((path: string, init?: RequestInit) => {
+      if (path === '/vehicles/42/settings/nickname' && init?.method === method) {
+        return completion
+      }
+      if (path === '/vehicles/42/settings') return Promise.resolve(payload)
+      if (path === '/vehicles/43/settings') return Promise.resolve(DEFAULT_PAYLOAD)
+      throw new Error(`unexpected ${path} ${init?.method}`)
+    })
+    return {
+      resolve: (value: string) => {
+        payload = makePayload([
+          { key: 'nickname', value, source: method === 'PUT' ? 'override' : 'vehicle' },
+        ])
+        resolve()
+      },
+      reject,
+    }
+  }
+
+  function editNickname(value: string) {
+    fireEvent.change(screen.getByTestId('vehicle-settings-input-nickname'), {
+      target: { value },
+    })
+  }
+
+  function submit(method: 'PUT' | 'DELETE') {
+    fireEvent.click(screen.getByTestId(
+      `vehicle-settings-${method === 'PUT' ? 'save' : 'reset'}-nickname`,
+    ))
+  }
+
+  it('discards drafts and validation on a vehicle change even when effective values match', async () => {
+    mockedRequest.mockResolvedValue(DEFAULT_PAYLOAD)
+    const { qc, rerenderVehicle } = renderTab()
+    await screen.findByTestId('vehicle-settings-input-nickname')
+    editNickname('')
+    submit('PUT')
+    expect(screen.getByTestId('vehicle-settings-error-nickname')).toBeInTheDocument()
+    qc.setQueryData(vehicleSettingsKeys.detail(43), DEFAULT_PAYLOAD)
+    rerenderVehicle(43)
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('Snowball')
+    expect(screen.queryByTestId('vehicle-settings-error-nickname')).not.toBeInTheDocument()
+    expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeDisabled()
+    rerenderVehicle(42)
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('Snowball')
+  })
+
+  it.each(['PUT', 'DELETE'] as const)(
+    '%s completion after switching away and back cannot settle the new row draft',
+    async (method) => {
+      const mutation = pendingMutation(method)
+      const { qc, rerenderVehicle } = renderTab()
+      const original = await screen.findByTestId('vehicle-settings-input-nickname')
+      editNickname('First vehicle draft')
+      submit(method)
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith(
+        '/vehicles/42/settings/nickname',
+        expect.objectContaining({ method }),
+      ))
+      expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeDisabled()
+      expect(screen.getByTestId('vehicle-settings-reset-nickname')).toBeDisabled()
+      qc.setQueryData(vehicleSettingsKeys.detail(43), DEFAULT_PAYLOAD)
+      rerenderVehicle(43)
+      expect(screen.getByTestId('vehicle-settings-input-nickname')).not.toBe(original)
+      expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('Snowball')
+      editNickname('Other vehicle draft')
+      expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled()
+      expect(screen.getByTestId('vehicle-settings-reset-nickname')).toBeEnabled()
+      rerenderVehicle(42)
+      editNickname('New visit draft')
+      await act(async () => { mutation.resolve('Settled old request') })
+      await waitFor(() => expect(qc.getQueryData(vehicleSettingsKeys.detail(42))).toEqual(
+        makePayload([
+          {
+            key: 'nickname',
+            value: 'Settled old request',
+            source: method === 'PUT' ? 'override' : 'vehicle',
+          },
+        ]),
+      ))
+      expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('New visit draft')
+      expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled()
+      expect(qc.getQueryData(vehicleSettingsKeys.detail(43))).toEqual(DEFAULT_PAYLOAD)
+    },
+  )
+
+  it.each(['PUT', 'DELETE'] as const)('%s rejection retains the draft for retry', async (method) => {
+    const mutation = pendingMutation(method)
+    renderTab()
+    await screen.findByTestId('vehicle-settings-input-nickname')
+    editNickname('Retained draft')
+    submit(method)
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2))
+    await act(async () => { mutation.reject(new Error('Mutation rejected')) })
+    await waitFor(() => expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled())
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('Retained draft')
+    expect(await screen.findByText('Mutation rejected')).toBeInTheDocument()
+  })
+
+  it.each(['PUT', 'DELETE'] as const)(
+    '%s matching success clears the submitted draft and follows the effective value',
+    async (method) => {
+      const mutation = pendingMutation(method)
+      const { qc } = renderTab()
+      await screen.findByTestId('vehicle-settings-input-nickname')
+      editNickname('Submitted draft')
+      submit(method)
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2))
+      await act(async () => { mutation.resolve('Server value') })
+      await waitFor(() => expect(screen.getByTestId('vehicle-settings-input-nickname'))
+        .toHaveValue('Server value'))
+      expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeDisabled()
+      act(() => {
+        qc.setQueryData(vehicleSettingsKeys.detail(42), makePayload([
+          { key: 'nickname', value: 'Later server value', source: 'vehicle' },
+        ]))
+      })
+      await waitFor(() => expect(screen.getByTestId('vehicle-settings-input-nickname'))
+        .toHaveValue('Later server value'))
+    },
+  )
+
+  it.each(['PUT', 'DELETE'] as const)(
+    '%s success preserves edits made during the pending request',
+    async (method) => {
+      const mutation = pendingMutation(method)
+      renderTab()
+      await screen.findByTestId('vehicle-settings-input-nickname')
+      editNickname('Submitted draft')
+      submit(method)
+      await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2))
+      editNickname('Newer edit')
+      await act(async () => { mutation.resolve('Server value') })
+      await waitFor(() => expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled())
+      expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('Newer edit')
+    },
+  )
+
+  it('retains an unsaved draft when a refresh changes its effective value', async () => {
+    mockedRequest.mockResolvedValue(DEFAULT_PAYLOAD)
+    const { qc } = renderTab()
+    await screen.findByTestId('vehicle-settings-input-nickname')
+    editNickname('Unsaved edit')
+    act(() => {
+      qc.setQueryData(vehicleSettingsKeys.detail(42), makePayload([
+        { key: 'nickname', value: 'External update', source: 'override' },
+      ]))
+    })
+    await waitFor(() => expect(screen.getByTestId('vehicle-settings-input-nickname'))
+      .toHaveValue('Unsaved edit'))
+    expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled()
+  })
+
+  it('does not clear a newer draft revision even when its text matches the submitted draft', async () => {
+    const mutation = pendingMutation('PUT')
+    renderTab()
+    await screen.findByTestId('vehicle-settings-input-nickname')
+    editNickname('Submitted draft')
+    submit('PUT')
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2))
+    editNickname('Intermediate edit')
+    editNickname('Submitted draft')
+    await act(async () => { mutation.resolve('Server-normalized value') })
+    await waitFor(() => expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled())
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('Submitted draft')
   })
 })
 
