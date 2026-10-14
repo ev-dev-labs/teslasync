@@ -388,6 +388,7 @@ func rawReview(t *testing.T, fq *fakeQuerier) map[string]json.RawMessage {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
 	}
+
 	var raw map[string]json.RawMessage
 	if err := json.Unmarshal(rec.Body.Bytes(), &raw); err != nil {
 		t.Fatal(err)
@@ -395,6 +396,42 @@ func rawReview(t *testing.T, fq *fakeQuerier) map[string]json.RawMessage {
 	return raw
 }
 
+func TestGetYearReview_CalendarBasis(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		at   time.Time
+		want string
+	}{
+		{"west boundary", time.Date(2020, 1, 1, 23, 30, 0, 0, time.FixedZone("west", -8*3600)), "2020-01-02"},
+		{"east boundary", time.Date(2020, 1, 2, 0, 30, 0, 0, time.FixedZone("east", 14*3600)), "2020-01-01"},
+		{"missing", time.Time{}, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.longestRow = fakeRow{vals: []any{int64(7), tt.at, 90000.0, 3576.0, strptr("McDonald ROAD"), strptr("iPhone Street")}}
+			rec := serve(fq, "vehicle_id=42&year=2020")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d; body=%s", rec.Code, rec.Body.String())
+			}
+			got := decodeYR(t, rec.Body.Bytes()).LongestDrive
+			if got == nil || got.Date != tt.want || got.DurationMinutes != 59.6 || got.StartAddress != "McDonald ROAD" {
+				t.Fatalf("highlight = %+v", got)
+			}
+			count := 0
+			for _, query := range fq.queries {
+				if strings.Contains(query, "EXTRACT(") {
+					count++
+					if !strings.Contains(query, "started_at AT TIME ZONE 'UTC'") {
+						t.Errorf("calendar aggregation depends on session timezone: %s", query)
+					}
+				}
+			}
+			if count != 4 {
+				t.Errorf("calendar queries = %d, want 4", count)
+			}
+		})
+	}
+}
 func assertWire(t *testing.T, raw map[string]json.RawMessage, key, want string) {
 	t.Helper()
 	if got := string(raw[key]); got != want {
@@ -996,6 +1033,36 @@ func TestGetYearReview_Success(t *testing.T) {
 	}
 	if got.Comparisons[5].Label != "Hours on the road" || got.Comparisons[5].Value != "50 hours — 25 movies!" {
 		t.Errorf("comparisons[5] = %+v, want 50 hours/25 movies", got.Comparisons[5])
+	}
+}
+
+func TestGetYearReview_EfficiencyRecordsUnavailableReason(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		fq   *fakeQuerier
+	}{
+		{"populated year", okQuerier()},
+		{"empty year", emptyQuerier()},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			raw := rawReview(t, tt.fq)
+			assertWire(t, raw, "most_efficient_drive", "null")
+			assertWire(t, raw, "least_efficient_drive", "null")
+			assertWire(t, raw, "efficiency_records_unavailable_reason", `"unsupported"`)
+			if tt.name == "populated year" {
+				assertWire(t, raw, "avg_efficiency_wh_km", "155.5")
+				assertWire(t, raw, "total_drives", "100")
+				for _, key := range []string{"longest_drive", "shortest_drive"} {
+					if len(raw[key]) == 0 || string(raw[key]) == "null" {
+						t.Errorf("%s must remain populated", key)
+					}
+				}
+			} else {
+				assertWire(t, raw, "total_drives", "0")
+				assertWire(t, raw, "longest_drive", "null")
+				assertWire(t, raw, "shortest_drive", "null")
+			}
+		})
 	}
 }
 
