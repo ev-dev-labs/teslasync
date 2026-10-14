@@ -19,6 +19,7 @@ import (
 
 // Filters scopes a single activity query. Start/End use the zero time.Time
 // to mean "unbounded" (mirrors apiparams.ParseDateRange / NullableTime).
+// Start is inclusive; End is exclusive and must be passed without an epsilon.
 // Kinds empty means "all kinds" (activitymodel.AllKinds).
 type Filters struct {
 	VehicleID *int64
@@ -81,7 +82,7 @@ SELECT
 FROM drives d
 WHERE ($1::bigint IS NULL OR d.vehicle_id = $1::bigint)
   AND ($2::timestamptz IS NULL OR d.started_at >= $2::timestamptz)
-  AND ($3::timestamptz IS NULL OR d.started_at <= $3::timestamptz)`,
+  AND ($3::timestamptz IS NULL OR d.started_at < $3::timestamptz)`,
 
 	activitymodel.KindCharging: `
 SELECT
@@ -106,7 +107,7 @@ SELECT
 FROM charging_sessions c
 WHERE ($1::bigint IS NULL OR c.vehicle_id = $1::bigint)
   AND ($2::timestamptz IS NULL OR c.started_at >= $2::timestamptz)
-  AND ($3::timestamptz IS NULL OR c.started_at <= $3::timestamptz)`,
+  AND ($3::timestamptz IS NULL OR c.started_at < $3::timestamptz)`,
 
 	// Vehicle scoping mirrors buildNotificationLogWhere in
 	// internal/database/notification/repo.go: a rule with no alert_id, an
@@ -144,7 +145,7 @@ SELECT
 FROM notification_logs nl
 LEFT JOIN alert_rules ar ON ar.id = nl.alert_id
 WHERE ($2::timestamptz IS NULL OR nl.created_at >= $2::timestamptz)
-  AND ($3::timestamptz IS NULL OR nl.created_at <= $3::timestamptz)
+  AND ($3::timestamptz IS NULL OR nl.created_at < $3::timestamptz)
   AND ($1::bigint IS NULL OR ar.id IS NULL OR ar.all_vehicles OR EXISTS (
         SELECT 1 FROM alert_rule_vehicles arv2
         WHERE arv2.rule_id = ar.id AND arv2.vehicle_id = $1::bigint
@@ -170,7 +171,7 @@ SELECT
 FROM software_updates su
 WHERE ($1::bigint IS NULL OR su.vehicle_id = $1::bigint)
   AND ($2::timestamptz IS NULL OR COALESCE(su.installed_at, su.scheduled_at, su.created_at) >= $2::timestamptz)
-  AND ($3::timestamptz IS NULL OR COALESCE(su.installed_at, su.scheduled_at, su.created_at) <= $3::timestamptz)`,
+  AND ($3::timestamptz IS NULL OR COALESCE(su.installed_at, su.scheduled_at, su.created_at) < $3::timestamptz)`,
 
 	// Vehicle scoping is inclusive of fleet-wide rows (vehicle_id IS NULL),
 	// matching the existing /annotations list semantics
@@ -195,7 +196,7 @@ SELECT
 FROM chart_annotations ca
 WHERE ($1::bigint IS NULL OR ca.vehicle_id = $1::bigint OR ca.vehicle_id IS NULL)
   AND ($2::timestamptz IS NULL OR ca.occurred_at >= $2::timestamptz)
-  AND ($3::timestamptz IS NULL OR ca.occurred_at <= $3::timestamptz)`,
+  AND ($3::timestamptz IS NULL OR ca.occurred_at < $3::timestamptz)`,
 }
 
 // buildQuery composes the WITH ... UNION ALL ... SELECT query for the

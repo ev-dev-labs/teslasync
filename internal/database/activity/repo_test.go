@@ -264,8 +264,80 @@ func TestBuildQuery_VehicleAndDateArgsPropagate(t *testing.T) {
 	if gotStart.Location() != time.UTC {
 		t.Errorf("expected start arg normalized to UTC, got location %v", gotStart.Location())
 	}
+	gotEnd, ok := args[2].(time.Time)
+	if !ok || gotEnd != end.UTC() {
+		t.Errorf("expected exact exclusive end arg %v, got %v", end.UTC(), args[2])
+	}
 	if args[3] != 10 || args[4] != 5 {
 		t.Errorf("expected limit=10 offset=5, got %v / %v", args[3], args[4])
+	}
+}
+
+func TestBuildQuery_HalfOpenRangeAcrossAllKinds(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		kind activitymodel.Kind
+		at   string
+	}{
+		{activitymodel.KindDrive, "d.started_at"},
+		{activitymodel.KindCharging, "c.started_at"},
+		{activitymodel.KindAlert, "nl.created_at"},
+		{activitymodel.KindSoftwareUpdate, "COALESCE(su.installed_at, su.scheduled_at, su.created_at)"},
+		{activitymodel.KindAnnotation, "ca.occurred_at"},
+	} {
+		t.Run(string(tc.kind), func(t *testing.T) {
+			query, _ := buildQuery(Filters{Kinds: []activitymodel.Kind{tc.kind}})
+			for _, predicate := range []string{
+				"($2::timestamptz IS NULL OR " + tc.at + " >= $2::timestamptz)",
+				"($3::timestamptz IS NULL OR " + tc.at + " < $3::timestamptz)",
+			} {
+				if !strings.Contains(query, predicate) {
+					t.Errorf("missing half-open range predicate %q", predicate)
+				}
+			}
+			if strings.Contains(query, "<= $3::timestamptz") {
+				t.Fatal("an event at the exact upper bound must be excluded")
+			}
+		})
+	}
+}
+
+func TestBuildQuery_PreservesExactRangeInstants(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name  string
+		start string
+		end   string
+	}{
+		{"rolling 24 hours", "2026-10-13T13:28:00.123456789-07:00", "2026-10-14T13:28:00.123456789-07:00"},
+		{"custom spring DST day", "2026-03-08T00:00:00-05:00", "2026-03-09T00:00:00-04:00"},
+		{"custom fall DST day", "2026-11-01T00:00:00-04:00", "2026-11-02T00:00:00-05:00"},
+		{"custom fractional offset", "2026-10-01T00:00:00+05:45", "2026-10-15T00:00:00+05:45"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			start, err := time.Parse(time.RFC3339Nano, tc.start)
+			if err != nil {
+				t.Fatal(err)
+			}
+			end, err := time.Parse(time.RFC3339Nano, tc.end)
+			if err != nil {
+				t.Fatal(err)
+			}
+			f := Filters{Start: start, End: end}
+			_, args := buildQuery(f)
+			_, countArgs := buildActivityCTE(f)
+			if args[1] != start.UTC() || args[2] != end.UTC() {
+				t.Fatalf("range args = %v / %v; want exact UTC instants %v / %v", args[1], args[2], start.UTC(), end.UTC())
+			}
+			if !reflect.DeepEqual(args[:3], countArgs) {
+				t.Fatalf("page and total bounds differ: %v / %v", args[:3], countArgs)
+			}
+			_, changedStartArgs := buildQuery(Filters{Start: start.Add(time.Second), End: end})
+			_, changedEndArgs := buildQuery(Filters{Start: start, End: end.Add(time.Second)})
+			if reflect.DeepEqual(args, changedStartArgs) || reflect.DeepEqual(args, changedEndArgs) {
+				t.Fatal("changing either range bound must change the query arguments")
+			}
+		})
 	}
 }
 
