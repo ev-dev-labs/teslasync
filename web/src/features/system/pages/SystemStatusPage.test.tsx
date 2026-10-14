@@ -383,6 +383,54 @@ beforeEach(() => {
   })
 })
 
+describe('SystemStatusPage — row-count completeness', () => {
+  const expectTotal = (value: string) => {
+    const resourceLabel = resourcesRegion().getByText('Total rows')
+    expect(within(resourceLabel.parentElement!).getByText(value)).toBeInTheDocument()
+    const database = document.querySelector('#database')!
+    const databaseLabel = within(database as HTMLElement).getByText('Total rows')
+    expect(databaseLabel.nextElementSibling).toHaveTextContent(value)
+  }
+
+  it.each([
+    { name: 'missing map', counts: undefined },
+    { name: 'null map', counts: null },
+    { name: 'empty map', counts: {} },
+    { name: 'array instead of map', counts: [1000, 50] },
+    { name: 'string instead of map', counts: '1000' },
+    { name: 'missing count with known subtotal', counts: { positions: 1000, drives: undefined } },
+    { name: 'null count with measured zero', counts: { positions: 0, drives: null } },
+    { name: 'all counts missing', counts: { positions: undefined, drives: null } },
+    { name: 'NaN', counts: { positions: 1000, drives: NaN } },
+    { name: 'positive infinity', counts: { positions: 1000, drives: Infinity } },
+    { name: 'negative infinity', counts: { positions: 1000, drives: -Infinity } },
+    { name: 'numeric string', counts: { positions: 1000, drives: '50' } },
+    { name: 'boolean', counts: { positions: 1000, drives: false } },
+    { name: 'negative count', counts: { positions: 1000, drives: -50 } },
+    { name: 'positive fraction', counts: { positions: 1000, drives: +0.5 } },
+    { name: 'negative fraction', counts: { positions: 1000, drives: -0.5 } },
+    { name: 'unsafe count', counts: { positions: Number.MAX_SAFE_INTEGER + 1 } },
+    { name: 'unsafe sum', counts: { positions: Number.MAX_SAFE_INTEGER, drives: 1 } },
+  ])('shows unknown rather than a complete total for $name', ({ counts }) => {
+    inline['backup-stats'] = backupStats({ row_counts: counts })
+    renderPage()
+    expectTotal('—')
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+  })
+
+  it.each([
+    { name: 'measured zero', counts: { positions: 0, drives: 0 }, expected: '0' },
+    { name: 'signed zero', counts: { positions: -0, drives: +0 }, expected: '0' },
+    { name: 'integer-valued decimals', counts: { positions: 1000.0, drives: 50.0 }, expected: '1,050' },
+    { name: 'signed positive integers', counts: { positions: +1000, drives: +50 }, expected: '1,050' },
+    { name: 'mixed zero and positive counts', counts: { positions: 0, drives: 50 }, expected: '50' },
+  ])('preserves a complete valid total for $name', ({ counts, expected }) => {
+    inline['backup-stats'] = backupStats({ row_counts: counts })
+    renderPage()
+    expectTotal(expected)
+  })
+})
+
 describe('SystemStatusPage — healthy populated view', () => {
   it('renders the page scaffolding, hero, sticky chrome, chip bar and live pill', () => {
     renderPage()
@@ -450,6 +498,72 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(screen.getByText('App version')).toBeInTheDocument()
     expect(screen.getByText('1.2.3')).toBeInTheDocument()
     expect(screen.getByText('linux/amd64')).toBeInTheDocument()
+  })
+
+  describe('database pool readings', () => {
+    const invalidReadings = [
+      { name: 'missing', value: undefined },
+      { name: 'null', value: null },
+      { name: 'NaN', value: Number.NaN },
+      { name: 'positive infinity', value: Number.POSITIVE_INFINITY },
+      { name: 'negative infinity', value: Number.NEGATIVE_INFINITY },
+      { name: 'numeric string', value: '5' },
+    ]
+    const fields = ['acquired_conns', 'idle_conns', 'total_conns'] as const
+
+    it.each(fields.flatMap(field => invalidReadings.map(reading => ({ field, ...reading }))))(
+      'shows $name $field as unknown without discarding the other readings',
+      ({ field, value }) => {
+        const extended = extHealth()
+        inline['extended-health'] = {
+          ...extended,
+          components: {
+            ...extended.components,
+            database_pool: { ...extended.components.database_pool, [field]: value },
+          },
+        }
+        renderPage()
+        const section = document.querySelector('#database')
+        if (!(section instanceof HTMLElement)) throw new Error('Database section missing')
+        const details = within(section)
+        expect(details.getByText(field === 'acquired_conns' ? '— / 25'
+          : field === 'total_conns' ? '5 / —' : '5 / 25')).toBeInTheDocument()
+        expect(details.getByText(field === 'idle_conns' ? '—' : '20')).toBeInTheDocument()
+        expect(section).not.toHaveTextContent(/undefined|null|NaN|Infinity/)
+        expect(details.getByText('512 MB')).toBeInTheDocument()
+        if (field !== 'idle_conns') {
+          expect(resourcesRegion().queryByRole('progressbar', { name: 'DB connections usage' })).not.toBeInTheDocument()
+        }
+        if (field === 'total_conns') {
+          expect(resourcesRegion().queryByText(/of .* in use/)).not.toBeInTheDocument()
+        }
+      },
+    )
+
+    it.each([
+      { acquired: 0, idle: 0, total: 0, acquiredText: '0 / 0', idleText: '0' },
+      { acquired: -0, idle: +2, total: +10, acquiredText: '0 / 10', idleText: '2' },
+      { acquired: -5, idle: -2, total: -10, acquiredText: '-5 / -10', idleText: '-2' },
+      { acquired: 7.5, idle: 2.25, total: 10.5, acquiredText: '7.5 / 10.5', idleText: '2.25' },
+      { acquired: 5, idle: 20, total: 0, acquiredText: '5 / 0', idleText: '20' },
+    ])('preserves finite pool readings $acquired/$total with idle $idle', ({
+      acquired, idle, total, acquiredText, idleText,
+    }) => {
+      const extended = extHealth()
+      extended.components.database_pool = {
+        status: 'healthy', acquired_conns: acquired, idle_conns: idle, total_conns: total,
+      }
+      inline['extended-health'] = extended
+      renderPage()
+      const section = document.querySelector('#database')
+      if (!(section instanceof HTMLElement)) throw new Error('Database section missing')
+      expect(within(section).getByText(acquiredText)).toBeInTheDocument()
+      expect(within(section).getByText(idleText)).toBeInTheDocument()
+      if (total <= 0) {
+        expect(resourcesRegion().queryByRole('progressbar', { name: 'DB connections usage' })).not.toBeInTheDocument()
+        expect(resourcesRegion().queryByText(/of .* in use/)).not.toBeInTheDocument()
+      }
+    })
   })
 
   it('reports an unhealthy database as down rather than degraded', () => {
@@ -562,6 +676,65 @@ describe('SystemStatusPage — auth + backup edge branches', () => {
 })
 
 describe('SystemStatusPage — loading / stale / error', () => {
+  it.each(['healthy', 'unhealthy'])('retains %s health during a paused refresh without presenting a live assessment', (status) => {
+    const data = systemHealth({ status })
+    mockSystemHealth.mockReturnValue(
+      q(data, { fetchStatus: 'paused' }) as ReturnType<typeof useSystemHealth>,
+    )
+    const view = renderPage()
+
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByText(/Health check failed/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Service outage')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('status-skeleton')).not.toBeInTheDocument()
+    expect(healthRegion().getByText('3 / 3 healthy')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Current component status' })).toHaveTextContent('tesla_api')
+    expect(resourcesRegion().getByText('512 MB')).toBeInTheDocument()
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+    expect(screen.getAllByTestId('stale-refresh-warning').some(
+      (notice) => notice.getAttribute('data-refresh-blocked') === 'true',
+    )).toBe(true)
+
+    mockSystemHealth.mockReturnValue(q(data) as ReturnType<typeof useSystemHealth>)
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument()
+    expect(screen.getByText(status === 'healthy' ? 'All systems operational' : 'Service outage')).toBeInTheDocument()
+  })
+
+  it('shows a paused initial health request as unknown, not active loading or an outage', () => {
+    mockSystemHealth.mockReturnValue(
+      q(undefined, { isLoading: true, isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 }) as ReturnType<typeof useSystemHealth>,
+    )
+    renderPage()
+
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByTestId('status-skeleton')).not.toBeInTheDocument()
+    expect(screen.queryByText(/Health check failed/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Service outage')).not.toBeInTheDocument()
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+  })
+
+  it('retains populated health through a failed refresh and restores trust on recovery', () => {
+    const data = systemHealth()
+    mockSystemHealth.mockReturnValue(
+      q(data, { error: new Error('health refresh failed') }) as ReturnType<typeof useSystemHealth>,
+    )
+    const view = renderPage()
+
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.getByText('Health check failed — health refresh failed')).toBeInTheDocument()
+    expect(healthRegion().getByText('3 / 3 healthy')).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Current component status' })).toHaveTextContent('tesla_api')
+    expect(screen.getByTestId('workers-card')).toHaveTextContent('workers:2')
+
+    mockSystemHealth.mockReturnValue(q(data) as ReturnType<typeof useSystemHealth>)
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(screen.queryByText(/Health check failed/)).not.toBeInTheDocument()
+  })
+
   it('shows the skeleton and no hero while the health query is loading', () => {
     mockSystemHealth.mockReturnValue(
        
@@ -644,9 +817,8 @@ describe('SystemStatusPage — missing data placeholders', () => {
     expect(screen.queryByText('Loading system info…')).not.toBeInTheDocument()
     // Infrastructure details are available in the operator disclosure.
     expect(document.querySelector('#operator-details #resources')).not.toBeNull()
-    // Nothing actionable → empty action list.
-    // The original empty-action assertion now verifies a persistent neutral panel.
-    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+    expect(actionsRegion().getByText('Operator action items is unavailable.')).toBeInTheDocument()
   })
 
   it('does not crash and shows an empty component list when components is missing', () => {
@@ -660,6 +832,73 @@ describe('SystemStatusPage — missing data placeholders', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'System status' })).toBeInTheDocument()
     expect(screen.getByText('Current component status is unavailable.')).toBeInTheDocument()
     expect(healthRegion().getByText('no data')).toBeInTheDocument()
+  })
+})
+
+describe('SystemStatusPage — assessment source authority', () => {
+  it.each(['extended-health', 'workers'])('does not declare operational health without %s', (source) => {
+    inline[source] = undefined
+    renderPage()
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(screen.queryByText('All systems operational')).not.toBeInTheDocument()
+  })
+
+  it.each(['update-check', 'workers'])('shows active assessment loading for %s without inventing an empty result', (source) => {
+    inline[source] = undefined
+    inlineOverrides[source] = { isLoading: true, isFetching: true, fetchStatus: 'fetching' }
+    renderPage()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Loading')
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+  })
+
+  it('keeps paused-without-data distinct from active loading and a successful empty assessment', () => {
+    inline['update-check'] = undefined
+    inlineOverrides['update-check'] = { isPending: true, fetchStatus: 'paused' }
+    renderPage()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Operator action items is unavailable.')
+    expect(actionsRegion().queryByText('Loading')).not.toBeInTheDocument()
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+  })
+
+  it('accepts successful empty backup lists and zero workers as evidence, not missing data', () => {
+    mockBackupRuns.mockReturnValue(q([]) as ReturnType<typeof useBackupRuns>)
+    mockBackupConfigs.mockReturnValue(q([]) as ReturnType<typeof useBackupConfigs>)
+    inline.workers = workersHealth({ workers: [], total: 0, healthy_count: 0 })
+    renderPage()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(screen.queryByText('No backups recorded')).not.toBeInTheDocument()
+  })
+
+  it('retains update findings through a failed refresh and clears the retained notice on recovery', () => {
+    inline['update-check'] = updateCheck({ update_available: true, latest: '2.0.0' })
+    inlineOverrides['update-check'] = { error: new Error('update refresh failed') }
+    const view = renderPage()
+    expect(actionsRegion().getByText('Update available — v2.0.0')).toBeInTheDocument()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Previously loaded data remains visible')
+    inlineOverrides['update-check'] = {}
+    inline['update-check'] = updateCheck()
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(actionsRegion().queryByText('Update available — v2.0.0')).not.toBeInTheDocument()
+    expect(actionsRegion().queryByRole('status')).not.toBeInTheDocument()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
+  })
+
+  it.each([
+    { error: new Error('worker refresh failed') },
+    { fetchStatus: 'paused' },
+    { isFetching: true, fetchStatus: 'fetching' },
+  ])('does not present retained healthy evidence as a fresh assessment: %j', (overrides) => {
+    inlineOverrides.workers = overrides
+    const view = renderPage()
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(actionsRegion().getByRole('status')).toHaveTextContent('Previously loaded data remains visible')
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+    expect(healthRegion().getByText('2 / 2 healthy')).toBeInTheDocument()
+    inlineOverrides.workers = {}
+    view.rerender(<MemoryRouter><ToastProvider><SystemStatusPage /></ToastProvider></MemoryRouter>)
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 })
 
@@ -775,7 +1014,6 @@ describe('SystemStatusPage — Resource source adoption', () => {
     { healthy: undefined, total: 10 },
     { healthy: 1, total: undefined },
     { healthy: null, total: 10 },
-    { healthy: 0, total: 0 },
     { healthy: 11, total: 10 },
     { healthy: -1, total: 10 },
     { healthy: 1.5, total: 10 },
@@ -784,17 +1022,52 @@ describe('SystemStatusPage — Resource source adoption', () => {
     { healthy: 1, total: Infinity },
     { healthy: Infinity, total: 10 },
     { healthy: 1, total: Number.MAX_SAFE_INTEGER + 1 },
+    { healthy: 0, total: -10 },
+    { healthy: 0, total: 1.5 },
+    { healthy: -Infinity, total: 10 },
+    { healthy: '0', total: 10 },
+    { healthy: 1, total: '10' },
   ])('does not invent health for invalid raw counts $healthy/$total', ({ healthy, total }) => {
     inline.workers = workersHealth({ healthy_count: healthy, total })
     renderPage()
     expect(workerRow().getByText('Unknown')).toBeInTheDocument()
     expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
     expect(resourcesRegion().getByRole('progressbar', { name: 'DB connections usage' })).toHaveAttribute('aria-valuenow', '20')
+    expect(screen.getByText('Status unknown')).toBeInTheDocument()
+    expect(actionsRegion().queryByText(/workers unhealthy/)).not.toBeInTheDocument()
+    expect(actionsRegion().queryByText('No current attention items.')).not.toBeInTheDocument()
+    expect(healthRegion().getByRole('button', { name: /Workers/ }).querySelector('.rounded-full')).toHaveClass('bg-zinc-400')
+  })
+
+  it.each([
+    { healthy: +2, total: +2, headline: 'All systems operational', unhealthy: null },
+    { healthy: -0, total: +10, headline: 'Service outage', unhealthy: '10 of 10 workers unhealthy' },
+    { healthy: +1, total: +10, headline: 'Degraded performance', unhealthy: '9 of 10 workers unhealthy' },
+  ])('uses one measured assessment for signed counts $healthy/$total', ({ healthy, total, headline, unhealthy }) => {
+    inline.workers = workersHealth({ healthy_count: healthy, total })
+    renderPage()
+    expect(screen.getByText(headline)).toBeInTheDocument()
+    expect(workerRow().getByText(`${healthy} / ${total}`)).toBeInTheDocument()
+    expect(healthRegion().getByText(`${healthy} / ${total} healthy`)).toBeInTheDocument()
+    expect(workerRow().getByRole('progressbar')).toHaveAttribute('aria-valuenow', String(Math.round(healthy / total * 100)))
+    if (unhealthy) expect(actionsRegion().getByText(unhealthy)).toBeInTheDocument()
+    else expect(actionsRegion().queryByText(/workers unhealthy/)).not.toBeInTheDocument()
+  })
+
+  it('treats measured zero workers as an empty assessment rather than an outage', () => {
+    inline.workers = workersHealth({ workers: [], healthy_count: 0, total: 0 })
+    renderPage()
+    expect(workerRow().getByText('0 / 0')).toBeInTheDocument()
+    expect(workerRow().getByText('Unknown')).toBeInTheDocument()
+    expect(workerRow().queryByRole('progressbar')).not.toBeInTheDocument()
+    expect(screen.getByText('All systems operational')).toBeInTheDocument()
+    expect(actionsRegion().getByText('No current attention items.')).toBeInTheDocument()
   })
 
   it.each([
     { acquired: 7, total: 10, status: 'Warning', color: neonColorMap.amber.dot },
     { acquired: 9, total: 10, status: 'Critical', color: neonColorMap.red.dot },
+    { acquired: +7.5, total: +10, status: 'Warning', color: neonColorMap.amber.dot },
   ])('retains DB utilization at $acquired/$total independently of worker health', ({ acquired, total, status, color }) => {
     const extended = extHealth()
     extended.components.database_pool.acquired_conns = acquired

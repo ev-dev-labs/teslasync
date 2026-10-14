@@ -96,7 +96,6 @@ export default function SystemStatusPage() {
     data: health,
     isLoading,
     isFetching,
-    error,
     refetch: refetchHealth,
     dataUpdatedAt,
   } = healthQuery
@@ -176,6 +175,25 @@ export default function SystemStatusPage() {
     { id: 'maintenance', label: t('systemStatus.scheduledMaintenance', 'Scheduled maintenance'), state: maintenanceState, loading: maintenanceQuery.isLoading },
     { id: 'vehicles', label: t('systemStatus.vehicles', 'Vehicles'), state: vehiclesState, loading: vehiclesQuery.isLoading },
   ]
+  const validWorkerCounts = workers != null &&
+    Number.isSafeInteger(workers.total) && workers.total >= 0 &&
+    Number.isSafeInteger(workers.healthy_count) && workers.healthy_count >= 0 &&
+    workers.healthy_count <= workers.total
+  const workerAssessment: { valid: boolean; status: HeroStatus; unhealthyCount: number | null } =
+    validWorkerCounts && workers
+      ? {
+          valid: true,
+          status: workers.total === 0 ? 'unknown'
+            : workers.healthy_count === workers.total ? 'healthy'
+            : workers.healthy_count === 0 ? 'unhealthy' : 'degraded',
+          unhealthyCount: workers.total - workers.healthy_count,
+        }
+      : { valid: false, status: 'unknown', unhealthyCount: null }
+  const healthAssessmentSources = [healthState, extendedState, workersState, authState, maintenanceState]
+  const healthAssessmentReady = health != null &&
+    resolveCompStatus(extendedQuery.data?.components?.database?.status ?? 'unknown') === 'healthy' &&
+    workerAssessment.valid && typeof auth?.authenticated === 'boolean' && maintenance?.mode != null &&
+    healthAssessmentSources.every((state) => state.hasData && state.status === 'ok' && !state.isRefreshing)
 
   // ── derived overall status ──────────────────────────────────────
   const overallStatus: HeroStatus = useMemo(() => {
@@ -186,15 +204,15 @@ export default function SystemStatusPage() {
     if (s === 'unhealthy' || s === 'down' || s === 'offline' || componentStatuses.includes('unhealthy')) return 'unhealthy'
     if (extHealth?.components?.database?.status === 'unhealthy' ||
         extHealth?.components?.database?.status === 'down' ||
-        (workers && workers.total > 0 && workers.healthy_count === 0)) return 'unhealthy'
+        workerAssessment.status === 'unhealthy') return 'unhealthy'
     if (s === 'degraded' || s === 'warning' ||
         componentStatuses.some((status) => status !== 'healthy') ||
         auth?.authenticated === false) return 'degraded'
     if (extHealth?.components?.database?.status === 'degraded' ||
-        (workers && workers.healthy_count < workers.total && workers.healthy_count > 0)) return 'degraded'
-    if (s === 'healthy' || s === 'ok') return 'healthy'
+        workerAssessment.status === 'degraded') return 'degraded'
+    if ((s === 'healthy' || s === 'ok') && healthAssessmentReady) return 'healthy'
     return 'unknown'
-  }, [health, maintenance, extHealth, workers, auth])
+  }, [health, maintenance, extHealth, workerAssessment.status, auth, healthAssessmentReady])
 
   // ── live "last checked" tick (drives the subline + sticky bar) ─
   const [now, setNow] = useState(() => Date.now())
@@ -293,6 +311,12 @@ export default function SystemStatusPage() {
   const extendedComponents = extHealth?.components
   const extendedDatabase = extendedComponents?.database
   const extendedPool = extendedComponents?.database_pool
+  const poolAcquired = typeof extendedPool?.acquired_conns === 'number' && Number.isFinite(extendedPool.acquired_conns)
+    ? extendedPool.acquired_conns : null
+  const poolIdle = typeof extendedPool?.idle_conns === 'number' && Number.isFinite(extendedPool.idle_conns)
+    ? extendedPool.idle_conns : null
+  const poolTotal = typeof extendedPool?.total_conns === 'number' && Number.isFinite(extendedPool.total_conns)
+    ? extendedPool.total_conns : null
   const extendedSystem = extendedComponents?.system
   const dbStatus: HeroStatus = extendedDatabase?.status
     ? resolveCompStatus(extendedDatabase.status)
@@ -314,22 +338,21 @@ export default function SystemStatusPage() {
     : t('systemStatus.pipelineStates.unknown', 'unknown')
 
   const totalRows = useMemo(() => {
-    if (!backupStats?.row_counts) return null
-    return Object.values(backupStats.row_counts).reduce((a, b) => a + (b ?? 0), 0)
+    if (!backupStats?.row_counts || typeof backupStats.row_counts !== 'object' ||
+        Array.isArray(backupStats.row_counts)) return null
+    const counts = Object.values(backupStats.row_counts)
+    if (counts.length === 0 || counts.some((count) =>
+      typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0,
+    )) return null
+    const total = counts.reduce((sum, count) => sum + count, 0)
+    return Number.isSafeInteger(total) ? total : null
   }, [backupStats])
 
   const positionCount = backupStats?.row_counts?.positions
   const drivesCount = backupStats?.row_counts?.drives
   const vehicleCount = vehicles?.length ?? 0
 
-  const workersStatus: HeroStatus = workers
-    ? workers.total === 0 ? 'unknown'
-      : workers.healthy_count === workers.total
-      ? 'healthy'
-      : workers.healthy_count > 0
-        ? 'degraded'
-        : 'unhealthy'
-    : 'unknown'
+  const workersStatus = workerAssessment.status
 
 
   // ── resources rows ──────────────────────────────────────────────
@@ -337,12 +360,8 @@ export default function SystemStatusPage() {
     const rows: ResourceRow[] = []
 
     if (extendedPool) {
-      const acquired = extendedPool.acquired_conns
-      const idle = extendedPool.idle_conns
-      const total = extendedPool.total_conns
-      const max = total != null && total > 0
-        ? total
-        : acquired != null && idle != null ? acquired + idle : null
+      const acquired = poolAcquired
+      const max = poolTotal
       rows.push({
         label: t('systemStatus.resourcesCopy.dbConnections', 'DB connections'),
         valueText: acquired != null ? `${acquired}` : '—',
@@ -363,15 +382,13 @@ export default function SystemStatusPage() {
       })
     }
 
-    if (totalRows != null) {
-      rows.push({
-        label: t('systemStatus.totalRows', 'Total rows'),
-        valueText: fmtInt(totalRows),
-        sourceState: backupStatsState,
-        metaText: positionCount != null && positionCount > 0 ? t('systemStatus.resourcesCopy.positions', '{{displayCount}} positions', { count: positionCount, displayCount: fmtInt(positionCount) }) : undefined,
-        icon: <Boxes className="h-4 w-4" />,
-      })
-    }
+    rows.push({
+      label: t('systemStatus.totalRows', 'Total rows'),
+      valueText: totalRows != null ? fmtInt(totalRows) : '—',
+      sourceState: backupStatsState,
+      metaText: positionCount != null && Number.isSafeInteger(positionCount) && positionCount > 0 ? t('systemStatus.resourcesCopy.positions', '{{displayCount}} positions', { count: positionCount, displayCount: fmtInt(positionCount) }) : undefined,
+      icon: <Boxes className="h-4 w-4" />,
+    })
 
     if (extendedSystem?.goroutines != null) {
       rows.push({
@@ -415,6 +432,8 @@ export default function SystemStatusPage() {
     backupStats,
     backupStatsState,
     extendedPool,
+    poolAcquired,
+    poolTotal,
     extendedSystem,
     extendedState,
     positionCount,
@@ -431,14 +450,37 @@ export default function SystemStatusPage() {
   const hasMaintenance = maintenance?.mode === 'maintenance'
   const hasAttention = hasMaintenance || hasUpdate || hasStaleBackup || hasNoBackup ||
     teslaTokenWarn != null || auth?.authenticated === false ||
-    (workers != null && workers.healthy_count < workers.total)
+    (workerAssessment.unhealthyCount != null && workerAssessment.unhealthyCount > 0)
+  const attentionSources = [
+    { state: maintenanceState, query: maintenanceQuery, usable: maintenance?.mode != null },
+    { state: updateState, query: updateQuery, usable: typeof updateCheck?.update_available === 'boolean' },
+    { state: backupRunsState, query: backupRunsQuery, usable: Array.isArray(backupRuns) },
+    { state: backupConfigsState, query: backupConfigsQuery, usable: Array.isArray(backupConfigs) },
+    { state: authState, query: authQuery, usable: typeof auth?.authenticated === 'boolean' },
+    { state: workersState, query: workersQuery, usable: workerAssessment.valid },
+  ]
+  const attentionUnavailable = attentionSources.some(({ usable }) => !usable)
+  const attentionLoading = attentionSources.some(({ usable, query }) =>
+    !usable && query.fetchStatus !== 'paused' && (query.isLoading || query.isFetching))
+  const attentionRetained = attentionSources.some(({ usable, state }) =>
+    usable && (state.status !== 'ok' || state.isRefreshing))
+  const attentionNotice = attentionLoading
+    ? t('dataSources.status.loading', 'Loading')
+    : attentionUnavailable
+      ? t('systemStatus.sourceUnavailable', '{{label}} is unavailable.', { label: t('systemStatus.actionItems', 'Operator action items') })
+      : attentionRetained
+        ? t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')
+        : null
 
-  // Health staleness — surface in hero subline if /health errored or
-  // we haven't received fresh data in over 2 minutes.
-  const healthStale = !!error || (dataUpdatedAt > 0 && now - dataUpdatedAt > 2 * 60_000)
-  const heroSubline = error
-    ? t('systemStatus.summary.healthFailed', 'Health check failed — {{error}}', { error: error instanceof Error ? error.message : String(error) })
-    : healthStale
+  // Keep aging the last successful observation between query updates.
+  const healthStale = healthState.status === 'stale' ||
+    (healthState.updatedAt != null && now - healthState.updatedAt > 2 * 60_000)
+  const healthError = healthState.fatalError ?? healthState.refreshError
+  const heroSubline = healthError
+    ? t('systemStatus.summary.healthFailed', 'Health check failed — {{error}}', { error: healthError.message })
+    : healthState.isRefreshBlocked
+      ? t('dataSources.status.paused', 'Refresh paused')
+      : healthStale
       ? t('systemStatus.summary.checkedStale', 'Last checked {{time}} (stale)', { time: lastCheckedLabel ?? t('systemStatus.pipelineStates.unknown', 'unknown') })
       : lastCheckedLabel
         ? t('systemStatus.summary.checked', 'Last checked {{time}}', { time: lastCheckedLabel })
@@ -497,7 +539,7 @@ export default function SystemStatusPage() {
           <StaleRefreshWarning state={state} label={label} />
           {(state.fatalError || !state.hasData) && (
             <SourceContent
-              state={state.fatalError ? 'error' : loading ? 'loading' : 'empty'}
+              state={state.fatalError ? 'error' : loading && !state.isRefreshBlocked ? 'loading' : 'empty'}
               label={label}
               emptyMessage={t('systemStatus.sourceUnavailable', '{{label}} is unavailable.', { label })}
               errorMessage={t('systemStatus.sourceLoadError', 'Unable to load {{label}}.', { label })}
@@ -530,10 +572,15 @@ export default function SystemStatusPage() {
           <div className="space-y-6 [&_section]:scroll-mt-24">
             {/* 1 ─ Hero ───────────────────────────────────────────── */}
             <FadeIn>
-              {isLoading && !healthState.hasData ? <StatusPageSkeleton /> : <StatusHero
+              {isLoading && !healthState.hasData && !healthState.isRefreshBlocked ? <StatusPageSkeleton /> : <StatusHero
                 id="status-hero"
-                status={healthStale ? 'unknown' : overallStatus}
-                subline={heroSubline}
+                status={healthStale || healthState.fatalError || healthAssessmentSources.some((state) => state.isRefreshBlocked || state.status === 'stale' || state.isRefreshing) ? 'unknown' : overallStatus}
+                subline={<>
+                  {heroSubline}
+                  {healthAssessmentSources.some((state) => state.hasData && (state.status === 'stale' || state.isRefreshing)) && (
+                    <Text as="span" size="sm" color="secondary">{t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}</Text>
+                  )}
+                </>}
                 cta={{ label: t('systemStatus.runHealthCheck', 'Run health check'), onClick: handleRefresh, loading: isFetching }}
               />}
             </FadeIn>
@@ -582,7 +629,8 @@ export default function SystemStatusPage() {
               <FadeIn>
                 <section id="action-items" aria-label={t('systemStatus.actionItems', 'Operator action items')}>
                   <ActionItemsPanel title={t('systemStatus.needsAttention', 'Needs your attention')}>
-                    {!hasAttention && <EmptyState message={t('operations.noAttention', 'No current attention items.')} className="py-6" />}
+                    {attentionNotice && <Text role="status" size="sm" color="secondary" className="py-3">{attentionNotice}</Text>}
+                    {!hasAttention && !attentionNotice && <EmptyState message={t('operations.noAttention', 'No current attention items.')} className="py-6" />}
                     {hasMaintenance && (
                       <ActionItem
                         severity="info"
@@ -643,11 +691,11 @@ export default function SystemStatusPage() {
                         cta={{ label: t('systemStatus.setupBackups', 'Set up backups'), to: '/backup' }}
                       />
                     )}
-                    {workers && workers.healthy_count < workers.total && (
+                    {workers && workerAssessment.unhealthyCount != null && workerAssessment.unhealthyCount > 0 && (
                       <ActionItem
                         severity="error"
                         title={t('systemStatus.summary.unhealthyWorkers', '{{down}} of {{total}} workers unhealthy', {
-                          down: workers.total - workers.healthy_count,
+                          down: workerAssessment.unhealthyCount,
                           total: workers.total,
                         })}
                         description={(workers.workers || [])
@@ -760,8 +808,8 @@ export default function SystemStatusPage() {
             <DefList
               rows={[
                 { label: t('systemStatus.latency', 'Latency'), value: dbLatency != null ? `${Math.round(dbLatency)}ms` : '—' },
-                { label: t('systemStatus.poolAcquired', 'Pool acquired'), value: extendedPool ? `${extendedPool.acquired_conns} / ${extendedPool.total_conns || (extendedPool.acquired_conns + extendedPool.idle_conns)}` : '—' },
-                { label: t('systemStatus.poolIdle', 'Pool idle'), value: extendedPool ? String(extendedPool.idle_conns) : '—' },
+                { label: t('systemStatus.poolAcquired', 'Pool acquired'), value: extendedPool ? `${poolAcquired ?? '—'} / ${poolTotal ?? '—'}` : '—' },
+                { label: t('systemStatus.poolIdle', 'Pool idle'), value: poolIdle != null ? String(poolIdle) : '—' },
                 { label: t('systemStatus.storageUsed', 'Storage used'), value: backupStats?.database_size ?? '—' },
                 { label: t('systemStatus.tables', 'Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
                 { label: t('systemStatus.totalRows', 'Total rows'), value: totalRows != null ? fmtInt(totalRows) : '—' },
