@@ -43,17 +43,19 @@ import {
 } from '@/components/ui';
 import { OperationalBrief } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { StaleRefreshWarning } from '@/components/feedback';
+import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { Icons } from '@/lib/icons';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useIsForwardAuth } from '@/api/hooks/useAuthMode';
+import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { cn } from '@/lib/cn';
 import { closestRoutes } from '@/lib/closestRoute';
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry';
+import { isInsideModalSurface, isTextEntryElement } from '@/lib/routeFocus';
 
 import {
   buildFeatureCatalog,
@@ -68,6 +70,7 @@ const CARD_GRID =
 
 export default function ExplorePage() {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -79,7 +82,13 @@ export default function ExplorePage() {
   const vehiclesQuery = useVehicles();
   const { data: vehicles } = vehiclesQuery;
   const fleetState = useDataState(vehiclesQuery);
-  const isForwardAuth = useIsForwardAuth();
+  const authQuery = useAuthMode();
+  const authState = useDataState(authQuery);
+  const isForwardAuth = authState.data?.mode === 'forward_auth';
+  const authFeaturesLabel = buildFeatureCatalog()
+    .filter(entry => entry.requiresAuth)
+    .map(entry => t(entry.labelKey, entry.label))
+    .join(', ');
   const vehicleCount = vehicles?.length ?? 0;
 
   const query = searchParams.get('q') ?? '';
@@ -131,14 +140,24 @@ export default function ExplorePage() {
   // to open the command palette — global handler upstream owns that.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      const inEditable =
-        tag === 'INPUT' || tag === 'TEXTAREA' || target?.isContentEditable;
-      if (!inEditable && e.key === '/') {
-        e.preventDefault();
-        inputRef.current?.focus();
-      }
+      if (
+        e.key !== '/' || e.defaultPrevented || e.ctrlKey || e.metaKey ||
+        e.altKey || e.shiftKey || e.isComposing
+      ) return;
+
+      const target = e.target instanceof Element ? e.target : null;
+      const active = document.activeElement;
+      const ownsEntryOrOverlay = (element: Element | null) => {
+        const editable = element?.closest('[contenteditable]');
+        return isTextEntryElement(element) ||
+          Boolean(editable && editable.getAttribute('contenteditable') !== 'false') ||
+          Boolean(element?.closest('input, textarea, select, [role="textbox"], [role="combobox"], [role="searchbox"], [role="spinbutton"], [role="menu"], [role="listbox"]')) ||
+          isInsideModalSurface(element);
+      };
+      if (ownsEntryOrOverlay(target) || ownsEntryOrOverlay(active)) return;
+
+      e.preventDefault();
+      inputRef.current?.focus();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -159,7 +178,7 @@ export default function ExplorePage() {
             : 'ready';
   const statusLabels = {
     unavailable: t('explore.brief.status.unavailable', 'Fleet unavailable'),
-    offline: t('explore.brief.status.offline', 'Fleet offline'),
+    offline: t('dataSources.status.paused', 'Refresh paused'),
     retained: t('explore.brief.status.retained', 'Retained fleet'),
     pending: t('explore.brief.status.pending', 'Fleet pending'),
     refreshing: t('explore.brief.status.refreshing', 'Fleet refreshing'),
@@ -173,7 +192,7 @@ export default function ExplorePage() {
   const scopeLabel = t('explore.brief.scope', 'Visible catalog and returned fleet list · no date window');
   const freshnessLabel = fleetState.updatedAt == null
     ? t('explore.brief.freshnessUnknown', 'Fleet load time not supplied')
-    : t('explore.brief.freshness', 'Fleet last loaded: {{time}}', { time: new Date(fleetState.updatedAt).toISOString() });
+    : t('explore.brief.freshness', 'Fleet last loaded: {{time}}', { time: formatDateTime(new Date(fleetState.updatedAt)) });
   const metrics: readonly StatMetric[] = [
     {
       metricId: 'count', occurrenceId: 'features', rawValue: totalFeatures,
@@ -250,6 +269,53 @@ export default function ExplorePage() {
               : []}
           />
           <StaleRefreshWarning state={fleetState} label={t('explore.kpi.vehicles', 'Vehicles')} />
+          {!fleetState.hasData && fleetState.retry != null && (fleetState.fatalError || fleetState.isRefreshBlocked) && (
+            <Button
+              variant="secondary"
+              onClick={fleetState.retry}
+              disabled={vehiclesQuery.isFetching}
+              aria-label={`${t('error.retry', 'Retry')} · ${t('explore.kpi.vehicles', 'Vehicles')}`}
+            >
+              {t('error.retry', 'Retry')} · {t('explore.kpi.vehicles', 'Vehicles')}
+            </Button>
+          )}
+          <div data-testid="explore-auth-source" className="mt-4 space-y-2">
+            {(!authState.hasData || !isForwardAuth) && (
+              <DataStateNotice
+                state={authState.fatalError ? 'unavailable' : !authState.hasData ? 'partial' : 'unsupported'}
+                title={t('requiresAuth.title', '{{feature}} requires authentication mode', {
+                  feature: authFeaturesLabel,
+                })}
+              >
+                {!authState.hasData && (
+                  <Text as="p" variant="bodySm" color="secondary" role="status">
+                    {authState.fatalError
+                      ? t('dataSources.status.failed', 'Failed')
+                      : authState.isRefreshBlocked
+                        ? t('dataSources.status.paused', 'Refresh paused')
+                        : authQuery.isFetching
+                          ? t('dataSources.status.loading', 'Loading')
+                          : t('dataSources.status.pending', 'Pending')}
+                    {' · '}{t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+                  </Text>
+                )}
+                <Text as="p" variant="bodySm" color="secondary">
+                  {t('requiresAuth.body', '{{feature}} is only available when TeslaSync is configured behind an authentication provider (Authentik, Authelia, oauth2-proxy, Keycloak, or similar). Set FORWARD_AUTH_HEADER on the API service to enable it.', {
+                    feature: authFeaturesLabel,
+                  })}
+                </Text>
+                {!authState.hasData && authState.retry != null && (authState.fatalError || authState.isRefreshBlocked) && (
+                  <Button variant="secondary" onClick={authState.retry} disabled={authQuery.isFetching}>
+                    {t('error.retry', 'Retry')}
+                  </Button>
+                )}
+              </DataStateNotice>
+            )}
+            <StaleRefreshWarning
+              state={authState}
+              label={authFeaturesLabel}
+            />
+          </div>
         </FadeIn>
 
         {/* Match the rule-template gallery: labeled search, outlined category
@@ -301,6 +367,7 @@ export default function ExplorePage() {
           {grouped.length === 0 ? (
             <EmptyResult
               query={query}
+              selectedSection={selectedSection}
               catalog={visibleCatalog}
               onPickSuggestion={(to) => {
                 setSearchParams({}, { replace: true });
@@ -527,16 +594,22 @@ function escapeRegExp(s: string): string {
 
 function EmptyResult({
   query,
+  selectedSection,
   catalog,
   onPickSuggestion,
   onClear,
 }: {
   query: string;
+  selectedSection: string;
   catalog: FeatureCatalogEntry[];
   onPickSuggestion: (to: string) => void;
   onClear: () => void;
 }) {
   const { t } = useTranslation();
+  const selectedCategory = catalog.find(entry => slugify(entry.section) === selectedSection);
+  const categoryLabel = selectedCategory
+    ? t(selectedCategory.sectionKey, selectedCategory.section)
+    : selectedSection;
   // Suggest the closest known routes — combines (a) full route registry
   // (so we pick up hidden pages too) and (b) catalog labels (so we match
   // the user's mental model). De-dupe by path; honor the catalog's
@@ -570,8 +643,18 @@ function EmptyResult({
     <GlassPanel className="p-6 text-center sm:p-8" data-testid="explore-empty">
       <Icons.search className="mx-auto h-6 w-6 text-[var(--text-muted)]" aria-hidden="true" />
       <SectionTitle className="mt-3">
-        {t('explore.empty.title', 'No features match "{{query}}"', { query })}
+        {selectedSection === 'all'
+          ? t('explore.empty.title', 'No features match "{{query}}"', { query })
+          : t('explore.subtitle.category', '{{matches}} features in the selected category', { matches: 0 })}
       </SectionTitle>
+      {selectedSection !== 'all' && (
+        <Caption as="p" className="mt-2 break-words">
+          {t('explore.brief.filterContext', 'Search: {{query}} · Category: {{category}}', {
+            query: query || t('explore.brief.noSearch', 'No search filter'),
+            category: categoryLabel,
+          })}
+        </Caption>
+      )}
       <Text as="p" variant="bodySm" className="mx-auto mt-1 max-w-md">
         {t(
           'explore.empty.body',

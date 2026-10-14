@@ -21,10 +21,10 @@
  *   - Visibility gates: minVehicles (Compare Vehicles) and requiresAuth
  *     (2FA / Sessions / My Activity) mirror the sidebar, plus the
  *     vehicles-undefined null-safety path.
- *   - a11y / keyboard: "/" focuses search from anywhere, other keys don't, and
+ *   - a11y / keyboard: unclaimed "/" focuses search outside entry/overlays, and
  *     icon-only KPI/card glyphs are aria-hidden with visible text labels.
  *
- * Network is never touched: useVehicles / useIsForwardAuth / usePageTitle are
+ * Network is never touched: useVehicles / useAuthMode / usePageTitle are
  * stubbed and i18n is stubbed to the English fallback with {{placeholder}}
  * interpolation.
  */
@@ -42,12 +42,18 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 const state = vi.hoisted(() => ({
   vehicles: [{ id: 1 }, { id: 2 }] as Array<{ id: number }> | undefined,
   forwardAuth: true,
+  authResolved: true,
+  authError: null as Error | null,
+  authFetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
+  authRetry: vi.fn(),
+  vehicleRetry: vi.fn(),
   translations: {} as Record<string, string>,
   vehicleError: null as Error | null,
   vehiclePending: false,
   vehicleFetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
   vehicleUpdatedAt: 0,
   locale: 'en-US',
+  timezone: 'America/Los_Angeles',
 }));
 
 vi.mock('react-i18next', () => ({
@@ -71,6 +77,8 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({
     data: state.vehicles,
     error: state.vehicleError,
+    isError: state.vehicleError != null,
+    refetch: state.vehicleRetry,
     isPending: state.vehiclePending,
     fetchStatus: state.vehicleFetchStatus,
     isFetching: state.vehicleFetchStatus === 'fetching',
@@ -86,16 +94,30 @@ vi.mock('@/hooks/useSettings', () => ({
       decimal_precision: 2,
       currency_symbol: '$',
       locale: state.locale,
+      tz_display_default: 'user',
+      timezone_user: state.timezone,
     },
+    locale: state.locale,
     settingsUnavailable: false,
   }),
+}));
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({ vehicle: undefined }),
 }));
 vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
   const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
   return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
 });
 vi.mock('@/api/hooks/useAuthMode', () => ({
-  useIsForwardAuth: () => state.forwardAuth,
+  useAuthMode: () => ({
+    data: state.authResolved ? { mode: state.forwardAuth ? 'forward_auth' : 'open' } : undefined,
+    error: state.authError,
+    isError: state.authError != null,
+    isPending: !state.authResolved,
+    fetchStatus: state.authFetchStatus,
+    isFetching: state.authFetchStatus === 'fetching',
+    refetch: state.authRetry,
+  }),
 }));
 vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: vi.fn(),
@@ -146,12 +168,18 @@ function kpiValue(label: string): string {
 beforeEach(() => {
   state.vehicles = [{ id: 1 }, { id: 2 }];
   state.forwardAuth = true;
+  state.authResolved = true;
+  state.authError = null;
+  state.authFetchStatus = 'idle';
+  state.authRetry.mockClear();
+  state.vehicleRetry.mockClear();
   state.translations = {};
   state.vehicleError = null;
   state.vehiclePending = false;
   state.vehicleFetchStatus = 'idle';
   state.vehicleUpdatedAt = 0;
   state.locale = 'en-US';
+  state.timezone = 'America/Los_Angeles';
   vi.mocked(useOperationalMetrics).mockClear();
   vi.mocked(usePageTitle).mockClear();
   // jsdom doesn't lay out, so scrollIntoView is a no-op stub.
@@ -192,6 +220,103 @@ describe('ExplorePage — shell', () => {
 });
 
 describe('ExplorePage — operational evidence', () => {
+  it.each(['fetching', 'paused', 'idle'] as const)(
+    'keeps unresolved authentication conservative and independent while %s',
+    fetchStatus => {
+      state.authResolved = false;
+      state.authFetchStatus = fetchStatus;
+      const { rerenderPage } = renderPage();
+      const auth = screen.getByTestId('explore-auth-source');
+      expect(within(auth).getByRole('status')).toHaveTextContent(
+        fetchStatus === 'fetching' ? 'Loading' : fetchStatus === 'paused' ? 'Refresh paused' : 'Pending',
+      );
+      expect(auth).toHaveTextContent('No requested source has returned usable data yet.');
+      for (const entry of ALL.filter(entry => entry.requiresAuth)) {
+        expect(screen.queryByTestId(`explore-card-${entry.to}`)).not.toBeInTheDocument();
+        expect(auth).toHaveTextContent(entry.label);
+      }
+      expect(kpiValue('Vehicles')).toBe('2');
+      expect(screen.getByTestId('explore-card-/charging')).toBeInTheDocument();
+      if (fetchStatus === 'paused') {
+        fireEvent.click(within(auth).getByRole('button', { name: 'Retry' }));
+        expect(state.authRetry).toHaveBeenCalledOnce();
+        expect(state.vehicleRetry).not.toHaveBeenCalled();
+      }
+      state.authResolved = true;
+      state.authFetchStatus = 'idle';
+      rerenderPage();
+      for (const entry of ALL.filter(entry => entry.requiresAuth)) {
+        expect(screen.getByTestId(`explore-card-${entry.to}`)).toBeInTheDocument();
+      }
+      expect(auth).toBeEmptyDOMElement();
+    },
+  );
+
+  it('keeps paused fleet without data unknown and retries only the fleet source', () => {
+    state.vehicles = undefined;
+    state.vehiclePending = true;
+    state.vehicleFetchStatus = 'paused';
+    const { rerenderPage } = renderPage();
+    expect(kpiValue('Vehicles')).toBe('—');
+    expect(screen.getByTestId('explore-operational-brief')).toHaveTextContent('Refresh paused');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry · Vehicles' }));
+    expect(state.vehicleRetry).toHaveBeenCalledOnce();
+    expect(state.authRetry).not.toHaveBeenCalled();
+    expect(screen.getByTestId(`explore-card-${ALL.find(entry => entry.requiresAuth)!.to}`)).toBeInTheDocument();
+    state.vehicles = [];
+    state.vehiclePending = false;
+    state.vehicleFetchStatus = 'idle';
+    rerenderPage();
+    expect(kpiValue('Vehicles')).toBe('0');
+    expect(screen.queryByRole('button', { name: 'Retry · Vehicles' })).not.toBeInTheDocument();
+  });
+
+  it('retains both sources through refresh failure and retries and recovers independently', () => {
+    const { rerenderPage } = renderPage();
+    const before = screen.getAllByTestId(/^explore-card-/).map(link => link.getAttribute('href'));
+    state.authError = new Error('Auth refresh failed');
+    state.vehicleError = new Error('Fleet refresh failed');
+    rerenderPage();
+    const auth = screen.getByTestId('explore-auth-source');
+    expect(within(auth).getByTestId('stale-refresh-warning')).toHaveTextContent(
+      'Previously loaded data remains visible while affected sources recover.',
+    );
+    expect(screen.getAllByTestId(/^explore-card-/).map(link => link.getAttribute('href'))).toEqual(before);
+    fireEvent.click(within(auth).getByRole('button', { name: 'Refresh' }));
+    expect(state.authRetry).toHaveBeenCalledOnce();
+    expect(state.vehicleRetry).not.toHaveBeenCalled();
+    state.authError = null;
+    rerenderPage();
+    expect(auth).toBeEmptyDOMElement();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(state.vehicleRetry).toHaveBeenCalledOnce();
+    state.vehicleError = null;
+    rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(kpiValue('Vehicles')).toBe('2');
+  });
+
+  it('offers auth-only recovery after an initial failure without erasing fleet or navigation', () => {
+    state.authResolved = false;
+    state.authError = new Error('Auth unavailable');
+    const { rerenderPage } = renderPage();
+    const auth = screen.getByTestId('explore-auth-source');
+    expect(auth).toHaveTextContent('Failed');
+    fireEvent.click(within(auth).getByRole('button', { name: 'Retry' }));
+    expect(state.authRetry).toHaveBeenCalledOnce();
+    expect(state.vehicleRetry).not.toHaveBeenCalled();
+    expect(kpiValue('Vehicles')).toBe('2');
+    expect(screen.getByRole('searchbox')).toBeEnabled();
+    state.authResolved = true;
+    state.authError = null;
+    state.forwardAuth = false;
+    rerenderPage();
+    expect(auth).toHaveTextContent('requires authentication mode');
+    expect(within(auth).queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(kpiValue('Vehicles')).toBe('2');
+  });
+
   it('passes only the original raw counts through the real bridge and preserves count semantics', () => {
     renderPage('/explore?q=powershare&section=home');
     const calls = vi.mocked(useOperationalMetrics).mock.calls;
@@ -251,11 +376,12 @@ describe('ExplorePage — operational evidence', () => {
 
   it('opens the built-in details drawer with complete filter, scope and source context, then closes it', () => {
     state.vehicleUpdatedAt = Date.parse('2026-10-06T22:00:00Z');
+    const freshness = 'Fleet last loaded: Oct 6, 2026, 03:00 PM';
     const { getLocation } = renderPage('/explore?q=powershare&section=charging');
     const overview = screen.getByTestId('explore-operational-brief');
     expect(within(overview).getAllByText('Visible catalog and returned fleet list · no date window').length)
       .toBeGreaterThan(0);
-    expect(within(overview).getAllByText('Fleet last loaded: 2026-10-06T22:00:00.000Z').length)
+    expect(within(overview).getAllByText(freshness).length)
       .toBeGreaterThan(0);
     const review = within(overview).getByRole('button', { name: 'Review details' });
     review.focus();
@@ -265,7 +391,7 @@ describe('ExplorePage — operational evidence', () => {
     expect(within(drawer).getByText('matching filter')).toBeInTheDocument();
     expect(within(drawer).getByText('Search: powershare · Category: charging')).toBeInTheDocument();
     expect(within(drawer).getByText('Visible catalog and returned fleet list · no date window', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
-    expect(within(drawer).getByText('Fleet last loaded: 2026-10-06T22:00:00.000Z', { selector: '[data-drawer-header] span' })).toBeInTheDocument();
+    expect(within(drawer).getByText(freshness, { selector: '[data-drawer-header] span' })).toBeInTheDocument();
     expect(within(drawer).getByText('Visible catalog entries after vehicle and authentication gates; unaffected by search or category filters.'))
       .toBeInTheDocument();
     expect(within(drawer).getByText('Distinct categories in the visible catalog before search and category filters.'))
@@ -283,6 +409,45 @@ describe('ExplorePage — operational evidence', () => {
     expect(screen.getByTestId('explore-card-/powershare')).toBeInTheDocument();
   });
 
+  it('reformats the retained query load time when display preferences change without changing raw evidence', () => {
+    const timestamp = Date.parse('2026-10-06T22:00:00Z');
+    state.vehicleUpdatedAt = timestamp;
+    const { rerenderPage } = renderPage();
+    const overview = screen.getByTestId('explore-operational-brief');
+    expect(within(overview).getAllByText('Fleet last loaded: Oct 6, 2026, 03:00 PM').length)
+      .toBeGreaterThan(0);
+
+    state.locale = 'de-DE';
+    state.timezone = 'Europe/Berlin';
+    state.vehicleError = new Error('Fleet refresh failed');
+    rerenderPage();
+    expect(within(overview).getAllByText('Fleet last loaded: 7. Okt. 2026, 00:00').length)
+      .toBeGreaterThan(0);
+    expect(within(overview).getAllByText('Retained fleet').length).toBeGreaterThan(0);
+    expect(state.vehicleUpdatedAt).toBe(timestamp);
+    expect(kpiValue('Vehicles')).toBe('2');
+    expect(screen.getByTestId('explore-card-/vehicle-comparison')).toBeInTheDocument();
+  });
+
+  it('keeps unknown load time distinct from a successful empty fleet and never formats an epoch fallback', () => {
+    state.vehicles = undefined;
+    state.vehiclePending = true;
+    state.vehicleFetchStatus = 'fetching';
+    const { rerenderPage } = renderPage();
+    const overview = screen.getByTestId('explore-operational-brief');
+    expect(within(overview).getAllByText('Fleet load time not supplied').length).toBeGreaterThan(0);
+    expect(overview).not.toHaveTextContent('Fleet last loaded:');
+    expect(kpiValue('Vehicles')).toBe('—');
+
+    state.vehicles = [];
+    state.vehiclePending = false;
+    state.vehicleFetchStatus = 'idle';
+    rerenderPage();
+    expect(within(overview).getAllByText('Fleet load time not supplied').length).toBeGreaterThan(0);
+    expect(overview).not.toHaveTextContent('Fleet last loaded:');
+    expect(kpiValue('Vehicles')).toBe('0');
+  });
+
   it.each(['error', 'paused'] as const)('labels retained fleet evidence honestly during %s while preserving eligibility', mode => {
     const { rerenderPage, getLocation } = renderPage('/explore?section=vehicles');
     const before = screen.getAllByTestId(/^explore-card-/).map(link => link.getAttribute('href'));
@@ -290,7 +455,7 @@ describe('ExplorePage — operational evidence', () => {
     else state.vehicleFetchStatus = 'paused';
     rerenderPage();
     const overview = screen.getByTestId('explore-operational-brief');
-    expect(within(overview).getAllByText(mode === 'error' ? 'Retained fleet' : 'Fleet offline').length)
+    expect(within(overview).getAllByText(mode === 'error' ? 'Retained fleet' : 'Refresh paused').length)
       .toBeGreaterThan(0);
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     expect(kpiValue('Vehicles')).toBe('2');
@@ -298,7 +463,7 @@ describe('ExplorePage — operational evidence', () => {
     expect(screen.getAllByTestId(/^explore-card-/).map(link => link.getAttribute('href'))).toEqual(before);
     fireEvent.click(within(overview).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog', { name: 'Feature overview details' });
-    expect(within(drawer).getAllByText(mode === 'error' ? 'Retained fleet' : 'Fleet offline').length)
+    expect(within(drawer).getAllByText(mode === 'error' ? 'Retained fleet' : 'Refresh paused').length)
       .toBeGreaterThan(0);
   });
 
@@ -437,6 +602,27 @@ describe('ExplorePage — filtering', () => {
 });
 
 describe('ExplorePage — empty state', () => {
+  it.each([
+    { search: '?section=unknown-category&context=retained', query: 'No search filter', category: 'unknown-category' },
+    { search: '?q=powershare&section=home&context=retained', query: 'powershare', category: 'Localized home' },
+  ])('explains a category miss for $search without changing URL state until explicitly cleared', ({ search, query, category }) => {
+    const home = ALL.find(entry => entry.section === 'Home')!;
+    state.translations[home.sectionKey] = 'Localized home';
+    state.translations['explore.subtitle.category'] = '{{matches}} localized category matches';
+    state.translations['explore.brief.filterContext'] = 'Localized search: {{query}}; category: {{category}}';
+    const { getLocation } = renderPage(`/explore${search}`);
+    const empty = screen.getByTestId('explore-empty');
+
+    expect(within(empty).getByRole('heading', { name: '0 localized category matches' })).toBeInTheDocument();
+    expect(within(empty).getByText(`Localized search: ${query}; category: ${category}`)).toBeInTheDocument();
+    expect(within(empty).queryByText(/^No features match "/)).not.toBeInTheDocument();
+    expect(getLocation().search).toBe(search);
+
+    fireEvent.click(within(empty).getByRole('button', { name: /clear filter/i }));
+    expect(getLocation().search).toBe('');
+    expect(screen.getAllByTestId(/^explore-card-/)).toHaveLength(ALL_COUNT);
+  });
+
   it('shows a self-contained empty state (no anchor strip) and clears via the button', () => {
     const { getLocation } = renderPage('/explore?q=zzznotarealthing');
 
@@ -755,6 +941,80 @@ describe('ExplorePage — keyboard', () => {
     });
     expect(document.activeElement).toBe(input);
   });
+
+  it.each([
+    { ctrlKey: true },
+    { metaKey: true },
+    { altKey: true },
+    { shiftKey: true },
+    { isComposing: true },
+  ])('leaves modified or composing slash events untouched: %j', modifiers => {
+    renderPage();
+    const card = screen.getByTestId('explore-card-/charging');
+    card.focus();
+    expect(fireEvent.keyDown(card, { key: '/', ...modifiers })).toBe(true);
+    expect(card).toHaveFocus();
+  });
+
+  it('respects an already prevented slash event', () => {
+    renderPage();
+    const card = screen.getByTestId('explore-card-/charging');
+    card.focus();
+    const event = new KeyboardEvent('keydown', { key: '/', bubbles: true, cancelable: true });
+    event.preventDefault();
+    fireEvent(card, event);
+    expect(card).toHaveFocus();
+    expect(screen.getByTestId('explore-search')).not.toHaveFocus();
+  });
+
+  it.each(['input', 'textarea', 'select', 'contenteditable', 'textbox', 'combobox'])(
+    'preserves slash entry in %s, including events dispatched on document',
+    kind => {
+      renderPage();
+      const owner = document.createElement(
+        ['input', 'textarea', 'select'].includes(kind) ? kind : 'div',
+      );
+      owner.tabIndex = 0;
+      if (kind === 'contenteditable') owner.setAttribute('contenteditable', 'true');
+      else if (kind === 'textbox' || kind === 'combobox') owner.setAttribute('role', kind);
+      const child = document.createElement('span');
+      if (owner.tagName === 'DIV') owner.append(child);
+      document.body.append(owner);
+      try {
+        owner.focus();
+        expect(fireEvent.keyDown(owner.tagName === 'DIV' ? child : owner, { key: '/' })).toBe(true);
+        expect(owner).toHaveFocus();
+        expect(fireEvent.keyDown(document, { key: '/' })).toBe(true);
+        expect(owner).toHaveFocus();
+      } finally {
+        owner.remove();
+      }
+    },
+  );
+
+  it.each(['dialog', 'alertdialog', 'menu', 'listbox', 'aria-modal'])(
+    'does not take an active %s overlay control focus',
+    role => {
+      renderPage();
+      const overlay = document.createElement('div');
+      if (role === 'aria-modal') overlay.setAttribute('aria-modal', 'true');
+      else overlay.setAttribute('role', role);
+      const control = document.createElement('button');
+      overlay.append(control);
+      document.body.append(overlay);
+      try {
+        control.focus();
+        expect(fireEvent.keyDown(control, { key: '/' })).toBe(true);
+        expect(control).toHaveFocus();
+        expect(fireEvent.keyDown(document, { key: '/' })).toBe(true);
+        expect(control).toHaveFocus();
+      } finally {
+        overlay.remove();
+      }
+      expect(fireEvent.keyDown(document, { key: '/' })).toBe(false);
+      expect(screen.getByTestId('explore-search')).toHaveFocus();
+    },
+  );
 });
 
 
