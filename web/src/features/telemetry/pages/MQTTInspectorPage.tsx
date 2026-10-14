@@ -14,7 +14,7 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   EmbeddedChart, axisTick,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, AlertBanner, StaleRefreshWarning, DataStateNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AIMqttSseInspectorExplanations } from '@/components/ai';
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
@@ -162,15 +162,28 @@ export default function MQTTInspectorPage() {
 
   const statusQuery = useMQTTStatus();
   const { data: status, isLoading } = statusQuery;
-  const statusState = useDataState(statusQuery, { provenance: 'live' });
-  const error = statusState.fatalError;
-  const metricsUnavailable = !statusState.hasData || error != null;
 
   /* ---- derived totals ---- */
   const vehicles: VehicleTelemetry[] = Array.isArray(status?.vehicles) ? status.vehicles : [];
-  const totalSignals = vehicles.reduce((sum, v) => sum + (v.signalCount ?? 0), 0);
-  const totalBatches = vehicles.reduce((sum, v) => sum + (v.batchCount ?? 0), 0);
-  const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? 0), 0);
+  const totalSignals = vehicles.reduce((sum, v) => sum + v.signalCount, 0);
+  const totalBatches = vehicles.reduce((sum, v) => sum + v.batchCount, 0);
+  const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? Number.NaN), 0);
+  const knownCount = (value: number) => Number.isSafeInteger(value) && value >= 0;
+  // Completeness belongs to each measurement, not to request success or connectivity.
+  const completeMetrics: Record<string, boolean> = {
+    'mqtt-vehicles': Array.isArray(status?.vehicles),
+    'mqtt-signals': Array.isArray(status?.vehicles)
+      && vehicles.every(v => knownCount(v.signalCount)) && knownCount(totalSignals),
+    'mqtt-batches': Array.isArray(status?.vehicles)
+      && vehicles.every(v => knownCount(v.batchCount)) && knownCount(totalBatches),
+    'mqtt-rate': Array.isArray(status?.vehicles)
+      && vehicles.every(v => v.signalsPerSecond != null && Number.isFinite(v.signalsPerSecond) && v.signalsPerSecond >= 0)
+      && Number.isFinite(totalRate),
+  };
+  const partialMeasurements = status != null && Object.values(completeMetrics).some(complete => !complete);
+  const statusState = useDataState(statusQuery, { provenance: 'live', partial: partialMeasurements });
+  const error = statusState.fatalError;
+  const metricsUnavailable = !statusState.hasData || error != null;
   const topics = Array.isArray(status?.topics) ? status.topics : [];
   // Reuse the existing point-age ticker; all freshness surfaces share this render's instant.
   useIsStale(vehicles.find(v => v.lastReceived && Number.isFinite(Date.parse(v.lastReceived)))?.lastReceived);
@@ -230,7 +243,10 @@ export default function MQTTInspectorPage() {
     observedAt: statusQuery.dataUpdatedAt ? new Date(statusQuery.dataUpdatedAt).toISOString() : null,
     precision: displayPrecision, locale: displayLocale,
   }, t);
-  const briefMetrics = useOperationalMetrics(summary.metrics);
+  const briefMetrics = useOperationalMetrics(summary.metrics.map(metric =>
+    completeMetrics[metric.occurrenceId ?? ''] ? metric : {
+      ...metric, rawValue: null, missingReason: t('common.unknown', 'Unknown'),
+    }));
 
   return (
     <PageLayout
@@ -282,10 +298,23 @@ export default function MQTTInspectorPage() {
             statusLabel={metricsUnavailable
               ? isLoading ? t('common.loading', 'Loading') : t('mqtt.summary.unavailable', 'Broker snapshot unavailable')
               : statusState.refreshError || statusState.isRefreshBlocked ? t('developerReference.stats.state.retained', 'Showing retained measurements')
-                : t('mqtt.summary.available', 'Broker snapshot available')}
-            statusTone={error ? 'danger' : statusState.refreshError || statusState.isRefreshBlocked ? 'warning' : 'neutral'}
+                : statusState.status === 'partial' ? t('dataState.partial.title', 'Partial data')
+                  : t('mqtt.summary.available', 'Broker snapshot available')}
+            statusTone={error ? 'danger' : statusState.refreshError || statusState.isRefreshBlocked || partialMeasurements ? 'warning' : 'neutral'}
             freshness={statusQuery.dataUpdatedAt ? formatRelative(new Date(statusQuery.dataUpdatedAt)) : undefined}
           />
+          {partialMeasurements && (
+            <DataStateNotice state="partial" className="mt-3" data-testid="mqtt-partial-measurements">
+              <dl className="space-y-1">
+                {briefMetrics.filter(metric => metric.valueState === 'missing').map(metric => (
+                  <div key={metric.key} className="flex flex-wrap gap-x-2">
+                    <Text as="dt" variant="bodySm">{metric.label}</Text>
+                    <Text as="dd" variant="bodySm" color="muted">{t('common.unknown', 'Unknown')}</Text>
+                  </div>
+                ))}
+              </dl>
+            </DataStateNotice>
+          )}
         </section>
       </FadeIn>
 

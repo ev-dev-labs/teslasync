@@ -789,3 +789,133 @@ describe('MQTTInspectorPage — localized complete messages', () => {
     }
   });
 });
+
+describe('MQTTInspectorPage — independent aggregate missingness', () => {
+  const metric = (label: string) => {
+    const summary = screen.getByTestId('mqtt-summary');
+    const element = within(summary).getByText(label).closest('[data-operational-metric]');
+    if (!(element instanceof HTMLElement)) throw new Error(`Missing metric: ${label}`);
+    return element;
+  };
+
+  it.each([
+    { field: 'signalCount', label: 'Total signals', known: ['Total batches', 'Signals / sec'] },
+    { field: 'batchCount', label: 'Total batches', known: ['Total signals', 'Signals / sec'] },
+    { field: 'signalsPerSecond', label: 'Signals / sec', known: ['Total signals', 'Total batches'] },
+  ] as const)('does not publish a complete $label aggregate when one returned vehicle omits $field', ({ field, label, known }) => {
+    const vehicles = makeStatus().vehicles!;
+    const incomplete = { ...vehicles[1], [field]: undefined };
+    setQuery({ data: makeStatus({ vehicles: [vehicles[0], incomplete] }) });
+    renderPage();
+    expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+    expect(metric(label)).toHaveTextContent('—');
+    expect(metric('Streaming vehicles')).toHaveAttribute('data-value-state', 'value');
+    for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
+    const notice = screen.getByTestId('mqtt-partial-measurements');
+    expect(notice).toHaveAttribute('data-data-state', 'partial');
+    expect(within(notice).getByText(label)).toBeInTheDocument();
+    expect(within(notice).getByText('Unknown')).toBeInTheDocument();
+    for (const name of known) expect(within(notice).queryByText(name)).toBeNull();
+    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Partial data');
+    expect(screen.getByTestId('mqtt-summary')).not.toHaveTextContent('Broker snapshot available');
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
+  });
+
+  it('keeps measured zeros distinct from an omitted rate and recovers each aggregate after a complete receipt', () => {
+    const incomplete = makeStatus({ vehicles: [
+      { vin: 'MISSING-RATE', signalCount: 0, batchCount: 0, lastReceived: freshIso() },
+    ] });
+    setQuery({ data: incomplete });
+    const { rerenderPage } = renderPage();
+    for (const label of ['Total signals', 'Total batches']) {
+      expect(metric(label)).toHaveAttribute('data-value-state', 'value');
+      expect(metric(label)).toHaveTextContent('0');
+    }
+    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'missing');
+    setQuery({ data: makeStatus({ vehicles: [
+      { ...incomplete.vehicles![0], signalsPerSecond: 0 },
+    ] }) });
+    rerenderPage();
+    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'value');
+    expect(metric('Signals / sec')).toHaveTextContent('0');
+    expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
+    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Broker snapshot available');
+  });
+
+  it.each([
+    { id: 'failed refresh', error: new Error('partial refresh rejected'), fetchStatus: 'idle' as const },
+    { id: 'paused refresh', error: undefined, fetchStatus: 'paused' as const },
+  ])('retains partial measurements and independent connectivity during $id without promoting unknown totals', ({ error, fetchStatus }) => {
+    const vehicles = makeStatus().vehicles!;
+    const status = makeStatus({ connected: false, vehicles: [
+      vehicles[0], { ...vehicles[1], signalsPerSecond: undefined },
+    ] });
+    const at = Date.now() - 5_000;
+    setQuery({ data: status, dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: status, dataUpdatedAt: at, error, fetchStatus });
+    rerenderPage();
+    expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Showing retained measurements');
+    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'missing');
+    expect(metric('Total signals')).toHaveTextContent('12,445');
+    expect(metric('Total batches')).toHaveTextContent('683');
+    expect(screen.getByTestId('mqtt-partial-measurements')).toHaveTextContent('Signals / sec');
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    expect(screen.queryByText('Connected')).toBeNull();
+    expect(screen.queryByText(/Unable to load MQTT status/)).toBeNull();
+    expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
+  });
+
+  it('keeps counter-based throughput and all seven mobile fields usable when only aggregate rate coverage is missing', () => {
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, bottom: 640, right: 375,
+      width: 375, height: 640, toJSON: () => ({}),
+    });
+    const at = Date.now() - 30_000;
+    const snapshot = (signalCount: number) => makeStatus({ vehicles: [{
+      vin: 'COUNTERS-WITHOUT-RATE', state: 'online', signalCount, batchCount: 0,
+      lastReceived: freshIso(),
+    }] });
+    setQuery({ data: snapshot(10), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    for (let index = 1; index <= 3; index += 1) {
+      setQuery({ data: snapshot(10 + index * 5), dataUpdatedAt: at + index * 5_000 });
+      rerenderPage();
+    }
+    expect(metric('Signals / sec')).toHaveAttribute('data-value-state', 'missing');
+    const history = screen.getByRole('table', { name: 'Signal throughput — data table' });
+    const intervals = within(history).getAllByRole('row').slice(1).map(row =>
+      within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
+    expect(intervals).toEqual([['5', '5'], ['5', '5'], ['5', '5']]);
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const fields = {
+      VIN: 'COUNTERS-WITHOUT-RATE', State: 'online', Signals: '25', Batches: '0',
+      'Sig/sec': '—', 'Last received': 'just now', Status: 'Live',
+    };
+    for (const [label, value] of Object.entries(fields)) {
+      expect(within(details).getByText(label, { selector: 'dt' }).parentElement).toHaveTextContent(value);
+    }
+    expect(within(details).getAllByRole('term')).toHaveLength(7);
+  });
+
+  it('does not certify a fleet aggregate whose returned numeric evidence is invalid or whose count sum is unsafe', () => {
+    const status = makeStatus({ vehicles: [
+      { vin: 'NUMERIC-A', signalCount: Number.MAX_SAFE_INTEGER, batchCount: -1, signalsPerSecond: Number.POSITIVE_INFINITY },
+      { vin: 'NUMERIC-B', signalCount: 1, batchCount: 2, signalsPerSecond: 0 },
+    ] });
+    setQuery({ data: status });
+    renderPage();
+    for (const label of ['Total signals', 'Total batches', 'Signals / sec']) {
+      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+      expect(metric(label)).toHaveTextContent('—');
+      expect(within(screen.getByTestId('mqtt-partial-measurements')).getByText(label)).toBeInTheDocument();
+    }
+    expect(metric('Streaming vehicles')).toHaveAttribute('data-value-state', 'value');
+    expect(screen.getByText('Connected')).toBeInTheDocument();
+  });
+});
