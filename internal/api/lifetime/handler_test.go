@@ -2,13 +2,82 @@ package lifetime
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database/achievement"
+	"github.com/jackc/pgx/v5"
 )
+
+type activeHourRow struct {
+	hour  *int
+	count int
+	err   error
+}
+
+func (r activeHourRow) Scan(dest ...interface{}) error {
+	*dest[0].(**int) = r.hour
+	*dest[1].(*int) = r.count
+	return r.err
+}
+
+func TestMostActiveHourEvidence(t *testing.T) {
+	midnight, late, negative, invalid := 0, 23, -1, 24
+	for _, tt := range []struct {
+		name      string
+		row       activeHourRow
+		want      int
+		available bool
+	}{
+		{"midnight is real zero", activeHourRow{hour: &midnight, count: 2}, 0, true},
+		{"last hour before day boundary", activeHourRow{hour: &late, count: 1}, 23, true},
+		{"no drives or missing dates", activeHourRow{err: pgx.ErrNoRows}, 0, false},
+		{"null hour", activeHourRow{count: 1}, 0, false},
+		{"query failure", activeHourRow{err: errors.New("database unavailable")}, 0, false},
+		{"invalid date scan", activeHourRow{hour: &midnight, count: 1, err: errors.New("invalid timestamp")}, 0, false},
+		{"negative hour", activeHourRow{hour: &negative, count: 1}, 0, false},
+		{"out of range hour", activeHourRow{hour: &invalid, count: 1}, 0, false},
+		{"no evidence count", activeHourRow{hour: &midnight}, 0, false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			hour, available := readMostActiveHour(tt.row)
+			if hour != tt.want || available != tt.available {
+				t.Fatalf("hour/available = %d/%t, want %d/%t", hour, available, tt.want, tt.available)
+			}
+			stats := LifetimeStatsResult{
+				MostActiveHour: hour, MostActiveHourAvailable: available,
+			}
+			payload, err := json.Marshal(map[string]interface{}{
+				"most_active_hour": stats.mostActiveHourValue(),
+				"first_drive_date": stats.FirstDriveDate,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			var wire map[string]json.RawMessage
+			if err := json.Unmarshal(payload, &wire); err != nil {
+				t.Fatal(err)
+			}
+			wantHour := "null"
+			if available {
+				b, err := json.Marshal(tt.want)
+				if err != nil {
+					t.Fatal(err)
+				}
+				wantHour = string(b)
+			}
+			if string(wire["most_active_hour"]) != wantHour {
+				t.Errorf("wire hour = %s, want %s", wire["most_active_hour"], wantHour)
+			}
+			if string(wire["first_drive_date"]) != "null" {
+				t.Errorf("missing date was synthesized: %s", wire["first_drive_date"])
+			}
+		})
+	}
+}
 
 // fakeAchievementUnlockStore is the in-memory test double for the
 // unlock-persistence repository. Each call to RecordUnlock mirrors the real
