@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next';
-import { Badge, GlassPanel } from '@/components/ui';
+import { Badge, GlassPanel, Text } from '@/components/ui';
 import { TimelineItem } from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
-import { formatTime } from '@/lib/dateFormat';
 import { Icons } from '@/lib/icons';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { ActivityItem } from '@/types/activity';
 import { groupActivityByDay } from './helpers';
 import { KIND_ACCENT, KIND_ICON, severityBadgeVariant, statusBadgeVariant } from './constants';
@@ -72,6 +72,7 @@ export function ActivityFeed({
 }: ActivityFeedProps) {
   const { t } = useTranslation();
   const { formatDuration, formatEnergy } = useUnits();
+  const { formatTime, locale } = useDateFormat('vehicle');
 
   if (isLoading) {
     return (
@@ -101,13 +102,13 @@ export function ActivityFeed({
     );
   }
 
-  const groups = groupActivityByDay(items, timezone);
+  const groups = groupActivityByDay(items, timezone, locale);
 
   return (
     <div className={className}>
       {groups.map((group) => (
         <GlassPanel key={group.dayKey} className="mb-4 p-4 sm:p-6">
-          <h3 className="mb-3 text-sm font-semibold text-[var(--text-secondary)]">{group.label}</h3>
+          <Text as="h3" size="sm" weight="semibold" color="secondary" className="mb-3">{group.label}</Text>
           <div>
             {group.items.map((item, i) => {
               const Icon = KIND_ICON[item.kind];
@@ -173,6 +174,7 @@ export function ActivityFeed({
                   subtitle={summary || undefined}
                   time={formatTime(item.occurred_at, { tz: timezone })}
                   href={item.path ?? undefined}
+                  wrap
                   isLast={i === group.items.length - 1}
                   badges={
                     <>
@@ -184,21 +186,21 @@ export function ActivityFeed({
                       <Badge variant={statusBadgeVariant(item.status)} size="sm">
                         {status}
                       </Badge>
-                      <span
-                        className="text-2xs text-[var(--text-muted)]"
-                        title={t(
-                          'activity.timeline.sourceRecord',
-                          '{{source}} record {{id}}',
-                          {
-                            source,
-                            id: item.source_id,
-                          },
-                        )}
-                      >
+                    </>
+                  }
+                  metadata={
+                    <>
+                      <Text as="p" variant="caption">
                         {t('activity.timeline.provenance', 'Source: {{source}}', {
                           source,
                         })}
-                      </span>
+                      </Text>
+                      <Text as="p" variant="caption">
+                        {t('activity.timeline.sourceRecord', '{{source}} record {{id}}', {
+                          source: item.source_table,
+                          id: item.source_id,
+                        })}
+                      </Text>
                     </>
                   }
                 />

@@ -70,4 +70,28 @@ describe('groupActivityByDay', () => {
     );
     expect(groups[0].dayKey).toBe('2025-12-31');
   });
+
+  it.each([
+    ['de-DE', '31. Dez. 2025'],
+    ['fr-FR', '31 déc. 2025'],
+    ['en-US', 'Dec 31, 2025'],
+  ])('uses selected locale %s for labels without shifting timezone-defined day keys', (locale, label) => {
+    const original = Object.freeze(item({ occurred_at: '2026-01-01T02:00:00Z' }));
+    const groups = groupActivityByDay(Object.freeze([original]), 'America/Los_Angeles', locale);
+    expect(groups[0].dayKey).toBe('2025-12-31');
+    expect(groups[0].label).toBe(label);
+    expect(groups[0].items[0]).toBe(original);
+  });
+
+  it('keeps unknown and valid buckets in input order with selected locale', () => {
+    const events = [
+      item({ id: 'invalid', occurred_at: 'not-a-date' }),
+      item({ id: 'valid', occurred_at: '2026-01-15T12:00:00Z' }),
+      item({ id: 'invalid-again', occurred_at: '' }),
+    ];
+    const groups = groupActivityByDay(events, 'UTC', 'de-DE');
+    expect(groups.map((group) => group.dayKey)).toEqual(['unknown', '2026-01-15']);
+    expect(groups.map((group) => group.label)).toEqual(['—', '15. Jan. 2026']);
+    expect(groups[0].items.map((event) => event.id)).toEqual(['invalid', 'invalid-again']);
+  });
 });

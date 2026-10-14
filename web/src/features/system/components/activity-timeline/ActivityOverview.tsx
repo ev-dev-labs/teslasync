@@ -24,8 +24,8 @@ export function ActivityOverview({ items, total, offset, loading, error, timezon
   const activeDays = new Set(items.map((item) => ymdInTz(new Date(item.occurred_at), timezone))).size;
   const criticalAlerts = items.filter((item) => item.kind === 'alert' && item.severity === 'critical').length;
   const pageCoverage = t('activity.timeline.overview.scope', 'Counts below describe only the loaded page (events {{start}}–{{end}} of {{total}}), not the entire selected range.', {
-    start: items.length ? offset + 1 : 0,
-    end: items.length ? offset + items.length : 0,
+    start: fmtInt(items.length ? offset + 1 : 0),
+    end: fmtInt(items.length ? offset + items.length : 0),
     total: error ? '—' : fmtInt(total),
   });
 
