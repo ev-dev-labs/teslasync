@@ -1,0 +1,1113 @@
+{
+  "item": "phase6-qa-vehicles-vehicle-list",
+  "attempt": 1,
+  "status": "SOURCE_QA_REPORT_COMPLETE_WITH_CONFIRMED_NEEDS",
+  "page": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+  "routes": [
+    "/vehicles"
+  ],
+  "acceptedSourceCommit": "c96596e1f9f40eec0046f58381584479dc76df75",
+  "authority": {
+    "queueLine": 63,
+    "acceptedQueueLine": 2049,
+    "reservationUtc": "2026-10-14T01:39:44.162Z",
+    "firstActualCommandUtc": "2026-10-14T01:43:49.8113693Z",
+    "returnByUtc": "2026-10-14T01:59:44.162Z",
+    "hardByUtc": "2026-10-14T02:04:44.162Z",
+    "clockNotRenewed": true
+  },
+  "writableFiles": [
+    "docs/frontend-audits/phase6-qa-vehicles-vehicle-list.json",
+    "web/logs/phase6-qa-vehicles-vehicle-list.log"
+  ],
+  "sourceReadOnly": true,
+  "beforePins": [
+    {
+      "path": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "sha256": "3934623EFAA2550466E1E045F4974446CA502ABA80C974681794F253F99E5971"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleListPage.test.tsx",
+      "sha256": "4322C892CDB4D96826E37A569A312F361A1D36AFB7E60A1D90B1CEA5E664D4C5"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B"
+    },
+    {
+      "path": "web/src/api/hooks/useFleetOps.ts",
+      "sha256": "78C121387FEE7EDC0DFD2089FD70C48FD1D93A8D57ABF9ACD5906C2055C54972"
+    },
+    {
+      "path": "web/src/api/hooks/usePinned.ts",
+      "sha256": "09A532A2FE26FCB0564DD63929B9436FFFBF63A30B8E075D1EEF588350E9D68B"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "path": "web/src/components/ui/PinButton.tsx",
+      "sha256": "DC796F0F5FDA1730E6DE2C94D7CB85DF2E05664F1B1F0D0A46633A946CD96B10"
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6"
+    },
+    {
+      "path": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+      "sha256": "815B8F2AB797B75D6D8D4A4E2E3D269621CA3EB24ED145BC3CAE2A84CEF9A60E"
+    },
+    {
+      "path": "web/src/components/vehicles/VirtualizedVehicleGrid.tsx",
+      "sha256": "2568A56C092F2D18D5CBC5DFE0AA622D46AA8F23C0F2534241D6DFE0B0A3DB9A"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.tsx",
+      "sha256": "7B666BC9FBBCD743327375B75BC9922BCC5E2C431833A30ED020E8CC3D2FA7C6"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "path": "web/src/types/fsm/vehicle.ts",
+      "sha256": "95B27F2949403A7F87D87AA094AA962B0233E7434EE7F937BE0F3E933FE2AC21"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B"
+    },
+    {
+      "path": "web/src/lib/resilience.ts",
+      "sha256": "E100C50C5CE8080AADDE8BADBF083254F1ED4730978E52FA4B690876CD2F0BCA"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554"
+    },
+    {
+      "path": "web/src/components/ui/MaskedValue.tsx",
+      "sha256": "D03E05B627B4F9AD19973B0A8C263D897E8F8A47E3F2C78C0D1A84F21C0B5B6C"
+    },
+    {
+      "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "sha256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C"
+    },
+    {
+      "path": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E"
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5"
+    }
+  ],
+  "afterPins": [
+    {
+      "path": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "sha256": "3934623EFAA2550466E1E045F4974446CA502ABA80C974681794F253F99E5971"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleListPage.test.tsx",
+      "sha256": "4322C892CDB4D96826E37A569A312F361A1D36AFB7E60A1D90B1CEA5E664D4C5"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B"
+    },
+    {
+      "path": "web/src/api/hooks/useFleetOps.ts",
+      "sha256": "78C121387FEE7EDC0DFD2089FD70C48FD1D93A8D57ABF9ACD5906C2055C54972"
+    },
+    {
+      "path": "web/src/api/hooks/usePinned.ts",
+      "sha256": "09A532A2FE26FCB0564DD63929B9436FFFBF63A30B8E075D1EEF588350E9D68B"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "path": "web/src/components/ui/PinButton.tsx",
+      "sha256": "DC796F0F5FDA1730E6DE2C94D7CB85DF2E05664F1B1F0D0A46633A946CD96B10"
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "sha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6"
+    },
+    {
+      "path": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+      "sha256": "815B8F2AB797B75D6D8D4A4E2E3D269621CA3EB24ED145BC3CAE2A84CEF9A60E"
+    },
+    {
+      "path": "web/src/components/vehicles/VirtualizedVehicleGrid.tsx",
+      "sha256": "2568A56C092F2D18D5CBC5DFE0AA622D46AA8F23C0F2534241D6DFE0B0A3DB9A"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.tsx",
+      "sha256": "7B666BC9FBBCD743327375B75BC9922BCC5E2C431833A30ED020E8CC3D2FA7C6"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "path": "web/src/types/fsm/vehicle.ts",
+      "sha256": "95B27F2949403A7F87D87AA094AA962B0233E7434EE7F937BE0F3E933FE2AC21"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B"
+    },
+    {
+      "path": "web/src/lib/resilience.ts",
+      "sha256": "E100C50C5CE8080AADDE8BADBF083254F1ED4730978E52FA4B690876CD2F0BCA"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554"
+    },
+    {
+      "path": "web/src/components/ui/MaskedValue.tsx",
+      "sha256": "D03E05B627B4F9AD19973B0A8C263D897E8F8A47E3F2C78C0D1A84F21C0B5B6C"
+    },
+    {
+      "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "sha256": "9DE001133E32EE63E950FDACF113D195845DEE7D1595B4EA3A92E09267844F75"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "sha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C"
+    },
+    {
+      "path": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211E403D2B7170A9AE96103D2694CD032560E2DCA81CD02AC2BD235B604C807E"
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5"
+    }
+  ],
+  "integrity": {
+    "status": "PASS",
+    "verifiedUtc": "2026-10-14T01:57:12.408932+00:00",
+    "sourcePinCount": 27,
+    "unchangedPinCount": 27,
+    "changedPaths": [],
+    "jsonReparse": "PASS",
+    "countsAndUniqueIDs": "PASS",
+    "beforeSnapshotLimit": "Source pins taken after preliminary reconnaissance, before artifact writes; no original historical baseline regenerated."
+  },
+  "confirmedFindings": [
+    {
+      "id": "VL01",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 1395,
+      "rule": "initial-paused",
+      "priority": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Never-loaded paused roster renders an authoritatively empty fleet; a never-loaded paused fleet-state source is also presented as missing/unavailable instead of blocked initial loading.",
+      "mechanism": "Roster skeleton gates only isLoading. For data=undefined/isPending=true/fetchStatus=paused/isLoading=false, deriveDataState yields initial/isRefreshBlocked=true, not initialFailure. vehicles??[] becomes empty; No vehicles yet renders. StaleRefreshWarning returns null without retained data. statesQuery.isLoading (1007) likewise misses paused initial state and permits unavailable attention/empty overview branches.",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "Use the described paused roster query without retained data and follow793-797,1395-1416,1511-1526.",
+          "With a populated roster and never-loaded paused states query, follow1007,1062-1089,1736-1753; blocked initial state has no surface."
+        ]
+      },
+      "fix": "Use data-state initial and isRefreshBlocked distinctly; keep all shells and safe independent read/reconnect recovery without asserting registration/vehicle availability.",
+      "supportCitations": [
+        {
+          "file": "web/src/api/dataState.ts",
+          "lines": [
+            193,
+            231
+          ]
+        },
+        {
+          "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+          "line": 59
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "lines": [
+            1007,
+            1089
+          ]
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.test.tsx",
+          "lines": [
+            893,
+            914
+          ],
+          "note": "active loading/failure declarations only; grep paused|fetchStatus matches0"
+        }
+      ],
+      "occurrences": 2
+    },
+    {
+      "id": "VL02",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 1736,
+      "rule": "retained-source-content-loss",
+      "priority": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Fleet battery overview erases last-known rows on real tagged retained/failed batches, although cards and preview retain correctly.",
+      "mechanism": "batteryEntries is batteryCurrent (929), filtered by isFleetStateFieldCurrent (887-889). Failed/stale/unverified rows fail this predicate. FleetBatteryPanel then receives no rows and showErrorInstead=isError&&entries.length===0 (315) chooses QueryError for retained failed data; expired resolved data chooses never-arrived EmptyState. Its non-destructive comment313 is defeated by caller filtering.",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "Begin with fresh battery rows in overview.",
+          "Represent failed refresh using real hook outcome=failed/non-null retained state/original observedAt (useVehicles1290-1294,1428-1433).",
+          "Follow887-889,929,1736,315-348; aggregate may honestly be unknown, but overview last-known rows disappear."
+        ]
+      },
+      "fix": "Keep fresh-only aggregates while separately rendering qualified last-known battery rows/age with retry. Cover actual retained failed-envelope shape, not only isError over resolved mock entries.",
+      "supportCitations": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "lines": [
+            313,
+            348
+          ]
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "lines": [
+            887,
+            932
+          ]
+        },
+        {
+          "file": "web/src/api/hooks/useVehicles.ts",
+          "lines": [
+            979,
+            985
+          ]
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.test.tsx",
+          "lines": [
+            1013,
+            1022
+          ],
+          "note": "resolved-outcome mocks with isError do not model rejected-batch retained entries"
+        }
+      ],
+      "occurrences": 1
+    },
+    {
+      "id": "VL03",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 618,
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Four visible domain-enum paths bypass localization: card status, preview status, narrative vehicle state, work-order severity.",
+      "mechanism": "Raw derived status is assigned to statusLabel618 and rendered661; preview passes previewStatus1833; narrative substitutes state.state1149/workOrder.severity1178. Breakdown501 already uses existing t(vehicle.state.*,VEHICLE_STATE_LABELS).",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "Select non-English locale with translated charging state and a fresh charging entry.",
+          "Card/preview still receive literal charging. Open operational details with a high work order to reach raw severity substitution."
+        ]
+      },
+      "fix": "Localize enum presentation through existing FSM/severity labels without rewriting wire enums. Parent serializes any genuinely missing canonical keys.",
+      "supportCitations": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "line": 661
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "line": 1149
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "line": 1178
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "line": 1833
+        },
+        {
+          "file": "web/src/types/fsm/vehicle.ts",
+          "lines": [
+            34,
+            44
+          ]
+        }
+      ],
+      "occurrences": 4
+    },
+    {
+      "id": "VL04",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 1797,
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Delete Cancel button uses literal English shared default.",
+      "mechanism": "ConfirmDialog caller1797-1814 provides confirmLabel but omits cancelLabel. Shared ConfirmDialog78 defaults Cancel and renders it172 without t(). Shared translation use is for silence checkbox, not that default.",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "In a non-English locale open Actions > Remove.",
+          "Trace omitted cancelLabel to shared default; Cancel remains literal English."
+        ]
+      },
+      "fix": "Pass cancelLabel={t(common.cancel,Cancel)} at this caller; do not globally rewrite completed primitive defaults without a claim.",
+      "supportCitations": [
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 78
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "line": 172
+        }
+      ],
+      "occurrences": 1
+    },
+    {
+      "id": "VL05",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 383,
+      "rule": "numeric-localization",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Five display expressions bypass locale/precision formatting: overview battery/status sublabels and operational live-state/readiness/utilization values.",
+      "mechanism": "Raw JS level interpolation383, String(count)506 and custom raw ratio/percentage formatters1376/1378/1380 ignore formatter preferences. formatMetric57-63 applies custom formatter before standard countTotal/locale handling110-113. Other KPI/card displays use fmtNumber/useUnits.",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "Use locale de-DE with verified battery80.5: overview sublabel emits80.5%, unlike formatted card.",
+          "Use ar-EG or grouped count>999: specialist ratios/status strings remain ASCII JS numerals."
+        ]
+      },
+      "fix": "Use fmtNumber sublabels and countTotal/effective formatter preferences; preserve raw validated inputs, unknown/null and measured zero.",
+      "supportCitations": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "line": 506
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "lines": [
+            1376,
+            1380
+          ]
+        },
+        {
+          "file": "web/src/lib/metric-reference/formatMetric.ts",
+          "lines": [
+            38,
+            63
+          ]
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "lines": [
+            20,
+            38
+          ]
+        }
+      ],
+      "occurrences": 5
+    },
+    {
+      "id": "VL06",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 1821,
+      "rule": "privacy-masking-bypass",
+      "priority": "P1",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Blank display-name fallback discloses clear VIN in passive preview title and delete confirmation, bypassing default masking/reveal intent.",
+      "mechanism": "previewTarget.vehicle.vin1821 and deleteTarget.vin1805-1806 are raw title/message fallbacks. Card/menu and battery labels use maskFor; MaskedValue promises masked by default and explicit reveal. Opening Quick view/Remove is not Reveal value.",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "Use synthetic nonempty VIN/display_name empty; do not invoke Reveal value.",
+          "Card/menu show masked identity; Quick view passes raw VIN to Drawer title and Remove passes raw VIN to confirmation message."
+        ]
+      },
+      "fix": "Use existing masked identity fallback for passive titles/messages; keep explicit reveal/copy, raw request identity and numeric vehicle IDs intact.",
+      "supportCitations": [
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "lines": [
+            635,
+            677
+          ]
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+          "lines": [
+            1805,
+            1806
+          ]
+        },
+        {
+          "file": "web/src/components/ui/MaskedValue.tsx",
+          "lines": [
+            12,
+            25
+          ]
+        },
+        {
+          "file": "web/src/features/vehicles/pages/VehicleListPage.test.tsx",
+          "lines": [
+            739,
+            761
+          ],
+          "note": "blank-name assertion covers card, not preview/remove"
+        }
+      ],
+      "occurrences": 2
+    },
+    {
+      "id": "VL07",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 672,
+      "rule": "mobile-target-declaration",
+      "priority": "P2",
+      "classification": "CONFIRMED_SOURCE_MECHANISM",
+      "confidence": "high source confidence; runtime NOTRUN",
+      "detail": "Card VIN Reveal/Copy support declares28px height on mobile, below contract44px default; this is source declaration evidence, NOT measured browser/WCAG acceptance.",
+      "mechanism": "MaskedValue190 sets !h-7 !min-h-0 !px-1.5 for Reveal and199 passes same classes to CopyButton. Page672-677 supplies copyable but no mobile sizing mechanism. Important fixed height has no below-md override/documented spacing exception in inspected owner.",
+      "repro": {
+        "kind": "conditional source trace, NOT executed",
+        "steps": [
+          "Trace card VIN reveal/copy below-md with nonempty synthetic VIN.",
+          "Source declares important h-7/min-h-0. Computed boxes, expanded targets and spacing exceptions still require native inspection."
+        ]
+      },
+      "fix": "Parent assigns bounded shared mobile-target API/adoption with desktop compact behavior, privacy/auto-hide/copy and localized names preserved; native bounds remain future.",
+      "supportCitations": [
+        {
+          "file": "web/src/components/ui/MaskedValue.tsx",
+          "line": 190
+        },
+        {
+          "file": "web/src/components/ui/MaskedValue.tsx",
+          "line": 199
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "lines": [
+            35,
+            48
+          ]
+        },
+        {
+          "file": "docs/frontend-design-contract.md",
+          "lines": [
+            525,
+            533
+          ]
+        }
+      ],
+      "occurrences": 2
+    }
+  ],
+  "unprovedCandidates": [
+    {
+      "id": "U01",
+      "classification": "UNPROVED_IDENTITY_COHERENCE",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "lines": [
+        1275,
+        1304
+      ],
+      "detail": "Fleet key uses sortedIDs; cached entries embed vehicle objects from query closure. SameIDs/renamed roster could diverge battery labels from current card/preview (page352).",
+      "needs": "Clarify intended identity provenance and reproduce sameID metadata refresh with actual QueryClient. Completed useVehicleLive reset is different owner; no confirmed regression claim."
+    },
+    {
+      "id": "U02",
+      "classification": "UNPROVED_REMOVED_PREVIEW_POLICY",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "lines": [
+        1337,
+        1342
+      ],
+      "detail": "previewTarget falls back to saved previewVehicle if ID disappears, retaining detail/context navigation; removal/account identity lifecycle policy unproved.",
+      "needs": "Safe removed-roster/scope replacement regression and policy, no real identity access."
+    },
+    {
+      "id": "U03",
+      "classification": "NATIVE_A11Y_NOTRUN",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "line": 680,
+      "detail": "PinButton44px opt-in is present; caller omits supported ariaLabel, leaving generic Pin/Unpin. Context sufficiency not verified.",
+      "needs": "Native screen reader/context and focus/contrast check; do not claim missing name/WCAG failure."
+    },
+    {
+      "id": "U04",
+      "classification": "NATIVE_VIRTUALIZATION_NOTRUN",
+      "file": "web/src/components/vehicles/VirtualizedVehicleGrid.tsx",
+      "lines": [
+        21,
+        26
+      ],
+      "detail": ">24 roster switches measured virtual row grid. List/setsize/posinset and computed geometry are declared; offscreen keyboard, resize/pin reordering, row measurement,200%text and scroll not proved.",
+      "needs": "Distinct native acceptance under parent; completed phase3-virtualized-vehicle-grid not redispatched/helper revived."
+    },
+    {
+      "id": "U05",
+      "classification": "UNPROVED_COVERAGE_PRESENTATION",
+      "file": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "lines": [
+        263,
+        284
+      ],
+      "detail": "FleetKpis generic measurement coverage and charge/null partial status omit explicit battery/range population counts, unlike posture battery denominator. Numeric mean/sum are verified-only; adequacy of summary caption is not proved defective.",
+      "needs": "Review safe sparse-field coverage language; no fabricated full-fleet assertion."
+    }
+  ],
+  "notRun": [
+    "fresh tests/Vitest (64 literal declarations read; execution0, no runner discovery/pass/fail counts)",
+    "fresh lint/scanners/preservation helpers",
+    "build/global npx tsc --noEmit/full suites",
+    "browser/API/real roster/identity access",
+    "native screenshots, mobile matrix, keyboard/focus/screen-reader/contrast/forced-colors/performance/auth",
+    "servers/installs/subagents",
+    "catalog edits/integration",
+    "backend route/auth/unit revalidation"
+  ],
+  "release": {
+    "sourceClaims": "never acquired; readonly source/tests/supports released",
+    "artifactClaims": "RELEASED after final JSON serialization/reparse and pin verification",
+    "files": [
+      "docs/frontend-audits/phase6-qa-vehicles-vehicle-list.json",
+      "web/logs/phase6-qa-vehicles-vehicle-list.log"
+    ],
+    "releasedUtc": "2026-10-14T01:57:12.408932+00:00",
+    "queueEdited": false,
+    "needs": "4 deduplicated repair groups plus 1 separate unproved/native acceptance group; parent must assign exact new claims. No source/native completion claim."
+  },
+  "failedProbes": [
+    {
+      "shellId": "1609",
+      "exit": 1,
+      "detail": "Missing web/src/types/fsm.ts; seventeen earlier source pins succeeded; corrected fsm/vehicle.ts later pinned."
+    },
+    {
+      "shellId": "1660",
+      "exit": 0,
+      "operationFailed": true,
+      "detail": "Nonterminating Get-FileHash missing operationalMetrics.ts; .tsx owner then read/pinned. Exit0 is NOT a hash PASS."
+    },
+    {
+      "tool": "view",
+      "detail": "Missing operationalMetrics.ts; actual .tsx read later."
+    },
+    {
+      "shellId": "1638",
+      "exit": 0,
+      "detail": "Optional ListPage.tsx nonexistent; actual PageLayout adapter read."
+    },
+    {
+      "shellId": "1720",
+      "exit": 1,
+      "detail": "Artifact authoring command too long for Windows: The filename or extension is too long. (os error 206). No artifacts written, verified1721."
+    }
+  ],
+  "counts": {
+    "confirmedFindings": 7,
+    "unprovedCandidates": 5,
+    "confirmedByRule": {
+      "initial-paused": 1,
+      "retained-source-content-loss": 1,
+      "hardcoded-string": 2,
+      "numeric-localization": 1,
+      "privacy-masking-bypass": 1,
+      "mobile-target-declaration": 1
+    },
+    "sourceOccurrences": 17,
+    "priorities": {
+      "P1": 3,
+      "P2": 4
+    },
+    "testDeclarations": 64,
+    "testsExecuted": 0,
+    "runnerDiscovered": null,
+    "testsPassed": null,
+    "testsFailed": null,
+    "testsSkipped": null,
+    "nativeRuns": 0,
+    "pinCount": 27
+  },
+  "deduplicatedNeeds": [
+    {
+      "key": "vehicle-list-initial-and-retained-trust",
+      "findings": [
+        "VL01",
+        "VL02"
+      ],
+      "owner": "new narrow page/test claim; preserve existing shared trust hook"
+    },
+    {
+      "key": "vehicle-list-localized-presentation",
+      "findings": [
+        "VL03",
+        "VL04",
+        "VL05"
+      ],
+      "owner": "one new narrow page/test claim; parent-only serialized catalog needs if proved"
+    },
+    {
+      "key": "vehicle-list-passive-vin-mask",
+      "findings": [
+        "VL06"
+      ],
+      "owner": "one narrow page/test claim; no shared primitive rewrite"
+    },
+    {
+      "key": "masked-mobile-target-support",
+      "findings": [
+        "VL07"
+      ],
+      "owner": "parent assigns exact MaskedValue/CopyButton/mobile tests after reading CopyButton; not opened in this audit"
+    },
+    {
+      "key": "vehicle-list-unproved-native-acceptance",
+      "candidates": [
+        "U01",
+        "U02",
+        "U03",
+        "U04",
+        "U05"
+      ],
+      "owner": "separate owner/policy/native checks; never convert candidates to confirmed or rerun unchanged passes"
+    }
+  ],
+  "queueDeduplication": {
+    "exactRepairSearchShellId": "1644",
+    "matchingRows": 1,
+    "onlyMatch": "phase6-qa-vehicles-vehicle-list row63",
+    "historicalOwners": [
+      {
+        "item": "phase5-page-vehicles-vehicle-list",
+        "line": 2049,
+        "status": "done source-only"
+      },
+      {
+        "item": "phase3-pin-button",
+        "line": 1443,
+        "status": "done source-only"
+      },
+      {
+        "item": "phase3-virtualized-vehicle-grid",
+        "line": 1725,
+        "status": "done source-only"
+      },
+      {
+        "item": "primitive-confirm-dialog",
+        "line": 897,
+        "status": "done"
+      },
+      {
+        "item": "phase6-live-vehicle-identity-reset",
+        "line": 2099,
+        "status": "done, unrelated useVehicleLive scope"
+      }
+    ],
+    "decision": "Parent queues genuinely new narrow needs; no queue edits, no completed objective retry."
+  },
+  "purpose": "Fleet-wide inventory, current verified measurements, readiness/service attention and vehicle management.",
+  "primaryGoal": "Inspect fleet evidence without treating missing/failed/retained/paused sources as current facts; preserve every section/action.",
+  "dataSources": [
+    {
+      "name": "roster",
+      "hook": "useVehicles",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 73,
+      "endpoint": "GET /api/v1/vehicles",
+      "scope": "registered workspace fleet, no selected vehicle/date filter",
+      "state": "useDataState active-initial skeleton/fatal retry/retained warning; paused defectVL01"
+    },
+    {
+      "name": "live-state",
+      "hook": "useFleetStates(vehicleList)",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "line": 1270,
+      "endpoint": "GET /api/v1/vehicles/states?vehicle_ids=<sortedIDs>&limit=500, chunked",
+      "scope": "all roster IDs; cancellation/recovery/SSE/query policy intact",
+      "state": "outcome/freshness/observedAt/verifiedFields; rejected batch retains original observation; automatic ageing; absent/failed not offline"
+    },
+    {
+      "name": "service",
+      "hook": "useFleetWorkOrders({limit:100})",
+      "file": "web/src/api/hooks/useFleetOps.ts",
+      "line": 389,
+      "endpoint": "GET /api/v1/fleet-ops/work-orders?limit=100",
+      "scope": "bounded fleet-wide workspace records, not selected vehicle",
+      "state": "unknown until hasData; current-complete needsok/offset0/total=loaded; independent fatal retry/retained coverage warning"
+    },
+    {
+      "name": "pins",
+      "hook": "usePinned(vehicle)/PinButton/useTogglePin",
+      "file": "web/src/api/hooks/usePinned.ts",
+      "line": 61,
+      "endpoint": "GET/POST /api/v1/pinned; DELETE /api/v1/pinned/<pinRowID>",
+      "scope": "user vehicle pin bucket",
+      "state": "unknown is not unpinned, pending/fatal notice, independent read retry, retained ordering, busy mutation"
+    },
+    {
+      "name": "management",
+      "hook": "useSyncVehicles/useDeleteVehicle",
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "lines": [
+        318,
+        335
+      ],
+      "endpoint": "POST /api/v1/vehicles/sync; DELETE /api/v1/vehicles/<ID>",
+      "scope": "requiresLiveMode true/networkMode always; hook-owned success/error toasts and invalidation; page batch invalidation success only",
+      "state": "sync resettable success/error banners; delete confirm pending lock/success-only close. No real action executed."
+    }
+  ],
+  "scopeContract": {
+    "fleetVersusWorkspace": "/vehicles is in VEHICLE_DISABLED_PATHS atworkspaceScope134 and not in dated routes. Page uses only setVehicleId for six related context navigations, never to filter roster. Compare natural firsttwo roster IDs, not pinned display order; leftId/rightId are frontend route parameters, not camelCase backend params.",
+    "backendLimits": "Only frontend request declarations inspected; actual server auth, units, roster completeness/endpoints NOTRUN."
+  },
+  "preservation": {
+    "sha256": "3934623EFAA2550466E1E045F4974446CA502ABA80C974681794F253F99E5971",
+    "lineCount": 1978,
+    "testSha256": "4322C892CDB4D96826E37A569A312F361A1D36AFB7E60A1D90B1CEA5E664D4C5",
+    "testLineCount": 1551,
+    "sectionDeclarations": 3,
+    "glassPanelDeclarations": 9,
+    "vehiclePanelGridDeclarations": 5,
+    "sections": [
+      {
+        "name": "Fleet posture",
+        "lines": [
+          1527,
+          1702
+        ],
+        "content": "six operational metrics, narrative/attention/provenance, Review details/Fleet operations"
+      },
+      {
+        "name": "Fleet summary",
+        "lines": [
+          1707,
+          1729
+        ],
+        "content": "registered count/current battery/range/charge coverage/raw metric Review details"
+      },
+      {
+        "name": "Fleet overview",
+        "lines": [
+          1730,
+          1759
+        ],
+        "content": "battery status/current status breakdown"
+      },
+      {
+        "name": "All vehicles",
+        "lines": [
+          1762,
+          1794
+        ],
+        "content": "pinned-first cards,>24 virtualization,empty/missing state shells"
+      }
+    ],
+    "actions": [
+      "Sync header/emptyCTA; reset/dismiss success/error feedback",
+      "Compare natural firsttwo rosterIDs if>=2",
+      "Fleet operations navigation",
+      "Both overview live-state refresh/retry",
+      "Roster/work-order/pin fatal or retained read retries",
+      "Vehicle detail prefetch title/footer links",
+      "Pin/unpin plus unknown-state read retry",
+      "Masked VIN reveal/hide/copy",
+      "Card overflow open/close,Quick view,Remove",
+      "Delete Confirm/Cancel with pending lock/success-only close",
+      "Preview Close/Open details",
+      "Six related context links:drives/charging/locations/alerts/service/telemetry;set selected vehicle",
+      "Both OperationalBrief Review details disclosures"
+    ],
+    "historicalParity": "Queue receipt already records1978of1904 lines,sections3of3/panels9of9/grids5of5. Current source declaration counts match accepted receipt. No historical baseline/helpers regenerated; no independent prior-original comparison claim.",
+    "writes": "No source/tests/catalog edits."
+  },
+  "states": {
+    "activeInitialRoster": "source skeleton present",
+    "fatalRoster": "initialFailure/fatal replaces only without retained data, retry",
+    "retainedRoster": "nonblocking warning, cards/compare/actions survive",
+    "initialPaused": "VL01, no paused/fetchStatus covering-test declaration",
+    "currentLive": "verified fields alone drive averages/current status/readiness/software; missing/failed/unverified are unknown, real offline/asleep legitimate and zero activity possible",
+    "retainedLive": "cards/preview retained lastknown original observed age; VL02 battery-overview exception",
+    "unknownZero": "knownNumber rejects absent/nonfinite. Verified0 battery/range/odometer/charger preserved; null uses dash/missing progressbar state, not0. Source tests declare those cases, not fresh pass.",
+    "service": "pending count null/no Fleet ready; bounded loaded/total/offset/limit coverage and confidence; retained counts independent retry",
+    "pins": "unknown distinct unpinned; error alert/read retry, pending status, retained warning/order",
+    "mutations": "existing hook toast covers delete errors; no missing-delete-error finding; no request executed"
+  },
+  "siSignsPreferencesLocalization": {
+    "distance": "raw meters at hooks/cache; convertDistanceFromSI/useUnits render only; existing mocked source tests includekm/mi withraw unchanged",
+    "power": "page documents VehicleState charger_power kW boundary; do not divide as watts or rename without integration authority. Backend truth not revalidated. Signed packpower not rendered; no fabricated SI correction.",
+    "signs": "No abs/sign inversion in inspected page; no signed-chart acceptance claimed. Measured covered0 activity retained; unknown null.",
+    "preferences": "useUnits/useNumberFormatting reactive preferences preserved; specialist numeric bypassVL05/raw enumVL03/defaultCancelVL04. No canonical catalog completeness/runtime translation pass."
+  },
+  "responsive": {
+    "source": "shared VehiclePanelGrid/CardGrid, min-w-0/wrapping,44px card/menu/pin/detail/preview declarations present; related preview linksmin-h-11 resolves old inventory gap. MaskedValue exceptionVL07 declaration-only.",
+    "native": "NOTRUN ten mission widths320/375/390/430/768/1024/1280/1440/1920/2560, narrow containers,light/dark/custom,RTL,200%text,large fleet,open overlays,low bandwidth/forcedcolors."
+  },
+  "accessibility": {
+    "source": "PageLayout actually wraps PageContainer. Labelled Section/listitem semantics, unknown-vs0 progressbar source, localized overflow aria-haspopup dialog/expanded,decorative icon hiding,pin uncertain alert/status,shared ConfirmDialog pending dismissal guard retained.",
+    "native": "keyboard/focus/restoration/screen reader/contrast/touch boxes/OS forcedcolors/reduced motion and overlay scroll NOTRUN; U03/U04 separate; VL07 not a measured WCAG failure."
+  },
+  "architecture": {
+    "reuse": "category barrels,typed hooks,shared data state/field trust,raw operational metrics,existing layout/grid/UI/motion retained",
+    "acceptableExceptions": [
+      "PageLayout wraps PageContainer: no missing-page-container violation",
+      "MetricBar API colorprops and computed virtualization styles not static-inline-style violations",
+      "Compare leftId/rightId frontend parameters not backend camelCase violation",
+      "Transient banners/icons not hidden data sections",
+      "Shared UI native buttons are expected building blocks",
+      "Single software-version text metric returns raw text before numeric formatter; rejected false candidate"
+    ],
+    "limits": "1978line legacy page source debt noted; no speculative decomposition/implementation campaign authorized."
+  },
+  "guidelineGrep": {
+    "scope": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+    "shellId": "1628",
+    "rawHtmlCorrectionShellId": "1638",
+    "candidateCounts": {
+      "static-inline-style": 0,
+      "raw-html-initial-case-insensitive": 2,
+      "raw-html-corrected-case-sensitive": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param-literals": 0,
+      "hidden-section-simple": 0,
+      "hardcoded-string-candidates": 12,
+      "PageLayout-wrapper-matches": 8,
+      "fetch-useeffect": 0
+    },
+    "limit": "Regex candidates not AST/whole-repo clean bill. Case-insensitive <Button> matchesfalse; corrected rawHTML0. Manual defaults/enum/specialist review adds confirmed mechanisms, no total0 claim."
+  },
+  "historicalEvidence": {
+    "acceptedQueueRow": 2049,
+    "receipt": "c96596e1 SOURCE ONLY. Latest ownVitest1 ZEROexecution externalcatalogstartup; historical ESLint/scan0 NOT rerun; no native/compiler/fullgate pass inherited.",
+    "phase": "Handoff phases0-5 closed by source/technical/scope decisions; Phase6 unfinished/Phase7 not started. This audit does not reopen completed objectives."
+  },
+  "filesRead": [
+    {
+      "path": "docs/orchestrator-loop.md",
+      "ranges": "1-EOF(entire)"
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "ranges": "1-605,2481-EOF"
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "ranges": "1-108,507-581,704-797,921-970,1119-1198,1370-1490"
+    },
+    {
+      "path": "docs/frontend-inventory.md",
+      "ranges": "290; exact page/shared needs searches"
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "ranges": "1-47,504-563,2219-2270"
+    },
+    {
+      "path": "migration-queue.md",
+      "ranges": "63,2049 and exact source/repair owner searches"
+    },
+    {
+      "path": "docs/frontend-worker-conventions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "ranges": "1-126,218-397; heading search"
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "ranges": "1-EOF; truncated565 continuation read"
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleListPage.tsx",
+      "ranges": "1-EOF(all continuation ranges)"
+    },
+    {
+      "path": "web/src/features/vehicles/pages/VehicleListPage.test.tsx",
+      "ranges": "1-EOF(all ranges);64literal declarations,hook/i18n mocks"
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "ranges": "67-85,300-351,695-725,915-1130,1270-1508;export/freshness locators"
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "ranges": "130-434"
+    },
+    {
+      "path": "web/src/api/hooks/useFleetOps.ts",
+      "ranges": "335-404"
+    },
+    {
+      "path": "web/src/api/hooks/usePinned.ts",
+      "ranges": "61-151"
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "ranges": "100-168"
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "ranges": "1-170"
+    },
+    {
+      "path": "web/src/types/fsm/vehicle.ts",
+      "ranges": "1-120"
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "ranges": "618-653;measurement search"
+    },
+    {
+      "path": "web/src/lib/resilience.ts",
+      "ranges": "search-only action/paused/toast/fleet locators,not full audit"
+    },
+    {
+      "path": "web/src/lib/metric-reference/formatMetric.ts",
+      "ranges": "1-135"
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "ranges": "1-194"
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/hooks/useDataState.ts",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/lib/operationalMetrics.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/components/ui/PinButton.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/components/ui/MaskedValue.tsx",
+      "ranges": "1-210"
+    },
+    {
+      "path": "web/src/components/ui/Button.tsx",
+      "ranges": "1-135"
+    },
+    {
+      "path": "web/src/components/ui/ConfirmDialog.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/components/data-display/EntityPreviewDrawer.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/components/vehicles/VirtualizedVehicleGrid.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/features/vehicles/components/modernization/VehiclePanelGrid.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "web/src/features/vehicles/components/operationalbrief-n-z/VehicleEvidenceBrief.tsx",
+      "ranges": "1-EOF"
+    },
+    {
+      "path": "docs/frontend-audits/phase6-qa-vehicles-utilization.json",
+      "ranges": "1-120(schema reference only,no inherited findings)"
+    }
+  ]
+}
