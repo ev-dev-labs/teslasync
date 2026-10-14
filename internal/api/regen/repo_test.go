@@ -2,6 +2,8 @@ package regen
 
 import (
 	"context"
+	"errors"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -132,14 +134,102 @@ func TestLifetimeEnergySQLPostgresBoundaries(t *testing.T) {
 				{"full history", nil, nil, 10},
 			} {
 				var regenWh, driveWh float64
+				var completed, eligible int64
 				if err := tx.QueryRow(ctx, lifetimeEnergySQL, int64(42), tc.start, tc.end).
-					Scan(&regenWh, &driveWh); err != nil {
+					Scan(&regenWh, &driveWh, &completed, &eligible); err != nil {
 					t.Fatal(err)
 				}
+
 				if regenWh != tc.want || driveWh != tc.want*10 {
 					t.Fatalf("%s: energy = %v/%v, want %v/%v", tc.name, regenWh, driveWh, tc.want, tc.want*10)
 				}
 			}
 		})
+	}
+}
+
+type energyTotalsRow struct {
+	regen, drive        *float64
+	completed, eligible int64
+	err                 error
+}
+
+func (r energyTotalsRow) Scan(dest ...interface{}) error {
+	if r.err != nil {
+		return r.err
+	}
+	*dest[0].(**float64) = r.regen
+	*dest[1].(**float64) = r.drive
+	*dest[2].(*int64) = r.completed
+	*dest[3].(*int64) = r.eligible
+	return nil
+}
+
+func TestScanLifetimeEnergyCoverage(t *testing.T) {
+	cases := []struct {
+		name string
+		row  energyTotalsRow
+		fail bool
+	}{
+		{"measured zero", energyTotalsRow{fptr(0), fptr(0), 1, 1, nil}, false},
+		{"signed fractional", energyTotalsRow{fptr(-0.25), fptr(-1.75), 2, 2, nil}, false},
+		{"positive fractional", energyTotalsRow{fptr(0.125), fptr(2.5), 1, 1, nil}, false},
+		{"no completed drives", energyTotalsRow{}, true},
+		{"missing numerator", energyTotalsRow{nil, fptr(10), 1, 0, nil}, true},
+		{"missing denominator", energyTotalsRow{fptr(10), nil, 1, 0, nil}, true},
+		{"partial coverage", energyTotalsRow{fptr(10), fptr(20), 3, 2, nil}, true},
+		{"disjoint coverage", energyTotalsRow{fptr(10), fptr(20), 2, 0, nil}, true},
+		{"invalid numerator", energyTotalsRow{fptr(math.NaN()), fptr(20), 1, 1, nil}, true},
+		{"invalid denominator", energyTotalsRow{fptr(10), fptr(math.Inf(1)), 1, 1, nil}, true},
+		{"no row", energyTotalsRow{err: pgx.ErrNoRows}, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			regen, drive, err := scanLifetimeEnergy(c.row)
+			if (err != nil) != c.fail {
+				t.Fatalf("error = %v, want failure %v", err, c.fail)
+			}
+			if !c.fail && (regen != *c.row.regen || drive != *c.row.drive) {
+				t.Fatalf("measurements changed: %v, %v", regen, drive)
+			}
+			if c.row.err != nil && !errors.Is(err, c.row.err) {
+				t.Fatalf("scan error not preserved: %v", err)
+			}
+		})
+	}
+}
+
+func TestFiniteMeasurement(t *testing.T) {
+	for _, value := range []*float64{nil, fptr(math.NaN()), fptr(math.Inf(1)), fptr(math.Inf(-1))} {
+		if finiteMeasurement(value) {
+			t.Fatalf("invalid measurement accepted: %v", value)
+		}
+	}
+	for _, value := range []float64{0, -0.125, 0.125} {
+		if !finiteMeasurement(&value) {
+			t.Fatalf("valid measurement rejected: %v", value)
+		}
+	}
+}
+
+func TestRegenSQLMeasurementPopulations(t *testing.T) {
+	for _, query := range []string{driveRegenSQL, monthlyRegenSQL} {
+		if !strings.Contains(query, "distance_m > $3") || strings.Contains(query, "ended_at IS NOT NULL") {
+			t.Fatal("detail population must include ongoing drives above the distance threshold")
+		}
+		if strings.Contains(query, "ELSE 0") || strings.Contains(query, "ABS(") || strings.Contains(query, "COALESCE(") {
+			t.Fatal("unknown or signed measurements must not be rewritten")
+		}
+		for _, required := range []string{"start_soc_pct BETWEEN 0 AND 100", "end_soc_pct BETWEEN 0 AND 100"} {
+			if !strings.Contains(query, required) {
+				t.Fatalf("missing efficiency eligibility: %s", required)
+			}
+		}
+	}
+	if !strings.Contains(lifetimeEnergySQL, "ended_at IS NOT NULL") || strings.Contains(lifetimeEnergySQL, "distance_m >") {
+		t.Fatal("energy population must include completed short drives")
+	}
+	if strings.Contains(lifetimeEnergySQL, "COALESCE(") || !strings.Contains(lifetimeEnergySQL, "COUNT(*) FILTER") {
+		t.Fatal("energy totals must retain unknown and check paired coverage")
 	}
 }
