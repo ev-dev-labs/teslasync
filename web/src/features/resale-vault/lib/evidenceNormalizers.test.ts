@@ -137,6 +137,35 @@ describe('normalizeMaintenance', () => {
     const evidence = normalizeMaintenance(items, records, 'day')!;
     expect(evidence.categories).toEqual(['tires']);
   });
+
+  it('excludes unreviewed free text without losing populated service facts', () => {
+    const privateRecord = { ...records[0]!, notes: 'Call owner at 555-0100; serviced at 123 Main St' };
+    expect(normalizeMaintenance(items, [privateRecord], 'day')).toMatchObject({
+      scheduled_item_count: 1,
+      service_record_count: 1,
+      categories: ['tires'],
+      service_records: [{ item_id: 'tire-rotation', date: '2023-06-15', odometer_m: 15500, notes: '' }],
+    });
+  });
+
+  it('requires consent and record-specific review, and uses reviewed text rather than raw notes', () => {
+    const record = { ...records[0]!, notes: 'Rotated tires at the owner home address' };
+    const reviewedNotes = new Map([[record, {
+      sourceNotes: record.notes, reviewedText: 'Rotated all four tires',
+    }]]);
+    expect(normalizeMaintenance(items, [record], 'day', { consent: false, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('');
+    expect(normalizeMaintenance(items, [record], 'day', { consent: true, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('Rotated all four tires');
+    expect(normalizeMaintenance(items, [{ ...record, notes: 'Updated private note' }], 'day', {
+      consent: true, reviewedNotes,
+    })?.service_records[0]?.notes).toBe('');
+    expect(normalizeMaintenance(items, [records[0]!], 'day', { consent: true, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('');
+    record.notes = 'Changed in place after review';
+    expect(normalizeMaintenance(items, [record], 'day', { consent: true, reviewedNotes })
+      ?.service_records[0]?.notes).toBe('');
+  });
 });
 
 describe('normalizeSoftwareUpdates', () => {
@@ -165,7 +194,7 @@ describe('normalizeWarranty', () => {
     expect(normalizeWarranty({ data: null, fetched_at: null }, 'day')).toBeNull();
   });
 
-  it('scrubs sensitive keys from the opaque warranty payload', () => {
+  it('projects a bounded warranty plan while excluding identity fields', () => {
     const evidence = normalizeWarranty(
       { data: { plan: 'Basic', vin: 'should-be-dropped', owner_email: 'x@example.com' }, fetched_at: '2024-01-01T00:00:00Z' },
       'day',
@@ -175,6 +204,25 @@ describe('normalizeWarranty', () => {
     expect(evidence.data?.plan).toBe('Basic');
     expect(evidence.fetched_at).toBe('2024-01-01');
   });
+
+  it('does not trust benign key names for free text or nested warranty content', () => {
+    const data = {
+      plan: 'Basic',
+      description: 'Owner Jane, 123 Main St',
+      notes: 'Token secret-value',
+      coverage: [{ label: 'Driver Jane', value: '555-0100' }],
+      status: 'Contact x@example.com',
+    };
+    expect(normalizeWarranty({ data, fetched_at: null }, 'day')?.data).toEqual({ plan: 'Basic' });
+    expect(data.description).toBe('Owner Jane, 123 Main St');
+  });
+
+  it.each(['Basic at 123 Main St', { notes: 'owner identity' }, ['Basic'], null, 1])(
+    'rejects an uncontracted warranty plan value (%s)',
+    (plan) => {
+      expect(normalizeWarranty({ data: { plan }, fetched_at: null }, 'day')?.data).toEqual({});
+    },
+  );
 });
 
 const drives: Drive[] = [

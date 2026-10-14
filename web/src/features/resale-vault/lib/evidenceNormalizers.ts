@@ -13,9 +13,9 @@
  *     to `useUnits()` in the UI layer.
  *   - Applies the selected date precision via `applyDatePrecision()` so no
  *     evidence timestamp bypasses the redaction selection.
- *   - Never reads/forwards any hard-excluded field (coordinates,
- *     addresses, raw trip paths, tokens, driver identity) — those fields
- *     are simply never read from the source objects here.
+ *   - Projects structured facts instead of forwarding opaque payloads.
+ *     Free-text service notes are excluded unless explicitly consented to
+ *     and reviewed; human review is not automated content sanitization.
  */
 import type { Vehicle } from '@/types/vehicle';
 import type { BatteryPassport } from '@/api/hooks/useBatteryPassport';
@@ -24,7 +24,7 @@ import type { Drive, DriveScore, DrivingStats } from '@/types/driving';
 import type { ChargingSession } from '@/types/charging';
 import type { GuardEvent } from '@/api/hooks/useGuard';
 import { asFiniteNumber } from '@/lib/typeGuards';
-import { applyDatePrecision, resolveVinDisclosure, scrubSensitiveRecord } from './redaction';
+import { applyDatePrecision, resolveVinDisclosure } from './redaction';
 import type {
   BatteryEvidence,
   ChargingHistoryEvidence,
@@ -39,6 +39,27 @@ import type { DatePrecision, VinDisclosure } from './types';
 
 const METERS_PER_KM = 1000;
 const WH_PER_KWH = 1000;
+
+/**
+ * Explicit disclosure approval for reviewed, shareable service-note text.
+ * Keys bind review to the exact source record, so a refreshed/changed record
+ * cannot inherit an earlier approval. Reviewers must remove hard-excluded
+ * content; consent alone does not make arbitrary text safe.
+ */
+interface ServiceNoteDisclosure {
+  consent: boolean;
+  reviewedNotes: ReadonlyMap<ServiceRecord, { sourceNotes: string; reviewedText: string }>;
+}
+
+function disclosedServiceNote(record: ServiceRecord, disclosure?: ServiceNoteDisclosure): string {
+  if (disclosure?.consent !== true) return '';
+  const review = disclosure.reviewedNotes.get(record);
+  return review && review.sourceNotes === record.notes ? review.reviewedText : '';
+}
+
+// Both field names AND values are constrained: a benign key is not proof
+// that an arbitrary string or nested payload is safe to disclose.
+const WARRANTY_PLANS = new Set(['Basic', 'Battery', 'Drive Unit', 'Extended']);
 
 /**
  * True for DC fast charging (Supercharger/CCS) session types, matching the
@@ -120,11 +141,12 @@ export function normalizeBattery(
   };
 }
 
-/** Maintenance schedule + service history. NOTE: both `/maintenance` and `/maintenance/records` are fleet-wide backend endpoints, not vehicle-scoped — surfaced as a report-level limitation by `reportBuilder.ts`, not silently treated as this-vehicle-only data here. */
+/** Maintenance schedule + service history. Notes require separate consent/review, not just section selection. Both source endpoints are fleet-wide; `reportBuilder.ts` surfaces that limitation. */
 export function normalizeMaintenance(
   items: MaintenanceItem[] | undefined,
   records: ServiceRecord[] | undefined,
   precision: DatePrecision,
+  noteDisclosure?: ServiceNoteDisclosure,
 ): MaintenanceEvidence | null {
   const hasItems = items != null && items.length > 0;
   const hasRecords = records != null && records.length > 0;
@@ -139,7 +161,7 @@ export function normalizeMaintenance(
       item_id: r.itemId,
       date: applyDatePrecision(r.date, precision) ?? r.date,
       odometer_m: r.odometerKm != null ? r.odometerKm * METERS_PER_KM : null,
-      notes: r.notes ?? '',
+      notes: disclosedServiceNote(r, noteDisclosure),
     })),
     categories,
   };
@@ -157,7 +179,11 @@ export function normalizeSoftwareUpdates(updates: SoftwareUpdate[] | undefined):
   };
 }
 
-/** Opaque, untyped Tesla warranty payload for the selected vehicle → scrubbed `WarrantyEvidence`. */
+/**
+ * Opaque warranty input -> an explicit bounded-value disclosure contract.
+ * Unknown fields, nested values and free text are excluded, not declared
+ * content-safe by key-name scrubbing. Extend only with verified safe contracts.
+ */
 export function normalizeWarranty(
   envelope: { data: Record<string, unknown> | null; fetched_at: string | null } | null | undefined,
   precision: DatePrecision,
@@ -165,7 +191,9 @@ export function normalizeWarranty(
   if (!envelope || !envelope.data) return null;
   return {
     fetched_at: applyDatePrecision(envelope.fetched_at, precision),
-    data: scrubSensitiveRecord(envelope.data) as Record<string, unknown>,
+    data: typeof envelope.data.plan === 'string' && WARRANTY_PLANS.has(envelope.data.plan)
+      ? { plan: envelope.data.plan }
+      : {},
   };
 }
 
