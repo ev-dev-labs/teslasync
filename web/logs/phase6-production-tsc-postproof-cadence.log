@@ -1,0 +1,16 @@
+
+=== phase6-production-tsc-postproof-cadence ===
+UTCstart=2026-10-14T06:08:18.5673224Z
+command=npx tsc --noEmit
+cwd=D:\repos\teslasync\web
+runner=installed Node v26.8.1; C:\Program Files\nodejs\node.exe
+scope=production only; test fixtures excluded; concurrent source writers; no immutable/global gate/native acceptance claim
+boundedCommandMax=15 minutes
+raw stdoutstderr BEGIN
+
+raw stdoutstderr END
+UTCend=2026-10-14T06:09:50.7891202Z
+numericexit=0
+commandReleaseUTC=2026-10-14T06:09:50.7901024Z
+logReleaseUTC=2026-10-14T06:09:50.7928312Z
+release=command complete; exclusive log write released; no source writes
