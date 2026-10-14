@@ -1,8 +1,14 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
 
-import { DataSourceNotice, resolveDataSourceStatus, type DataSourceDescriptor } from './DataSourceNotice';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import type { UnavailabilityEvidence } from '@/lib/dataUnavailability';
+import { DataSourceNotice, resolveDataSourceStatus, type DataSourceDescriptor, type DataSourceStatus } from './DataSourceNotice';
+
+vi.mock('@/hooks/useOnlineStatus', () => ({
+  useOnlineStatus: vi.fn(() => true),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -22,6 +28,10 @@ function source(
 }
 
 describe('DataSourceNotice', () => {
+  beforeEach(() => {
+    vi.mocked(useOnlineStatus).mockReturnValue(true);
+  });
+
   it.each([
     [{ isError: true }, 'failed'],
     [{ data: [], isError: true }, 'refreshFailed'],
@@ -32,7 +42,7 @@ describe('DataSourceNotice', () => {
     [{ data: null, isFetching: true }, 'refreshing'],
     [{ isPending: true, fetchStatus: 'fetching' }, 'loading'],
     [{}, 'pending'],
-  ] satisfies [DataSourceDescriptor['query'], string][])('preserves source distinctions for %j', (query, status) => {
+  ] satisfies [DataSourceDescriptor['query'], DataSourceStatus][])('preserves source distinctions for %j', (query, status) => {
     expect(resolveDataSourceStatus(source('test', 'Source', query))).toBe(status);
   });
 
@@ -50,7 +60,7 @@ describe('DataSourceNotice', () => {
     );
     expect(screen.getByTestId('notice')).toHaveAttribute('dir', 'rtl');
     expect(screen.getByText(label)).not.toHaveClass('truncate');
-    expect(screen.getByText('Paused offline')).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
     expect(screen.getByText('Ready')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: `Retry unavailable sources: ${label}` }));
     expect(pausedRefetch).toHaveBeenCalledTimes(1);
@@ -67,6 +77,138 @@ describe('DataSourceNotice', () => {
     ]} />);
     expect(screen.getByRole('status')).toHaveAttribute('data-data-state', 'stale');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['online-paused', { fetchStatus: 'paused' }, 'unavailable'],
+    ['cold-paused', { isPending: true, fetchStatus: 'paused' }, 'unavailable'],
+    ['initial-loading-paused', { isLoading: true, fetchStatus: 'paused' }, 'unavailable'],
+    ['refresh-paused', { data: [{ value: 12 }], fetchStatus: 'paused' }, 'stale'],
+    ['zero-refresh-paused', { data: 0, fetchStatus: 'paused' }, 'stale'],
+    ['empty-refresh-paused', { data: [], fetchStatus: 'paused' }, 'stale'],
+    ['null-refresh-paused', { data: null, fetchStatus: 'paused' }, 'stale'],
+  ] satisfies [string, DataSourceDescriptor['query'], 'unavailable' | 'stale'][])(
+    'keeps %s badge and body cause-neutral without offline evidence',
+    (_name, query, state) => {
+      render(<DataSourceNotice data-testid="paused-notice" sources={[
+        source('paused', 'Paused source', query),
+      ]} />);
+
+      const notice = screen.getByTestId('paused-notice');
+      expect(notice).toHaveAttribute('data-data-state', state);
+      expect(notice).not.toHaveAttribute('data-unavailable-reason');
+      expect(notice).toHaveAttribute('role', state === 'stale' ? 'status' : 'alert');
+      expect(notice).toHaveAttribute('aria-live', state === 'stale' ? 'polite' : 'assertive');
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      expect(notice).not.toHaveTextContent(/offline|network|connectivity/i);
+      expect(screen.getByText(state === 'stale'
+        ? 'Previously loaded data remains visible while affected sources recover.'
+        : 'No requested source has returned usable data yet.')).toBeInTheDocument();
+    },
+  );
+
+  it.each([
+    ['initial', undefined, 'unavailable'],
+    ['retained', 0, 'stale'],
+  ] as const)('preserves actual browser-offline indication for a %s pause', (_name, data, state) => {
+    vi.mocked(useOnlineStatus).mockReturnValue(false);
+    const refetch = vi.fn();
+    render(<DataSourceNotice sources={[
+      source('paused', 'Paused source', { data, fetchStatus: 'paused', refetch }),
+    ]} />);
+
+    expect(screen.getByText('Paused offline')).toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.getByRole(state === 'stale' ? 'status' : 'alert'))
+      .toHaveAttribute('data-data-state', state);
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Paused source' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [{ online: false }, 'Paused offline', undefined],
+    [{ online: true }, 'Refresh paused', undefined],
+    [{ vehicleState: 'offline' }, 'Paused offline', 'vehicle_offline'],
+    [{ vehicleState: 'asleep' }, 'Refresh paused', 'vehicle_asleep'],
+  ] satisfies [UnavailabilityEvidence, string, string | undefined][])(
+    'uses independent caller evidence %j without inferring offline from pause',
+    (evidence, label, reason) => {
+      render(<DataSourceNotice evidence={evidence} sources={[
+        source('paused', 'Retained source', { data: 0, fetchStatus: 'paused' }),
+      ]} />);
+
+      const notice = screen.getByRole('status');
+      expect(notice).toHaveAttribute('data-data-state', 'stale');
+      expect(screen.getByText(label)).toBeInTheDocument();
+      if (reason) {
+        expect(notice).toHaveAttribute('data-unavailable-reason', reason);
+      } else {
+        expect(notice).not.toHaveAttribute('data-unavailable-reason');
+      }
+      if (reason === 'vehicle_offline') {
+        expect(notice).toHaveTextContent('The vehicle is not reachable');
+      }
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    },
+  );
+
+  it('respects explicit online evidence over browser-offline state', () => {
+    vi.mocked(useOnlineStatus).mockReturnValue(false);
+    render(<DataSourceNotice evidence={{ online: true }} sources={[
+      source('paused', 'Retained source', { data: 0, fetchStatus: 'paused' }),
+    ]} />);
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Paused offline')).not.toBeInTheDocument();
+  });
+
+  it('retains the payload, snapshot, public copy and retry across pause recovery', () => {
+    const payload = Object.freeze({ value: 0, observedAt: '2026-10-14T03:20:00Z' });
+    const refetch = vi.fn();
+    const query = Object.freeze({ data: payload, fetchStatus: 'paused' as const, refetch });
+    const sources = [source('paused', 'Retained source', query)];
+    const { rerender, container } = render(
+      <DataSourceNotice
+        sources={sources}
+        title="Custom title"
+        message="Retained snapshot is still visible"
+        retryLabel="Try again"
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent('Custom title');
+    expect(screen.getByText('Retained snapshot is still visible')).toBeInTheDocument();
+    expect(query.data).toBe(payload);
+    expect(query.data.value).toBe(0);
+    expect(query.data.observedAt).toBe('2026-10-14T03:20:00Z');
+    fireEvent.click(screen.getByRole('button', { name: 'Try again: Retained source' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    rerender(<DataSourceNotice sources={[
+      source('paused', 'Retained source', { ...query, fetchStatus: 'idle' }),
+    ]} />);
+    expect(container).toBeEmptyDOMElement();
+    expect(query.data).toBe(payload);
+  });
+
+  it.each([
+    [undefined, 'unavailable', 'alert'],
+    [0, 'stale', 'status'],
+  ] as const)('keeps service failures separate from pause with retained data %j', (data, state, role) => {
+    render(<DataSourceNotice sources={[
+      source('failed', 'Failed source', {
+        data,
+        isError: true,
+        error: { name: 'ApiError', status: 503, message: 'Unavailable' },
+      }),
+      source('paused', 'Paused source', { data, fetchStatus: 'paused' }),
+    ]} />);
+
+    const notice = screen.getByRole(role);
+    expect(notice).toHaveAttribute('data-data-state', state);
+    expect(notice).toHaveAttribute('data-unavailable-reason', 'service_outage');
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('Paused offline')).not.toBeInTheDocument();
   });
 
   it('stays hidden when every enabled source is ready', () => {
@@ -174,7 +316,7 @@ describe('DataSourceNotice', () => {
     );
 
     expect(screen.getByRole('alert')).toHaveTextContent('Service unavailable');
-    expect(screen.getByText('Paused offline')).toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
   });
 
   it('retries only unavailable sources and omits disabled prerequisites', () => {

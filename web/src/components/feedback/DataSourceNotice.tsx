@@ -6,7 +6,7 @@ import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import { Text } from '../ui/Typography';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
-import type { UnavailabilityEvidence } from '@/lib/dataUnavailability';
+import { classifyUnavailability, type UnavailabilityEvidence } from '@/lib/dataUnavailability';
 import { DataStateNotice, type DataStateKind } from './DataStateNotice';
 
 export type DataSourceStatus =
@@ -141,6 +141,29 @@ export function DataSourceNotice({
 
   if (state == null) return null;
 
+  /**
+   * Evidence for the HELP-04 classifier.
+   *
+   * The first failing source's error is the honest representative: when a
+   * page's queries fail together they almost always fail for the same reason
+   * (one 403, one outage), and picking the first keeps the result
+   * deterministic. Caller-supplied evidence wins on every field it sets —
+   * a page knows things a query result cannot express, such as whether the
+   * vehicle is asleep.
+   */
+  const firstFailure = resolved.find(
+    ({ status, query }) =>
+      (status === 'failed' || status === 'refreshFailed') && query.error != null,
+  );
+  const derivedEvidence: UnavailabilityEvidence = {
+    error: firstFailure?.query.error,
+    online,
+    ...evidence,
+  };
+  // A query-policy pause alone does not establish a connectivity failure.
+  const offline = derivedEvidence.online === false
+    || classifyUnavailability(derivedEvidence) === 'vehicle_offline';
+
   const statusConfig: Record<
     DataSourceStatus,
     {
@@ -161,7 +184,9 @@ export function DataSourceNotice({
       variant: 'info',
     },
     paused: {
-      label: t('dataSources.status.paused', 'Paused offline'),
+      label: offline
+        ? t('dataSources.status.pausedOffline', 'Paused offline')
+        : t('dataSources.status.paused', 'Refresh paused'),
       variant: 'neutral',
     },
     failed: {
@@ -199,26 +224,6 @@ export function DataSourceNotice({
     retryable.forEach(({ query }) => {
       void query.refetch?.();
     });
-  };
-
-  /**
-   * Evidence for the HELP-04 classifier.
-   *
-   * The first failing source's error is the honest representative: when a
-   * page's queries fail together they almost always fail for the same reason
-   * (one 403, one outage), and picking the first keeps the result
-   * deterministic. Caller-supplied evidence wins on every field it sets —
-   * a page knows things a query result cannot express, such as whether the
-   * vehicle is asleep.
-   */
-  const firstFailure = resolved.find(
-    ({ status, query }) =>
-      (status === 'failed' || status === 'refreshFailed') && query.error != null,
-  );
-  const derivedEvidence: UnavailabilityEvidence = {
-    error: firstFailure?.query.error,
-    online,
-    ...evidence,
   };
 
   return (
