@@ -140,9 +140,11 @@ export function toDateInput(value: string | null | undefined): string {
   return parsed.toISOString().slice(0, 10);
 }
 
-/** Turn a `yyyy-mm-dd` form value into an RFC-3339 instant at UTC midnight. */
+/** Turn a valid `yyyy-mm-dd` value into UTC midnight; leave invalid input empty for validation. */
 export function fromDateInput(value: string): string {
-  if (!value) return new Date().toISOString();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return '';
   const parsed = new Date(`${value}T00:00:00.000Z`);
-  return Number.isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
+  if (Number.isNaN(parsed.getTime())) return '';
+  const instant = parsed.toISOString();
+  return instant.slice(0, 10) === value ? instant : '';
 }
