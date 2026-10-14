@@ -1,10 +1,12 @@
 import { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDrives } from '@/api/hooks/useDriving';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useAlertHistory } from '@/api/hooks/useNotifications';
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useSettings } from '@/hooks/useSettings';
 import { formatDateShort } from '@/lib/dateFormat';
 import { safeNumber } from '@/lib/numberFormat';
 import { browserTimezone } from '@/lib/timezone';
@@ -94,6 +96,8 @@ function chargingPowerW(session: ChargingSession): number | null {
 }
 
 export function useWeeklyDigest() {
+  const { t } = useTranslation();
+  const { locale: dateLocale } = useSettings();
   const { fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
   const [weekOffset, setWeekOffset] = useState(0);
 
@@ -101,8 +105,8 @@ export function useWeeklyDigest() {
   const [prevStart, prevEnd] = useMemo(() => getWeekRange(weekOffset - 1), [weekOffset]);
 
   const weekLabel = useMemo(
-    () => `${formatDateShort(weekStart)} – ${formatDateShort(weekEnd)}`,
-    [weekStart, weekEnd],
+    () => `${formatDateShort(weekStart, { locale: dateLocale })} – ${formatDateShort(weekEnd, { locale: dateLocale })}`,
+    [weekStart, weekEnd, dateLocale],
   );
 
   const isCurrentWeek = weekOffset === 0;
@@ -370,35 +374,52 @@ export function useWeeklyDigest() {
   }, [weekDrives, prevWeekDrives, weekCharging, prevWeekCharging, weekAlerts, drives, chargingSessions, displayPrecision, displayLocale]);
 
   /* ── Daily distance chart data ── */
+  const dayLabels = useMemo(() => [
+    t('analytics.weeklyDigest.weekdays.mon', 'Mon'),
+    t('analytics.weeklyDigest.weekdays.tue', 'Tue'),
+    t('analytics.weeklyDigest.weekdays.wed', 'Wed'),
+    t('analytics.weeklyDigest.weekdays.thu', 'Thu'),
+    t('analytics.weeklyDigest.weekdays.fri', 'Fri'),
+    t('analytics.weeklyDigest.weekdays.sat', 'Sat'),
+    t('analytics.weeklyDigest.weekdays.sun', 'Sun'),
+  ], [t]);
+
   const dailyDistanceData: DailyDistanceEntry[] = useMemo(() => {
-    const bins = DAY_LABELS.map((label) => ({ day: label, distanceM: 0 }));
+    const bins = DAY_LABELS.map((_, index) => ({ day: dayLabels[index], distanceM: 0 }));
     for (const drive of weekDrives) {
       const idx = dayOfWeekIndex(drive.startTs);
       if (idx < 0) continue;
       bins[idx].distanceM += safeNumber(drive.distanceM);
     }
     return bins;
-  }, [weekDrives, displayPrecision, displayLocale]);
+  }, [weekDrives, dayLabels]);
 
   /* ── Daily energy added chart data ── */
   const dailyEnergyData: DailyEnergyEntry[] = useMemo(() => {
-    const bins = DAY_LABELS.map((label) => ({ day: label, energyWh: 0 }));
+    const bins = DAY_LABELS.map((_, index) => ({ day: dayLabels[index], energyWh: 0 }));
     for (const session of weekCharging) {
       const idx = dayOfWeekIndex(session.started_at);
       if (idx < 0) continue;
       bins[idx].energyWh += safeNumber(session.total_energy_added_wh);
     }
     return bins;
-  }, [weekCharging, displayPrecision, displayLocale]);
+  }, [weekCharging, dayLabels]);
 
   /* ── Alert pie data ── */
   const alertPieData: AlertPieEntry[] = useMemo(() => {
+    const severityLabels: Record<string, string> = {
+      info: t('analytics.weeklyDigest.severities.info', 'Info'),
+      warning: t('analytics.weeklyDigest.severities.warning', 'Warning'),
+      critical: t('analytics.weeklyDigest.severities.critical', 'Critical'),
+    };
     return Object.entries(metrics.alertsByType).map(([severity, count]) => ({
-      name: severity.charAt(0).toUpperCase() + severity.slice(1),
+      name: Object.prototype.hasOwnProperty.call(severityLabels, severity)
+        ? severityLabels[severity]
+        : severity.charAt(0).toUpperCase() + severity.slice(1),
       value: count,
       color: ALERT_SEVERITY_COLORS[severity] ?? CHART_COLORS[4],
     }));
-  }, [metrics.alertsByType]);
+  }, [metrics.alertsByType, t]);
 
   /* ── Fun fact ── */
   const funFact: FunFact | undefined = useMemo(() => {

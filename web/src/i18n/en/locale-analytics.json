@@ -178,6 +178,20 @@
     },
     "weeklyDigest": {
       "alertsSection": "Alerts",
+      "weekdays": {
+        "mon": "Mon",
+        "tue": "Tue",
+        "wed": "Wed",
+        "thu": "Thu",
+        "fri": "Fri",
+        "sat": "Sat",
+        "sun": "Sun"
+      },
+      "severities": {
+        "info": "Info",
+        "warning": "Warning",
+        "critical": "Critical"
+      },
       "modernization": {
         "periodProvenance": "Selected week; based on available history records.",
         "comparisonPeriod": "Compared with previous week"

@@ -68,7 +68,9 @@ export function DrivingSection({
           })}
         </Caption>
         <EmbeddedChart
-          title={t('analytics.weeklyDigest.dailyDistance', 'Daily distance')}
+          title={t('analytics.weeklyDigest.dailyDistance', 'Daily distance ({{unit}})', {
+            unit: unitPrefs.distance,
+          })}
           ariaLabel={t(
               'analytics.weeklyDigest.dailyDistanceChartLabel',
               'Bar chart of daily driving distance in {{unit}}',

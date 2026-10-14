@@ -67,7 +67,9 @@ export function ChargingSection({
           })}
         </Caption>
         <EmbeddedChart
-          title={t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily energy added')}
+          title={t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily energy added ({{unit}})', {
+            unit: unitPrefs.energy,
+          })}
           ariaLabel={t(
             'analytics.weeklyDigest.dailyEnergyChartLabel',
             'Bar chart of daily charging energy in {{unit}}',
