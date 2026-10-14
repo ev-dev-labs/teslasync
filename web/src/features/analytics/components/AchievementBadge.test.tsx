@@ -2,11 +2,11 @@
  * AchievementBadge — behaviour + hardening contract.
  *
  * The badge renders one lifetime achievement in two mutually-exclusive states:
- *   - unlocked → a bright gold tile, the emoji at full opacity, no progress ring,
+ *   - unlocked → a semantic success tile, the emoji at full opacity, no progress ring,
  *     and the localized "✓ Unlocked" caption (never a "%" figure);
  *   - locked   → a muted tile with a <ProgressRing> behind a dimmed/grayscaled
- *     emoji and a "{pct}%" caption. When progress ≥ 0.8 the tile pulses and the
- *     ring switches from grey (#6b7280) to amber (#eab308).
+ *     emoji and a "{pct}%" caption. When progress ≥ 0.8 the tile and ring use
+ *     static semantic warning emphasis, without decorative looping.
  *
  * These tests also pin the null-safety hardening this file added. Achievements
  * come from a partial `stats?.achievements` payload, so the API's non-null
@@ -56,7 +56,7 @@ function makeAchievement(overrides: Partial<AchievementData> = {}): AchievementD
 
 describe('AchievementBadge', () => {
   describe('unlocked state', () => {
-    it('shows the gold tile, the "✓ Unlocked" caption, and no ring or percentage', () => {
+    it('shows the success tile, the "✓ Unlocked" caption, and no ring or percentage', () => {
       const { container } = render(
         <AchievementBadge
           achievement={makeAchievement({
@@ -77,8 +77,8 @@ describe('AchievementBadge', () => {
       expect(container.querySelector('svg')).toBeNull();
       expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
 
-      // Gold tile + full-opacity, non-grayscaled emoji labelled by its name.
-      expect(container.firstChild).toHaveClass('bg-yellow-500/[0.08]');
+      // Success tile + full-opacity, non-grayscaled emoji labelled by its name.
+      expect(container.firstChild).toHaveClass('bg-[var(--semantic-success-bg)]');
       const icon = screen.getByRole('img', { name: 'Century' });
       expect(icon).toHaveTextContent('💯');
       expect(icon).not.toHaveClass('grayscale');
@@ -103,7 +103,7 @@ describe('AchievementBadge', () => {
       expect(screen.queryByText('✓ Unlocked')).not.toBeInTheDocument();
 
       // Muted tile + grayscaled, half-opacity emoji.
-      expect(container.firstChild).toHaveClass('bg-white/[0.03]');
+      expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]');
       const icon = screen.getByRole('img', { name: 'Road Warrior' });
       expect(icon).toHaveClass('grayscale');
       expect(icon).toHaveClass('opacity-50');
@@ -115,24 +115,47 @@ describe('AchievementBadge', () => {
       expect(screen.getByText('86%')).toBeInTheDocument();
     });
 
-    it('pulses and paints the ring amber when near completion (progress ≥ 0.8)', () => {
+    it.each([0.8, 0.9, 1])('uses static warning emphasis at progress %s without claiming it is unlocked', (progress) => {
       const { container } = render(
-        <AchievementBadge achievement={makeAchievement({ progress: 0.9 })} />,
+        <AchievementBadge achievement={makeAchievement({ progress })} />,
       );
 
-      expect(container.firstChild).toHaveClass('animate-pulse');
-      expect(container.querySelector('circle[stroke="#eab308"]')).not.toBeNull();
-      expect(screen.getByText('90%')).toBeInTheDocument();
+      expect(container.firstChild).toHaveClass(
+        'bg-[var(--semantic-warning-bg)]', 'border-[var(--semantic-warning-border)]',
+      );
+      expect(container.firstChild).not.toHaveClass('animate-pulse');
+      expect(container.querySelector('circle[stroke="var(--semantic-warning)"]')).not.toBeNull();
+      expect(screen.getByText(`${Math.round(progress * 100)}%`)).toBeInTheDocument();
+      expect(screen.queryByText('✓ Unlocked')).not.toBeInTheDocument();
     });
 
-    it('keeps the grey ring and no pulse for mid progress', () => {
+    it.each([0.4, 0.799])('keeps the neutral ring and no pulse below the near-complete threshold at %s', (progress) => {
       const { container } = render(
-        <AchievementBadge achievement={makeAchievement({ progress: 0.4 })} />,
+        <AchievementBadge achievement={makeAchievement({ progress })} />,
       );
 
       expect(container.firstChild).not.toHaveClass('animate-pulse');
-      expect(container.querySelector('circle[stroke="#6b7280"]')).not.toBeNull();
-      expect(container.querySelector('circle[stroke="#eab308"]')).toBeNull();
+      expect(container.firstChild).toHaveClass('bg-[var(--surface-2)]');
+      expect(container.querySelector('circle[stroke="var(--text-secondary)"]')).not.toBeNull();
+      expect(container.querySelector('circle[stroke="var(--semantic-warning)"]')).toBeNull();
+    });
+
+    it('replaces near-complete emphasis with success when the achievement unlocks', () => {
+      const { container, rerender } = render(
+        <AchievementBadge achievement={makeAchievement({ progress: 0.9 })} />,
+      );
+
+      rerender(
+        <AchievementBadge achievement={makeAchievement({ progress: 1, unlocked: true })} />,
+      );
+
+      expect(container.firstChild).toHaveClass(
+        'bg-[var(--semantic-success-bg)]', 'border-[var(--semantic-success-border)]',
+      );
+      expect(container.firstChild).not.toHaveClass('bg-[var(--semantic-warning-bg)]', 'animate-pulse');
+      expect(screen.getByText('✓ Unlocked')).toBeInTheDocument();
+      expect(screen.queryByText(/%$/)).not.toBeInTheDocument();
+      expect(container.querySelector('svg')).toBeNull();
     });
   });
 
@@ -145,7 +168,7 @@ describe('AchievementBadge', () => {
       expect(screen.getByText('0%')).toBeInTheDocument();
       expect(container.textContent).not.toContain('NaN');
       // The ring's dash offset must be a real number, never "NaN".
-      const progressCircle = container.querySelector('circle[stroke="#6b7280"]');
+      const progressCircle = container.querySelector('circle[stroke="var(--text-secondary)"]');
       expect(progressCircle?.getAttribute('stroke-dashoffset')).not.toContain('NaN');
     });
 

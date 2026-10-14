@@ -1,7 +1,7 @@
 import { cn } from '@/lib/cn';
 import { ProgressRing } from '@/components/data-display/runtime';
 import { Text } from '@/components/ui/runtime';
-import { type TypographySize } from '@/lib/tokens';
+import { gaugeTone, neonColorMap, semanticToNeon, type TypographySize } from '@/lib/tokens';
 import { useTranslation } from 'react-i18next';
 
 export interface AchievementData {
@@ -41,6 +41,8 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
   const progress = achievement.progress ?? 0;
   const pct = Math.min(100, Math.max(0, Math.round(progress * 100)));
   const isNearComplete = !achievement.unlocked && progress >= 0.8;
+  const tone = achievement.unlocked ? 'success' : isNearComplete ? 'warning' : 'neutral';
+  const colors = neonColorMap[semanticToNeon[tone]];
 
   const displayName = achievement.name || '—';
   const iconGlyph = achievement.icon || '🏆';
@@ -50,12 +52,10 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
   return (
     <div
       className={cn(
-        'relative flex flex-col items-center rounded-xl p-3 transition-all duration-normal',
+        'relative flex flex-col items-center rounded-xl border p-3',
         cfg.gap,
-        achievement.unlocked
-          ? 'bg-yellow-500/[0.08] border border-yellow-500/30'
-          : 'bg-white/[0.03] border border-white/[0.06]',
-        isNearComplete && 'animate-pulse',
+        colors.bg,
+        colors.border,
       )}
     >
       {/* Badge circle */}
@@ -66,7 +66,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
             max={100}
             size={cfg.ring}
             strokeWidth={cfg.stroke}
-            color={isNearComplete ? '#eab308' : '#6b7280'}
+            color={gaugeTone[tone]}
           />
         )}
         <span
@@ -89,7 +89,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
         weight="semibold"
         className={cn(
           'text-center leading-tight',
-          achievement.unlocked ? 'text-yellow-400' : 'text-[var(--text-secondary)]',
+          achievement.unlocked ? colors.text : 'text-[var(--text-secondary)]',
         )}
       >
         {displayName}
@@ -102,7 +102,7 @@ export function AchievementBadge({ achievement, size = 'md' }: AchievementBadgeP
 
       {/* Progress or unlocked status */}
       {achievement.unlocked ? (
-        <Text as="span" size="xs" weight="medium" className="text-yellow-500/70">
+        <Text as="span" size="xs" weight="medium" className={colors.text}>
           {t('lifetime.unlocked', '✓ Unlocked')}
         </Text>
       ) : (
