@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { MetricBar } from '@/components/data-display';
 import type { NormalizationSummary } from '@/types/admin-operator-confidence';
@@ -48,6 +48,7 @@ describe('NormalizationVersionPanel semantic attestation contract', () => {
     barProps.mockClear();
   });
   afterEach(() => {
+    cleanup();
     setGlobalLocale(previousPreferences.locale);
     setGlobalPrecision(previousPreferences.precision);
   });
@@ -97,6 +98,37 @@ describe('NormalizationVersionPanel semantic attestation contract', () => {
   });
 
   it.each([
+    { requiredVersion: 0, status: 'Attested', color: 'var(--semantic-success)' },
+    { requiredVersion: 2, status: 'Unattested', color: 'var(--semantic-warning)' },
+  ])('keeps explicit v0 distinct from missing evidence at required version $requiredVersion', ({ requiredVersion, status, color }) => {
+    const normalization: NormalizationSummary = {
+      ...summary,
+      required_version: requiredVersion,
+      versions: [
+        { version: 0, sample_count: 0, share_pct: 0 },
+        { version: null, sample_count: 1200, share_pct: null },
+      ],
+    };
+    renderPanel({ normalization });
+    const rows = screen.getAllByRole('listitem');
+    const missing = within(rows[0]);
+    expect(missing.getByText('Legacy / unknown')).toBeInTheDocument();
+    expect(missing.getByText('Unattested')).toHaveClass('text-[var(--semantic-warning)]');
+    expect(missing.getByText('Share unknown')).toBeInTheDocument();
+    expect(missing.getByRole('progressbar', { name: 'Legacy / unknown' })).not.toHaveAttribute('aria-valuenow');
+    const zero = within(rows[1]);
+    expect(zero.getByText('v0')).toBeInTheDocument();
+    expect(zero.getByText(status)).toHaveClass(`text-[${color}]`);
+    expect(zero.getByText('0 rows')).toBeInTheDocument();
+    expect(zero.getByText('0.00% of window')).toBeInTheDocument();
+    expect(zero.getByRole('progressbar', { name: 'v0' })).toHaveAttribute('aria-valuenow', '0');
+    expect(barProps).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      value: 0, label: 'v0', fill: 'solid', color,
+    }));
+    expect(normalization.versions.map((bucket) => bucket.version)).toEqual([0, null]);
+  });
+
+  it.each([
     { name: 'null', value: null },
     { name: 'NaN', value: Number.NaN },
     { name: 'positive infinity', value: Number.POSITIVE_INFINITY },
@@ -117,18 +149,52 @@ describe('NormalizationVersionPanel semantic attestation contract', () => {
   });
 
   it('retains saved locale and precision for shares and integer counters', () => {
-    setGlobalLocale('de-DE');
-    setGlobalPrecision(1);
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(1);
+    });
     renderPanel({ normalization: { ...summary, versions: [{ version: 2, sample_count: 1200, share_pct: 12.25 }] } });
     expect(screen.getByText('1.200 rows')).toBeInTheDocument();
     expect(screen.getByText('12,3% of window')).toBeInTheDocument();
     expect(screen.getByRole('progressbar', { name: 'v2' })).toHaveAttribute('aria-valuenow', '12.25');
   });
 
+  it('keeps an omitted runtime share unknown while preserving attestation and count', () => {
+    const bucket = { ...summary.versions[0] };
+    Object.defineProperty(bucket, 'share_pct', { value: undefined });
+    renderPanel({ normalization: { ...summary, versions: [bucket] } });
+    const bar = screen.getByRole('progressbar', { name: 'v3' });
+    expect(bar).not.toHaveAttribute('aria-valuenow');
+    expect(bar).toHaveAttribute('aria-valuetext', 'No reading');
+    expect(bar.querySelector('[data-metric-fill]')).toBeNull();
+    expect(screen.getByText('Share unknown')).toBeInTheDocument();
+    expect(screen.getByText('1,050 rows')).toBeInTheDocument();
+    expect(screen.getByText('Attested')).toBeInTheDocument();
+    expect(barProps).toHaveBeenCalledWith(expect.objectContaining({
+      value: undefined, fill: 'solid', color: 'var(--semantic-success)',
+    }));
+  });
+
+  it.each([
+    { name: 'null', value: null },
+    { name: 'omitted', value: undefined },
+  ])('keeps the empty shell and retry for $name runtime buckets', ({ value }) => {
+    const normalization = { ...summary };
+    Object.defineProperty(normalization, 'versions', { value });
+    const onRetry = vi.fn();
+    renderPanel({ normalization, onRetry });
+    expect(screen.getByRole('heading', { name: 'Normalization version distribution' })).toBeInTheDocument();
+    expect(screen.getByText('No version evidence')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    expect(barProps).not.toHaveBeenCalled();
+  });
+
   it('keeps the section shell and loading branch without fabricating buckets', () => {
     const { container } = renderPanel({ normalization: undefined, loading: true });
     expect(screen.getByRole('heading', { name: 'Normalization version distribution' })).toBeInTheDocument();
-    expect(screen.getByText('Row counts per normalization contract version over the scoring window.')).toBeInTheDocument();
+    expect(container.querySelector('[data-card-desc="true"]')).toHaveTextContent('Row counts per normalization contract version over the scoring window.');
     expect(container.querySelector('div[aria-hidden="true"]')).toHaveStyle({ height: '180px' });
     expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
     expect(screen.queryByText('No version evidence')).not.toBeInTheDocument();
