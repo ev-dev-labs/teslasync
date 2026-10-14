@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { DiskForecastSummary } from './DiskForecastSummary';
-import { getFormatterPreferences, setGlobalPrecision, setGlobalLocale, fmtNumber } from '@/lib/numberFormat';
+import { getFormatterPreferences, setGlobalPrecision, setGlobalLocale } from '@/lib/numberFormat';
 import type { HypertableSize } from '@/types/admin-operator-confidence';
 
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
@@ -29,7 +29,6 @@ const props = {
   totals: { total: 4.5 * GB, uncompressed: 3 * GB, compressed: 1.5 * GB, growth: 150 * MB },
   count: 3, largest, soonest: largest, known: true, loading: false, retained: false,
   error: null, onRetry: vi.fn(),
-  pctOf: (part: number, whole: number) => whole > 0 ? `${fmtNumber(part / whole * 100)}%` : '—',
 };
 const values = () => [...screen.getByTestId('disk-forecast-summary').querySelectorAll('[data-operational-value]')]
   .map(node => node.textContent);
@@ -43,7 +42,10 @@ describe('DiskForecastSummary canonical preservation', () => {
     const strip = screen.getByTestId('disk-forecast-summary');
     expect(strip.querySelectorAll('[data-operational-metric]')).toHaveLength(6);
     expect(strip.querySelector('[data-operational-metric="soonest-quota"]')).toHaveAttribute('data-value-state', 'value');
-    expect(strip).toHaveTextContent('66.67% of total');
+    expect(strip).toHaveTextContent('Compressed chunks only; not a share of current disk usage.');
+    expect(strip).toHaveTextContent('Before compression');
+    expect(strip).toHaveTextContent('After compression');
+    expect(strip).not.toHaveTextContent('% of total');
     expect(screen.getAllByText(largest.hypertable_name)).toHaveLength(2);
     act(() => { setGlobalPrecision(3); setGlobalLocale('de-DE'); });
     expect(values()).toEqual(['4,500 GB', '3,000 GB', '1,500 GB', '150,000 MB/d', '3,000 GB', '5,000 d']);
@@ -96,6 +98,28 @@ describe('DiskForecastSummary canonical preservation', () => {
     expect(within(drawer).getByText('150.00 MB/d')).toBeInTheDocument();
     expect(within(drawer).getByText('5.00 d')).toBeInTheDocument();
     expect(within(drawer).getAllByText(largest.hypertable_name)).toHaveLength(2);
-    expect(within(drawer).getByText('66.67% of total')).toBeInTheDocument();
+    expect(within(drawer).getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2);
+    expect(within(drawer).getByText('Before compression')).toBeInTheDocument();
+    expect(within(drawer).getByText('After compression')).toBeInTheDocument();
+    expect(within(drawer).queryByText(/% of total/)).not.toBeInTheDocument();
+  });
+
+  it('does not equate a missing estimate with an absent quota', () => {
+    render(<DiskForecastSummary {...props} soonest={null} />);
+    expect(screen.getByText('No quota estimate available')).toBeInTheDocument();
+    expect(screen.queryByText('No quota configured')).not.toBeInTheDocument();
+    expect(values()).toEqual(['4.50 GB', '3.00 GB', '1.50 GB', '150.00 MB/d', '3.00 GB', '—']);
+    expect(screen.getByTestId('disk-forecast-summary').querySelector('[data-operational-metric="soonest-quota"]'))
+      .toHaveAttribute('data-value-state', 'missing');
+  });
+
+  it('keeps producer before/after measurements independent of the current total', () => {
+    setGlobalPrecision(2);
+    setGlobalLocale('en-US');
+    render(<DiskForecastSummary {...props}
+      totals={{ total: 10 * MB, uncompressed: 100 * MB, compressed: 10 * MB, growth: 0 }} />);
+    expect(values().slice(0, 4)).toEqual(['10.00 MB', '100.00 MB', '10.00 MB', '0 B/d']);
+    expect(screen.getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2);
+    expect(screen.queryByText(/% of total/)).not.toBeInTheDocument();
   });
 });

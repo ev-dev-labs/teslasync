@@ -1,12 +1,12 @@
 /**
  * Disk Forecast page.
  *
- * Per-hypertable disk usage with compressed/uncompressed split, growth
- * rate (bytes/day), and an estimate of days-to-quota when the deployment
- * configured `HYPERTABLE_QUOTA_BYTES`. Severity comes straight from the
- * backend so threshold tuning is a single Go ship.
+ * Current per-hypertable disk usage, before/after compression sizes,
+ * growth rate (bytes/day), and any source-supplied days-to-quota estimate.
+ * Compression sizes describe compressed chunks, not additive current usage.
+ * Severity comes straight from the backend.
  *
- * Modern-UI full-width bento: a KPI band, a storage-composition chart +
+ * Modern-UI full-width bento: a KPI band, a compression-comparison chart +
  * severity donut, a growth/quota outlook row, and a full-width detail
  * table. Every data section owns its loading / empty / error state.
  *
@@ -45,7 +45,6 @@ import type {
   HypertableSize,
 } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { fmtNumber } from '@/lib/numberFormat';
 import { deriveDataState } from '@/api/dataState';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { DiskForecastSummary } from '../components/statstrip-performance-storage/DiskForecastSummary';
@@ -72,11 +71,6 @@ const SEVERITY_DOT: Record<DiskForecastSeverity, string> = {
 
 const SEVERITY_ORDER: DiskForecastSeverity[] = ['critical', 'warn', 'ok', 'unknown'];
 
-/** Percentage of `part` within `whole`, or an em-dash when `whole` is zero. */
-function pctOf(part: number, whole: number): string {
-  return whole > 0 ? `${fmtNumber(((part / whole) * 100))}%` : '—';
-}
-
 /** Clip long hypertable names so axis ticks and cards stay one line. */
 function truncate(value: string, max = 18): string {
   return value.length > max ? `${value.slice(0, max - 1)}…` : value;
@@ -93,7 +87,7 @@ export default function DiskForecastPage() {
   const source = deriveDataState(query);
   const subsystemMissing = isApiError(source.fatalError) && source.fatalError.status === 503;
   const showError = source.fatalError !== null && !subsystemMissing;
-  const isLoading = query.isLoading;
+  const isLoading = source.status === 'initial';
   const rows = query.data?.hypertables ?? [];
 
   // Severity display labels resolved through i18n (module-level consts
@@ -202,13 +196,13 @@ export default function DiskForecastPage() {
       },
       {
         key: 'split',
-        header: t('admin.diskForecast.colSplit', 'Uncompressed / compressed'),
+        header: t('admin.diskForecast.colSplit', 'Before / after compression'),
         align: 'right',
         render: (r) => (
           <div className="text-right tabular-nums">
             <div>{formatBytes(r.uncompressed_bytes ?? 0)}</div>
             <Caption>
-              {formatBytes(r.compressed_bytes ?? 0)} {t('admin.diskForecast.compressedSuffix', 'compressed')}
+              {formatBytes(r.compressed_bytes ?? 0)} {t('admin.diskForecast.compressedSuffix', 'after compression')}
             </Caption>
           </div>
         ),
@@ -258,7 +252,7 @@ export default function DiskForecastPage() {
       title={t('admin.diskForecast.pageTitle', 'Disk forecast')}
       subtitle={t(
         'admin.diskForecast.subtitle',
-        'Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.',
+        'Current per-hypertable disk usage, before/after compression sizes for compressed chunks, and source-supplied days-to-quota estimates. Compression sizes are not additive parts of current disk usage.',
       )}
       query={query}
       dataSources={[{
@@ -291,31 +285,33 @@ export default function DiskForecastPage() {
         <DiskForecastSummary totals={totals} count={rows.length} largest={largest} soonest={soonest}
           known={source.hasData} loading={source.status === 'initial'}
           retained={source.hasData && (source.status === 'stale' || source.isRefreshing)}
-          error={showError ? source.fatalError : null} onRetry={retry} pctOf={pctOf} />
+          error={showError ? source.fatalError : null} onRetry={retry} />
       </FadeIn>
 
-      {/* 2 — Composition + severity ------------------------------------- */}
+      {/* 2 — Compression comparison + severity --------------------------- */}
       <FadeIn delay={0.1}>
         <section
-          aria-label={t('admin.diskForecast.composition', 'Storage composition')}
+          aria-label={t('admin.diskForecast.composition', 'Compression size comparison')}
           className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
         >
           <div className="min-w-0 xl:col-span-2">
-          <LayoutCard title={t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}>
+          <LayoutCard title={t('admin.diskForecast.compositionTitle', 'Before vs after compression')}>
             <EmbeddedChart
               chartKey="admin-disk-composition"
-              title={t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}
-              ariaLabel={t('admin.diskForecast.compositionAria', 'Stacked bar chart of the largest hypertables split by uncompressed and compressed bytes')}
+              title={t('admin.diskForecast.compositionTitle', 'Before vs after compression')}
+              ariaLabel={t('admin.diskForecast.compositionAria', 'Grouped bar chart comparing before and after compression sizes of compressed chunks in the largest hypertables')}
               loading={isLoading}
               error={showError ? (query.error ?? undefined) : undefined}
               onRetry={retry}
               empty={!isLoading && !showError && topBySize.length === 0}
-              emptyMessage={t('admin.diskForecast.noComposition', 'No hypertable sizes to chart yet.')}
+              emptyMessage={source.hasData
+                ? t('admin.diskForecast.noComposition', 'No hypertable sizes to chart yet.')
+                : t('admin.operationalBrief.unmeasured', 'Not measured')}
               data={topBySizeChartRows}
               dataColumns={[
                 { key: 'hypertable_name', label: t('admin.diskForecast.colTable', 'Hypertable') },
-                { key: 'uncompressed_bytes', label: t('admin.diskForecast.uncompressed', 'Uncompressed'), format: (v) => formatBytes(Number(v)) },
-                { key: 'compressed_bytes', label: t('admin.diskForecast.compressed', 'Compressed'), format: (v) => formatBytes(Number(v)) },
+                { key: 'uncompressed_bytes', label: t('admin.diskForecast.uncompressed', 'Before compression'), format: (v) => formatBytes(Number(v)) },
+                { key: 'compressed_bytes', label: t('admin.diskForecast.compressed', 'After compression'), format: (v) => formatBytes(Number(v)) },
               ]}
             >
               {({ hiddenSeries }) => (
@@ -338,16 +334,14 @@ export default function DiskForecastPage() {
                     <ChartLegend />
                     <Bar
                       dataKey="uncompressed_bytes"
-                      name={t('admin.diskForecast.uncompressed', 'Uncompressed')}
-                      stackId="a"
+                      name={t('admin.diskForecast.uncompressed', 'Before compression')}
                       fill={palette[0]}
                       fillOpacity={0.85}
                       hide={hiddenSeries?.isHidden('uncompressed_bytes') ?? false}
                     />
                     <Bar
                       dataKey="compressed_bytes"
-                      name={t('admin.diskForecast.compressed', 'Compressed')}
-                      stackId="a"
+                      name={t('admin.diskForecast.compressed', 'After compression')}
                       fill={palette[1]}
                       fillOpacity={0.85}
                       radius={[0, 4, 4, 0]}
@@ -369,7 +363,9 @@ export default function DiskForecastPage() {
                 error={showError ? (query.error ?? undefined) : undefined}
                 onRetry={retry}
                 empty={!isLoading && !showError && severitySlices.length === 0}
-                emptyMessage={t('admin.diskForecast.noSeverity', 'No severity data available yet.')}
+                emptyMessage={source.hasData
+                  ? t('admin.diskForecast.noSeverity', 'No severity data available yet.')
+                  : t('admin.operationalBrief.unmeasured', 'Not measured')}
                 data={severitySlices}
                 dataColumns={[
                   { key: 'label', label: t('admin.diskForecast.col.severity', 'Severity') },
@@ -429,6 +425,8 @@ export default function DiskForecastPage() {
               <Skeleton height={200} />
             ) : showError ? (
               <QueryError error={query.error} onRetry={retry} />
+            ) : !source.hasData ? (
+              <DataStateNotice state="unsupported" title={t('admin.operationalBrief.unmeasured', 'Not measured')} />
             ) : growthLeaders.length === 0 ? (
               <EmptyState /* no-action: growth appears once tables accrue daily deltas */
                 icon={<Icon icon={TrendingUp} size="xl" />}
@@ -443,6 +441,7 @@ export default function DiskForecastPage() {
                     value={r.growth_bytes_per_day ?? 0}
                     max={maxGrowth || (r.growth_bytes_per_day ?? 1)}
                     color={SEVERITY_COLOR[r.severity] ?? SEVERITY_COLOR.unknown}
+                    fill="solid"
                     sublabel={`${formatBytes(r.growth_bytes_per_day ?? 0)}/d`}
                   />
                 ))}
@@ -455,13 +454,15 @@ export default function DiskForecastPage() {
               <Skeleton height={200} />
             ) : showError ? (
               <QueryError error={query.error} onRetry={retry} />
+            ) : !source.hasData ? (
+              <DataStateNotice state="unsupported" title={t('admin.operationalBrief.unmeasured', 'Not measured')} />
             ) : quotaWatch.length === 0 ? (
-              <EmptyState /* no-action: quota watch requires HYPERTABLE_QUOTA_BYTES to be configured */
+              <EmptyState /* no-action: the source has supplied no quota estimate */
                 icon={<Icon icon={Gauge} size="xl" />}
-                title={t('admin.diskForecast.noQuotaTitle', 'No quota configured')}
+                title={t('admin.diskForecast.noQuotaTitle', 'No quota estimate available')}
                 message={t(
                   'admin.diskForecast.noQuotaMessage',
-                  'Set HYPERTABLE_QUOTA_BYTES to surface a days-to-quota estimate for each hypertable.',
+                  'An estimate may be absent when there is no measurable growth. Missing estimates do not establish whether a quota is configured.',
                 )}
               />
             ) : (
@@ -497,7 +498,9 @@ export default function DiskForecastPage() {
                 <Skeleton height={280} />
               ) : showError ? (
                 <QueryError error={query.error} onRetry={retry} />
-              ) : rows.length === 0 && !subsystemMissing ? (
+              ) : !source.hasData ? (
+                <DataStateNotice state="unsupported" title={t('admin.operationalBrief.unmeasured', 'Not measured')} />
+              ) : rows.length === 0 ? (
                 <EmptyState /* no-action: hypertable inventory is TimescaleDB system state; not user-creatable */
                   icon={<Icon icon={Database} size="xl" />}
                   title={t('admin.diskForecast.emptyTitle', 'No hypertables')}

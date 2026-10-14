@@ -6,7 +6,7 @@
  * pin the behaviour that actually matters to an operator:
  *
  *  1. Loading skeletons render before data lands.
- *  2. The KPI band computes fleet totals, percentages, growth, and the
+ *  2. The KPI band computes fleet totals, compression sizes, growth, and the
  *     soonest-to-quota table from the raw hypertable rows.
  *  3. The per-hypertable detail table renders each row (name + chunk count).
  *  4. Accessible landmarks + chart labels are present (a11y contract).
@@ -23,9 +23,9 @@
  * so the page's own `isApiError`/`ApiError` 503 branch is exercised honestly.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -86,13 +86,13 @@ describe('DiskForecastPage semantic and mobile adoption', () => {
     expect(details).not.toBeNull()
     const detail = within(details!)
     expect([...details!.querySelectorAll('dt')].map(node => node.textContent)).toEqual([
-      'Hypertable', 'Total', 'Uncompressed / compressed', 'Growth (per day)', 'Days to quota', 'Severity',
+      'Hypertable', 'Total', 'Before / after compression', 'Growth (per day)', 'Days to quota', 'Severity',
     ])
     expect(detail.getByText(LONG_NAME)).toBeInTheDocument()
     expect(detail.getByText('10 chunks')).toBeInTheDocument()
     expect(detail.getByText('3.00 GB')).toBeInTheDocument()
     expect(detail.getByText('2.00 GB')).toBeInTheDocument()
-    expect(detail.getByText('1.00 GB compressed')).toBeInTheDocument()
+    expect(detail.getByText('1.00 GB after compression')).toBeInTheDocument()
     expect(detail.getByText('100.00 MB/d')).toBeInTheDocument()
     expect(detail.getByText('5.00')).toBeInTheDocument()
     expect(detail.getByText('Critical')).toBeInTheDocument()
@@ -160,8 +160,8 @@ function makeRow(overrides: Partial<HypertableSize> = {}): HypertableSize {
 
 // Three rows chosen so every derived metric has a clean, predictable string:
 //   total       = 3GB + 1GB + 0.5GB = 4.5 GB
-//   uncompressed = 2GB + 0.5GB + 0.5GB = 3.0 GB  (66.7% of total)
-//   compressed   = 1GB + 0.5GB + 0    = 1.5 GB  (33.3% of total)
+//   before compression = 2GB + 0.5GB + 0.5GB = 3.0 GB
+//   after compression  = 1GB + 0.5GB + 0    = 1.5 GB
 //   growth       = 100MB + 50MB + 0   = 150.0 MB/d
 //   soonest quota = min(5, 30) = 5 days (the critical table)
 function defaultRows(): HypertableSize[] {
@@ -203,12 +203,11 @@ function makeResponse(rows: HypertableSize[] = defaultRows()): DiskForecastRespo
   return { hypertables: rows }
 }
 
-function renderPage() {
+function renderPage(client = new QueryClient({
+  defaultOptions: { queries: { retry: false, retryDelay: 0 } },
+})) {
   // retryDelay:0 keeps the hook's `retry: 1` (which overrides the client
   // default) from adding a real backoff to the rejection-path tests.
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false, retryDelay: 0 } },
-  })
   return render(
     <MemoryRouter>
       <QueryClientProvider client={client}>
@@ -226,6 +225,10 @@ function summaryValue(label: string): string {
 
 beforeEach(() => {
   mockedRequest.mockReset()
+})
+
+afterEach(() => {
+  onlineManager.setOnline(true)
 })
 
 describe('DiskForecastPage', () => {
@@ -252,7 +255,7 @@ describe('DiskForecastPage', () => {
     resolve(makeResponse([]))
   })
 
-  it('computes fleet totals, percentages, growth, and soonest-quota in the KPI band', async () => {
+  it('computes fleet totals, compression sizes, growth, and soonest-quota in the KPI band', async () => {
     mockedRequest.mockResolvedValueOnce(makeResponse())
 
     renderPage()
@@ -264,15 +267,16 @@ describe('DiskForecastPage', () => {
     // Totals are summed and byte-formatted.
     expect(summaryValue('Total disk')).toBe('4.50 GB')
 
-    // Uncompressed / compressed carry their share-of-total subtitles. Scope
-    // these assertions away from the chart's accessible fallback table.
+    // Before/after measurements retain both raw totals and their actual basis.
     const summary = within(
       screen.getByRole('region', { name: 'Fleet disk summary' }),
     )
-    expect(summary.getByText('Uncompressed')).toBeInTheDocument()
-    expect(summary.getByText('66.67% of total')).toBeInTheDocument()
-    expect(summary.getByText('Compressed')).toBeInTheDocument()
-    expect(summary.getByText('33.33% of total')).toBeInTheDocument()
+    expect(summary.getByText('Before compression')).toBeInTheDocument()
+    expect(summaryValue('Before compression')).toBe('3.00 GB')
+    expect(summary.getByText('After compression')).toBeInTheDocument()
+    expect(summaryValue('After compression')).toBe('1.50 GB')
+    expect(summary.getAllByText('Compressed chunks only; not a share of current disk usage.')).toHaveLength(2)
+    expect(summary.queryByText(/% of total/)).not.toBeInTheDocument()
 
     // Daily growth is summed across all rows.
     expect(summaryValue('Growth (per day)')).toBe('150.00 MB/d')
@@ -332,7 +336,7 @@ describe('DiskForecastPage', () => {
     // Interactive charts are named groups; static charts retain image semantics.
     expect(
       screen.getByRole('group', {
-        name: /stacked bar chart of the largest hypertables/i,
+        name: /grouped bar chart comparing before and after compression sizes/i,
       }),
     ).toBeInTheDocument()
     expect(
@@ -423,9 +427,9 @@ describe('DiskForecastPage', () => {
     // Detail table + KPI placeholders degrade gracefully.
     expect(screen.getByText('No hypertables')).toBeInTheDocument()
     expect(screen.getByText('No data')).toBeInTheDocument()
-    // "No quota configured" is the soonest-quota subtitle AND the quota panel
-    // empty title — both should be present.
-    expect(screen.getAllByText('No quota configured').length).toBeGreaterThan(0)
+    // A missing estimate cannot establish whether a quota is configured.
+    expect(screen.getAllByText('No quota estimate available').length).toBeGreaterThan(0)
+    expect(screen.queryByText('No quota configured')).not.toBeInTheDocument()
     // Totals collapse to "0 B" rather than vanishing.
     expect(summaryValue('Total disk')).toBe('0 B')
     expect(summaryValue('Growth (per day)')).toBe('0 B/d')
@@ -488,7 +492,104 @@ describe('DiskForecastPage', () => {
     expect(screen.getAllByText(LONG_NAME).length).toBeGreaterThan(2)
     expect(screen.getByText('Quota pressure')).toBeInTheDocument()
     expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Retry', exact: true })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Retry$/ })).not.toBeInTheDocument()
     expect(screen.getByTestId('disk-forecast-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true')
+  })
+
+  it('reports a missing quota estimate without inferring configuration or suggesting an unsupported variable', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse([makeRow({
+      hypertable_name: 'stable_table', growth_bytes_per_day: 0, est_days_to_quota: null,
+    })]))
+    renderPage()
+
+    await waitFor(() => expect(summaryValue('Total disk')).toBe('1.00 GB'))
+    expect(screen.getAllByText('No quota estimate available')).toHaveLength(2)
+    expect(screen.getByText('An estimate may be absent when there is no measurable growth. Missing estimates do not establish whether a quota is configured.')).toBeInTheDocument()
+    expect(screen.queryByText('No quota configured')).not.toBeInTheDocument()
+    expect(screen.queryByText(/HYPERTABLE_QUOTA_BYTES/)).not.toBeInTheDocument()
+    expect(summaryValue('Soonest quota')).toBe('—')
+    expect(within(screen.getByRole('table', { name: 'Hypertables' })).getByText('OK')).toBeInTheDocument()
+  })
+
+  it.each(['paused', 'unresolved'] as const)('keeps cold %s sections pending rather than authoritatively empty', (state) => {
+    if (state === 'paused') onlineManager.setOnline(false)
+    const client = new QueryClient({
+      defaultOptions: { queries: { enabled: state !== 'unresolved', retry: false } },
+    })
+    renderPage(client)
+
+    expect(screen.getByTestId('disk-forecast-summary')).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByText('Fastest-growing hypertables')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Growth and quota outlook' }))
+      .getByRole('heading', { name: 'Days to quota' })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: 'Hypertables' })).toBeInTheDocument()
+    expect(screen.queryByText('No hypertables')).not.toBeInTheDocument()
+    expect(screen.queryByText('No hypertable sizes to chart yet.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No severity data available yet.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No measurable daily growth yet.')).not.toBeInTheDocument()
+    expect(screen.queryByText('No quota estimate available')).not.toBeInTheDocument()
+    expect(mockedRequest).not.toHaveBeenCalled()
+    if (state === 'paused') {
+      expect(screen.getByText('Paused offline')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeEnabled()
+    }
+    client.clear()
+  })
+
+  it('keeps retained paused evidence and its retry until the source resumes', async () => {
+    mockedRequest.mockImplementation((path: string) =>
+      Promise.resolve(path === '/admin/observability/disk-forecast' ? makeResponse() : []),
+    )
+    renderPage()
+    await waitFor(() => expect(summaryValue('Total disk')).toBe('4.50 GB'))
+    act(() => onlineManager.setOnline(false))
+    fireEvent.click(screen.getByRole('button', { name: /refresh/i }))
+    await waitFor(() => expect(screen.getByText('Paused offline')).toBeInTheDocument())
+
+    expect(summaryValue('Soonest quota')).toBe('5.00 d')
+    expect(screen.getByRole('table', { name: 'Hypertables' })).toBeInTheDocument()
+    expect(screen.getAllByText(LONG_NAME).length).toBeGreaterThan(2)
+    expect(screen.queryByText('No quota estimate available')).not.toBeInTheDocument()
+    expect(screen.getByTestId('disk-forecast-summary').closest('[data-retained]')).toHaveAttribute('data-retained', 'true')
+    const before = mockedRequest.mock.calls.length
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }))
+    act(() => onlineManager.setOnline(true))
+    await waitFor(() => expect(mockedRequest.mock.calls.length).toBeGreaterThan(before))
+    await waitFor(() => expect(screen.queryByText('Paused offline')).not.toBeInTheDocument())
+    expect(summaryValue('Total disk')).toBe('4.50 GB')
+  })
+
+  it('compares before/after sizes independently when before compression exceeds current disk usage', async () => {
+    mockedRequest.mockResolvedValueOnce(makeResponse([makeRow({
+      hypertable_name: 'compressed_chunks', total_bytes: 10 * MB,
+      uncompressed_bytes: 100 * MB, compressed_bytes: 10 * MB,
+    })]))
+    renderPage()
+    await waitFor(() => expect(summaryValue('Total disk')).toBe('10.00 MB'))
+    expect(summaryValue('Before compression')).toBe('100.00 MB')
+    expect(summaryValue('After compression')).toBe('10.00 MB')
+    expect(screen.queryByText(/% of total/)).not.toBeInTheDocument()
+    expect(screen.getByRole('group', { name: /grouped bar chart comparing before and after compression sizes/i })).toBeInTheDocument()
+    const table = screen.getByRole('table', { name: 'Before vs after compression — data table' })
+    expect(within(table).getByRole('columnheader', { name: 'Before compression' })).toBeInTheDocument()
+    expect(within(table).getByRole('columnheader', { name: 'After compression' })).toBeInTheDocument()
+    expect(within(table).getByText('100.00 MB')).toBeInTheDocument()
+    expect(within(table).getByText('10.00 MB')).toBeInTheDocument()
+  })
+
+  it.each([
+    ['ok', 'var(--semantic-success)'],
+    ['warn', 'var(--semantic-warning)'],
+    ['critical', 'var(--semantic-danger)'],
+    ['unknown', 'var(--text-secondary)'],
+  ] as const)('uses the supported solid fill for %s growth severity', async (severity, color) => {
+    mockedRequest.mockResolvedValueOnce(makeResponse([makeRow({ severity })]))
+    renderPage()
+    const bar = await screen.findByRole('progressbar', { name: 'table' })
+    const fill = bar.querySelector<HTMLElement>('[data-metric-fill]')
+    expect(fill).not.toBeNull()
+    expect(fill!.style.background).toBe(color)
+    expect(fill!.style.background).not.toContain('linear-gradient')
+    expect(bar).toHaveAttribute('aria-valuenow', String(10 * MB))
   })
 })

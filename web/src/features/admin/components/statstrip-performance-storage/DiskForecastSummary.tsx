@@ -16,29 +16,28 @@ interface DiskForecastSummaryProps {
   retained: boolean;
   error: unknown;
   onRetry: () => void;
-  pctOf: (part: number, whole: number) => string;
 }
 
 export function DiskForecastSummary({
-  totals, count, largest, soonest, known, loading, retained, error, onRetry, pctOf,
+  totals, count, largest, soonest, known, loading, retained, error, onRetry,
 }: DiskForecastSummaryProps) {
   const { t } = useTranslation();
   const { precision, locale } = useNumberFormatting();
   const title = t('admin.diskForecast.kpis', 'Fleet disk summary');
   const growthHint = t('admin.diskForecast.growthSub', 'Sum across all hypertables');
   const bytesDisplay = { precision, units: { locale } };
-  const share = (part: number) => known
-    ? t('admin.diskForecast.percentSub', '{{pct}} of total', { pct: pctOf(part, totals.total) }) : '—';
+  const compressionContext = known
+    ? t('admin.diskForecast.percentSub', 'Compressed chunks only; not a share of current disk usage.') : '—';
   const metrics: StatMetric[] = [
     { metricId: 'bytes', occurrenceId: 'total-disk', rawValue: known ? totals.total : null,
       display: bytesDisplay, label: t('admin.diskForecast.fleetTotal', 'Total disk'), description: growthHint,
       context: known ? t('admin.diskForecast.tableCount', '{{count}} hypertables', { count }) : '—' },
     { metricId: 'bytes', occurrenceId: 'uncompressed', rawValue: known ? totals.uncompressed : null,
-      display: bytesDisplay, label: t('admin.diskForecast.fleetUncompressed', 'Uncompressed'),
-      description: growthHint, context: share(totals.uncompressed) },
+      display: bytesDisplay, label: t('admin.diskForecast.fleetUncompressed', 'Before compression'),
+      description: growthHint, context: compressionContext },
     { metricId: 'bytes', occurrenceId: 'compressed', rawValue: known ? totals.compressed : null,
-      display: bytesDisplay, label: t('admin.diskForecast.fleetCompressed', 'Compressed'),
-      description: growthHint, context: share(totals.compressed) },
+      display: bytesDisplay, label: t('admin.diskForecast.fleetCompressed', 'After compression'),
+      description: growthHint, context: compressionContext },
     { metricId: 'byteRate', occurrenceId: 'daily-growth', rawValue: known ? totals.growth / 86400 : null,
       display: { ...bytesDisplay, byteRatePeriod: 'd' }, label: t('admin.diskForecast.fleetGrowth', 'Growth (per day)'),
       description: growthHint, context: growthHint },
@@ -50,7 +49,7 @@ export function DiskForecastSummary({
       display: { precision, units: { locale, duration: 'd' } },
       label: t('admin.diskForecast.soonestQuota', 'Soonest quota'),
       description: t('admin.diskForecast.colDays', 'Days to quota'),
-      context: !known ? '—' : soonest?.hypertable_name ?? t('admin.diskForecast.noQuota', 'No quota configured') },
+      context: !known ? '—' : soonest?.hypertable_name ?? t('admin.diskForecast.noQuota', 'No quota estimate available') },
   ];
   const briefMetrics = useOperationalMetrics(metrics);
   return (
