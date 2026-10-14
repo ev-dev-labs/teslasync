@@ -35,13 +35,22 @@
  *   8. Empty        — the caller's empty-state message, no chart.
  *   9. Null-safety  — an (untyped-at-runtime) undefined `data` prop renders the
  *      empty state instead of throwing on `.length` / `.map`.
- *  10. Hardening    — nullish / non-finite values coerce to 0, missing names to
- *      an em dash, and the caller's array is not mutated.
+ *  10. Hardening    — missing / invalid values remain unknown, genuine zero
+ *      survives, missing names use an em dash, and caller data is not mutated.
+ *  11. Display     — saved numeric preferences reach ticks, tooltips and the
+ *      real accessible fallback table without rounding chart input.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
+import {
+  getFormatterPreferences, setGlobalLocale, setGlobalPrecision,
+} from '@/lib/numberFormat';
+
+const displayProbe = vi.hoisted(() => ({ value: 1234.567, realFrame: false }));
+const initialPreferences = getFormatterPreferences();
 
 /* ── i18n: resolve t(key, fallback) → fallback so QueryError's copy is
  *    deterministic and locale-file independent. ─────────────────────────── */
@@ -60,19 +69,15 @@ vi.mock('react-i18next', async () => {
 
 /* ── charts: surface the data payload + per-series props for inspection. The
  *    real Recharts primitives would paint nothing under jsdom. ──────────── */
-vi.mock('@/components/charts', async () => ({
+vi.mock('@/components/charts', async () => {
+  const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
+  return {
   ...(await import('@/test/chartTestDoubles')).chartTestDoubles,
-  EmbeddedChart: ({
-    ariaLabel,
-    height,
-    children,
-  }: {
-    ariaLabel?: string;
-    height?: number;
-    children?: ReactNode;
-  }) => (
-    <div role="img" aria-label={ariaLabel} data-height={String(height ?? '')}>
-      {children}
+  EmbeddedChart: (props: ComponentProps<typeof actual.EmbeddedChart>) => displayProbe.realFrame ? (
+    <actual.EmbeddedChart {...props} />
+  ) : (
+    <div role="img" aria-label={props.ariaLabel} data-height={String(props.height ?? '')}>
+      {props.children as ReactNode}
     </div>
   ),
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
@@ -121,15 +126,19 @@ vi.mock('@/components/charts', async () => ({
   XAxis: ({
     type,
     allowDecimals,
+    tickFormatter,
   }: {
     type?: string;
     allowDecimals?: boolean;
+    tickFormatter?: (value: unknown) => string;
   }) => (
     <div
       data-testid="x-axis"
       data-type={String(type)}
       data-allow-decimals={String(allowDecimals)}
-    />
+    >
+      <span data-testid="axis-value">{tickFormatter?.(displayProbe.value)}</span>
+    </div>
   ),
   YAxis: ({
     dataKey,
@@ -147,13 +156,28 @@ vi.mock('@/components/charts', async () => ({
       data-width={String(width)}
     />
   ),
-  Tooltip: ({ cursor }: { cursor?: unknown }) => (
-    <div data-testid="tooltip" data-cursor={JSON.stringify(cursor ?? null)} />
+  Tooltip: ({ cursor, content, filterNull }: {
+    cursor?: unknown;
+    content?: ReactNode;
+    filterNull?: boolean;
+  }) => (
+    <div
+      data-testid="tooltip"
+      data-cursor={JSON.stringify(cursor ?? null)}
+      data-filter-null={String(filterNull)}
+    >
+      {content}
+    </div>
   ),
-  ChartTooltip: () => null,
+  ChartTooltip: ({ valueFormatter }: {
+    valueFormatter?: (value: unknown, name: string) => ReactNode;
+  }) => (
+    <span data-testid="tooltip-value">{valueFormatter?.(displayProbe.value, 'Visits')}</span>
+  ),
   chartGrid: <div data-testid="chart-grid" />,
   axisTickSm: {},
-}));
+  };
+});
 
 import {
   LocationLeaderboardPanel,
@@ -187,16 +211,28 @@ function baseProps(overrides: Partial<PanelProps> = {}): PanelProps {
 function renderPanel(overrides: Partial<PanelProps> = {}) {
   const onRetry = overrides.onRetry ?? vi.fn();
   const props = baseProps({ ...overrides, onRetry });
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 0 },
+      mutations: { retry: false, gcTime: 0 },
+    },
+  });
   const utils = render(
-    <MemoryRouter>
-      <LocationLeaderboardPanel {...props} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <LocationLeaderboardPanel {...props} />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
   return { ...utils, onRetry };
 }
 
 afterEach(() => {
   cleanup();
+  displayProbe.value = 1234.567;
+  displayProbe.realFrame = false;
+  setGlobalLocale(initialPreferences.locale);
+  setGlobalPrecision(initialPreferences.precision);
 });
 
 describe('LocationLeaderboardPanel — panel chrome', () => {
@@ -268,7 +304,8 @@ describe('LocationLeaderboardPanel — ready state', () => {
     expect(screen.getByTestId('chart-grid')).toBeInTheDocument();
     expect(
       JSON.parse(screen.getByTestId('tooltip').getAttribute('data-cursor') ?? 'null'),
-    ).toEqual({ fill: 'rgba(255,255,255,0.04)' });
+    ).toEqual({ fill: 'var(--surface-2)', opacity: 0.4 });
+    expect(screen.getByTestId('tooltip')).toHaveAttribute('data-filter-null', 'false');
   });
 
   it('forwards a different colour, series label, and aria description (props are not hardcoded)', () => {
@@ -364,7 +401,7 @@ describe('LocationLeaderboardPanel — empty + null safety', () => {
 });
 
 describe('LocationLeaderboardPanel — hardening (row normalisation)', () => {
-  it('coerces nullish / non-finite values to 0 and missing names to an em dash', () => {
+  it('keeps nullish / non-finite values unknown and missing names as an em dash', () => {
     renderPanel({
       data: [
         datum({ name: undefined as unknown as string, value: null as unknown as number }),
@@ -376,19 +413,102 @@ describe('LocationLeaderboardPanel — hardening (row normalisation)', () => {
     const rows = JSON.parse(
       screen.getByTestId('bar-chart').getAttribute('data-rows') ?? '[]',
     );
-    // Without the `?? '—'` + `Number.isFinite` guards these would serialise as
-    // null (name) / null (NaN) and paint a blank tick / NaN-wide bar.
-    expect(rows[0]).toEqual({ name: '—', value: 0 });
-    expect(rows[1]).toEqual({ name: 'Work', value: 0 });
+    expect(rows).toHaveLength(3);
+    expect(rows[0]).toEqual({ name: '—', value: null });
+    expect(rows[1]).toEqual({ name: 'Work', value: null });
     expect(rows[2]).toEqual({ name: 'Gym', value: 5 });
   });
 
   it("does not mutate the caller's data array", () => {
-    const original = [datum({ name: 'Home', value: 12 })];
-    const snapshot = JSON.parse(JSON.stringify(original));
+    const original = Object.freeze([
+      Object.freeze(datum({ name: 'Home', value: 1234.567 })),
+      Object.freeze(datum({ name: 'Missing', value: undefined })),
+      Object.freeze(datum({ name: 'Invalid', value: Number.NaN })),
+      Object.freeze(datum({ name: 'Negative', value: -1 })),
+      Object.freeze(datum({ name: 'Zero', value: 0 })),
+    ]);
+    const snapshot = original.map((row) => ({ ...row }));
 
     renderPanel({ data: original });
 
     expect(original).toEqual(snapshot);
+    expect(original[2].value).toBeNaN();
+  });
+
+  it.each([
+    ['missing', undefined], ['null', null], ['NaN', Number.NaN],
+    ['infinity', Infinity], ['negative infinity', -Infinity], ['negative', -1],
+    ['numeric string', '12'], ['empty string', ''], ['boolean', false],
+  ])('keeps %s unknown without discarding its row or valid zero', (_label, value) => {
+    renderPanel({
+      data: [
+        datum({ name: 'Unknown', value: value as number | null | undefined }),
+        datum({ name: 'Zero', value: 0 }),
+        datum({ name: 'Measured', value: 1234.567 }),
+      ],
+    });
+
+    expect(JSON.parse(screen.getByTestId('bar-chart').getAttribute('data-rows') ?? '[]')).toEqual([
+      { name: 'Unknown', value: null },
+      { name: 'Zero', value: 0 },
+      { name: 'Measured', value: 1234.567 },
+    ]);
+  });
+});
+
+describe('LocationLeaderboardPanel — saved numeric preferences', () => {
+  it('updates ticks, tooltip and the real fallback table without changing plotted values', () => {
+    displayProbe.realFrame = true;
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(3);
+    const original = Object.freeze([
+      Object.freeze(datum({ name: 'Home', value: 1234.567 })),
+      Object.freeze(datum({ name: 'Zero', value: 0 })),
+      Object.freeze(datum({ name: 'Missing', value: null })),
+      Object.freeze(datum({ name: 'Invalid', value: -1 })),
+    ]);
+    renderPanel({ data: original });
+
+    const table = screen.getByRole('table');
+    expect(within(table).getByRole('columnheader', { name: 'Visits' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '1.234,567' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '0,000' })).toBeInTheDocument();
+    expect(within(table).getAllByRole('cell', { name: '—' })).toHaveLength(2);
+    expect(screen.getByTestId('axis-value')).toHaveTextContent('1.234,567');
+    expect(screen.getByTestId('tooltip-value')).toHaveTextContent('1.234,567');
+    const chartRows = screen.getByTestId('bar-chart').getAttribute('data-rows');
+
+    act(() => {
+      setGlobalLocale('en-US');
+      setGlobalPrecision(1);
+    });
+
+    expect(within(table).getByRole('cell', { name: '1,234.6' })).toBeInTheDocument();
+    expect(within(table).getByRole('cell', { name: '0.0' })).toBeInTheDocument();
+    expect(within(table).getAllByRole('cell', { name: '—' })).toHaveLength(2);
+    expect(screen.getByTestId('axis-value')).toHaveTextContent('1,234.6');
+    expect(screen.getByTestId('tooltip-value')).toHaveTextContent('1,234.6');
+    expect(screen.getByTestId('bar-chart')).toHaveAttribute('data-rows', chartRows);
+    expect(original[0].value).toBe(1234.567);
+    expect(original[2].value).toBeNull();
+    expect(original[3].value).toBe(-1);
+  });
+
+  it.each([null, undefined, Number.NaN, Infinity, -Infinity, -1, '12', false])(
+    'formats invalid tick/tooltip probes as unknown (%s)',
+    (value) => {
+      displayProbe.value = value as number;
+      renderPanel();
+      expect(screen.getByTestId('axis-value')).toHaveTextContent('—');
+      expect(screen.getByTestId('tooltip-value')).toHaveTextContent('—');
+    },
+  );
+
+  it('keeps the empty-filter reset action available', () => {
+    const onResetFilters = vi.fn();
+    renderPanel({ data: [], emptyActionLabel: 'Reset date range', onResetFilters });
+    fireEvent.click(screen.getByRole('button', { name: 'Reset date range' }));
+    expect(onResetFilters).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole('heading', { name: 'Top Locations by Visits' })).toBeInTheDocument();
   });
 });
