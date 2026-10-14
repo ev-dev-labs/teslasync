@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "item": "phase6-qa-battery-battery-passport",
   "queue_item": "phase6-qa-battery-battery-passport",
   "repository_root": "D:\\repos\\teslasync",
   "status": "DONE_SOURCE_QA_WITH_FINDINGS",
