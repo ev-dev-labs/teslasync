@@ -20,6 +20,7 @@ export function ComfortConsistencyRowDisposition({
 }: ComfortConsistencyRowDispositionProps) {
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
+  const hasEvidence = state.vehicleSelected && state.isResolved && !state.isLoading && !state.error;
   const rows = summary.rows;
   const outcomes = [
     [t('comfortConsistency.rows.invalidRow', 'Invalid row type'), rows.invalidRowRows],
@@ -37,11 +38,21 @@ export function ComfortConsistencyRowDisposition({
     <section data-testid="comfort-consistency-row-disposition">
       <LayoutCard title={t('comfortConsistency.rows.title', 'Returned-row disposition')}>
         <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-          <Badge variant={summary.identities.rowsBalanced ? 'success' : 'danger'}>
-            {summary.identities.rowsBalanced
-              ? t('comfortConsistency.rows.balanced', 'Exact balance')
-              : t('comfortConsistency.rows.mismatch', 'Accounting mismatch')}
-          </Badge>
+          {hasEvidence ? (
+            <Badge variant={summary.identities.rowsBalanced ? 'success' : 'danger'}>
+              {summary.identities.rowsBalanced
+                ? t('comfortConsistency.rows.balanced', 'Exact balance')
+                : t('comfortConsistency.rows.mismatch', 'Accounting mismatch')}
+            </Badge>
+          ) : (
+            <Text as="p" variant="caption">
+              {state.vehicleSelected && state.isPaused && !state.error
+                ? t('comfortConsistency.states.paused', 'Climate history loading is paused while the network is unavailable; no empty response is inferred.')
+                : state.vehicleSelected && state.isLoading && !state.error
+                  ? t('common.loading', 'Loading...')
+                  : t('common.unknown', 'Unknown')}
+            </Text>
+          )}
         </div>
         <Text as="p" variant="caption" className="mb-4">
           {t(
