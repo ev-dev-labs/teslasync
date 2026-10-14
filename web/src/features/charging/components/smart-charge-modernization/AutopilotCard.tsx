@@ -1,10 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bot, ShieldCheck, CalendarClock, Zap } from 'lucide-react';
-import { LayoutCard, ChartCard } from '@/components/layout/layout-reference';
-import { Grid } from '@/components/layout';
+import { LayoutCard, ChartCard, Grid } from '@/components/layout';
 import { Button, Select, Input, Slider, Toggle, Badge, Text, Caption, ErrorText } from '@/components/ui';
-import { type StatMetric } from '@/components/data-display/stat-reference';
+import { type StatMetric } from '@/components/data-display';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
@@ -21,6 +20,7 @@ import type { AutopilotProfile } from '@/types/charging';
 import { RateTimeline } from './RateTimeline';
 
 const columns = { default: 1, lg: 2 };
+const actionClassName = 'h-auto min-h-11 md:min-h-10';
 
 /** Profile controls, preview and savings retain their independent sources. */
 export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
@@ -65,6 +65,8 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
   }, [stored, hydrated]);
 
   const profileReady = stored != null && hydrated;
+  const persistedEnabled = typeof stored?.enabled === 'boolean' ? stored.enabled : undefined;
+  const enableDraftChanged = profileReady && persistedEnabled != null && enabled !== persistedEnabled;
   const ratePlans = safeArray(ratePlansState.data);
   const ratePlanOptions = ratePlans.length
     ? ratePlans.map(plan => ({ value: plan.id, label: `${plan.name} (${plan.utility})` }))
@@ -90,7 +92,9 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
     if (vehicleId && profileReady) previewMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
   };
   const handleRun = () => {
-    if (vehicleId && profileReady && enabled) runMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
+    if (vehicleId && profileReady && persistedEnabled === true && !saveMutation.isPending) {
+      runMutation.mutate({ vehicle_id: vehicleId, current_soc: currentSoc });
+    }
   };
 
   const [retainedPreview, setRetainedPreview] = useState<{
@@ -116,7 +120,8 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
     ? saveMutation.error?.message || t('autopilot.saveError', 'Failed to save autopilot settings') : '';
   const runError = runMutation.isError
     ? runMutation.error?.message || t('autopilot.runError', 'Run failed') : '';
-  const runResult = runMutation.data ?? null;
+  const runResult = runMutation.isSuccess && !runMutation.isPending && !runMutation.isPaused && !runMutation.isError
+    ? runMutation.data ?? null : null;
   const previewMetrics: StatMetric[] = [
     {
       metricId: 'text', occurrenceId: 'next-window',
@@ -137,9 +142,13 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
   return (
     <LayoutCard title={t('autopilot.title', 'Charging Autopilot')}
       actions={<div className="flex flex-wrap items-center gap-3">
-        <Badge variant={enabled ? 'success' : 'neutral'} size="sm">
-          {enabled ? t('autopilot.on', 'Autopilot on') : t('autopilot.off', 'Autopilot off')}
+        <Badge variant={persistedEnabled === true ? 'success' : 'neutral'} size="sm">
+          {persistedEnabled == null ? t('common.unknown', 'Unknown')
+            : persistedEnabled ? t('autopilot.on', 'Autopilot on') : t('autopilot.off', 'Autopilot off')}
         </Badge>
+        {enableDraftChanged && <Caption>
+          {t('draft.recovery.fallbackLabel', 'Unsaved draft')}: {enabled ? t('common.on', 'On') : t('common.off', 'Off')}
+        </Caption>}
         <Toggle checked={enabled} onChange={setEnabled} disabled={!profileReady}
           aria-label={t('autopilot.enable', 'Enable autopilot')} />
       </div>}>
@@ -177,16 +186,17 @@ export function AutopilotCard({ vehicleId }: { vehicleId?: number }) {
             </div>
             </>}
             <div className="flex flex-wrap gap-2">
-              <Button onClick={handleSave} disabled={!vehicleId || !profileReady || saveMutation.isPending} loading={saveMutation.isPending}>
+              <Button wrapLabel className={actionClassName} onClick={handleSave}
+                disabled={!vehicleId || !profileReady || saveMutation.isPending} loading={saveMutation.isPending}>
                 {t('autopilot.save', 'Save Autopilot')}
               </Button>
-              <Button variant="secondary" onClick={handlePreview}
+              <Button wrapLabel className={actionClassName} variant="secondary" onClick={handlePreview}
                 disabled={!vehicleId || !profileReady || previewMutation.isPending} loading={previewMutation.isPending}
                 icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}>
                 {t('autopilot.preview', 'Preview next run')}
               </Button>
-              <Button variant="secondary" onClick={handleRun}
-                disabled={!vehicleId || !profileReady || !enabled || runMutation.isPending} loading={runMutation.isPending}
+              <Button wrapLabel className={actionClassName} variant="secondary" onClick={handleRun}
+                disabled={!vehicleId || !profileReady || persistedEnabled !== true || saveMutation.isPending || runMutation.isPending} loading={runMutation.isPending}
                 icon={<Zap className="h-4 w-4" aria-hidden="true" />}
                 title={t('autopilot.runHint', 'Schedule the optimal window on the vehicle now')}>
                 {t('autopilot.run', 'Run now')}

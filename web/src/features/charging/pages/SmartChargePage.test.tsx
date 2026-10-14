@@ -34,7 +34,10 @@
 process.env.TZ = 'America/New_York';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { render, screen, within, fireEvent, act } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -177,6 +180,21 @@ import {
 import { useOcppChargePoints, useOcppSessions } from '@/api/hooks/useOcpp';
 import SmartChargePage, { planStatusVariant, defaultDepartBy } from './SmartChargePage';
 
+describe('smart charge component import boundaries', () => {
+  it.each(['AutopilotCard', 'ChargePointsCard'])('%s uses existing category barrels', component => {
+    const source = readFileSync(resolve(
+      process.cwd(), 'src', 'features', 'charging', 'components', 'smart-charge-modernization', `${component}.tsx`,
+    ), 'utf8');
+
+    expect(source).toMatch(/import \{[^}]*LayoutCard[^}]*\} from '@\/components\/layout';/);
+    expect(source).not.toMatch(/from ['"]@\/components\/(?:layout|data-display)\//);
+    if (component === 'AutopilotCard') {
+      expect(source).toMatch(/import \{[^}]*ChartCard[^}]*Grid[^}]*\} from '@\/components\/layout';/);
+      expect(source).toMatch(/import \{ type StatMetric \} from '@\/components\/data-display';/);
+    }
+  });
+});
+
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOptimize = useOptimizeCharge as unknown as ReturnType<typeof vi.fn>;
 const mockApply = useApplySchedule as unknown as ReturnType<typeof vi.fn>;
@@ -310,6 +328,61 @@ beforeEach(() => {
   // Embedded ChargePointsPanel defaults (no charger reporting).
   mockOcppPoints.mockReturnValue(makeQuery({ data: [] }));
   mockOcppSessions.mockReturnValue(makeQuery({ data: [] }));
+});
+
+describe('SmartChargePage — mobile action allocation', () => {
+  it('keeps five wrapping targets, desktop minimums and keyboard actions on the actual buttons', async () => {
+    const user = userEvent.setup();
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const save = optimizeState();
+    const preview = optimizeState();
+    const run = optimizeState();
+    const apply = applyState();
+    const optimize = optimizeState({
+      mutate: vi.fn((_vars: unknown, opts?: { onSuccess?: (result: OptimizeChargeResponse) => void }) =>
+        opts?.onSuccess?.(RESULT)),
+    });
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotPreview.mockReturnValue(preview);
+    mockAutopilotRun.mockReturnValue(run);
+    mockOptimize.mockReturnValue(optimize);
+    mockApply.mockReturnValue(apply);
+    renderPage();
+
+    const findWindow = optimizeButton();
+    findWindow.focus();
+    await user.keyboard('{Enter}');
+    expect(optimize.mutate).toHaveBeenCalledOnce();
+
+    const actions = [
+      { button: findWindow, mutation: optimize },
+      { button: screen.getByRole('button', { name: 'Apply schedule' }), mutation: apply },
+      { button: screen.getByRole('button', { name: 'Save Autopilot' }), mutation: save },
+      { button: screen.getByRole('button', { name: 'Preview next run' }), mutation: preview },
+      { button: screen.getByRole('button', { name: 'Run now' }), mutation: run },
+    ];
+    for (const { button, mutation } of actions) {
+      expect(button).toHaveClass('h-auto', 'min-h-11', 'md:min-h-10', 'whitespace-normal', 'max-w-full');
+      expect(button.querySelector('span.min-w-0.break-words')).not.toBeNull();
+      expect(button).toBeEnabled();
+      button.focus();
+      expect(button).toHaveFocus();
+      if (button !== findWindow) {
+        await user.keyboard(' ');
+        expect(mutation.mutate).toHaveBeenCalledOnce();
+      }
+    }
+
+    expect(screen.getByLabelText('Depart by')).toBeEnabled();
+    expect(screen.getByLabelText('Ready by (daily)')).toBeEnabled();
+    expect(screen.getByLabelText('Battery capacity')).toBeEnabled();
+    expect(screen.getByLabelText('Max amps', { selector: '#smart-charge-max-amps' })).toBeEnabled();
+  });
 });
 
 // ───────────────────────────── pure utilities ─────────────────────────────
@@ -1010,6 +1083,10 @@ describe('SmartChargePage — plan history', () => {
     renderPage();
 
     expect(screen.getByText('Charging Autopilot')).toBeInTheDocument();
+    expect(screen.getAllByText('Unknown').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Autopilot on')).not.toBeInTheDocument();
+    expect(screen.queryByText('Autopilot off')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved draft:/)).not.toBeInTheDocument();
     expect(screen.getByRole('switch', { name: 'Enable autopilot' })).toBeDisabled();
     for (const name of ['Save Autopilot', 'Preview next run', 'Run now']) {
       const button = screen.getByRole('button', { name });
@@ -1044,6 +1121,7 @@ describe('SmartChargePage — plan history', () => {
     expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('00:00');
     expect(screen.getByLabelText('Max amps')).toHaveValue(0);
     expect(screen.getByRole('switch', { name: 'Precondition before departure' })).not.toBeChecked();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
     expect(save.mutate).toHaveBeenCalledWith(profile);
     expect(screen.getByRole('button', { name: 'Preview next run' })).toBeEnabled();
@@ -1068,9 +1146,13 @@ describe('SmartChargePage — plan history', () => {
     }));
     const { rerenderPage } = renderPage();
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable autopilot' }));
+    expect(screen.getByText('Unsaved draft: Off')).toBeInTheDocument();
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Ready by (daily)'), { target: { value: '05:30' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
-    expect(save.mutate).toHaveBeenCalledWith({ ...profile, ready_by: '05:30' });
+    expect(save.mutate).toHaveBeenCalledWith({ ...profile, enabled: false, ready_by: '05:30' });
     fireEvent.click(screen.getByRole('button', { name: 'Preview next run' }));
     expect(preview.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
     fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
@@ -1081,7 +1163,83 @@ describe('SmartChargePage — plan history', () => {
     rerenderPage();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Ready by (daily)')).toHaveValue('05:30');
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved draft: Off')).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Enable autopilot' })).not.toBeChecked();
     expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeEnabled();
+  });
+
+  it('keeps draft enable intent separate from persisted status until a successful save refresh', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: false, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const save = optimizeState();
+    const run = optimizeState();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockSaveAutopilot.mockReturnValue(save);
+    mockAutopilotRun.mockReturnValue(run);
+    const { rerenderPage } = renderPage();
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable autopilot' }));
+    expect(screen.getByRole('switch', { name: 'Enable autopilot' })).toBeChecked();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved draft: On')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(run.mutate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Autopilot' }));
+    expect(save.mutate).toHaveBeenCalledWith({ ...profile, enabled: true });
+
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isPending: true }));
+    rerenderPage();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Autopilot' })).toBeDisabled();
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isError: true, error: new Error('save rejected') }));
+    rerenderPage();
+    expect(screen.getByText('save rejected')).toBeInTheDocument();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByText('Unsaved draft: On')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isSuccess: true, data: { ...profile, enabled: true } }));
+    rerenderPage();
+    expect(screen.getByText('Autopilot off')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: { ...profile, enabled: true } }));
+    rerenderPage();
+    expect(screen.getByText('Autopilot on')).toBeInTheDocument();
+    expect(screen.queryByText(/Unsaved draft:/)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Run now' }));
+    expect(run.mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
+  });
+
+  it('shows run completion only after success and blocks running while saving the persisted profile', () => {
+    const profile: AutopilotProfile = {
+      vehicle_id: 7, enabled: true, ready_by: '06:45', target_soc: 85,
+      rate_plan: 'pge-ev2a', daily_cap_soc: 90, trip_override: true,
+      precondition: false, max_amps: 40, battery_capacity_kwh: 75,
+    };
+    const data = { message: 'Autopilot scheduled successfully' };
+    mockAutopilotProfile.mockReturnValue(makeQuery({ data: profile }));
+    mockSaveAutopilot.mockReturnValue(optimizeState({ isPending: true }));
+    const { rerenderPage } = renderPage();
+    expect(screen.getByRole('button', { name: 'Run now' })).toBeDisabled();
+    mockSaveAutopilot.mockReturnValue(optimizeState());
+    for (const state of [
+      {},
+      { isPending: true },
+      { isPending: true, isPaused: true },
+      { isError: true, error: new Error('run rejected') },
+    ]) {
+      mockAutopilotRun.mockReturnValue(optimizeState({ data, ...state }));
+      rerenderPage();
+      expect(screen.queryByText(data.message)).not.toBeInTheDocument();
+    }
+    expect(screen.getByText('run rejected')).toBeInTheDocument();
+    mockAutopilotRun.mockReturnValue(optimizeState({ data, isSuccess: true }));
+    rerenderPage();
+    expect(screen.getByText(data.message)).toBeInTheDocument();
+    expect(screen.queryByText('run rejected')).not.toBeInTheDocument();
   });
 
   it.each([false, true])('describes autopilot preview as an estimate without changing historical savings (populated: %s)', populated => {
@@ -1234,6 +1392,40 @@ describe('SmartChargePage — plan history', () => {
       fireEvent.click(screen.getByRole('button', { name: /retry/i }));
       expect(mutate).toHaveBeenCalledWith({ vehicle_id: 7, current_soc: 50 });
     }
+  });
+
+  it.each([
+    ['missing', null],
+    ['not a number', Number.NaN],
+    ['infinite', Number.POSITIVE_INFINITY],
+    ['zero', 0],
+    ['populated', 42000],
+  ])('separates OCPP lifecycle from %s energy for open and ended transactions', (_label, energy) => {
+    const session: OcppSession = {
+      transaction_id: 12, charge_point_id: 'charger-1', connector_id: 1,
+      started_at: '2026-01-16T02:00:00Z', ended_at: null,
+      start_meter_wh: 0, end_meter_wh: null, energy_delivered_wh: energy,
+      stop_reason: '',
+    };
+    mockOcppSessions.mockReturnValue(makeQuery({
+      data: [session, { ...session, transaction_id: 13, ended_at: '2026-01-16T03:00:00Z' }],
+    }));
+    renderPage();
+    const openRow = screen.getByText('charger-1 · #12').closest('li')!;
+    const endedRow = screen.getByText('charger-1 · #13').closest('li')!;
+    for (const row of [openRow, endedRow]) {
+      const reading = within(row).getByLabelText('Energy');
+      if (energy != null && Number.isFinite(energy)) {
+        expect(reading).toHaveTextContent(energy === 0 ? /0.*kWh/ : /42.*kWh/);
+      } else {
+        expect(reading).toHaveTextContent('Unknown');
+        expect(reading).not.toHaveTextContent(/kWh/);
+      }
+    }
+    expect(within(openRow).getByText('in progress')).toBeInTheDocument();
+    expect(within(openRow).queryByText('Completed')).not.toBeInTheDocument();
+    expect(within(endedRow).getByText('Completed')).toBeInTheDocument();
+    expect(within(endedRow).queryByText('in progress')).not.toBeInTheDocument();
   });
 
   it('keeps OCPP charger and transaction readings visible after independent refresh failures', () => {
