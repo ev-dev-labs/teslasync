@@ -260,7 +260,7 @@ func okQuerier() *fakeQuerier {
 		shortestRow:      fakeRow{vals: []any{int64(8), mustDate("2020-02-01"), 2000.0, 600.0, strptr("A"), strptr("B")}},
 		dowRow:           fakeRow{vals: []any{int(5), int(30)}},
 		hourRow:          fakeRow{vals: []any{int(17), int(25)}},
-		socRow:           fakeRow{vals: []any{42.0}},
+		socRow:           fakeRow{vals: []any{42.0, int(20)}},
 		driveMonthRows:   &fakeRows{rows: [][]any{{int(6), int(40), 800.0}, {int(2), int(60), 1200.0}}},
 		chargeMonthRows:  &fakeRows{rows: [][]any{{int(6), 500.0, 90.0}, {int(2), 700.0, 90.0}}},
 		chargeTypeRows:   &fakeRows{rows: [][]any{{"supercharger", int(30)}, {"dc_fast", int(15)}, {"ac_other", int(5)}}},
@@ -281,7 +281,7 @@ func emptyQuerier() *fakeQuerier {
 		shortestRow:      fakeRow{err: pgx.ErrNoRows},
 		dowRow:           fakeRow{err: pgx.ErrNoRows},
 		hourRow:          fakeRow{err: pgx.ErrNoRows},
-		socRow:           fakeRow{err: pgx.ErrNoRows},
+		socRow:           fakeRow{vals: []any{nil, int(0)}},
 		driveMonthRows:   &fakeRows{},
 		chargeMonthRows:  &fakeRows{},
 		chargeTypeRows:   &fakeRows{},
@@ -420,7 +420,7 @@ func TestGetYearReview_SecondaryScalarAvailability(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			fq := okQuerier()
 			fq.efficiencyRow = fakeRow{vals: []any{tt.value}}
-			fq.socRow = fakeRow{vals: []any{tt.value}}
+			fq.socRow = fakeRow{vals: []any{tt.value, int(1)}}
 			raw := rawReview(t, fq)
 			assertWire(t, raw, "avg_efficiency_wh_km", tt.want)
 			socWant := tt.want
@@ -428,6 +428,7 @@ func TestGetYearReview_SecondaryScalarAvailability(t *testing.T) {
 				socWant = "null"
 			}
 			assertWire(t, raw, "avg_charge_start_soc", socWant)
+			assertWire(t, raw, "avg_charge_start_soc_count", "1")
 			assertWire(t, raw, "total_drives", "100")
 			assertWire(t, raw, "gas_savings", "123.98")
 		})
@@ -438,8 +439,88 @@ func TestGetYearReview_SecondaryScalarAvailability(t *testing.T) {
 		raw := rawReview(t, fq)
 		assertWire(t, raw, "avg_efficiency_wh_km", "null")
 		assertWire(t, raw, "avg_charge_start_soc", "null")
+		assertWire(t, raw, "avg_charge_start_soc_count", "null")
 		assertWire(t, raw, "total_energy_kwh", "1200")
 	}
+}
+
+func TestGetYearReview_ChargingObservationAvailability(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		soc   any
+		count int
+		want  string
+	}{
+		{"no observations", nil, 0, "null"},
+		{"zero without observations", 0.0, 0, "null"},
+		{"measured zero", 0.0, 3, "0"},
+		{"fractional SOC", 42.26, 3, "42.3"},
+		{"full SOC", 100.0, 3, "100"},
+		{"missing SOC", nil, 3, "null"},
+		{"negative SOC", -0.1, 3, "null"},
+		{"above full SOC", 100.1, 3, "null"},
+		{"nan SOC", math.NaN(), 3, "null"},
+		{"infinite SOC", math.Inf(1), 3, "null"},
+		{"invalid count", 42.0, -1, "null"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.socRow = fakeRow{vals: []any{tt.soc, tt.count}}
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "avg_charge_start_soc", tt.want)
+			countWant := fmt.Sprint(tt.count)
+			if tt.count < 0 {
+				countWant = "null"
+			}
+			assertWire(t, raw, "avg_charge_start_soc_count", countWant)
+			assertWire(t, raw, "total_charge_sessions", "50")
+			for i, sql := range fq.queries {
+				if !strings.Contains(sql, "AVG(start_soc_pct)") {
+					continue
+				}
+				for _, fragment := range []string{
+					"COUNT(start_soc_pct)", "start_soc_pct >= 0", "start_soc_pct <= 100",
+					"vehicle_id = $1", "ended_at IS NOT NULL", "started_at >= $2", "started_at < $3",
+				} {
+					if !strings.Contains(sql, fragment) {
+						t.Errorf("SOC query missing %q: %s", fragment, sql)
+					}
+				}
+				if len(fq.args[i]) != 3 || fq.args[i][0] != int64(42) ||
+					fq.args[i][1] != mustDate("2020-01-01") || fq.args[i][2] != mustDate("2021-01-01") {
+					t.Errorf("SOC scope args = %v", fq.args[i])
+				}
+			}
+		})
+	}
+
+	for _, tt := range []struct {
+		name string
+		rows *fakeRows
+		sc   string
+		dc   string
+		ac   string
+	}{
+		{"no sessions", &fakeRows{}, "null", "null", "null"},
+		{"zero denominator", &fakeRows{rows: [][]any{{"supercharger", 0}}}, "null", "null", "null"},
+		{"measured zero share", &fakeRows{rows: [][]any{{"dc_fast", 2}}}, "0", "100", "0"},
+		{"fractional shares", &fakeRows{rows: [][]any{{"supercharger", 1}, {"dc_fast", 2}}}, "33.3", "66.7", "0"},
+		{"negative count", &fakeRows{rows: [][]any{{"supercharger", -1}}}, "null", "null", "null"},
+		{"unknown category", &fakeRows{rows: [][]any{{"unknown", 1}}}, "null", "null", "null"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			fq := okQuerier()
+			fq.chargeTypeRows = tt.rows
+			raw := rawReview(t, fq)
+			assertWire(t, raw, "supercharger_pct", tt.sc)
+			assertWire(t, raw, "dc_fast_pct", tt.dc)
+			assertWire(t, raw, "ac_other_pct", tt.ac)
+		})
+	}
+
+	raw := rawReview(t, emptyQuerier())
+	assertWire(t, raw, "avg_charge_start_soc", "null")
+	assertWire(t, raw, "avg_charge_start_soc_count", "0")
 }
 
 func TestGetYearReview_SettingsAvailability(t *testing.T) {

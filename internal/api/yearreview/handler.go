@@ -475,27 +475,34 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 
 	totalChargeForPct := superchargerCnt + dcFastCnt + acOtherCnt
 	var superchargerPct, dcFastPct, acOtherPct *float64
-	if chargeTypesOK {
-		sc, dc, ac := 0.0, 0.0, 0.0
-		if totalChargeForPct > 0 {
-			sc = float64(superchargerCnt) / float64(totalChargeForPct) * 100
-			dc = float64(dcFastCnt) / float64(totalChargeForPct) * 100
-			ac = float64(acOtherCnt) / float64(totalChargeForPct) * 100
-		}
+	if chargeTypesOK && totalChargeForPct > 0 {
+		sc := float64(superchargerCnt) / float64(totalChargeForPct) * 100
+		dc := float64(dcFastCnt) / float64(totalChargeForPct) * 100
+		ac := float64(acOtherCnt) / float64(totalChargeForPct) * 100
 		superchargerPct, dcFastPct, acOtherPct = &sc, &dc, &ac
 	}
 
-	// Average charge start SOC from SI column start_soc_pct (REAL).
+	// Count only valid SOC observations, not all completed charging sessions.
 	var avgChargeStartSOC *float64
+	var chargeStartSOCCount *int
+	var socCount int
 	if err := h.q.QueryRow(ctx, `
-		SELECT AVG(start_soc_pct)
+		SELECT AVG(start_soc_pct), COUNT(start_soc_pct)
 		FROM charging_sessions
 		WHERE vehicle_id = $1 AND ended_at IS NOT NULL AND start_soc_pct >= 0 AND start_soc_pct <= 100
 		  AND started_at >= $2 AND started_at < $3`,
 		vehicleID, yearStart, yearEnd,
-	).Scan(&avgChargeStartSOC); err != nil {
+	).Scan(&avgChargeStartSOC, &socCount); err != nil {
 		log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("year-review: charge-start SOC query failed")
 		avgChargeStartSOC = nil
+	} else if socCount < 0 {
+		logger.Warn().Int("count", socCount).Msg("year-review: invalid charge-start SOC observation count")
+		avgChargeStartSOC = nil
+	} else {
+		chargeStartSOCCount = &socCount
+		if socCount == 0 {
+			avgChargeStartSOC = nil
+		}
 	}
 	if avgChargeStartSOC != nil && (*avgChargeStartSOC < 0 || *avgChargeStartSOC > 100) {
 		avgChargeStartSOC = nil
@@ -553,10 +560,11 @@ func (h *Handler) GetYearReview(w http.ResponseWriter, r *http.Request) {
 		"avg_efficiency_wh_km":      roundNullableYR(avgEffWhKm, 1),
 
 		// Charging habits
-		"supercharger_pct":     roundNullableYR(superchargerPct, 1),
-		"dc_fast_pct":          roundNullableYR(dcFastPct, 1),
-		"ac_other_pct":         roundNullableYR(acOtherPct, 1),
-		"avg_charge_start_soc": roundNullableYR(avgChargeStartSOC, 1),
+		"supercharger_pct":           roundNullableYR(superchargerPct, 1),
+		"dc_fast_pct":                roundNullableYR(dcFastPct, 1),
+		"ac_other_pct":               roundNullableYR(acOtherPct, 1),
+		"avg_charge_start_soc":       roundNullableYR(avgChargeStartSOC, 1),
+		"avg_charge_start_soc_count": chargeStartSOCCount,
 
 		// Fun comparisons
 		"comparisons": comparisons,
