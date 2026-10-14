@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from 'react';
+import { type Dispatch, type FormEvent, type SetStateAction, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 import {
@@ -11,12 +11,13 @@ import {
   type JourneyTransition,
 } from '@/api/hooks/useJourney';
 import { useDataState } from '@/hooks/useDataState';
+import type { DataState } from '@/api/dataState';
 import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { FormSection } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { safeArray } from '@/lib/safeArray';
 import { StopScorePanel } from './StopScorePanel';
 import { DeparturePanel } from './DeparturePanel';
@@ -28,6 +29,18 @@ import { ArrivalPanel } from './ArrivalPanel';
 import { ReportPanel } from './ReportPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
+
+const EMPTY_DRAFT = { name: '', origin_name: '', dest_name: '' };
+type JourneyDraft = typeof EMPTY_DRAFT;
+
+function journeySourceState(state: DataState<unknown>, empty: boolean) {
+  if (state.fatalError) return 'error' as const;
+  if (!state.hasData) return state.isRefreshBlocked ? 'ready' as const : 'loading' as const;
+  if (state.status === 'stale' || state.status === 'partial' || state.isRefreshBlocked) {
+    return 'retained' as const;
+  }
+  return empty || state.status === 'unavailable' ? 'empty' as const : 'ready' as const;
+}
 
 const STATUS_LABEL_KEYS: Record<Exclude<(typeof STATUS_FILTERS)[number], ''>, string> = {
   planned: 'journey.status.planned',
@@ -104,34 +117,87 @@ function transitionIcon(action: JourneyTransition) {
  * never re-implements the state machine.
  */
 export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
+  const [drafts, setDrafts] = useState<Record<string, JourneyDraft>>({});
+  const scope = vehicleId ?? 'fleet';
+  const draft = drafts[scope] ?? EMPTY_DRAFT;
+  const setDraft: Dispatch<SetStateAction<JourneyDraft>> = (update) => {
+    setDrafts((current) => ({
+      ...current,
+      [scope]: typeof update === 'function' ? update(current[scope] ?? EMPTY_DRAFT) : update,
+    }));
+  };
+  return (
+    <VehicleJourneyPanel
+      key={scope}
+      vehicleId={vehicleId}
+      draft={draft}
+      setDraft={setDraft}
+    />
+  );
+}
+
+function VehicleJourneyPanel({ vehicleId, draft, setDraft }: {
+  vehicleId: number | null;
+  draft: JourneyDraft;
+  setDraft: Dispatch<SetStateAction<JourneyDraft>>;
+}) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [formOpen, setFormOpen] = useState(false);
-  const [draft, setDraft] = useState({ name: '', origin_name: '', dest_name: '' });
 
   const listQuery = useJourneys(vehicleId, statusFilter);
   const listState = useDataState(listQuery);
-  const sessions = safeArray(listQuery.data);
+  const sessions = safeArray(listState.data).filter((session) =>
+    vehicleId == null || session.vehicle_id === vehicleId);
 
   const detailQuery = useJourney(selectedId);
   const detailState = useDataState(detailQuery);
-  const detail = detailQuery.data ?? null;
+  const candidateDetail = detailState.data;
+  const detail = candidateDetail?.session.id === selectedId &&
+    (vehicleId == null || candidateDetail.session.vehicle_id === vehicleId)
+    ? candidateDetail : null;
 
   const create = useCreateJourney();
   const transition = useTransitionJourney();
+  const formGeneration = useRef(0);
+  const mounted = useRef(false);
+  const currentForm = useRef({ draft, formOpen, statusFilter });
+  useEffect(() => {
+    currentForm.current = { draft, formOpen, statusFilter };
+  }, [draft, formOpen, statusFilter]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
 
   useEffect(() => {
-    if (selectedId != null && sessions.some((s) => s.id === selectedId)) return;
+    if (selectedId != null) return;
     setSelectedId(sessions[0]?.id ?? null);
   }, [sessions, selectedId]);
 
   const statusLabel = (status: JourneyStatus) =>
     t(STATUS_LABEL_KEYS[status], STATUS_LABEL_DEFAULTS[status]);
 
+  const pausedContent = (state: DataState<unknown>) => (
+    <div className="space-y-2">
+      <Text role="status">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+      {state.retry ? <Button variant="secondary" size="sm" onClick={state.retry}>
+        {t('error.retry', 'Retry')}
+      </Button> : null}
+    </div>
+  );
+
+  const openJourney = (row: JourneySession) => {
+    if (row.id !== selectedId) formGeneration.current += 1;
+    setSelectedId(row.id);
+  };
+
   const submitCreate = (event: FormEvent) => {
     event.preventDefault();
     if (vehicleId == null || !draft.name.trim()) return;
+    const submittedGeneration = formGeneration.current;
     create.mutate(
       {
         vehicle_id: vehicleId,
@@ -141,8 +207,12 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
       },
       {
         onSuccess: (session) => {
+          if (!mounted.current || session.vehicle_id !== vehicleId ||
+            formGeneration.current !== submittedGeneration ||
+            currentForm.current.draft !== draft || !currentForm.current.formOpen ||
+            currentForm.current.statusFilter !== statusFilter) return;
           setFormOpen(false);
-          setDraft({ name: '', origin_name: '', dest_name: '' });
+          setDraft(EMPTY_DRAFT);
           setSelectedId(session.id);
         },
       },
@@ -195,7 +265,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
       key: 'open',
       header: t('journey.col.actions', 'Actions'),
       render: (row) => (
-        <Button variant="ghost" size="sm" onClick={() => setSelectedId(row.id)}>
+        <Button variant="ghost" size="sm" onClick={() => openJourney(row)}>
           {t('journey.open', 'Open')}
         </Button>
       ),
@@ -216,7 +286,11 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 value: s,
                 label: s === '' ? t('journey.filter.all', 'All') : statusLabel(s),
               }))}
-              onChange={(event) => setStatusFilter(event.target.value)}
+              onChange={(event) => {
+                formGeneration.current += 1;
+                setStatusFilter(event.target.value);
+                setSelectedId(null);
+              }}
             />
             {sessions.length > 0 || formOpen ? (
               <Button
@@ -224,13 +298,17 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 variant="secondary"
                 size="sm"
                 icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
-                onClick={() => setFormOpen((open) => !open)}
+                onClick={() => {
+                  formGeneration.current += 1;
+                  setFormOpen((open) => !open);
+                }}
               >
                 {formOpen
                   ? t('journey.action.cancel', 'Cancel')
                   : t('journey.action.plan', 'Plan journey')}
               </Button>
             ) : null}
+            {create.error ? <QueryError error={create.error} /> : null}
           </div>
         }
       >
@@ -272,15 +350,29 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
         ) : null}
 
         <SourceContent
-          state={listState.refreshError ? 'retained' : 'ready'}
+          state={journeySourceState(listState, sessions.length === 0)}
           label={t('journey.list.title', 'Planned journeys')}
           emptyMessage={t('journey.list.empty', 'No journeys yet. Plan one above and it will live here from planning to debrief.')}
           errorMessage={t('journey.list.loadFailed', 'The journey list could not be loaded.')}
+          error={listState.fatalError}
+          errorRecovery={{ onRetry: listState.isRefreshing ? undefined : listState.retry ?? undefined }}
+          retainedMessage={listState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+          loadingContent={<ListSkeleton label={t('journey.list.loading', 'Loading journeys…')} />}
+          emptyContent={<EmptyState
+            icon={<Icons.trip className="h-10 w-10" aria-hidden="true" />}
+            message={t('journey.list.empty', 'No journeys yet. Plan one above and it will live here from planning to debrief.')}
+            action={{
+              label: t('journey.action.plan', 'Plan journey'),
+              onClick: () => {
+                formGeneration.current += 1;
+                setFormOpen(true);
+              },
+            }}
+          />}
         >
-        {listQuery.isLoading && !listState.hasData ? (
-          <ListSkeleton label={t('journey.list.loading', 'Loading journeys…')} />
-        ) : listState.fatalError ? (
-          <QueryError error={listState.fatalError} onRetry={() => listState.retry?.()} />
+        {!listState.hasData && listState.isRefreshBlocked ? (
+          pausedContent(listState)
         ) : sessions.length === 0 ? (
           <EmptyState
             icon={<Icons.trip className="h-10 w-10" aria-hidden="true" />}
@@ -290,13 +382,36 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
             )}
             action={{
               label: t('journey.action.plan', 'Plan journey'),
-              onClick: () => setFormOpen(true),
+              onClick: () => {
+                formGeneration.current += 1;
+                setFormOpen(true);
+              },
             }}
           />
         ) : (
           <DataTable
             columns={columns}
             mobileColumns={['journey', 'status', 'updated']}
+            rowLabel={(row) => row.name}
+            mobilePresentation={{
+              roles: { journey: 'title', status: 'badge', plan: 'meta', updated: 'meta', open: 'hidden' },
+              displayValue: (row, key) => {
+                switch (key) {
+                  case 'journey': return row.name;
+                  case 'status': return statusLabel(row.status);
+                  case 'plan': return t('journey.planVersion', 'v{{version}}', { version: row.plan_version });
+                  case 'updated': return formatDateTime(row.updated_at);
+                  default: return null;
+                }
+              },
+              onOpenRow: openJourney,
+              inlineActions: (row) => (
+                <Button variant="ghost" size="sm" className="min-h-11 min-w-11" wrapLabel
+                  onClick={() => openJourney(row)}>
+                  {t('journey.open', 'Open')}
+                </Button>
+              ),
+            }}
             data={sessions}
             keyExtractor={(row) => row.id}
             tableId="journey-sessions"
@@ -307,26 +422,43 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
 
       <LayoutCard title={detail ? detail.session.name : t('journey.detail.title', 'Journey detail')}>
         <SourceContent
-          state={detailState.refreshError ? 'retained' : 'ready'}
+          state={selectedId == null ? 'empty'
+            : candidateDetail != null && detail == null ? 'loading'
+            : journeySourceState(detailState, detail == null)}
           label={t('journey.detail.title', 'Journey detail')}
           emptyMessage={t('journey.detail.empty', 'Select a journey to manage its lifecycle and plans.')}
           errorMessage={t('journey.detail.loadFailed', 'Journey details could not be loaded.')}
+          error={detailState.fatalError}
+          errorRecovery={{ onRetry: detailState.isRefreshing ? undefined : detailState.retry ?? undefined }}
+          retainedMessage={detailState.isRefreshBlocked
+            ? t('dataSources.status.paused', 'Refresh paused') : undefined}
+          loadingContent={<ListSkeleton label={t('journey.detail.loading', 'Loading journey…')} />}
+          emptyRecovery={{
+            action: {
+              label: t('journey.action.plan', 'Plan journey'),
+              onClick: () => {
+                formGeneration.current += 1;
+                setFormOpen(true);
+              },
+            },
+          }}
         >
-        {detailState.fatalError ? (
-          <QueryError error={detailState.fatalError} onRetry={() => detailState.retry?.()} />
-        ) : (detailQuery.isLoading && !detailState.hasData) || (selectedId != null && detail == null) ? (
-          <ListSkeleton label={t('journey.detail.loading', 'Loading journey…')} />
-        ) : selectedId == null || detail == null ? (
+        {!detailState.hasData && detailState.isRefreshBlocked ? (
+          pausedContent(detailState)
+        ) : detail == null ? (
           <EmptyState
             icon={<Icons.mapPinned className="h-10 w-10" aria-hidden="true" />}
             message={t('journey.detail.empty', 'Select a journey to manage its lifecycle and plans.')}
             action={{
               label: t('journey.action.plan', 'Plan journey'),
-              onClick: () => setFormOpen(true),
+              onClick: () => {
+                formGeneration.current += 1;
+                setFormOpen(true);
+              },
             }}
           />
         ) : (
-          <div className="space-y-4">
+          <div key={detail.session.id} className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant={statusVariant(detail.session.status)}>
                 {statusLabel(detail.session.status)}
@@ -340,7 +472,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                     variant={action === 'abort' ? 'danger' : 'secondary'}
                     size="sm"
                     icon={transitionIcon(action)}
-                    loading={transition.isPending}
+                    loading={transition.isPending && transition.variables?.id === detail.session.id}
                     onClick={() => transition.mutate({ id: detail.session.id, action })}
                   >
                     {t(TRANSITION_LABEL_KEYS[action], TRANSITION_DEFAULTS[action])}
@@ -348,6 +480,8 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 );
               })}
             </div>
+            {transition.error && transition.variables?.id === detail.session.id
+              ? <QueryError error={transition.error} /> : null}
             <div>
               <Text as="p" variant="label" className="mb-2 flex items-center gap-2">
                 <Icons.package className="h-4 w-4" aria-hidden="true" />
@@ -396,7 +530,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
       </LayoutCard>
 
       {detail != null ? (
-        <div className="min-w-0 xl:col-span-2">
+        <div key={detail.session.id} className="min-w-0 xl:col-span-2">
           <div className="grid gap-6 lg:grid-cols-2">
             <DeparturePanel session={detail.session} />
             <ChecklistPanel session={detail.session} />
