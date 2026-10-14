@@ -59,7 +59,7 @@ export function QueryReferencePanel() {
   return (
     <GlassPanel className="min-w-0 max-w-full space-y-3 p-4 sm:p-5">
       <PanelTitle className="flex min-w-0 items-center gap-2 break-words">
-        <FileCode className="h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />
+        <FileCode className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" aria-hidden="true" />
         {t('powerSql.info.title', 'Working with queries')}
       </PanelTitle>
       <InlineCallout variant="info" icon={<Info className="h-4 w-4" />}>
@@ -72,7 +72,7 @@ export function QueryReferencePanel() {
         {tips.map((tip) => (
           <li key={tip.id} className="flex items-start gap-2">
             <span
-              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-400/60"
+              className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--text-muted)]"
               aria-hidden="true"
             />
             <Text variant="bodySm" as="p">
@@ -92,6 +92,7 @@ export function QueryReferencePanel() {
           action={
             <CopyButton
               text={EXAMPLE_QUERY}
+              className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
               onCopy={() => setCopyFailed(false)}
               onCopyError={() => setCopyFailed(true)}
             />

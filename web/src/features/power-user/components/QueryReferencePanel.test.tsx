@@ -109,6 +109,17 @@ describe('QueryReferencePanel', () => {
     ).toBeGreaterThanOrEqual(5);
   });
 
+  it('allocates a mobile touch target while restoring the compact desktop copy control', () => {
+    render(<QueryReferencePanel />);
+
+    expect(screen.getByRole('button', { name: 'Copy' })).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'md:min-h-9',
+      'md:min-w-0',
+    );
+  });
+
   it('keeps the complete SQL example selectable after denial and retries the exact payload', async () => {
     const writeText = vi.fn()
       .mockRejectedValueOnce(new Error('permission denied'))
@@ -121,6 +132,12 @@ describe('QueryReferencePanel', () => {
     fireEvent.click(screen.getByRole('button'));
     await waitFor(() => expect(screen.queryByText(/Select the text manually/)).toBeNull());
     expect(writeText.mock.calls).toEqual([[EXPECTED_SQL], [EXPECTED_SQL]]);
+    expect(screen.getByRole('button', { name: 'Copied' })).toHaveClass(
+      'min-h-11',
+      'min-w-11',
+      'md:min-h-9',
+      'md:min-w-0',
+    );
   });
 
   it('routes visible copy through i18n so locale overrides win over the English fallback', () => {
