@@ -5,7 +5,7 @@ import {
   useCausalExperiments,
   useCreateCausalExperiment,
 } from '@/api/hooks/useAdvancedIntelligence';
-import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, OperationalWriteNotice, StaleRefreshWarning } from '@/components/feedback';
 import { ValidationSummary } from '@/components/forms';
 import { KVList, StatGroup, type StatMetric } from '@/components/data-display';
 import { PageLayout, SourceContent } from '@/components/layout';
@@ -14,6 +14,7 @@ import { Badge, Button, ConfirmDialog, Icon, Input, Pagination, Select, Text } f
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { toLocalDatetimeStr } from '@/lib/dateFormat';
@@ -45,6 +46,7 @@ export default function CausalExperimentationPage() {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();
+  const operationalMode = useOperationalMode();
   const { formatDateTime, tz } = useDateFormat();
   const units = useUnits();
   const [pagination, setPagination] = useState({ vehicleId, page: 1 });
@@ -165,7 +167,7 @@ export default function CausalExperimentationPage() {
 
   const requestConfirmation = (event: FormEvent) => {
     event.preventDefault();
-    if (vehicleId == null || mutation.isPending || submitting.current) return;
+    if (!operationalMode.canWrite || vehicleId == null || mutation.isPending || submitting.current) return;
     const instants = windowFields.map((field) => new Date(form[field]).getTime());
     const [baselineStart, baselineEnd, treatmentStart, treatmentEnd] = instants;
     const errors = getWindowErrors(form);
@@ -182,7 +184,7 @@ export default function CausalExperimentationPage() {
   };
 
   const confirmExperiment = () => {
-    if (!review || review.vehicle_id !== vehicleId || mutation.isPending || submitting.current) return;
+    if (!operationalMode.canWrite || !review || review.vehicle_id !== vehicleId || mutation.isPending || submitting.current) return;
     submitting.current = true;
     mutation.mutate(review, {
       onSuccess: () => setReview(null),
@@ -251,6 +253,7 @@ export default function CausalExperimentationPage() {
           title={t('advancedIntelligence.causal.form.title', 'Create windowed experiment')}
           description={windowHint}
         >
+          <OperationalWriteNotice className="mb-4" />
           <form className="space-y-4" onSubmit={requestConfirmation}>
             <ValidationSummary focusOnError={false} errors={windowFields.flatMap((field, index) => {
               const message = windowErrors[field];
@@ -295,7 +298,8 @@ export default function CausalExperimentationPage() {
             <Button
               type="submit"
               className="min-h-11 md:min-h-10"
-              disabled={vehicleId == null || mutation.isPending}
+              disabled={!operationalMode.canWrite || vehicleId == null || mutation.isPending}
+              title={operationalMode.writeBlockReason ?? undefined}
               icon={<Icon icon={Beaker} aria-hidden={true} />}
             >
               {t('advancedIntelligence.causal.form.review', 'Review experiment')}
@@ -355,7 +359,7 @@ export default function CausalExperimentationPage() {
         open={review !== null}
         variant="warning"
         loading={mutation.isPending}
-        confirmDisabled={review?.vehicle_id !== vehicleId}
+        confirmDisabled={!operationalMode.canWrite || review?.vehicle_id !== vehicleId}
         title={t('advancedIntelligence.causal.confirm.title', 'Confirm experiment estimate')}
         message={t(
           'advancedIntelligence.causal.confirm.body',
@@ -364,6 +368,7 @@ export default function CausalExperimentationPage() {
         confirmLabel={t('advancedIntelligence.causal.confirm.action', 'Create estimate')}
         cancelLabel={t('common.cancel', 'Cancel')}
         details={<div className="min-w-0 space-y-4">
+          <OperationalWriteNotice />
           {review && <KVList wrap layout="stacked" items={[
             { label: t('common.vehicle', 'Vehicle'), value: fmtNumber(review.vehicle_id, 0) },
             { label: t('advancedIntelligence.causal.form.intervention', 'Intervention'), value: labelFor(interventions, review.intervention_kind) },

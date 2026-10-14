@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { DataStateSource } from '@/api/dataState';
+import type { OperationalModeContextValue } from '@/hooks/useOperationalMode';
 import type { AdvancedPage, CausalExperiment } from '@/types/advancedIntelligence';
 import { formatSpeed, type UnitPref } from '@/lib/unitConversion';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
@@ -20,6 +21,10 @@ const mocks = vi.hoisted(() => ({
   mutation: { data: undefined as CausalExperiment | undefined, error: null as Error | null, isPending: false },
   translations: {} as Record<string, string>,
   translate: vi.fn(),
+  operationalMode: {
+    mode: 'live', asOf: null, online: true, isReadOnly: false, canWrite: true,
+    label: 'Live', description: 'Current data with live actions available.', writeBlockReason: null,
+  } as OperationalModeContextValue,
 }));
 const preferences: UnitPref = {
   distance: 'km', speed: 'km/h', temperature: '°C', pressure: 'kPa',
@@ -32,6 +37,9 @@ vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: mocks.vehicleId }),
+}));
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => mocks.operationalMode,
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({
@@ -114,6 +122,10 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 9, 10, 10).getTime());
   mocks.vehicleId = 4;
+  mocks.operationalMode = {
+    mode: 'live', asOf: null, online: true, isReadOnly: false, canWrite: true,
+    label: 'Live', description: 'Current data with live actions available.', writeBlockReason: null,
+  };
   mocks.translations = {};
   mocks.mutation = { data: undefined, error: null, isPending: false };
   mocks.query.mockReturnValue(query(payload()));
@@ -121,6 +133,67 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('CausalExperimentationPage', () => {
+  it.each([
+    { mode: 'as_of' as const, reason: 'Return to live mode before making operational changes.' },
+    { mode: 'cached' as const, reason: 'Reconnect before making operational changes.' },
+  ])('preserves observational evidence and the draft while blocking review in $mode mode', ({ mode, reason }) => {
+    mocks.operationalMode = {
+      ...mocks.operationalMode, mode, canWrite: false, isReadOnly: true,
+      online: mode !== 'cached', writeBlockReason: reason,
+    };
+    const view = renderPage();
+    const review = screen.getByRole('button', { name: 'Review experiment' });
+    expect(review).toBeDisabled();
+    expect(review).toHaveAttribute('title', reason);
+    expect(screen.getByText(reason)).toBeInTheDocument();
+    expect(screen.getByRole('article')).toHaveTextContent('Estimated');
+    expect(screen.getByRole('region', { name: 'Evidence sources' })).toHaveTextContent('test-only historical aggregates');
+    fireEvent.change(screen.getByLabelText('Metric'), { target: { value: 'average_speed_mps' } });
+    submitReview();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocks.reset).not.toHaveBeenCalled();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    mocks.operationalMode = {
+      ...mocks.operationalMode, mode: 'live', canWrite: true, isReadOnly: false,
+      online: true, writeBlockReason: null,
+    };
+    view.rerender(<CausalExperimentationPage />);
+    expect(review).toBeEnabled();
+    expect(screen.getByLabelText('Metric')).toHaveValue('average_speed_mps');
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    submitReview();
+    expect(within(screen.getByRole('dialog')).getByText('Average speed')).toBeInTheDocument();
+  });
+
+  it.each([
+    { mode: 'as_of' as const, reason: 'Return to live mode before making operational changes.' },
+    { mode: 'cached' as const, reason: 'Reconnect before making operational changes.' },
+  ])('blocks an already reviewed estimate in $mode mode without replaying it on recovery', ({ mode, reason }) => {
+    const view = renderPage();
+    submitReview();
+    mocks.operationalMode = {
+      ...mocks.operationalMode, mode, canWrite: false, isReadOnly: true,
+      online: mode !== 'cached', writeBlockReason: reason,
+    };
+    view.rerender(<CausalExperimentationPage />);
+    const dialog = within(screen.getByRole('dialog'));
+    expect(dialog.getByText(reason)).toBeInTheDocument();
+    expect(dialog.getByRole('button', { name: 'Create estimate' })).toBeDisabled();
+    expect(dialog.getByRole('button', { name: 'Cancel' })).toBeEnabled();
+    fireEvent.click(dialog.getByRole('button', { name: 'Create estimate' }));
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    mocks.operationalMode = {
+      ...mocks.operationalMode, mode: 'live', canWrite: true, isReadOnly: false,
+      online: true, writeBlockReason: null,
+    };
+    view.rerender(<CausalExperimentationPage />);
+    expect(dialog.getByRole('button', { name: 'Create estimate' })).toBeEnabled();
+    expect(mocks.mutate).not.toHaveBeenCalled();
+    fireEvent.click(dialog.getByRole('button', { name: 'Create estimate' }));
+    expect(mocks.mutate).toHaveBeenCalledOnce();
+    expect(mocks.mutate.mock.calls[0][0]).toMatchObject({ vehicle_id: 4, confirmed: true });
+  });
+
   it('preserves four measurements, samples, quality, evidence and observational limitations', () => {
     renderPage();
     const article = within(screen.getByRole('article'));
