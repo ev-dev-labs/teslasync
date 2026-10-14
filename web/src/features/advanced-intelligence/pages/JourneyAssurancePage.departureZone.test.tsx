@@ -131,10 +131,30 @@ afterEach(() => {
   client?.clear();
   onlineManager.setOnline(true);
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   expect(unexpectedRequests).toEqual([]);
 });
 
 describe('Journey departure browser-local zone contract', () => {
+  it.each(['empty', 'throwing'] as const)('discloses an unknown entry zone when Intl resolution is %s without fabricating UTC', async (resolution) => {
+    const dateTimeFormat = Intl.DateTimeFormat;
+    vi.spyOn(Intl, 'DateTimeFormat').mockImplementation((...args) => {
+      const formatter = new dateTimeFormat(...args);
+      const options = formatter.resolvedOptions();
+      vi.spyOn(formatter, 'resolvedOptions').mockImplementation(() => {
+        if (resolution === 'throwing') throw new Error('Synthetic zone resolution unavailable');
+        return { ...options, timeZone: '' };
+      });
+      return formatter;
+    });
+    await renderPage('utc');
+    expect(departureInput()).toHaveAccessibleDescription(
+      'Enter departure in your browser time zone (Unknown). Display time zone preferences do not change this entry.',
+    );
+    expect(departureInput()).not.toHaveAccessibleDescription(/UTC/);
+    expect(scenarioRequests()).toHaveLength(0);
+  });
+
   it.each([
     { mode: 'utc' as const, displayZone: 'UTC' },
     { mode: 'vehicle' as const, displayZone: 'Europe/Berlin' },
@@ -238,6 +258,8 @@ describe('Journey departure browser-local zone contract', () => {
     expect(screen.getByText('Observed charge, not readiness proof.')).toBeVisible();
     expect(screen.getByText('Unknown weather is not zero degrees.')).toBeVisible();
     expect(screen.getAllByText('Estimated energy requirement for the submitted route, not measured journey consumption.').length).toBeGreaterThan(0);
-    expect(scenarioRequests()).toHaveLength(2);
+    // request() forwards the rejected direct attempt to resilientFetch once.
+    expect(scenarioRequests()).toHaveLength(3);
+    expect(payload(2)).toEqual(payload(1));
   });
 });

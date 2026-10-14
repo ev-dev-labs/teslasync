@@ -17,7 +17,6 @@ import { toLocalDatetimeStr } from '@/lib/dateFormat';
 
 import { glassCardClasses } from '@/lib/tokens';
 import { SI } from '@/lib/unitConversion';
-import { browserTimezone } from '@/lib/timezone';
 import type { JourneyAssuranceRequest } from '@/types/advancedIntelligence';
 import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -42,6 +41,14 @@ export default function JourneyAssurancePage() {
   const { fmtNumber } = useNumberFormatting();
   const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
+  // The entry parser uses browser-local time even when Intl cannot name it.
+  // Do not label that unknown zone UTC via the display helper's fallback.
+  let departureTimeZone: string;
+  try {
+    departureTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || t('common.unknown', 'Unknown');
+  } catch {
+    departureTimeZone = t('common.unknown', 'Unknown');
+  }
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const mutation = useRunJourneyAssurance();
@@ -145,7 +152,7 @@ export default function JourneyAssurancePage() {
                 label={t('advancedIntelligence.journey.form.departure', 'Departure')}
                 hint={t('advancedIntelligence.journey.form.departureZone',
                   'Enter departure in your browser time zone ({{timeZone}}). Display time zone preferences do not change this entry.',
-                  { timeZone: browserTimezone() })}
+                  { timeZone: departureTimeZone })}
                 value={form.departure_at}
                 required
                 onChange={(event) => setForm((current) => ({ ...current, departure_at: event.target.value }))}
