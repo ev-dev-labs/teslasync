@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { formatTime } from '@/lib/dateFormat';
 import { knownNumber } from '@/api/dataState';
 import { safeArray } from '@/lib/safeArray';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -13,10 +14,10 @@ interface RateTimelineProps {
 }
 
 const tierColors: Record<string, string> = {
-  OFF_PEAK: 'bg-emerald-500/40',
-  SUPER_OFF_PEAK: 'bg-emerald-500/50',
-  MID_PEAK: 'bg-amber-500/40',
-  ON_PEAK: 'bg-red-500/40',
+  OFF_PEAK: 'bg-[var(--semantic-success)]/40',
+  SUPER_OFF_PEAK: 'bg-[var(--semantic-success)]/50',
+  MID_PEAK: 'bg-[var(--semantic-warning)]/40',
+  ON_PEAK: 'bg-[var(--semantic-danger)]/40',
   unknown: 'bg-[var(--surface-3)]',
 };
 
@@ -27,17 +28,16 @@ const tierLabels: Record<string, { key: string; def: string }> = {
   ON_PEAK: { key: 'chargePlanner.onPeak', def: 'On-Peak' },
 };
 
-function formatHour(h: number): string {
-  if (!Number.isFinite(h)) return '—';
+function formatHour(h: number, locale: string): string {
+  if (typeof h !== 'number' || !Number.isFinite(h)) return '—';
   const hour = ((Math.trunc(h) % 24) + 24) % 24;
-  if (hour === 0) return '12a';
-  if (hour === 12) return '12p';
-  return hour < 12 ? `${hour}a` : `${hour - 12}p`;
+  // Tariff hours are wall-clock coordinates, not instants in the viewer's zone.
+  return formatTime(new Date(Date.UTC(2000, 0, 1) + hour * 3_600_000), { locale, tz: 'UTC' });
 }
 
 /** Preserves tariff tiers, wall-clock hours and cross-midnight highlighting. */
 export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
-  const { fmtNumber } = useNumberFormatting();
+  const { fmtNumber, locale } = useNumberFormatting();
   const { t } = useTranslation();
   const rows = safeArray(rates);
   const maxRate = useMemo(() => {
@@ -66,15 +66,15 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
     <div className="flex h-full min-w-0 flex-col justify-center gap-3">
       <div className="flex flex-wrap gap-3">
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="h-3 w-3 rounded-sm bg-emerald-500/40" />
+          <span aria-hidden="true" className={cn('h-3 w-3 rounded-sm', tierColors.OFF_PEAK)} />
           <Text variant="bodySm">{t('chargePlanner.offPeak', 'Off-Peak')}</Text>
         </span>
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="h-3 w-3 rounded-sm bg-amber-500/40" />
+          <span aria-hidden="true" className={cn('h-3 w-3 rounded-sm', tierColors.MID_PEAK)} />
           <Text variant="bodySm">{t('chargePlanner.midPeak', 'Mid-Peak')}</Text>
         </span>
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="h-3 w-3 rounded-sm bg-red-500/40" />
+          <span aria-hidden="true" className={cn('h-3 w-3 rounded-sm', tierColors.ON_PEAK)} />
           <Text variant="bodySm">{t('chargePlanner.onPeak', 'On-Peak')}</Text>
         </span>
         {chargeWindow && <span className="flex items-center gap-1.5">
@@ -93,7 +93,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
           const meta = tierLabels[rate.tier];
           const tierName = meta ? t(meta.key, meta.def)
             : rate.tier || t('chargePlanner.unknownTier', 'Unknown');
-          const vars = { hour: formatHour(rate.hour), rate: value == null ? '—' : fmtNumber(value), tier: tierName };
+          const vars = { hour: formatHour(rate.hour, locale), rate: value == null ? '—' : fmtNumber(value), tier: tierName };
           const label = inWindow
             ? t('chargePlanner.rateBarLabelInWindow', '{{hour}}: {{rate}}¢ per kWh, {{tier}}, in charge window', vars)
             : t('chargePlanner.rateBarLabel', '{{hour}}: {{rate}}¢ per kWh, {{tier}}', vars);
@@ -102,7 +102,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
               className="group relative flex h-full min-w-0 flex-1 flex-col items-center justify-end">
               <div aria-hidden="true" className="absolute bottom-full z-10 mb-1 hidden group-hover:block">
                 <div className="whitespace-nowrap rounded border border-[var(--border-subtle)] bg-[var(--surface-overlay)] px-2 py-1">
-                  <Text as="div" size="xs" weight="medium" color="primary">{formatHour(rate.hour)}</Text>
+                  <Text as="div" size="xs" weight="medium" color="primary">{formatHour(rate.hour, locale)}</Text>
                   <Text as="div" size="xs" color="secondary">{value == null ? '—' : `${fmtNumber(value)}¢/kWh`}</Text>
                 </div>
               </div>
@@ -118,7 +118,7 @@ export function RateTimeline({ rates, chargeWindow }: RateTimelineProps) {
         {rows.map((rate, index) => (
           <Text as="div" key={`label-${rate.hour}-${index}`} size="2xs" color="muted"
             className="min-w-0 flex-1 text-center">
-            {rate.hour % 3 === 0 ? formatHour(rate.hour) : ''}
+            {rate.hour % 3 === 0 ? formatHour(rate.hour, locale) : ''}
           </Text>
         ))}
       </div>
