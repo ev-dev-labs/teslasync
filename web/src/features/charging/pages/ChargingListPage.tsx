@@ -114,19 +114,13 @@ export default function ChargingListPage() {
   const [sortBy, setSortBy] = useUrlEnum<SortField>('sort', SORT_FIELDS, 'date');
   const [sortDesc, setSortDesc] = useUrlBoolean('sort_desc', true);
   const [density, setDensity] = useUrlEnum<Density>('density', DENSITY_VALUES, isDesktopEvidence ? 'compact' : 'comfortable');
-  const [page, setPage] = useUrlNumber('page', 1);
-  const [pageSize] = useUrlNumber('size', 50);
+  const [requestedPage, setPage] = useUrlNumber('page', 1);
+  const [requestedPageSize] = useUrlNumber('size', 50);
+  const pageSize = Number.isSafeInteger(requestedPageSize) && requestedPageSize > 0 ? requestedPageSize : 50;
   const setUrlBatch = useUrlBatch();
   const [gridValues] = useUrlString('grid_values');
   const valueFilter = useMemo(() => parseChargingValueSelections(gridValues), [gridValues]);
   const hasValueFilters = valueFilter.invalid || Object.keys(valueFilter.selections).length > 0;
-  const previousRange = useRef(`${startDate}:${endDate}`);
-  useEffect(() => {
-    const currentRange = `${startDate}:${endDate}`;
-    if (previousRange.current === currentRange) return;
-    previousRange.current = currentRange;
-    if (page !== 1) setUrlBatch({ page: null });
-  }, [startDate, endDate, page, setUrlBatch]);
 
   /* ── Source query ────────────────────────────────────────────── */
   const chargingQuery = useChargingSessionsPaginated(vehicleId, {
@@ -322,6 +316,22 @@ export default function ChargingListPage() {
   }, [filteredSessions, sortBy, sortDesc]);
 
   /* ── Pagination ──────────────────────────────────────────────── */
+  const paginationScope = JSON.stringify([vehicleId, startDate, endDate, tz, deferredSearch, collection, gridValues, pageSize]);
+  const previousPaginationScope = useRef(paginationScope);
+  const scopeChanged = previousPaginationScope.current !== paginationScope;
+  const normalizedPage = Number.isFinite(requestedPage) ? Math.max(1, Math.floor(requestedPage)) : 1;
+  const totalPages = Math.max(1, Math.ceil(sortedSessions.length / pageSize));
+  const canClampPage = historyAvailable && !isLoading && !isSearchPending;
+  const page = scopeChanged ? 1 : canClampPage ? Math.min(normalizedPage, totalPages) : normalizedPage;
+  useEffect(() => {
+    previousPaginationScope.current = paginationScope;
+    if (requestedPage !== page || requestedPageSize !== pageSize) {
+      setUrlBatch({
+        page: page === 1 ? null : String(page),
+        size: pageSize === 50 ? null : String(pageSize),
+      });
+    }
+  }, [paginationScope, requestedPage, requestedPageSize, page, pageSize, setUrlBatch]);
   const paginatedSessions = useMemo(() => {
     const start = (page - 1) * pageSize;
     return sortedSessions.slice(start, start + pageSize);

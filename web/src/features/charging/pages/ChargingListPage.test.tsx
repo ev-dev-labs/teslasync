@@ -25,9 +25,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import type { ComponentProps, ReactNode } from 'react';
 
 // i18n stub: echo the fallback string, interpolating {{var}} tokens from the
@@ -339,19 +339,29 @@ function installHappyPath() {
   } as any);
 }
 
+let navigatePage: ReturnType<typeof useNavigate>;
+
+function PaginationLocationProbe() {
+  navigatePage = useNavigate();
+  return <output data-testid="pagination-location">{useLocation().search}</output>;
+}
+
 function renderPage(entries: string[] = ['/charging?from=2000-01-01&to=2100-01-01']) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const content = () => (
     <MemoryRouter initialEntries={entries}>
       <QueryClientProvider client={client}>
         <ToastProvider>
           <ChargingListPage />
+          <PaginationLocationProbe />
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
   );
+  const result = render(content());
+  return { ...result, refresh: () => result.rerender(content()) };
 }
 
 function briefMetric(label: string): HTMLElement {
@@ -548,6 +558,90 @@ describe('ChargingListPage — date window', () => {
     expect(opts.end).toMatch(/T/);
     expect(opts.start).not.toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(opts.end).not.toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
+describe('ChargingListPage — pagination', () => {
+  const baseUrl = '/charging?from=2000-01-01&to=2100-01-01';
+  const urlParams = () => new URLSearchParams(screen.getByTestId('pagination-location').textContent ?? '');
+
+  it.each([false, true])('keeps a valid populated deep link in sync with pagination (desktop=%s)', async (desktop) => {
+    mediaState.desktop = desktop;
+    renderPage([`${baseUrl}&size=2&page=2`]);
+    const pagination = await screen.findByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByText('Showing 3–4 of 6')).toBeInTheDocument();
+    expect(within(pagination).getByRole('button', { name: 'Page 2 of 3' })).toHaveAttribute('aria-current', 'page');
+    expect(document.querySelector('a[href="/charging/3"]')).toBeInTheDocument();
+    expect(document.querySelector('a[href="/charging/4"]')).toBeInTheDocument();
+    expect(document.querySelector('a[href="/charging/1"]')).not.toBeInTheDocument();
+    expect(urlParams().get('page')).toBe('2');
+  });
+
+  it.each([
+    ['0', '0', 1, 50],
+    ['-2', '-3', 1, 50],
+    ['1.9', '2.5', 1, 50],
+    ['999', '2', 3, 2],
+    ['2.9', '2', 2, 2],
+  ])('normalizes page=%s and size=%s before slicing', async (requestedPage, size, page, pageSize) => {
+    renderPage([`${baseUrl}&page=${requestedPage}&size=${size}`]);
+    const pagination = await screen.findByRole('navigation', { name: 'Pagination' });
+    expect(within(pagination).getByRole('button', { name: `Page ${page} of ${Math.ceil(6 / pageSize)}` }))
+      .toHaveAttribute('aria-current', 'page');
+    expect(document.querySelector(`a[href="/charging/${(page - 1) * pageSize + 1}"]`)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(urlParams().get('page')).toBe(page === 1 ? null : String(page));
+      expect(urlParams().get('size')).toBe(pageSize === 50 ? null : String(pageSize));
+    });
+  });
+
+  it('preserves a requested page while loading and clamps only after results arrive', async () => {
+    mockSessions.mockReturnValue(qr({ isLoading: true }));
+    const view = renderPage([`${baseUrl}&page=3&size=2`]);
+    expect(urlParams().get('page')).toBe('3');
+    mockSessions.mockReturnValue(qr({ data: SESSIONS.slice(0, 3) }));
+    view.refresh();
+    expect(await findSessionCard(3)).toBeInTheDocument();
+    await waitFor(() => expect(urlParams().get('page')).toBe('2'));
+  });
+
+  it.each(['vehicle', 'range', 'search', 'collection', 'values', 'size'])('resets pagination when %s scope changes', async (scope) => {
+    const view = renderPage([`${baseUrl}&page=3&size=2`]);
+    expect(await findSessionCard(5)).toBeInTheDocument();
+    if (scope === 'vehicle') {
+      mockSelectedVehicle.mockReturnValue({ ...mockSelectedVehicle(), vehicleId: 2 });
+      view.refresh();
+    } else {
+      const params = new URLSearchParams(urlParams());
+      if (scope === 'range') params.set('from', '2024-06-11');
+      if (scope === 'search') params.set('q', 'charger:home');
+      if (scope === 'collection') params.set('coll', 'home');
+      if (scope === 'values') params.set('grid_values', JSON.stringify({ cost: ['null'] }));
+      if (scope === 'size') params.set('size', '3');
+      // Change the URL without the page's filter handlers to cover restored/external scope changes.
+      act(() => navigatePage(`/charging?${params}`));
+    }
+    await waitFor(() => expect(urlParams().get('page')).toBeNull());
+    if (scope !== 'values') {
+      expect(document.querySelector('a[href="/charging/1"]')).toBeInTheDocument();
+    }
+  });
+
+  it('clamps shrinking membership but preserves the page on same-membership refreshes', async () => {
+    const view = renderPage([`${baseUrl}&page=3&size=2`]);
+    expect(await findSessionCard(5)).toBeInTheDocument();
+    mockSessions.mockReturnValue(qr({ data: SESSIONS.map((session) => ({ ...session, cost_decimal: 7 })) }));
+    view.refresh();
+    expect(sessionCard(5)).toBeInTheDocument();
+    expect(urlParams().get('page')).toBe('3');
+    mockSessions.mockReturnValue(qr({ data: SESSIONS.slice(0, 3) }));
+    view.refresh();
+    expect(await findSessionCard(3)).toBeInTheDocument();
+    await waitFor(() => expect(urlParams().get('page')).toBe('2'));
+    mockSessions.mockReturnValue(qr({ data: [] }));
+    view.refresh();
+    await waitFor(() => expect(urlParams().get('page')).toBeNull());
+    expect(screen.getByText('No charging sessions yet')).toBeInTheDocument();
   });
 });
 
