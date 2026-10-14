@@ -39,8 +39,6 @@ export interface ReplayMarker {
 /*  Tunable thresholds                                                 */
 /* ------------------------------------------------------------------ */
 
-/** Minimum contiguous duration (ms) to count as a "charge" segment. */
-const MIN_CHARGE_MS = 30_000;
 /** Minimum contiguous duration (ms) to count as a "fast segment". */
 const MIN_FAST_SEG_MS = 10_000;
 /** Power threshold (kW) below which a position is considered regen. */
@@ -131,6 +129,10 @@ function kindLabel(kind: ReplayMarkerKind): string {
  * no React/DOM dependencies. Designed to be cheap enough to run on every
  * render of the page; consumers that care can wrap it in `useMemo`.
  *
+ * Negative drive power is regenerative-flow evidence, not charge-session
+ * evidence. DrivePosition has no charging state or session identity, so this
+ * helper never infers charge-start / charge-stop markers from power or SoC.
+ *
  * Edge cases handled:
  *   - Empty `positions` → empty array.
  *   - Single position → only `start` marker.
@@ -162,33 +164,6 @@ export function computeReplayMarkers(positions: DrivePosition[]): ReplayMarker[]
     { at: 0, kind: 'start', label: 'Start' },
     { at: 1, kind: 'stop', label: 'End' },
   ];
-
-  /* ---- Charge segments: contiguous runs where power < threshold for >=30s ---- */
-  let chargeStartIdx: number | null = null;
-  for (let i = 0; i < positions.length; i++) {
-    const p = positions[i];
-    const isChargingNow = p.power != null && p.power < REGEN_THRESHOLD_KW;
-    if (isChargingNow && chargeStartIdx === null) {
-      chargeStartIdx = i;
-    } else if (!isChargingNow && chargeStartIdx !== null) {
-      const startTs = new Date(positions[chargeStartIdx].timestamp).getTime();
-      const endTs = new Date(positions[i - 1].timestamp).getTime();
-      if (endTs - startTs >= MIN_CHARGE_MS) {
-        markers.push({ at: normalize(chargeStartIdx), kind: 'charge-start', label: 'Charge start' });
-        markers.push({ at: normalize(i - 1), kind: 'charge-stop', label: 'Charge stop' });
-      }
-      chargeStartIdx = null;
-    }
-  }
-  // Trailing run that never ended.
-  if (chargeStartIdx !== null) {
-    const startTs = new Date(positions[chargeStartIdx].timestamp).getTime();
-    const endTs = new Date(positions[positions.length - 1].timestamp).getTime();
-    if (endTs - startTs >= MIN_CHARGE_MS) {
-      markers.push({ at: normalize(chargeStartIdx), kind: 'charge-start', label: 'Charge start' });
-      markers.push({ at: normalize(positions.length - 1), kind: 'charge-stop', label: 'Charge stop' });
-    }
-  }
 
   /* ---- Fast segments: contiguous runs where speed > p95 for >=10s ---- */
   const speeds = positions.map((p) => p.speed ?? 0).filter((s) => s > 0);
