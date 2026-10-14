@@ -1,6 +1,8 @@
 import { useTranslation } from 'react-i18next';
 import { ReceiptText } from 'lucide-react';
 import { Text, Badge } from '@/components/ui';
+import { StaleRefreshWarning } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
 import { ChargingSummaryBrief } from '../operationalbrief-all/ChargingSummaryBrief';
 import { useBillVariance } from '@/api/hooks/useCharging';
 import { CostStatSection } from './CostStatSection';
@@ -25,16 +27,19 @@ export function BillVarianceCard({ vehicleId }: BillVarianceCardProps) {
   const { t } = useTranslation();
   const { text, preferences } = useStatFormatting();
   const period = useIndependentStatPeriod('billing');
-  const { data, isLoading, error, refetch } = useBillVariance(vehicleId ?? undefined);
+  const query = useBillVariance(vehicleId ?? undefined);
+  const state = useDataState(query, { provenance: 'historical' });
+  const { data } = state;
 
   return (
     <CostStatSection title={t('costAnalysis.billVariance.title', 'Bill Truth: Measured vs Invoiced')}
-      icon={<ReceiptText className="h-4 w-4 text-cyan-300" aria-hidden="true" />} glow="cyan"
-      isLoading={isLoading} error={error} onRetry={() => refetch()} retained={data != null}
+      icon={<ReceiptText className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />}
+      isLoading={query.isLoading} error={state.fatalError} onRetry={() => void query.refetch()}
       isEmpty={!data} period={period}
       emptyMessage={t('costAnalysis.billVariance.noData', 'No reconciliation data yet')} skeletonHeight={160}>
       {periodHeaderId => (
         <div className="space-y-3">
+          <StaleRefreshWarning state={state} label={t('costAnalysis.billVariance.title', 'Bill Truth: Measured vs Invoiced')} />
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant={verdictVariant(data?.verdict ?? '')} size="sm">
               {data?.verdict === 'reconciled'
