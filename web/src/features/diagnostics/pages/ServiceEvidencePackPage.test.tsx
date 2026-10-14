@@ -13,11 +13,31 @@ import {
   type ServiceEvidencePackDocument,
 } from '../lib/serviceEvidencePack';
 import ServiceEvidencePackPage from './ServiceEvidencePackPage';
+import { RootCauseEvidenceGraph } from '../components/RootCauseEvidenceGraph';
+import { RootCauseSignalTimelineChart } from '../components/RootCauseSignalTimelineChart';
+import type { EvidenceGraph } from '../lib/rootCauseIntelligence';
+import type { ReactNode } from 'react';
 
 const mocks = vi.hoisted(() => ({
   workspace: vi.fn(),
   updates: vi.fn(),
   selected: { vehicleId: 4, vehicle: { display_name: 'DRILL evidence vehicle' } },
+  palette: ['var(--series-a)', 'var(--series-b)'] as readonly string[],
+  line: vi.fn(),
+  legend: vi.fn(),
+}));
+
+vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => mocks.palette }));
+vi.mock('@/components/charts', async (importActual) => ({
+  ...await importActual<typeof import('@/components/charts')>(),
+  ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  LineChart: ({ children }: { children: ReactNode }) => <>{children}</>,
+  Line: (props: unknown) => { mocks.line(props); return null; },
+  ChartLegend: (props: unknown) => { mocks.legend(props); return null; },
+  CartesianGrid: () => null,
+  XAxis: () => null,
+  YAxis: () => null,
+  Tooltip: () => null,
 }));
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
@@ -116,10 +136,88 @@ function renderPage() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.palette = ['var(--series-a)', 'var(--series-b)'];
   mocks.selected.vehicleId = 4;
   mocks.workspace.mockReturnValue(workspace());
   mocks.updates.mockReturnValue(query([]));
   vi.mocked(buildServiceEvidencePack).mockReset();
+});
+
+describe('root-cause chart preference adoption', () => {
+  it('updates graph nodes, edges and legend swatches without changing identities or relation encodings', () => {
+    const graph: EvidenceGraph = {
+      nodes: [
+        { id: 'Soc', kind: 'focal', domains: [], sampleCount: 48, hasEvidence: true },
+        ...['PackVoltage', 'PackCurrent', 'BatteryTemp', 'UnknownSignal'].map((id, index) => ({
+          id, kind: 'candidate' as const, domains: [], sampleCount: 48, hasEvidence: index < 3,
+        })),
+      ],
+      edges: [
+        { source: 'Soc', target: 'PackVoltage', relation: 'leads', strength: 0.8 },
+        { source: 'Soc', target: 'PackCurrent', relation: 'lags', strength: 0.6 },
+        { source: 'Soc', target: 'BatteryTemp', relation: 'concurrent', strength: 0.4 },
+      ],
+    };
+    const content = <RootCauseEvidenceGraph graph={graph} hasChosenSignal isLoading={false} isError={false} />;
+    const view = render(content);
+    const assertGraph = () => {
+      const diagram = view.container.querySelector('svg[viewBox]')!;
+      const circles = diagram.querySelectorAll('circle');
+      const edges = diagram.querySelectorAll('line');
+      const legend = screen.getAllByRole('listitem');
+      expect(legend.map((item) => item.querySelector('span')?.textContent))
+        .toEqual(['Soc', 'PackVoltage', 'PackCurrent', 'BatteryTemp', 'UnknownSignal']);
+      for (let index = 0; index < 4; index++) {
+        const color = mocks.palette[index % mocks.palette.length]!;
+        expect(circles[index]).toHaveAttribute('stroke', color);
+        expect(circles[index]).toHaveAttribute('fill', index < 3 ? color : 'none');
+        expect(legend[index + 1]!.querySelector('circle')).toHaveAttribute('stroke', color);
+        expect(legend[index + 1]!.querySelector('circle')).toHaveAttribute('fill', index < 3 ? color : 'none');
+        if (index < 3) expect(edges[index]).toHaveAttribute('stroke', color);
+      }
+      expect(edges[0]).not.toHaveAttribute('stroke-dasharray');
+      expect(edges[1]).toHaveAttribute('stroke-dasharray', '7 5');
+      expect(edges[2]).toHaveAttribute('stroke-dasharray', '2 4');
+      expect(circles[4]).toHaveAttribute('fill', 'var(--theme-primary)');
+    };
+    assertGraph();
+    mocks.palette = ['var(--series-c)', 'var(--series-d)', 'var(--series-e)'];
+    view.rerender(<RootCauseEvidenceGraph graph={graph} hasChosenSignal isLoading={false} isError={false} />);
+    assertGraph();
+  });
+
+  it('updates timeline colors while retaining data order, focal emphasis and URL-backed hidden-series identity', () => {
+    const timeline = [
+      { ms: 0, time: points[0]!.ts, Soc: 0, PackVoltage: null, PackCurrent: 1 },
+      { ms: 1, time: points[1]!.ts, Soc: 1, PackVoltage: 0.5, PackCurrent: 0 },
+    ];
+    const seriesNames = ['Soc', 'PackVoltage', 'PackCurrent'];
+    const content = () => (
+      <MemoryRouter initialEntries={['/?hidden_diagnostics-root-cause-timeline=PackVoltage']}>
+        <RootCauseSignalTimelineChart timeline={timeline} seriesNames={seriesNames}
+          focalSignal="Soc" hasChosenSignal isLoading={false} isError={false} />
+      </MemoryRouter>
+    );
+    const view = render(content());
+    const assertTimeline = () => {
+      expect(mocks.line.mock.calls.slice(-3).map(([props]) => props)).toEqual(
+        seriesNames.map((name, index) => expect.objectContaining({
+          dataKey: name, name, stroke: mocks.palette[index % mocks.palette.length],
+          strokeWidth: name === 'Soc' ? 2.5 : 1.5,
+          hide: name === 'PackVoltage', dot: false, connectNulls: false,
+        })),
+      );
+      expect(view.container.querySelector('[data-chart-key="diagnostics-root-cause-timeline"]')).not.toBeNull();
+      expect(mocks.legend).toHaveBeenLastCalledWith(expect.objectContaining({
+        state: expect.objectContaining({ hidden: new Set(['PackVoltage']) }),
+      }));
+    };
+    assertTimeline();
+    mocks.palette = ['var(--series-c)', 'var(--series-d)', 'var(--series-e)'];
+    view.rerender(content());
+    assertTimeline();
+    expect(timeline[0]!.PackVoltage).toBeNull();
+  });
 });
 
 describe('ServiceEvidencePackPage snapshot integrity', () => {

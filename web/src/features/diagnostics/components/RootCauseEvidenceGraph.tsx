@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Network } from 'lucide-react';
 import { GlassPanel, PanelTitle, Text, Caption } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { chartTokens } from '@/lib/tokens';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import type { EvidenceGraph, EvidenceRelation } from '../lib/rootCauseIntelligence';
 import type { SignalEvidenceBundleSource } from '@/api/hooks/useTelemetry';
 import { hasSignalHistory } from '../lib/signalEvidenceAvailability';
@@ -70,6 +70,7 @@ export function RootCauseEvidenceGraph({
   className,
 }: RootCauseEvidenceGraphProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const focal = graph.nodes.find((n) => n.kind === 'focal') ?? null;
   const candidates = graph.nodes.filter((n) => n.kind === 'candidate');
   const edgeByTarget = useMemo(() => new Map(graph.edges.map((e) => [e.target, e] as const)), [graph.edges]);
@@ -83,14 +84,14 @@ export function RootCauseEvidenceGraph({
         id: c.id,
         x: CENTER + CANDIDATE_ORBIT_R * Math.cos(angle),
         y: CENTER + CANDIDATE_ORBIT_R * Math.sin(angle),
-        color: chartTokens.series[i % chartTokens.series.length]!,
+        color: palette[i % palette.length]!,
         hasEvidence: c.hasEvidence,
         sampleCount: c.sampleCount,
         relation: edge?.relation ?? null,
         strength: edge?.strength ?? 0,
       };
     });
-  }, [candidates, edgeByTarget]);
+  }, [candidates, edgeByTarget, palette]);
 
   const isEmpty = focal == null || candidates.length === 0;
 

@@ -15,7 +15,7 @@ import {
   ResponsiveContainer,
 } from '@/components/charts';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { chartTokens } from '@/lib/tokens';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 import type { TimelineRow } from '../lib/rootCauseIntelligence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -61,6 +61,7 @@ export function RootCauseSignalTimelineChart({
 }: RootCauseSignalTimelineChartProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const hidden = useHiddenSeries(CHART_KEY);
 
   const dataColumns = [
@@ -125,7 +126,7 @@ export function RootCauseSignalTimelineChart({
               type="monotone"
               dataKey={name}
               name={name}
-              stroke={chartTokens.series[i % chartTokens.series.length]}
+              stroke={palette[i % palette.length]}
               strokeWidth={name === focalSignal ? 2.5 : 1.5}
               dot={false}
               connectNulls={false}
