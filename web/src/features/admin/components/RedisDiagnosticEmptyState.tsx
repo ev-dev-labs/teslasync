@@ -1,19 +1,19 @@
 import type React from 'react'
 import { useTranslation } from 'react-i18next'
-import { useQuery } from '@tanstack/react-query'
 import { AlertTriangle, Database, ServerCrash, Radio, Zap } from 'lucide-react'
 
 import { GlassPanel, Badge, Button, Heading, Text, Code } from '@/components/ui'
 import { EmptyState } from '@/components/feedback'
+import { SourceContent } from '@/components/layout'
+import { deriveDataState } from '@/api/dataState'
 import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import { type ApiError } from '@/lib/resilience'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import {
-  getRedisSignalKeys,
   type RedisSignalsMeta,
-  type RedisSignalKeyEntry,
 } from '@/api/devtools'
+import { useRedisSignalKeys } from '@/api/hooks/useRedisSignals'
 
 /**
  * Discriminated union for the error-aware props. The banner also speaks for
@@ -60,12 +60,6 @@ export function RedisDiagnosticEmptyState({
 }: RedisDiagnosticEmptyStateProps) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
-
-  const { data: keysData, isError: keysQueryError } = useQuery({
-    queryKey: ['redis-signal-keys'],
-    queryFn: () => getRedisSignalKeys(50),
-    staleTime: 30_000,
-  })
 
   // Branch 0.A — Redis cache wiring missing on the API server (503 + specific msg).
   if (
@@ -152,13 +146,6 @@ export function RedisDiagnosticEmptyState({
     )
   }
 
-  // When the keys query itself is in an error state we hide the
-  // "other vehicles" sub-section rather than render misleading chips
-  // — the outer banner already tells the operator the request failed.
-  const otherKeys: RedisSignalKeyEntry[] = keysQueryError
-    ? []
-    : keysData?.keys.filter((k) => k.vehicle_id !== vehicleId && k.field_count > 0) ?? []
-
   // Branch 1 — mode=local: structural cause; banner explains the rollback switch.
   if (meta.live_signal_store_mode === 'local') {
     return (
@@ -189,7 +176,7 @@ export function RedisDiagnosticEmptyState({
           'The in-process L1 store has {{count}} signals for this vehicle but Redis is empty. The async mirror goroutine in HybridLiveSignalStore.UpdateNonBlocking may be timing out or the Redis connection may be saturated. Check pod logs for "live signal store: Redis mirror failed".',
           { count: meta.l1_signal_count },
         )}
-        otherKeys={otherKeys}
+        vehicleId={vehicleId}
         onSelectVehicle={onSelectVehicle}
         meta={meta}
       />
@@ -219,7 +206,7 @@ export function RedisDiagnosticEmptyState({
                 'This vehicle has no L1 entries on this pod. Either telemetry has never streamed for it, or this pod restarted before any telemetry arrived.',
               )
         }
-        otherKeys={otherKeys}
+        vehicleId={vehicleId}
         onSelectVehicle={onSelectVehicle}
         meta={meta}
       />
@@ -236,7 +223,7 @@ export function RedisDiagnosticEmptyState({
         'redis.diagnostic.empty.body',
         'Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline.',
       )}
-      otherKeys={otherKeys}
+      vehicleId={vehicleId}
       onSelectVehicle={onSelectVehicle}
       meta={meta}
     />
@@ -250,7 +237,7 @@ interface BannerProps {
   body: string
   cta?: string
   ctaHref?: string
-  otherKeys?: RedisSignalKeyEntry[]
+  vehicleId?: number
   onSelectVehicle?: (id: number) => void
   meta: RedisSignalsMeta | undefined
 }
@@ -262,19 +249,12 @@ function DiagnosticBanner({
   body,
   cta,
   ctaHref,
-  otherKeys,
+  vehicleId,
   onSelectVehicle,
   meta,
 }: BannerProps) {
-  const { t } = useTranslation()
-  const toneClass = {
-    danger: 'border-rose-500/30 bg-rose-500/5',
-    warning: 'border-amber-500/30 bg-amber-500/5',
-    info: 'border-cyan-500/30 bg-cyan-500/5',
-    neutral: 'border-[var(--border-subtle)] bg-[var(--surface-2)]',
-  }[tone]
   return (
-    <GlassPanel className={`border ${toneClass}`} padding="md" data-testid="redis-diagnostic-banner" data-tone={tone}>
+    <GlassPanel className="border border-[var(--border-subtle)] bg-[var(--surface-2)]" padding="md" data-testid="redis-diagnostic-banner" data-tone={tone}>
       <div className="flex items-start gap-4">
         <div className="text-[var(--text-secondary)]">{icon}</div>
         <div className="flex-1 space-y-3">
@@ -286,36 +266,87 @@ function DiagnosticBanner({
               <Button variant="secondary" size="sm">{cta}</Button>
             </a>
           )}
-          {otherKeys && otherKeys.length > 0 && (
-            <div className="space-y-2 pt-2" data-testid="redis-diagnostic-other-vehicles">
-              <Text as="p" size="xs" color="muted" className="tracking-wide">
-                {t('redis.diagnostic.otherVehicles', 'Other vehicles with cached signals')}
-              </Text>
-              <div className="flex flex-wrap gap-2">
-                {otherKeys.slice(0, 6).map((k) => (
-                  <Button
-                    key={k.vehicle_id}
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onSelectVehicle?.(k.vehicle_id)}
-                    data-testid={`redis-diagnostic-other-${k.vehicle_id}`}
-                    className={cn(
-                      'h-auto rounded-full border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-1 hover:bg-[var(--surface-2)]',
-                      typography.size.xs,
-                      typography.color.secondary,
-                    )}
-                  >
-                    {k.display_name || k.vehicle_vin || `Vehicle ${k.vehicle_id}`}{' '}
-                    <Text color="muted">· {k.field_count}</Text>
-                  </Button>
-                ))}
-              </div>
-            </div>
+          {vehicleId !== undefined && (
+            <OtherRedisVehicles vehicleId={vehicleId} onSelectVehicle={onSelectVehicle} />
           )}
         </div>
       </div>
     </GlassPanel>
+  )
+}
+
+function OtherRedisVehicles({
+  vehicleId,
+  onSelectVehicle,
+}: Pick<BannerProps, 'onSelectVehicle'> & { vehicleId: number }) {
+  const { t } = useTranslation()
+  const query = useRedisSignalKeys()
+  const source = deriveDataState(query)
+  const otherKeys = (source.data?.keys ?? []).filter(
+    (key) => key.vehicle_id !== vehicleId && key.field_count > 0,
+  )
+  const label = t('redis.diagnostic.otherVehicles', 'Other vehicles with cached signals')
+  const paused = source.isRefreshBlocked
+  return (
+    <div className="space-y-2 pt-2" data-testid="redis-diagnostic-key-source">
+      <Text as="p" size="xs" color="muted" className="tracking-wide">
+        {label}
+      </Text>
+      {source.refreshError && (
+        <Text as="p" variant="bodySm" role="status">
+          {t('dataSources.status.refreshFailed', 'Refresh failed')}
+        </Text>
+      )}
+      {source.isRefreshing && (
+        <Text as="p" variant="bodySm" role="status">
+          {t('dataSources.status.refreshing', 'Refreshing')}
+        </Text>
+      )}
+      <SourceContent
+        state={source.fatalError ? 'error' : !source.hasData
+          ? paused ? 'empty' : 'loading'
+          : source.status === 'stale' ? 'retained' : otherKeys.length ? 'ready' : 'empty'}
+        label={label}
+        error={source.fatalError}
+        errorMessage={t('dataSources.status.failed', 'Failed')}
+        emptyMessage={t('common.noData', 'No data available')}
+        errorRecovery={{ onRetry: source.retry ?? undefined }}
+        retainedMessage={paused
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')}
+        emptyContent={paused ? (
+          <div className="space-y-2">
+            <Text as="p" variant="bodySm" role="status">{t('dataSources.status.paused', 'Refresh paused')}</Text>
+            <Button type="button" variant="secondary" size="sm" onClick={source.retry ?? undefined}>
+              {t('error.retry', 'Retry')}
+            </Button>
+          </div>
+        ) : undefined}
+      >
+        {otherKeys.length > 0 ? (
+          <div className="flex flex-wrap gap-2" data-testid="redis-diagnostic-other-vehicles">
+            {otherKeys.slice(0, 6).map((k) => (
+              <Button
+                key={k.vehicle_id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => onSelectVehicle?.(k.vehicle_id)}
+                data-testid={`redis-diagnostic-other-${k.vehicle_id}`}
+                className={cn(
+                  'h-auto rounded-full border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-1 hover:bg-[var(--surface-2)]',
+                  typography.size.xs,
+                  typography.color.secondary,
+                )}
+              >
+                {k.display_name || k.vehicle_vin || `Vehicle ${k.vehicle_id}`}{' '}
+                <Text color="muted">· {k.field_count}</Text>
+              </Button>
+            ))}
+          </div>
+        ) : <EmptyState message={t('common.noData', 'No data available')} className="py-6" />}
+      </SourceContent>
+    </div>
   )
 }
 

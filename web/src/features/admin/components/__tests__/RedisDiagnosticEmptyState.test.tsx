@@ -10,9 +10,9 @@
  * Plus: meta=undefined back-compat fallback, and onSelectVehicle wiring
  * for the "other vehicles with cached signals" chips.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent, cleanup, within, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import '@/i18n';
 
@@ -28,13 +28,21 @@ vi.mock('@/api/devtools', async (importOriginal) => {
 import { getRedisSignalKeys, type RedisSignalsMeta } from '@/api/devtools';
 import { ApiError } from '@/lib/resilience';
 import { RedisDiagnosticEmptyState } from '../RedisDiagnosticEmptyState';
+import { redisSignalKeys } from '@/api/hooks/useRedisSignals';
 
-const mockedGetKeys = getRedisSignalKeys as unknown as ReturnType<typeof vi.fn>;
+const mockedGetKeys = vi.mocked(getRedisSignalKeys);
 
-function makeWrapper() {
-  const qc = new QueryClient({
+const clients: QueryClient[] = [];
+
+function makeClient() {
+  const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  clients.push(client);
+  return client;
+}
+
+function makeWrapper(qc = makeClient()) {
   return function Wrapper({ children }: { children: ReactNode }) {
     return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
   };
@@ -71,6 +79,129 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     cleanup();
     mockedGetKeys.mockReset();
     mockedGetKeys.mockResolvedValue({ keys: [], total: 0 });
+  });
+
+  afterEach(() => {
+    cleanup();
+    clients.splice(0).forEach((client) => client.clear());
+    onlineManager.setOnline(true);
+  });
+
+  function renderKeys(client = makeClient()) {
+    const Wrapper = makeWrapper(client);
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState vehicleId={7} meta={baseMeta()} onSelectVehicle={() => {}} />
+      </Wrapper>,
+    );
+    return client;
+  }
+
+  it('shows active key loading without claiming the enumeration is empty', async () => {
+    mockedGetKeys.mockReturnValue(new Promise(() => {}));
+    renderKeys();
+    const section = screen.getByTestId('redis-diagnostic-key-source');
+    expect(within(section).getByRole('status')).toHaveAccessibleName(
+      'Loading Other vehicles with cached signals',
+    );
+    expect(within(section).queryByText('No data available')).toBeNull();
+    await waitFor(() => expect(mockedGetKeys).toHaveBeenCalledWith(50, {
+      signal: expect.any(AbortSignal),
+    }));
+  });
+
+  it('shows paused-without-data independently and recovers when key reads resume', async () => {
+    onlineManager.setOnline(false);
+    renderKeys();
+    const section = screen.getByTestId('redis-diagnostic-key-source');
+    expect(within(section).getByText('Refresh paused')).toBeInTheDocument();
+    expect(within(section).queryByText('No data available')).toBeNull();
+    expect(within(section).getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+    expect(mockedGetKeys).not.toHaveBeenCalled();
+    act(() => onlineManager.setOnline(true));
+    await waitFor(() => expect(within(section).getByText('No data available')).toBeInTheDocument());
+    expect(within(section).queryByText('Refresh paused')).toBeNull();
+  });
+
+  it.each([
+    { keys: [], total: 0 },
+    { keys: [{ vehicle_id: 1, field_count: 0, display_name: 'Zero' }], total: 1 },
+  ])('shows authoritative empty keys without retry for $total enumerated keys', async (data) => {
+    mockedGetKeys.mockResolvedValue(data);
+    renderKeys();
+    const section = screen.getByTestId('redis-diagnostic-key-source');
+    await waitFor(() => expect(within(section).getByText('No data available')).toBeInTheDocument());
+    expect(within(section).queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(screen.queryByTestId('redis-diagnostic-other-1')).toBeNull();
+    expect(screen.getAllByText('0').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('retries a fatal key-source failure without replacing the vehicle diagnostic', async () => {
+    mockedGetKeys.mockRejectedValueOnce(new Error('Key enumeration failed'));
+    renderKeys();
+    const section = screen.getByTestId('redis-diagnostic-key-source');
+    const retry = await within(section).findByRole('button', { name: /retry/i });
+    expect(screen.getByText('No recent telemetry for this vehicle')).toBeInTheDocument();
+    fireEvent.click(retry);
+    await waitFor(() => expect(within(section).getByText('No data available')).toBeInTheDocument());
+    expect(mockedGetKeys).toHaveBeenCalledTimes(2);
+  });
+
+  it('retains successful keys on refresh failure and retries only their source through recovery', async () => {
+    mockedGetKeys.mockResolvedValueOnce({
+      keys: [{ vehicle_id: 1, field_count: 12, display_name: 'Retained vehicle' }],
+      total: 1,
+    });
+    const client = renderKeys();
+    await screen.findByTestId('redis-diagnostic-other-1');
+    mockedGetKeys.mockRejectedValueOnce(new Error('Key refresh failed'));
+    await act(async () => {
+      await client.refetchQueries({ queryKey: redisSignalKeys.keys });
+    });
+    const section = screen.getByTestId('redis-diagnostic-key-source');
+    await within(section).findByText('Previously loaded data remains visible while affected sources recover.');
+    expect(within(section).getByText('Refresh failed')).toBeInTheDocument();
+    expect(screen.getByTestId('redis-diagnostic-other-1')).toHaveTextContent('Retained vehicle');
+    mockedGetKeys.mockResolvedValueOnce({
+      keys: [{ vehicle_id: 12, field_count: 5, display_name: 'Recovered vehicle' }],
+      total: 1,
+    });
+    fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
+    await screen.findByTestId('redis-diagnostic-other-12');
+    expect(screen.queryByTestId('redis-diagnostic-other-1')).toBeNull();
+    expect(within(section).queryByRole('button', { name: 'Retry' })).toBeNull();
+    expect(within(section).queryByText('Refresh failed')).toBeNull();
+    expect(mockedGetKeys).toHaveBeenCalledTimes(3);
+    expect(client.getQueryState(redisSignalKeys.detail(7))).toBeUndefined();
+  });
+
+  it('keeps cached keys visible during a paused refresh', () => {
+    const client = makeClient();
+    client.setQueryData(redisSignalKeys.keys, {
+      keys: [{ vehicle_id: 1, field_count: 12, display_name: 'Cached vehicle' }],
+      total: 1,
+    }, { updatedAt: Date.now() - 60_000 });
+    onlineManager.setOnline(false);
+    renderKeys(client);
+    expect(screen.getByTestId('redis-diagnostic-other-1')).toHaveTextContent('Cached vehicle');
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(mockedGetKeys).not.toHaveBeenCalled();
+  });
+
+  it('retains a successful empty enumeration through failure and clears the warning on recovery', async () => {
+    const client = renderKeys();
+    const section = screen.getByTestId('redis-diagnostic-key-source');
+    await within(section).findByText('No data available');
+    mockedGetKeys.mockRejectedValueOnce(new Error('Empty key refresh failed'));
+    await act(async () => {
+      await client.refetchQueries({ queryKey: redisSignalKeys.keys });
+    });
+    await within(section).findByText('Refresh failed');
+    expect(within(section).getByText('No data available')).toBeInTheDocument();
+    fireEvent.click(within(section).getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(within(section).queryByText('Refresh failed')).toBeNull());
+    expect(within(section).getByText('No data available')).toBeInTheDocument();
+    expect(within(section).queryByRole('button', { name: 'Retry' })).toBeNull();
   });
 
   it('renders the legacy generic message when meta is undefined', () => {
