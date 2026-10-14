@@ -39,9 +39,15 @@ export default function YearReviewPage() {
   const { year: yearParam } = useParams<{ year: string }>();
   const navigate = useNavigate();
 
-  const currentYear = new Date().getFullYear();
-  const year = Number(yearParam) || currentYear;
-  usePageTitle(t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in review' }));
+  // The endpoint aggregates UTC calendar years, independently of display
+  // locale/timezone and the workspace analysis range.
+  const currentYear = new Date().getUTCFullYear();
+  const year = yearParam === undefined ? currentYear : Number(yearParam);
+  const validYear = (yearParam === undefined || /^[+-]?\d+$/.test(yearParam))
+    && Number.isInteger(year) && year >= 2010 && year <= 2100;
+  usePageTitle(validYear
+    ? t('yearReview.pageTitle', { year, defaultValue: '{{year}} Year in review' })
+    : t('yearReview.title', 'Year in review'));
 
   const { unitPrefs } = useUnits();
   const { currencySymbol } = useFormatting();
@@ -51,7 +57,7 @@ export default function YearReviewPage() {
   const { vehicleId, vehicles: vehicleList } = useSelectedVehicle();
   const vehicleIdParam = vehicleId == null ? '' : String(vehicleId);
 
-  const query = useYearReview(year, vehicleIdParam || undefined);
+  const query = useYearReview(validYear ? year : NaN, validYear ? vehicleIdParam || undefined : undefined);
   const reviewState = useDataState(query, { provenance: 'historical' });
   const { data, refetch } = query;
   const retained = reviewState.status === 'stale';
@@ -124,6 +130,17 @@ export default function YearReviewPage() {
   ];
   const highlightOperationalMetrics = useOperationalMetrics(highlightMetrics, preferences);
   const extremeOperationalMetrics = useOperationalMetrics(extremeMetrics, preferences);
+  if (!validYear) {
+    return (
+      <PageLayout title={t('yearReview.title', 'Year in review')}>
+        <EmptyState message={t('playground.validation.schemaMismatch', 'Does not match the API specification ({{constraint}}).',
+          { constraint: '2010–2100' })} />
+        <Button onClick={() => goYear(currentYear)} className="min-h-11">
+          {t('yearReview.pageTitle', { year: currentYear, defaultValue: '{{year}} Year in review' })}
+        </Button>
+      </PageLayout>
+    );
+  }
   const briefStatus = sectionLoading ? t('yearReview.brief.loading', 'Loading year evidence')
     : retained ? t('yearReview.brief.retained', 'Retained year evidence')
     : reviewState.fatalError || (!vehicleIdParam && vehiclesState.fatalError) ? t('yearReview.brief.unavailable', 'Year evidence unavailable')
@@ -142,7 +159,7 @@ export default function YearReviewPage() {
   const yearControls = (
     <div className="flex flex-wrap items-center gap-2">
       <div className="flex items-center gap-1">
-        <Button variant="ghost" size="sm" className="min-h-11 min-w-11" onClick={() => goYear(year - 1)} aria-label={t('yearReview.prevYear', 'Previous year')}>
+        <Button variant="ghost" size="sm" className="min-h-11 min-w-11" onClick={() => goYear(year - 1)} disabled={year <= 2010} aria-label={t('yearReview.prevYear', 'Previous year')}>
           <Icon icon={ChevronLeft} />
         </Button>
         <Text size="sm" weight="semibold" color="primary" className="min-w-11 text-center tabular-nums">{year}</Text>

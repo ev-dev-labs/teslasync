@@ -34,6 +34,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import * as settingsHook from '@/hooks/useSettings';
 
 // jsdom lacks matchMedia; framer-motion (reached via <FadeIn>) reads it at
 // module load. Install before any import evaluates.
@@ -324,6 +325,8 @@ beforeEach(() => {
 
 afterEach(() => {
   onlineManager.setOnline(true);
+  vi.useRealTimers();
+  vi.restoreAllMocks();
   vi.clearAllMocks();
 });
 
@@ -668,6 +671,72 @@ describe('YearReviewPage — zero-activity banner', () => {
 });
 
 describe('YearReviewPage — year navigation & a11y', () => {
+  it.each(['2009', '2101', '0', '-2023', '2023.5', '2023.0', '2e3', '0x7e7', 'Infinity', 'NaN', 'garbage', '%202023%20'])(
+    'rejects the literal year %s without fetching or pretending vehicle selection is missing',
+    async literal => {
+      installRequest();
+      renderPage(`/year-review/${literal}?vehicle_id=10`);
+      expect(screen.getByRole('heading', { level: 1, name: 'Year in review' })).toBeInTheDocument();
+      expect(screen.getByText('Does not match the API specification (2010–2100).')).toBeInTheDocument();
+      expect(screen.queryByText(/Select a vehicle to view/)).toBeNull();
+      expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+      await waitFor(() => expect(aiCapture.props).toBeNull());
+      expect(yearReviewCalls()).toHaveLength(0);
+      fireEvent.click(screen.getByRole('button', { name: `${CURRENT_YEAR} Year in review` }));
+      expect(navigateSpy).toHaveBeenCalledWith(`/year-review/${CURRENT_YEAR}?vehicle_id=10`);
+    },
+  );
+
+  it.each(['2010', '2100', '2023', '02023', '+2023'])('accepts backend integer year %s', async literal => {
+    installRequest();
+    renderPage(`/year-review/${literal}?vehicle_id=10`);
+    await waitForReview();
+    expect(yearReviewCalls()).toEqual([`/analytics/year-review?year=${Number(literal)}&vehicle_id=10`]);
+    if (Number(literal) === 2010) {
+      expect(screen.getByRole('button', { name: 'Previous year' })).toBeDisabled();
+    }
+  });
+
+  it('recovers invalid scope with the effective workspace vehicle, not the original URL vehicle', async () => {
+    installRequest();
+    renderPage('/year-review/not-a-year?vehicle_id=10', true);
+    fireEvent.click(screen.getByRole('button', { name: 'Switch workspace vehicle' }));
+    fireEvent.click(screen.getByRole('button', { name: `${CURRENT_YEAR} Year in review` }));
+    expect(navigateSpy).toHaveBeenLastCalledWith(`/year-review/${CURRENT_YEAR}?vehicle_id=20`);
+    expect(yearReviewCalls()).toHaveLength(0);
+  });
+
+  it.each([
+    ['2026-01-01T00:00:00Z', 'America/Los_Angeles', 2026],
+    ['2025-12-31T23:59:59Z', 'Pacific/Kiritimati', 2025],
+  ])('defaults a missing year at UTC boundary %s despite saved display timezone %s', async (instant, timezone, expectedYear) => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(instant));
+    const saved = settingsHook.useSettings();
+    vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
+      ...saved, locale: 'de-DE',
+      settings: { ...saved.settings, locale: 'de-DE', tz_display_default: 'user', timezone_user: timezone },
+    });
+    installRequest();
+    renderPage('/year-review?vehicle_id=10&from=invalid&to=2026-02-30');
+    await waitForReview();
+    expect(screen.getByRole('heading', { level: 1, name: `${expectedYear} Year in review` })).toBeInTheDocument();
+    expect(yearReviewCalls()).toEqual([`/analytics/year-review?year=${expectedYear}&vehicle_id=10`]);
+    expect(within(highlights()).getByText('$1.875,00')).toBeInTheDocument();
+  });
+
+  it.each(['', '&from=2024-01-01&to=2024-12-31', '&from=invalid&to=', '&to=2024-02-30'])(
+    'keeps the literal calendar year independent of missing or invalid workspace dates %s',
+    async dates => {
+      installRequest();
+      renderPage(`/year-review/2023?vehicle_id=10${dates}`);
+      await waitForReview();
+      expect(yearReviewCalls()).toEqual(['/analytics/year-review?year=2023&vehicle_id=10']);
+      fireEvent.click(screen.getByRole('button', { name: 'Previous year' }));
+      expect(navigateSpy).toHaveBeenCalledWith('/year-review/2022?vehicle_id=10');
+    },
+  );
+
   it('exposes labelled prev/next/close controls and navigates to the previous year keeping the vehicle', async () => {
     installRequest();
     renderPage('/year-review/2023?vehicle_id=10');
