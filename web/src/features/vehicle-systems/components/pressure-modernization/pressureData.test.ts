@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { deriveDataState } from '@/api/dataState';
+import { formatDateTime } from '@/lib/dateFormat';
 import { formatMetric, type MetricPreferences } from '@/lib/metric-reference';
 import { convertPressureFromSI, PASCALS_PER_KPA, type PressureUnitPref } from '@/lib/unitConversion';
 import type { TirePressureReading } from '../../pages/TirePressurePage';
@@ -24,8 +25,8 @@ describe('canonical pressure presentation — no source-unit guessing', () => {
     const original = { ...reading };
     expect(['fl', 'fr', 'rl', 'rr'].map(pos => readPressurePa(reading, pos as 'fl' | 'fr' | 'rl' | 'rr')))
       .toEqual([280_000, 285_000, 290_000, 295_000]);
-    expect(pressureChartRows([reading], converter('bar'))[0]).toMatchObject({ fl: 2.8, fr: 2.85, rl: 2.9, rr: 2.95 });
-    expect(pressureChartRows([reading], converter('kPa'))[0]).toMatchObject({ fl: 280, fr: 285, rl: 290, rr: 295 });
+    expect(pressureChartRows([reading], converter('bar'), formatDateTime)[0]).toMatchObject({ fl: 2.8, fr: 2.85, rl: 2.9, rr: 2.95 });
+    expect(pressureChartRows([reading], converter('kPa'), formatDateTime)[0]).toMatchObject({ fl: 280, fr: 285, rl: 290, rr: 295 });
     expect(converter('psi')(300_000)).toBeCloseTo(43.5113, 3);
     expect(reading).toEqual(original);
     // A small *Pa* measurement must never be reinterpreted as bar or psi.
@@ -36,7 +37,7 @@ describe('canonical pressure presentation — no source-unit guessing', () => {
   it('keeps missing, nonfinite and inherited zero sentinels out of aggregates and chart values', () => {
     const partial = { ...reading, front_left: null, front_right: 0, rear_left: Number.NaN, rear_right: 300_000 };
     expect(summarisePressure(partial)).toEqual({ avg: 300_000, min: 300_000, warningCount: 0, reportedCount: 1 });
-    expect(pressureChartRows([partial], converter('bar'))[0]).toMatchObject({ fl: null, fr: null, rl: null, rr: 3 });
+    expect(pressureChartRows([partial], converter('bar'), formatDateTime)[0]).toMatchObject({ fl: null, fr: null, rl: null, rr: 3 });
     expect(summarisePressure({ ...partial, rear_right: undefined })).toBeNull();
     expect(summarisePressure(null)).toBeNull();
     expect(readPressurePa({ ...reading, front_left: Infinity }, 'fl')).toBeNull();
@@ -55,8 +56,25 @@ describe('canonical pressure presentation — no source-unit guessing', () => {
     const rows = [newer, reading, { ...reading, id: 10 }];
     expect(chronologicalPressure(rows).map(row => row.id)).toEqual([9, 10, 2]);
     expect(rows.map(row => row.id)).toEqual([2, 9, 10]);
-    expect(pressureChartRows(chronologicalPressure(rows), converter('bar'))).toHaveLength(3);
+    expect(pressureChartRows(chronologicalPressure(rows), converter('bar'), formatDateTime)).toHaveLength(3);
     expect(chronologicalPressure(undefined)).toEqual([]);
+  });
+
+  it('injects locale and timezone formatting without changing UTC chronology or source timestamps', () => {
+    const newer = { ...reading, id: 10, created_at: '2026-06-16T00:30:00Z' };
+    const source = [newer, reading];
+    const original = source.map(row => ({ ...row }));
+    const ordered = chronologicalPressure(source);
+    const format = (value: string | Date | null | undefined) =>
+      formatDateTime(value, { locale: 'de-DE', tz: 'America/Los_Angeles' });
+    const projected = pressureChartRows(ordered, converter('bar'), format);
+
+    expect(projected.map(row => row.time)).toEqual([
+      '15. Juni 2026, 02:00', '15. Juni 2026, 17:30',
+    ]);
+    expect(ordered.map(row => row.created_at)).toEqual([reading.created_at, newer.created_at]);
+    expect(source).toEqual(original);
+    expect(projected[1]).toMatchObject({ fl: 2.8, fr: 2.85, rl: 2.9, rr: 2.95 });
   });
 
   it('uses the canonical formatter for locale, precision and unit preferences without rewriting raw Pa', () => {

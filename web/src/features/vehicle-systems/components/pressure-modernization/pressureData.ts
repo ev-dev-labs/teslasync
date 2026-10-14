@@ -1,5 +1,5 @@
 import type { TirePosition, TirePressureReading } from '../../pages/TirePressurePage';
-import { formatDateTime } from '@/lib/dateFormat';
+import type { DateFormatter } from '@/hooks/useDateFormat';
 
 const fields = {
   fl: 'front_left', fr: 'front_right', rl: 'rear_left', rr: 'rear_right',
@@ -60,7 +60,11 @@ export interface PressureChartDatum {
   rr: number | null;
 }
 
-export function pressureChartRows(rows: readonly TirePressureReading[], convert: PressureValueConverter): PressureChartDatum[] {
+export function pressureChartRows(
+  rows: readonly TirePressureReading[],
+  convert: PressureValueConverter,
+  formatDateTime: DateFormatter,
+): PressureChartDatum[] {
   return rows.map(row => {
     const display = (pos: TirePosition) => {
       const pa = readPressurePa(row, pos);

@@ -30,6 +30,7 @@ import { render, screen, within, fireEvent, waitFor } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { formatDateTime } from '@/lib/dateFormat';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -59,7 +60,11 @@ const H = vi.hoisted(() => ({
   history: { mode: 'resolve' as 'resolve' | 'reject' | 'pending', value: [] as unknown },
   calls: { latest: 0, history: 0 },
   historyPaths: [] as string[],
+  historySignals: [] as (AbortSignal | undefined)[],
+  startInstant: '2026-06-01T00:00:00Z',
+  endInstantExclusive: '2026-07-01T00:00:00Z',
   setRange: vi.fn(),
+  dateOptions: { locale: 'en-US', tz: 'UTC' },
 }));
 
 /* ── framer-motion: render eagerly as plain divs (no matchMedia / IO). ────── */
@@ -126,7 +131,7 @@ vi.mock('@/api/client', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/client')>();
   return {
     ...actual, // keep ApiError / isApiError / getApiBase for QueryError
-    request: (path: string) => {
+    request: (path: string, options?: { signal?: AbortSignal }) => {
       if (path.startsWith('/tire-pressure/latest')) {
         H.calls.latest += 1;
         if (H.latest.mode === 'reject') return Promise.reject(new Error('latest boom'));
@@ -136,6 +141,7 @@ vi.mock('@/api/client', async (importOriginal) => {
       if (path.startsWith('/tire-pressure?')) {
         H.calls.history += 1;
         H.historyPaths.push(path);
+        H.historySignals.push(options?.signal);
         if (H.history.mode === 'reject') return Promise.reject(new Error('history boom'));
         if (H.history.mode === 'pending') return new Promise(() => {});
         return Promise.resolve(H.history.value);
@@ -146,6 +152,19 @@ vi.mock('@/api/client', async (importOriginal) => {
 });
 
 /* ── App hooks the page reads (kept minimal — only what the page consumes). ─ */
+
+vi.mock('@/hooks/useDateFormat', async () => {
+  const { useMemo } = await import('react');
+  const { formatDateTime } = await import('@/lib/dateFormat');
+  return {
+    useDateFormat: () => {
+      const { locale, tz } = H.dateOptions;
+      return useMemo(() => ({
+        formatDateTime: (value: string | Date | null | undefined) => formatDateTime(value, { locale, tz }),
+      }), [locale, tz]);
+    },
+  };
+});
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -183,8 +202,8 @@ vi.mock('@/hooks/useRangeState', () => ({
   useRangeState: () => ({
     start: '2026-06-01',
     end: '2026-06-30',
-    startInstant: '2026-06-01T00:00:00Z',
-    endInstantExclusive: '2026-07-01T00:00:00Z',
+    startInstant: H.startInstant,
+    endInstantExclusive: H.endInstantExclusive,
     timezone: 'UTC',
     presetId: '30d',
     compare: false,
@@ -254,13 +273,16 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
-    <MemoryRouter initialEntries={['/tire-pressure']}>
-      <QueryClientProvider client={client}>
-        <TirePressurePage />
-      </QueryClientProvider>
-    </MemoryRouter>,
-  );
+  return {
+    client,
+    ...render(<TirePressurePage />, {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <MemoryRouter initialEntries={['/tire-pressure']}>
+          <QueryClientProvider client={client}>{children}</QueryClientProvider>
+        </MemoryRouter>
+      ),
+    }),
+  };
 }
 
 /** Scope to the real shared statistic, not its label/tooltip wrapper. */
@@ -286,8 +308,13 @@ function pressureMetric(label: string, value: string, unit: string) {
 beforeEach(() => {
   H.vehicleId = 42;
   H.pressure = 'bar';
+  H.dateOptions = { locale: 'en-US', tz: 'UTC' };
   H.calls.latest = 0;
   H.calls.history = 0;
+  H.historyPaths = [];
+  H.historySignals = [];
+  H.startInstant = '2026-06-01T00:00:00Z';
+  H.endInstantExclusive = '2026-07-01T00:00:00Z';
   H.setRange.mockClear();
   setLatest(makeReading());
   setHistory([makeReading()]);
@@ -404,6 +431,35 @@ describe('getTirePressureValue — corner mapping through normaliseTpmsToPa', ()
  * ════════════════════════════════════════════════════════════════════════ */
 
 describe('TirePressurePage — populated data (bar)', () => {
+  it('refreshes table, chart labels and summary on date preference changes without rewriting UTC data', async () => {
+    const readings = [
+      makeReading({ id: 2, created_at: '2026-06-16T00:30:00Z' }),
+      makeReading({ id: 1, created_at: '2026-06-15T09:00:00Z' }),
+    ];
+    setHistory(readings);
+    const original = readings.map(row => ({ ...row }));
+    const { rerender, client } = renderPage();
+    const newest = readings[0].created_at;
+    await waitFor(() => {
+      expect(kpiCard('Last updated').getByText(formatDateTime(newest, H.dateOptions))).toBeInTheDocument();
+    });
+
+    H.dateOptions = { locale: 'de-DE', tz: 'America/Los_Angeles' };
+    rerender(<TirePressurePage />);
+    const labels = readings.map(row => formatDateTime(row.created_at, H.dateOptions));
+    await waitFor(() => {
+      expect(kpiCard('Last updated').getByText(labels[0])).toBeInTheDocument();
+      expect(historyTable().getAllByRole('row').slice(1)
+        .map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual(labels);
+    });
+    // The chart's accessible data table uses the same projected labels.
+    const chartTable = screen.getByRole('table', { name: 'Pressure history — data table' });
+    expect(within(chartTable).getAllByRole('row').slice(1)
+      .map(row => within(row).getAllByRole('cell')[0].textContent)).toEqual([...labels].reverse());
+    expect(client.getQueryData(['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive])).toEqual(original);
+    expect(readings).toEqual(original);
+  });
+
   it('renders KPIs, four corner gauges with statuses, and the sorted history table', async () => {
     setLatest(
       makeReading({
@@ -559,6 +615,30 @@ describe('TirePressurePage — loading / empty / error states', () => {
 });
 
 describe('TirePressurePage — interactions + a11y', () => {
+  it('retains pagination and raw-pressure filters without rewriting history values', async () => {
+    const readings = Array.from({ length: 26 }, (_, index) => makeReading({
+      id: index + 1,
+      created_at: `2026-06-${String(index + 1).padStart(2, '0')}T09:00:00Z`,
+      front_left: index === 0 ? 230_000 : 300_000,
+    }));
+    setHistory(readings);
+    const { client } = renderPage();
+    await historyTable().findByRole('columnheader', { name: /Front left/ });
+    expect(historyTable().getAllByRole('row').slice(1)).toHaveLength(25);
+    fireEvent.click(historyTable().getByRole('button', { name: /next page/i }));
+    expect(historyTable().getAllByRole('row').slice(1)).toHaveLength(1);
+    expect(historyTable().getByText('2.30 bar · Low')).toBeInTheDocument();
+    fireEvent.click(historyTable().getByRole('button', { name: /Front left.*filter/i }));
+    const filter = screen.getByRole('dialog', { name: /Front left.*filter/i });
+    fireEvent.click(within(filter).getByRole('checkbox', { name: 'Select all shown values' }));
+    fireEvent.click(within(filter).getByRole('checkbox', { name: '2.30 bar' }));
+    fireEvent.click(within(filter).getByRole('button', { name: 'Done' }));
+    expect(historyTable().getAllByRole('row').slice(1)).toHaveLength(1);
+    expect(historyTable().getByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(client.getQueryData(['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive])).toEqual(readings);
+    expect(readings[0].front_left).toBe(230_000);
+  });
+
   it('exposes aria-sort on the sortable Time column and toggles it on header click', async () => {
     setLatest(makeReading());
     setHistory([
@@ -589,9 +669,60 @@ describe('TirePressurePage — interactions + a11y', () => {
     renderPage();
 
     await historyTable().findByRole('columnheader', { name: /Front left \(bar\)/ });
-    expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
+    expect(H.historyPaths).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01T00%3A00%3A00Z&end=2026-07-01T00%3A00%3A00Z');
     expect(screen.queryByTestId('tire-pressure-range')).not.toBeInTheDocument();
     expect(H.setRange).not.toHaveBeenCalled();
+  });
+
+  it('encodes workspace instants and isolates history cache entries when either bound changes', async () => {
+    H.startInstant = '2026-06-15T08:30:00+05:30';
+    H.endInstantExclusive = '2026-06-16T08:30:00+05:30';
+    const initialHistory = [makeReading()];
+    setHistory(initialHistory);
+    const { client, rerender } = renderPage();
+    const initialKey = ['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive];
+
+    await waitFor(() => expect(client.getQueryData(initialKey)).toEqual(initialHistory));
+    expect(H.historyPaths).toEqual([
+      '/tire-pressure?vehicle_id=42&start=2026-06-15T08%3A30%3A00%2B05%3A30&end=2026-06-16T08%3A30%3A00%2B05%3A30',
+    ]);
+    expect(H.historySignals[0]).toBeInstanceOf(AbortSignal);
+
+    const updatedHistory = [makeReading({ id: 2, front_left: 230_000 })];
+    setHistory(updatedHistory);
+    H.startInstant = '2026-06-15T09:30:00+05:30';
+    rerender(<TirePressurePage />);
+    const startChangedKey = ['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive];
+    await waitFor(() => expect(client.getQueryData(startChangedKey)).toEqual(updatedHistory));
+
+    H.endInstantExclusive = '2026-06-16T09:30:00+05:30';
+    rerender(<TirePressurePage />);
+    const endChangedKey = ['tire-pressure-history', 42, H.startInstant, H.endInstantExclusive];
+    await waitFor(() => expect(client.getQueryData(endChangedKey)).toEqual(updatedHistory));
+    expect(client.getQueryData(initialKey)).toEqual(initialHistory);
+    expect(H.historyPaths).toHaveLength(3);
+    const params = new URL(H.historyPaths[2], 'http://localhost').searchParams;
+    expect(params.get('start')).toBe(H.startInstant);
+    expect(params.get('end')).toBe(H.endInstantExclusive);
+    expect(H.calls.latest).toBe(1);
+    expect(await historyTable().findByText('2.30 bar · Low')).toBeInTheDocument();
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+  });
+
+  it('aborts an in-flight history request when the workspace window changes', async () => {
+    setHistory([], 'pending');
+    const { rerender, unmount } = renderPage();
+    await waitFor(() => expect(H.historySignals).toHaveLength(1));
+    const previousSignal = H.historySignals[0];
+    expect(previousSignal?.aborted).toBe(false);
+
+    H.endInstantExclusive = '2026-07-01T01:00:00Z';
+    rerender(<TirePressurePage />);
+    await waitFor(() => expect(H.historySignals).toHaveLength(2));
+    expect(previousSignal?.aborted).toBe(true);
+    expect(H.historySignals[1]?.aborted).toBe(false);
+    unmount();
+    expect(H.historySignals[1]?.aborted).toBe(true);
   });
 });
 

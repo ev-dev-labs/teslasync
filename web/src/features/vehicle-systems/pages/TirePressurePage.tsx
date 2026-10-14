@@ -18,7 +18,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePressureFormat } from '@/hooks/usePressureFormat';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { gaugeTone } from '@/lib/tokens';
 
 import {
@@ -171,6 +171,7 @@ export default function TirePressurePage() {
   usePageTitle(t('tirePressure.title', 'Tire pressure'));
   const { unitPrefs } = useUnits();
   const { pressureUnit, toPressureValue } = usePressureFormat();
+  const { formatDateTime } = useDateFormat();
 
   // i18n label resolvers — keep the English constant as the fallback so
   // untranslated locales still render a meaningful corner / status name.
@@ -227,9 +228,7 @@ export default function TirePressurePage() {
 
   // Header VehiclePicker is the source of truth.
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
-  const { start, end } = useRangeState({
-    persistKey: 'tire-pressure.range',
-  });
+  const { startInstant, endInstantExclusive } = useRangeState();
 
   /* ---- API queries ---- */
 
@@ -239,7 +238,7 @@ export default function TirePressurePage() {
     isLoading: loadingLatest,
   } = latestQuery;
 
-  const historyQuery = usePressurePageHistory(activeVehicleId, start, end);
+  const historyQuery = usePressurePageHistory(activeVehicleId, startInstant, endInstantExclusive);
   const {
     data: history,
     isLoading: loadingHistory,
@@ -286,8 +285,8 @@ export default function TirePressurePage() {
   // newest-first table derivation below.
   const historyAsc = useMemo(() => chronologicalPressure(history), [history]);
   const chartData = useMemo(
-    () => pressureChartRows(historyAsc, toPressureValue),
-    [historyAsc, toPressureValue],
+    () => pressureChartRows(historyAsc, toPressureValue, formatDateTime),
+    [historyAsc, toPressureValue, formatDateTime],
   );
 
   // Newest entry in the selected range — used to populate "Last Updated"
@@ -406,7 +405,7 @@ export default function TirePressurePage() {
     // pressureUnit rebuilds the render closures with the correct display unit
     // when the user flips their pressure preference; between changes the deps
     // are stable so the columns keep their identity.
-    [t, tireLabel, statusLabel, pressureUnit, fmtNumber, pressureDisplayValue],
+    [t, tireLabel, statusLabel, pressureUnit, fmtNumber, pressureDisplayValue, formatDateTime],
   );
 
   /* ---- Render ---- */
