@@ -48,11 +48,16 @@ export interface ThermalTaxSample {
 export type ThermalPhaseState = 'heater_on' | 'heater_off';
 
 export interface ThermalPhase {
+  /** First and last observations of this state, not exact transition instants. */
   startMs: number;
   endMs: number;
+  /** Observed span only; independent of the summary's midpoint-rule heaterOnS. */
   durationS: number;
   state: ThermalPhaseState;
   avgHeaterW: number;
+  /** Transition windows bracketed by opposite-state observations; null at unobserved session edges. */
+  startTransition: { earliestMs: number; latestMs: number } | null;
+  endTransition: { earliestMs: number; latestMs: number } | null;
 }
 
 export type ThermalEnergySource = 'cumulative' | 'power_integral' | 'none';
@@ -175,9 +180,9 @@ function powerIntegralDeliveredWh(samples: readonly ThermalTaxSample[]): number 
 
 /**
  * Segment the (time-sorted) samples into contiguous heater-on / heater-off
- * phases. Boundaries fall on sample timestamps — the true transition
- * instant between two samples is approximated by the timestamp of the
- * sample where the new state is first observed.
+ * phases. Retain each run's observed span and bracket transitions between
+ * the adjacent opposite-state readings. Sparse observations cannot establish
+ * an exact transition instant or prove that only one transition occurred.
  */
 function buildPhases(
   sorted: readonly { tMs: number; heaterW: number; state: ThermalPhaseState }[],
@@ -198,6 +203,14 @@ function buildPhases(
         durationS: Math.max(0, (endMs - startMs) / 1000),
         state: sorted[runStartIdx]!.state,
         avgHeaterW,
+        startTransition: runStartIdx > 0 ? {
+          earliestMs: sorted[runStartIdx - 1]!.tMs,
+          latestMs: startMs,
+        } : null,
+        endTransition: !atEnd ? {
+          earliestMs: endMs,
+          latestMs: sorted[i]!.tMs,
+        } : null,
       });
       runStartIdx = i;
     }

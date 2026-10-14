@@ -128,6 +128,53 @@ describe('analyzeChargingThermalTax', () => {
     expect(gappySummary.dataCoveragePct).toBeLessThan(50);
   });
 
+  it('brackets sparse phase transitions without changing observations or the independent KPIs', () => {
+    const rows = [
+      sample(1200, { battery_heater_power_w: 0, ac_charging_energy_in_wh: 1200 }),
+      sample(0, { battery_heater_power_w: 0, ac_charging_energy_in_wh: 0 }),
+      sample(900, { battery_heater_power_w: 3000, ac_charging_energy_in_wh: 900 }),
+      sample(300, { battery_heater_power_w: 3000, ac_charging_energy_in_wh: 300 }),
+    ];
+    const before = structuredClone(rows);
+    const s = analyzeChargingThermalTax(rows);
+    const entering = { earliestMs: T0, latestMs: T0 + 300_000 };
+    const leaving = { earliestMs: T0 + 900_000, latestMs: T0 + 1200_000 };
+    expect(s.phases).toEqual([
+      { startMs: T0, endMs: T0, durationS: 0, state: 'heater_off', avgHeaterW: 0,
+        startTransition: null, endTransition: entering },
+      { startMs: T0 + 300_000, endMs: T0 + 900_000, durationS: 600,
+        state: 'heater_on', avgHeaterW: 3000, startTransition: entering, endTransition: leaving },
+      { startMs: T0 + 1200_000, endMs: T0 + 1200_000, durationS: 0,
+        state: 'heater_off', avgHeaterW: 0, startTransition: leaving, endTransition: null },
+    ]);
+    expect(s.heaterOnS).toBe(1200);
+    expect(s.heaterOnPct).toBe(100);
+    expect(s.heaterWh).toBe(750);
+    expect(s.deliveredEnergyWh).toBe(1200);
+    expect(s.heaterSharePct).toBeCloseTo(125 / 3);
+    expect(rows).toEqual(before);
+  });
+
+  it('uses the current threshold and brackets across missing heater observations', () => {
+    const s = analyzeChargingThermalTax([
+      sample(0, { battery_heater_power_w: 50 }),
+      sample(60),
+      sample(120, { battery_heater_power_w: 50.5 }),
+    ]);
+    expect(s.phases.map(p => p.state)).toEqual(['heater_off', 'heater_on']);
+    expect(s.phases[0]!.endTransition).toEqual({ earliestMs: T0, latestMs: T0 + 120_000 });
+    expect(s.phases[1]!.startTransition).toEqual(s.phases[0]!.endTransition);
+    expect(s.heaterOnS).toBe(0);
+    const custom = analyzeChargingThermalTax([
+      sample(0, { battery_heater_power_w: 50 }),
+      sample(120, { battery_heater_power_w: 50.5 }),
+    ], { heaterOnThresholdW: 50.5 });
+    expect(custom.phases).toEqual([{
+      startMs: T0, endMs: T0 + 120_000, durationS: 120,
+      state: 'heater_off', avgHeaterW: 50.25, startTransition: null, endTransition: null,
+    }]);
+  });
+
   it('ignores samples with an unparsable timestamp', () => {
     const samples = [
       sample(0, { battery_heater_power_w: 1000 }),
