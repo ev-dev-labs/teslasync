@@ -43,7 +43,7 @@ import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey } from '@/lib/dateFormat';
+import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey, formatTime } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 
 import { buildContextHref } from '@/lib/contextNavigation';
@@ -194,12 +194,8 @@ export default function ChargingListPage() {
     [dateFilteredSessions, tz],
   );
   const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
-  const priorStats = useMemo<ChargingPeriodStats | null>(
-    () => priorRange && sessions
-      ? computeChargingPeriodStats(sessions, priorRange.start, priorRange.end, tz)
-      : null,
-    [sessions, priorRange, tz],
-  );
+  // The capped current-range query does not establish prior-period coverage.
+  const priorStats: ChargingPeriodStats | null = null;
 
   /* ── Collection counts (computed BEFORE filter) ──────────────── */
   const anomalies = useMemo(
@@ -530,13 +526,8 @@ export default function ChargingListPage() {
   const datePresetLabel = datePreset ? t(datePreset.i18nKey, datePreset.fallback) : null;
   const formattedRange = `${formatDayKey(startDate, { style: 'long' })} – ${formatDayKey(endDate, { style: 'long' })}`;
   const periodLabel = datePresetLabel ? `${datePresetLabel} · ${formattedRange}` : formattedRange;
-  const priorHasData = priorStats != null && priorStats.count > 0;
-  const priorLabel: string | undefined = priorHasData && priorRange
-    ? t('charging.priorPeriod', 'prior period: {{start}} – {{end}}', {
-        start: formatDayKey(priorRange.start, { style: 'long' }),
-        end: formatDayKey(priorRange.end, { style: 'long' }),
-      })
-    : priorRange
+  const priorHasData = false;
+  const priorLabel: string | undefined = priorRange
       ? t('charging.priorUnavailable', 'Prior-period comparison unavailable: {{start}} – {{end}}', {
           start: formatDayKey(priorRange.start, { style: 'long' }),
           end: formatDayKey(priorRange.end, { style: 'long' }),
@@ -590,7 +581,7 @@ export default function ChargingListPage() {
           <span className="opacity-50">·</span>
           <span>
             {t('charging.mostCommon', 'Most common start: {{hour}}', {
-              hour: formatHour(currentStats.mostCommonStartHour),
+              hour: formatHour(currentStats.mostCommonStartHour, unitPrefs.locale),
             })}
           </span>
         </>
@@ -1584,9 +1575,8 @@ export default function ChargingListPage() {
   );
 }
 
-export function formatHour(h: number): string {
-  if (h === 0) return '12 AM';
-  if (h === 12) return '12 PM';
-  if (h < 12) return `${h} AM`;
-  return `${h - 12} PM`;
+export function formatHour(h: number, locale = 'en-US'): string {
+  if (!Number.isInteger(h) || h < 0 || h > 23) return '—';
+  // This is an already-local hour bucket, not an instant to shift into another zone.
+  return formatTime(new Date(Date.UTC(2000, 0, 1, h)), { locale, tz: 'UTC' });
 }

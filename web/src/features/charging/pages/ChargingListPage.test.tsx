@@ -61,6 +61,7 @@ vi.mock('react-i18next', () => ({
 // imperial (mi) display-conversion branches. Hoisted so the settings mock
 // factory can close over it.
 const unitState = vi.hoisted(() => ({ length: 'km' as 'km' | 'mi' }));
+const timeDisplayState = vi.hoisted(() => ({ locale: 'en-US', timezone: '' }));
 const mediaState = vi.hoisted(() => ({ desktop: false }));
 const chartPreference = vi.hoisted(() => ({ palette: 'cb_safe' as 'cb_safe' | 'neon' }));
 
@@ -119,12 +120,15 @@ vi.mock('@/hooks/useSettings', async (importActual) => {
   return {
     ...actual,
     useSettings: () => ({
-      settings: { ...defaults, unit_of_length: unitState.length },
+      settings: {
+        ...defaults, unit_of_length: unitState.length,
+        locale: timeDisplayState.locale, timezone_user: timeDisplayState.timezone,
+      },
       isMiles: unitState.length === 'mi',
       isFahrenheit: false,
       isPSI: false,
       decimals: 2,
-      locale: 'en-US',
+      locale: timeDisplayState.locale,
       density: 'comfortable' as const,
       rangeType: 'rated' as const,
     }),
@@ -424,6 +428,8 @@ beforeEach(() => {
   localStorage.clear();
   mediaState.desktop = false;
   unitState.length = 'km';
+  timeDisplayState.locale = 'en-US';
+  timeDisplayState.timezone = '';
   chartPreference.palette = 'cb_safe';
   captured.toDistanceDisplay = null;
   captured.distanceUnit = '';
@@ -435,21 +441,87 @@ afterEach(() => vi.unstubAllGlobals());
 /* ─────────────────────────── Pure helper unit tests ─────────────────────── */
 
 describe('formatHour', () => {
-  it('formats the midnight and noon boundaries as 12 AM / 12 PM', () => {
-    expect(formatHour(0)).toBe('12 AM');
-    expect(formatHour(12)).toBe('12 PM');
+  it('formats the midnight and noon boundaries with the shared clock formatter', () => {
+    expect(formatHour(0)).toBe('12:00 AM');
+    expect(formatHour(12)).toBe('12:00 PM');
   });
 
   it('formats morning hours as AM and afternoon/evening hours as 12-hour PM', () => {
-    expect(formatHour(1)).toBe('1 AM');
-    expect(formatHour(9)).toBe('9 AM');
-    expect(formatHour(13)).toBe('1 PM');
-    expect(formatHour(15)).toBe('3 PM');
-    expect(formatHour(23)).toBe('11 PM');
+    expect(formatHour(1)).toBe('01:00 AM');
+    expect(formatHour(9)).toBe('09:00 AM');
+    expect(formatHour(13)).toBe('01:00 PM');
+    expect(formatHour(15)).toBe('03:00 PM');
+    expect(formatHour(23)).toBe('11:00 PM');
+  });
+
+  it('preserves all source hour identities across locale and hour-cycle preferences', () => {
+    for (let hour = 0; hour < 24; hour++) {
+      const expected = `${String(hour).padStart(2, '0')}:00`;
+      expect(formatHour(hour, 'en-GB')).toBe(expected);
+      expect(formatHour(hour, 'en-US-u-hc-h23')).toBe(expected);
+    }
+    expect(formatHour(13, 'en-GB-u-hc-h12')).toBe('01:00 pm');
+    expect(formatHour(13, 'ar-EG')).toBe('٠١:٠٠ م');
+  });
+
+  it.each([NaN, Infinity, -1, 24, 1.5])('does not invent an hour for invalid bucket %s', hour => {
+    expect(formatHour(hour)).toBe('—');
   });
 });
 
 /* ─────────────────────────────── Component tests ─────────────────────────── */
+
+describe('ChargingListPage — prior-period evidence', () => {
+  it.each([false, true])(
+    'keeps comparison unavailable for the current-range query (out-of-range rows: %s)',
+    async (includePriorRows) => {
+      const current = makeSession({
+        id: 101,
+        started_at: '2024-06-15T10:00:00Z',
+        ended_at: '2024-06-15T11:00:00Z',
+      });
+      const prior = makeSession({
+        id: 102,
+        started_at: '2024-06-14T10:00:00Z',
+        ended_at: '2024-06-14T11:00:00Z',
+      });
+      mockSessions.mockReturnValue(qr({ data: includePriorRows ? [current, prior] : [current] }));
+
+      renderPage(['/charging?from=2024-06-15&to=2024-06-15']);
+
+      const overview = await screen.findByTestId('charging-overview');
+      expect(within(overview).getByText(/^Prior-period comparison unavailable:/)).toHaveTextContent(
+        '2024',
+      );
+      expect(within(overview).queryByText(/^prior period:/)).not.toBeInTheDocument();
+      expect(await findSessionCard(101)).toBeInTheDocument();
+      expect(sessionCard(102)).toBeNull();
+      expect(mockSessions).toHaveBeenCalledWith(1, expect.objectContaining({
+        limit: 500,
+        offset: 0,
+        start: expect.any(String),
+        end: expect.any(String),
+      }));
+    },
+  );
+});
+
+describe('ChargingListPage — preferred clock labels', () => {
+  it('updates the populated overview label without changing the source sessions', async () => {
+    timeDisplayState.timezone = 'Pacific/Honolulu';
+    mockSessions.mockReturnValue(qr({ data: [
+      makeSession({ started_at: '2024-06-15T13:00:00Z', ended_at: '2024-06-15T14:00:00Z' }),
+    ] }));
+    const page = renderPage();
+    const originalLabel = await screen.findByText(/^Most common start:/);
+    expect(originalLabel).toHaveTextContent('Most common start: 03:00 AM');
+    timeDisplayState.locale = 'en-US-u-hc-h23';
+    page.refresh();
+    expect(screen.getByText(/^Most common start:/)).toHaveTextContent('Most common start: 03:00');
+    expect(await findSessionCard(1)).toBeInTheDocument();
+    expect(mockSessions.mock.calls.at(-1)?.[0]).toBe(1);
+  });
+});
 
 describe('ChargingListPage — responsive evidence adoption', () => {
   it('renders the real desktop evidence table before charging insights without duplicating session cards', async () => {
