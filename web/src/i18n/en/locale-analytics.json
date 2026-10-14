@@ -237,7 +237,9 @@
         "generating": "Generating…",
         "error": "Could not generate narration. Please try again.",
         "badge": "Helix",
-        "noVehicleHint": "Pick a vehicle to enable Helix narration."
+        "noVehicleHint": "Pick a vehicle to enable Helix narration.",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       },
       "noAlerts": "No alerts this week — everything looks great!",
       "noDailyEnergy": "No charging energy data is available for this week.",
@@ -579,6 +581,19 @@
       "temperatureColumn": "Temperature ({{unit}})"
     }
   },
+  "card": {
+    "interior": "Interior",
+    "charging": "Charging",
+    "viewDetails": "View details",
+    "removeVehicle": "Remove vehicle",
+    "locked": "Locked",
+    "sentryOn": "Sentry mode on",
+    "stateError": "Live state unavailable",
+    "removeVehicleNamed": "Remove {{name}}",
+    "stateLoading": "Loading live state…",
+    "stateEmpty": "No live telemetry yet",
+    "viewDetailsFor": "View details for {{name}}"
+  },
   "compare": {
     "title": "Period comparison",
     "subtitle": "Compare key metrics across two time periods",
@@ -702,7 +717,8 @@
     "avgSpeed": "Avg speed",
     "topSpeed": "Top speed",
     "regenRatio": "Regen ratio",
-    "co2Saved": "CO₂ saved",
+    "co2Saved": "Estimated CO₂ saved",
+    "co2Context": "CO₂ savings are a distance-based estimate using 0.07 kg per kilometre of recorded driving, not measured emissions. Values cover lifetime tracked drives; exact observation bounds and recording completeness are not supplied.",
     "chargingCost": "Charging cost",
     "totalEnergy": "Total energy",
     "chargeSessions": "Charge sessions",
@@ -719,7 +735,7 @@
     "batteryDiff": "Battery level",
     "efficiencyDiff": "Avg efficiency",
     "costDiff": "Charging cost",
-    "co2Diff": "CO₂ saved",
+    "co2Diff": "Estimated CO₂ saved",
     "openPeriodCompare": "Period comparison",
     "banner": {
       "toPeriodPrefix": "Looking to compare time periods instead?",
@@ -747,9 +763,13 @@
     "currentStreak": "Current streak",
     "rangeEndStreak": "End-of-period streak",
     "days": "{{count}} days",
+    "days_one": "{{count}} day",
+    "days_other": "{{count}} days",
     "longest": "longest: {{count}}",
     "distance": "Distance",
     "driveCount": "{{count}} drives",
+    "driveCount_one": "{{count}} drive",
+    "driveCount_other": "{{count}} drives",
     "busiestDay": "Busiest day",
     "less": "Less",
     "more": "More",
@@ -895,7 +915,14 @@
     "subtitle": "Your all-time driving achievements and milestones",
     "source": {
       "allTime": "All time",
-      "aggregate": "Server lifetime aggregates"
+      "aggregate": "Server lifetime aggregates",
+      "refreshFailed": "Refresh failed; retained evidence",
+      "paused": "Request paused",
+      "refreshing": "Refreshing retained evidence",
+      "aged": "Evidence may be outdated",
+      "age": "Loaded {{minutes}} minutes ago",
+      "pausedRetained": "Request paused; previously loaded values remain visible.",
+      "agedRetained": "Previously loaded values remain visible but may be outdated."
     },
     "aiQA": {
       "title": "Ask about your lifetime stats",
@@ -1817,6 +1844,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "ai": {
     "common": {
       "errorUnknown": "unknown",
@@ -2171,6 +2205,9 @@
       "title": "Helix explanation"
     }
   },
+  "app": {
+    "currency": "Currency"
+  },
   "automations": {
     "builder": {
       "aiBuilder": {
@@ -2505,14 +2542,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -2524,7 +2559,8 @@
         "emptyHint": "Waiting for a charging session…",
         "generateButton": "Generate diagnosis",
         "title": "Charging diagnosis"
-      }
+      },
+      "soc": "SoC"
     }
   },
   "chart": {
@@ -2567,11 +2603,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -2737,6 +2768,9 @@
           "description": "Source-provided text, retained without numeric coercion.",
           "label": "Text"
         }
+      },
+      "reason": {
+        "missing": "No measurement supplied"
       },
       "state": {
         "empty": "No metrics supplied",
@@ -3147,6 +3181,11 @@
     "reviewAll": "Review all",
     "reviewDetails": "Review details"
   },
+  "playground": {
+    "validation": {
+      "schemaMismatch": "Does not match the API specification ({{constraint}})."
+    }
+  },
   "powerDashboards": {
     "aiDrafter": {
       "applyButton": "Apply to editor",
@@ -3220,6 +3259,11 @@
     "submitError": "Could not send the report. Please try again.",
     "title": "Report a problem"
   },
+  "productPreferences": {
+    "defaultVehicle": {
+      "unavailable": "Unavailable vehicle {{id}}"
+    }
+  },
   "provenance": {
     "cached": "Cached",
     "historical": "Historical",
@@ -3287,7 +3331,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -3370,18 +3414,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -3405,6 +3442,9 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "actions": "Actions",
@@ -3537,17 +3577,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -3708,7 +3737,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -3780,5 +3808,10 @@
     "inputLabel": "Your question for Helix",
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   }
 }

@@ -64,8 +64,9 @@ export default function LifetimeStatsPage() {
   const { vehicleId } = useSelectedVehicle();
   const lifetimeQuery = useLifetimeStats(vehicleId != null ? String(vehicleId) : undefined);
   const { data: stats, isLoading, error } = lifetimeQuery;
-  const source = deriveDataState({ ...lifetimeQuery, data: stats ?? undefined }, {
+  const source = deriveDataState({ ...lifetimeQuery, data: stats ?? (lifetimeQuery.isSuccess ? null : undefined) }, {
     provenance: 'historical', maxAgeMs: LIFETIME_MAX_AGE_MS,
+    unavailable: lifetimeQuery.isSuccess && stats == null,
   });
   const retry = () => { void lifetimeQuery.refetch(); };
 
@@ -245,8 +246,7 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.15}>
         <CardGrid label={t('lifetime.funFacts', 'Fun facts')} items={[
           { id: 'lifetime-fun-facts', size: 'half', content: (
-          <LifetimeContextBrief mode="funfacts" stats={stats} loading={isLoading}
-            error={error} onRetry={retry} />
+          <LifetimeContextBrief mode="funfacts" stats={stats} source={source} onRetry={retry} />
           ) },
           { id: 'lifetime-savings-comparison', size: 'half', content: (
           <SectionCard
@@ -291,8 +291,7 @@ export default function LifetimeStatsPage() {
       <FadeIn delay={0.2}>
         <CardGrid label={t('lifetime.activitySummary', 'Activity summary')} items={[
           { id: 'lifetime-environmental-impact', size: 'third', content: (
-          <LifetimeContextBrief mode="environment" stats={stats} loading={isLoading}
-            error={error} onRetry={retry} />
+          <LifetimeContextBrief mode="environment" stats={stats} source={source} onRetry={retry} />
           ) },
           { id: 'lifetime-personal-records', size: 'third', content: (
           <SectionCard
@@ -327,8 +326,7 @@ export default function LifetimeStatsPage() {
           </SectionCard>
           ) },
           { id: 'lifetime-activity-summary', size: 'third', content: (
-          <LifetimeContextBrief mode="activity" stats={stats} loading={isLoading}
-            error={error} onRetry={retry} />
+          <LifetimeContextBrief mode="activity" stats={stats} source={source} onRetry={retry} />
           ) },
         ]} />
       </FadeIn>

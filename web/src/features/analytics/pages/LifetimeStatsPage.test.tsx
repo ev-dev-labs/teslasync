@@ -152,6 +152,8 @@ interface QueryStub {
   data: LifetimeStats | null | undefined;
   isLoading: boolean;
   isError: boolean;
+  isSuccess?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
@@ -327,7 +329,7 @@ describe('LifetimeStatsPage', () => {
   });
 
   it('renders a per-section EmptyState (never a blank panel) when the query resolves with no data', () => {
-    h.query = makeQuery({ data: null });
+    h.query = makeQuery({ data: null, isSuccess: true });
 
     const { container } = renderPage();
 
@@ -341,6 +343,17 @@ describe('LifetimeStatsPage', () => {
     expect(container.querySelectorAll('[aria-hidden="true"][class*="bg-[var(--skeleton-bg)]"]')).toHaveLength(0);
     fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     expect(refetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('passes paused initial query state to every context brief without declaring empty', () => {
+    h.query = makeQuery({ fetchStatus: 'paused', dataUpdatedAt: 0 });
+    const { container } = renderPage();
+    expect(screen.getAllByText('Request paused')).toHaveLength(3);
+    const briefs = container.querySelectorAll('[data-operational-brief]');
+    for (const brief of Array.from(briefs).slice(1)) {
+      expect(brief).not.toHaveAttribute('aria-busy', 'true');
+      expect(brief.parentElement?.querySelector('[data-empty-state]')).toBeNull();
+    }
   });
 
   it('surfaces QueryError in every panel and wires Retry to the query refetch', () => {
