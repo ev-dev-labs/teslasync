@@ -20,6 +20,7 @@ import { act, renderHook, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { ReactNode } from 'react'
 import type { SignalHistoryResponse } from '@/types/telemetry'
+import { camelCaseKeys } from '@/lib/resilience'
 
 vi.mock('@/api/client', () => ({
   request: vi.fn(),
@@ -653,9 +654,9 @@ describe('useMQTTStatus', () => {
     expect(mockedRequest.mock.calls[0][0]).toBe('/telemetry')
     const vehicles = result.current.data!.vehicles
     expect(vehicles).toHaveLength(1)
-    expect(vehicles[0].vin).toBe('5YJVIN')
-    expect(vehicles[0].signalCount).toBe(10)
-    expect(vehicles[0].batchCount).toBe(2)
+    expect(vehicles?.[0].vin).toBe('5YJVIN')
+    expect(vehicles?.[0].signalCount).toBe(10)
+    expect(vehicles?.[0].batchCount).toBe(2)
     expect(result.current.data!.uptimeSeconds).toBe(42)
   })
 
@@ -666,10 +667,10 @@ describe('useMQTTStatus', () => {
     })
     const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.vehicles[0].vin).toBe('A')
+    expect(result.current.data!.vehicles?.[0].vin).toBe('A')
   })
 
-  it('falls back to streaming_vehicles and defaults missing counts to 0', async () => {
+  it('falls back to streaming_vehicles without manufacturing missing counts', async () => {
     mockedRequest.mockResolvedValueOnce({
       connected: false,
       streaming_vehicles: { VIN2: { state: 'online' } },
@@ -677,16 +678,72 @@ describe('useMQTTStatus', () => {
     const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
     const vehicles = result.current.data!.vehicles
-    expect(vehicles[0].vin).toBe('VIN2')
-    expect(vehicles[0].signalCount).toBe(0)
-    expect(vehicles[0].batchCount).toBe(0)
+    expect(vehicles?.[0].vin).toBe('VIN2')
+    expect(vehicles?.[0].signalCount).toBeUndefined()
+    expect(vehicles?.[0].batchCount).toBeUndefined()
   })
 
-  it('yields an empty vehicles array when none are present', async () => {
+  it('keeps the vehicles list unknown when no container is present', async () => {
     mockedRequest.mockResolvedValueOnce({ connected: false })
     const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
     await waitFor(() => expect(result.current.isSuccess).toBe(true))
-    expect(result.current.data!.vehicles).toEqual([])
+    expect(result.current.data!.vehicles).toBeUndefined()
+  })
+
+  it.each([
+    { shape: 'array', casing: 'camel' },
+    { shape: 'array', casing: 'snake' },
+    { shape: 'map', casing: 'camel' },
+    { shape: 'map', casing: 'snake' },
+  ] as const)('Q01 retains partial $shape / $casing rows, real zeros and independent broker fields', async ({ shape, casing }) => {
+    const rows = casing === 'camel'
+      ? [
+        { vin: 'ZERO', signalCount: 0, batchCount: 0, signalsPerSecond: 0 },
+        { vin: 'NO-SIGNALS', batchCount: 7, signalsPerSecond: 2 },
+        { vin: 'NO-BATCHES', signalCount: 9, signalsPerSecond: 3 },
+      ]
+      : [
+        { vin: 'ZERO', signal_count: 0, batch_count: 0, signals_per_second: 0 },
+        { vin: 'NO-SIGNALS', batch_count: 7, signals_per_second: 2 },
+        { vin: 'NO-BATCHES', signal_count: 9, signals_per_second: 3 },
+      ]
+    const vehicles = shape === 'array' ? rows
+      : Object.fromEntries(rows.map(row => [row.vin, { ...row, vin: 'ignored' }]))
+    const raw = camelCaseKeys({ connected: false, broker: 'fixture-broker', uptime_seconds: 42, vehicles })
+    mockedRequest.mockResolvedValueOnce(raw)
+    const client = makeClient()
+    const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper(client) })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(result.current.data).toMatchObject({ connected: false, broker: 'fixture-broker', uptime_seconds: 42, uptimeSeconds: 42 })
+    expect(result.current.data?.vehicles).toHaveLength(3)
+    expect(result.current.data?.vehicles?.[0]).toMatchObject({ vin: 'ZERO', signalCount: 0, batchCount: 0, signalsPerSecond: 0 })
+    expect(result.current.data?.vehicles?.[1]).toMatchObject({ vin: 'NO-SIGNALS', batchCount: 7, signalsPerSecond: 2 })
+    expect(result.current.data?.vehicles?.[1].signalCount).toBeUndefined()
+    expect(result.current.data?.vehicles?.[2].batchCount).toBeUndefined()
+    expect(result.current.data?.vehicles?.[2].signalCount).toBe(9)
+    expect(mockedRequest.mock.calls[0][0]).toBe('/telemetry')
+    expect(mockedRequest.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
+    const query = client.getQueryCache().find({ queryKey: ['mqtt-status'] })
+    expect(query?.queryKey).toEqual(['mqtt-status'])
+    expect(query?.observers[0].options.refetchInterval).toBe(5_000)
+  })
+
+  it.each([
+    { id: 'omitted', payload: { connected: true }, expected: undefined },
+    { id: 'nullish', payload: { connected: false, vehicles: null }, expected: undefined },
+    { id: 'unsupported primary', payload: { connected: true, vehicles: 'oops', streaming_vehicles: { LEGACY: { signal_count: 1 } } }, expected: undefined },
+    { id: 'empty array', payload: { connected: true, vehicles: [], streaming_vehicles: { LEGACY: { signal_count: 1 } } }, expected: [] },
+    { id: 'empty map', payload: { connected: false, vehicles: {} }, expected: [] },
+    { id: 'legacy empty array', payload: { connected: false, streaming_vehicles: [] }, expected: [] },
+    { id: 'legacy empty map', payload: { connected: true, streaming_vehicles: {} }, expected: [] },
+  ])('Q01 distinguishes $id container evidence without failing a successful request', async ({ payload, expected }) => {
+    mockedRequest.mockResolvedValueOnce(camelCaseKeys(payload))
+    const { result } = renderHook(() => useMQTTStatus(), { wrapper: makeWrapper() })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    expect(result.current.data?.vehicles).toEqual(expected)
+    expect(result.current.data?.connected).toBe(payload.connected)
+    expect(result.current.error).toBeNull()
   })
 })
 

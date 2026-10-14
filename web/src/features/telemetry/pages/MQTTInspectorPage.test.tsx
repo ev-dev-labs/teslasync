@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -80,6 +80,8 @@ vi.mock('@/hooks/useDateFormat', async () => {
 });
 
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
+import * as apiClient from '@/api/client';
+import { camelCaseKeys } from '@/lib/resilience';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
 import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import MQTTInspectorPage from './MQTTInspectorPage';
@@ -821,6 +823,113 @@ describe('MQTTInspectorPage — independent aggregate missingness', () => {
     expect(screen.getByText('Connected')).toBeInTheDocument();
     expect(screen.getByText('mqtt://mosquitto:1883')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
+  });
+
+  describe('MQTTInspectorPage — Q01 raw transport presence integration', () => {
+    const metric = (label: string) => {
+      const element = within(screen.getByTestId('mqtt-summary')).getByText(label).closest('[data-operational-metric]');
+      if (!(element instanceof HTMLElement)) throw new Error(`Missing metric: ${label}`);
+      return element;
+    };
+
+    async function mountRawStatus(raw: unknown) {
+      const actual = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>('@/api/hooks/useTelemetry');
+      const request = vi.spyOn(apiClient, 'request').mockResolvedValue(camelCaseKeys(raw));
+      let query: ReturnType<typeof actual.useMQTTStatus> | undefined;
+      mockUseMQTTStatus.mockImplementation(() => {
+        query = actual.useMQTTStatus();
+        return query;
+      });
+      const page = renderPage();
+      await waitFor(() => expect(query?.isSuccess).toBe(true));
+      return {
+        ...page,
+        request,
+        async refresh(payload: unknown, error?: Error) {
+          if (!query) throw new Error('Missing actual MQTT query');
+          if (error) request.mockRejectedValueOnce(error);
+          else request.mockResolvedValue(camelCaseKeys(payload));
+          await act(async () => { await query?.refetch(); });
+        },
+      };
+    }
+
+    it.each([
+      { field: 'signal_count', label: 'Total signals', known: ['Total batches', 'Signals / sec'] },
+      { field: 'batch_count', label: 'Total batches', known: ['Total signals', 'Signals / sec'] },
+      { field: 'signals_per_second', label: 'Signals / sec', known: ['Total signals', 'Total batches'] },
+    ])('withholds only $label after the actual hook receives raw omitted $field and retains that distinction on failure', async ({ field, label, known }) => {
+      const incomplete: Record<string, unknown> = {
+        signal_count: 10, batch_count: 2, signals_per_second: 3, state: 'online', last_received: freshIso(),
+      };
+      delete incomplete[field];
+      const raw = {
+        connected: false, broker: 'fixture-broker', uptime_seconds: 60, topics: ['telemetry/+/v/+'],
+        vehicles: {
+          ZERO: { signal_count: 0, batch_count: 0, signals_per_second: 0, last_received: freshIso() },
+          PARTIAL: incomplete,
+        },
+      };
+      const page = await mountRawStatus(raw);
+      expect(page.request.mock.calls[0][0]).toBe('/telemetry');
+      expect(page.request.mock.calls[0][1]?.signal).toBeInstanceOf(AbortSignal);
+      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+      expect(metric(label)).toHaveTextContent('—');
+      expect(metric('Streaming vehicles')).toHaveTextContent('2');
+      for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByTestId('mqtt-partial-measurements')).toHaveTextContent(label);
+      expect(screen.getByText('Disconnected')).toBeInTheDocument();
+      expect(screen.getByText('fixture-broker')).toBeInTheDocument();
+      expect(screen.getByText('1m')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Vehicle breakdown/ })).toBeInTheDocument();
+      await page.refresh(raw, new Error('Q01 transport refresh unavailable'));
+      expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Showing retained measurements');
+      expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+      for (const name of known) expect(metric(name)).toHaveAttribute('data-value-state', 'value');
+      expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getByText('Disconnected')).toBeInTheDocument();
+    });
+
+    it.each([
+      { id: 'absent', vehicles: undefined },
+      { id: 'unsupported', vehicles: 'oops' },
+    ])('keeps every aggregate unknown for a raw $id container and recovers observed emptiness', async ({ vehicles }) => {
+      const page = await mountRawStatus({ connected: true, broker: 'fixture-broker', vehicles });
+      for (const label of ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec']) {
+        expect(metric(label)).toHaveAttribute('data-value-state', 'missing');
+        expect(metric(label)).toHaveTextContent('—');
+      }
+      expect(screen.getByTestId('mqtt-summary')).toHaveTextContent('Partial data');
+      expect(screen.getByText('Connected')).toBeInTheDocument();
+      expect(screen.getByText('fixture-broker')).toBeInTheDocument();
+      await page.refresh({ connected: true, vehicles: [] });
+      for (const label of ['Streaming vehicles', 'Total signals', 'Total batches', 'Signals / sec']) {
+        expect(metric(label)).toHaveAttribute('data-value-state', 'value');
+        expect(metric(label)).toHaveTextContent('0');
+      }
+      expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
+    });
+
+    it.each(['missing count', 'unknown container'])('breaks raw %s comparability and rebases recovery before publishing a later measured delta', async missing => {
+      let at = Date.now() - 30_000;
+      vi.spyOn(Date, 'now').mockImplementation(() => at);
+      const raw = (count: number) => ({ connected: true, vehicles: [{ vin: 'RAW-A', signal_count: count, batch_count: 0, signals_per_second: 0 }] });
+      const page = await mountRawStatus(raw(10));
+      const rows = () => within(screen.getByRole('table', { name: 'Signal throughput — data table' }))
+        .getAllByRole('row').slice(1).map(row => within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
+      at += 5_000;
+      await page.refresh(missing === 'missing count'
+        ? { connected: true, vehicles: [{ vin: 'RAW-A', batch_count: 0, signals_per_second: 0 }] }
+        : { connected: true });
+      expect(rows()).toEqual([['5', '—']]);
+      at += 5_000;
+      await page.refresh(raw(20));
+      expect(rows()).toEqual([['5', '—'], ['5', '—']]);
+      at += 5_000;
+      await page.refresh(raw(23));
+      expect(rows()).toEqual([['5', '—'], ['5', '—'], ['5', '3']]);
+      expect(screen.queryByTestId('mqtt-partial-measurements')).toBeNull();
+    });
   });
 
   it('keeps measured zeros distinct from an omitted rate and recovers each aggregate after a complete receipt', () => {

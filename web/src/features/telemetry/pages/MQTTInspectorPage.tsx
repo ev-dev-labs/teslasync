@@ -43,6 +43,10 @@ interface ThroughputPoint {
   signals: number | null;
 }
 
+function knownCount(value: number | undefined): value is number {
+  return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+}
+
 function formatUptime(seconds: number, t: TFunction, locale: string): string {
   if (!Number.isFinite(seconds) || seconds < 0) return '—';
   const minutes = Math.floor(seconds / 60);
@@ -165,10 +169,9 @@ export default function MQTTInspectorPage() {
 
   /* ---- derived totals ---- */
   const vehicles: VehicleTelemetry[] = Array.isArray(status?.vehicles) ? status.vehicles : [];
-  const totalSignals = vehicles.reduce((sum, v) => sum + v.signalCount, 0);
-  const totalBatches = vehicles.reduce((sum, v) => sum + v.batchCount, 0);
+  const totalSignals = vehicles.reduce((sum, v) => sum + (v.signalCount ?? Number.NaN), 0);
+  const totalBatches = vehicles.reduce((sum, v) => sum + (v.batchCount ?? Number.NaN), 0);
   const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? Number.NaN), 0);
-  const knownCount = (value: number) => Number.isSafeInteger(value) && value >= 0;
   // Completeness belongs to each measurement, not to request success or connectivity.
   const completeMetrics: Record<string, boolean> = {
     'mqtt-vehicles': Array.isArray(status?.vehicles),
@@ -204,9 +207,16 @@ export default function MQTTInspectorPage() {
     if (!statusQuery.isSuccess || !status || statusQuery.error || !Number.isFinite(at) || at <= 0) return;
     const previous = previousReceipt.current;
     if (previous?.at === at) return;
-    const counts = Array.isArray(status.vehicles) && vehicles.every(v =>
-      Number.isSafeInteger(v.signalCount) && v.signalCount >= 0)
-      ? new Map(vehicles.map(v => [v.vin, v.signalCount])) : null;
+    let counts: Map<string, number> | null = Array.isArray(status.vehicles) ? new Map() : null;
+    if (counts) {
+      for (const vehicle of vehicles) {
+        if (!knownCount(vehicle.signalCount)) {
+          counts = null;
+          break;
+        }
+        counts.set(vehicle.vin, vehicle.signalCount);
+      }
+    }
     const validCounts = counts?.size === vehicles.length ? counts : null;
     previousReceipt.current = { at, counts: validCounts };
     if (!previous) return; // First successful receipt establishes a baseline, not an observed zero.

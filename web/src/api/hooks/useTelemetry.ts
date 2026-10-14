@@ -5,7 +5,7 @@ import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { queryPolicy } from '../queryPolicy';
 import { deriveDataState, type DataState } from '../dataState';
 import { useToast } from '@/components/feedback/Toast';
-import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
+import type { SignalHistoryResponse, SignalStats, TelemetryStatus } from '@/types/telemetry';
 import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
 import type { SignalsCatalogResponse, SignalObservation } from '@/types/signals';
 
@@ -419,13 +419,13 @@ export function useMQTTStatus() {
       const raw = await request<TelemetryStatus>('/telemetry', { signal });
       // The backend has shipped vehicles as an array or a Record<vin, …> map,
       // under `vehicles` or the older `streaming_vehicles`, in either casing.
-      // telemetryVehicleList() collapses all of that to one normalized array
+      // telemetryVehicleList() preserves unknown versus observed empty lists
       // (and telemetryUptimeSeconds() resolves the dual-shape uptime field).
       return {
         ...raw,
         uptimeSeconds: telemetryUptimeSeconds(raw),
         vehicles: telemetryVehicleList(raw),
-      } as TelemetryStatus & { vehicles: VehicleTelemetry[] };
+      };
     },
     refetchInterval: INTERVALS.REALTIME,
   });
