@@ -34,6 +34,17 @@ describe('toNumericDeadbandSeries', () => {
       { ts: new Date(ANCHOR + 1_000).toISOString(), kind: 'ValueKindFloat', value: 4 },
     ])).toHaveLength(1);
   });
+
+  it('keeps signed fractional SI measurements and zero separate from invalid inputs', () => {
+    const values = [null, NaN, Infinity, -Infinity, '', '0', false, 0, -2e-12, 3e-12];
+    const rows = values.map((value, index) => ({
+      ts: new Date(ANCHOR + index * 1_000).toISOString(),
+      kind: 'ValueKindFloat',
+      value,
+    }));
+    expect(toNumericDeadbandSeries(rows).map((point) => point.value)).toEqual([0, -2e-12, 3e-12]);
+    expect(analyzeSignalDeadband(rows.slice(0, 7))).toBeNull();
+  });
 });
 
 describe('estimateDeltaNoise', () => {
@@ -80,6 +91,41 @@ describe('simulateDeadband', () => {
 });
 
 describe('analyzeSignalDeadband', () => {
+  it.each([1e-100, 1e-12, 1e-7, 1, 1e100])(
+    'preserves scale-relative noise, thresholds and simulation results at scale %s',
+    scale => {
+      const values = [0, 0.1, -0.1, 0.05, 4, 4.1, 3.9];
+      const baseline = analyzeSignalDeadband(samples(values))!;
+      const scaledSamples = samples(values.map(value => value * scale));
+      const originalSamples = structuredClone(scaledSamples);
+      const result = analyzeSignalDeadband(scaledSamples)!;
+      expect(scaledSamples).toEqual(originalSamples);
+      expect(result.deltaMedian / scale).toBeCloseTo(baseline.deltaMedian, 10);
+      expect(result.deltaMad / scale).toBeCloseTo(baseline.deltaMad, 10);
+      expect(result.noiseScale / scale).toBeCloseTo(baseline.noiseScale, 10);
+      expect(result.noiseThreshold / scale).toBeCloseTo(baseline.noiseThreshold, 10);
+      const thresholds = [0, 0.5, 20];
+      for (const threshold of thresholds) {
+        const candidate = simulateDeadband(values.map(value => value * scale), threshold * scale, 0.25 * scale);
+        expect(candidate).toEqual({
+          ...simulateDeadband(values, threshold, 0.25),
+          threshold: threshold * scale,
+        });
+      }
+      expect(result.candidates.some(candidate => candidate.threshold > 0)).toBe(true);
+    },
+  );
+
+  it('does not merge small supplied thresholds or round their reported values', () => {
+    const thresholds = [0, 1e-12, 2e-12, 3e-12];
+    const result = analyzeSignalDeadband(samples([0, -1e-12, 2e-12, 0]), {
+      candidateThresholds: thresholds,
+    })!;
+    expect(result.candidates.map(candidate => candidate.threshold)).toEqual(thresholds);
+    expect(result.unchangedEmissionRatio).toBe(0);
+    expect(result.noiseScale).toBeGreaterThan(0);
+  });
+
   it('retains measured zero emissions and all original reduction denominators', () => {
     const result = analyzeSignalDeadband(samples([0, 0, 0, 0]), {
       candidateThresholds: [0, 0.5],

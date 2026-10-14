@@ -181,6 +181,16 @@ describe('numberFormat — fmtNumber', () => {
 })
 
 describe('numberFormat — fmtScientificNumber', () => {
+  it.each([1e-12, -1e-12, 1e-100, -1e-100])(
+    'keeps nonzero deadband thresholds %s distinct from measured zero',
+    value => {
+      expect(fmtScientificNumber(value, 4)).not.toBe(fmtScientificNumber(0, 4));
+      expect(fmtScientificNumber(value, 4)).not.toBe('—');
+      setGlobalPrecision(6);
+      expect(fmtScientificNumber(value, 4)).toContain('000000E');
+    },
+  );
+
   it.each([null, undefined, NaN, Infinity, -Infinity, '0', '', false, {}, []])(
     'keeps missing or invalid input %j distinct from measured zero',
     value => {

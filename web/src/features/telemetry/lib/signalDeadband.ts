@@ -7,6 +7,7 @@
  * value instead of filtering adjacent deltas independently.
  *
  * Pure and React-free.
+ * SI magnitudes retain their precision; only dimensionless scores are rounded.
  */
 
 import { toSignalHistoryMeasurements, type SignalHistorySample } from './signalHistorySamples';
@@ -98,10 +99,10 @@ export function estimateDeltaNoise(values: readonly number[]): {
   const deltaMad = median(deltas.map((delta) => Math.abs(delta - deltaMedian)));
   const noiseScale = MAD_TO_SIGMA * deltaMad;
   return {
-    deltaMedian: round(deltaMedian),
-    deltaMad: round(deltaMad),
-    noiseScale: round(noiseScale),
-    noiseThreshold: round(noiseScale * 3),
+    deltaMedian,
+    deltaMad,
+    noiseScale,
+    noiseThreshold: noiseScale * 3,
   };
 }
 
@@ -124,8 +125,10 @@ export function simulateDeadband(
 
   const safeThreshold = Math.max(0, Number.isFinite(threshold) ? threshold : 0);
   const range = Math.max(...values) - Math.min(...values);
-  const epsilon = Math.max(Number.EPSILON, range * 1e-12);
+  const epsilon = range * 1e-12;
   const noiseCeiling = Math.max(noiseThreshold, epsilon);
+  const robustSpan =
+    quantile(values, 0.95) - quantile(values, 0.05) || range || noiseCeiling || 1;
   let retained = 1;
   let lastRetained = values[0]!;
   let squaredError = 0;
@@ -146,19 +149,17 @@ export function simulateDeadband(
       if (adjacentDelta <= noiseCeiling) noisyRetained += 1;
       else materialRetained += 1;
     }
-    squaredError += (value - lastRetained) ** 2;
+    squaredError += ((value - lastRetained) / robustSpan) ** 2;
   }
 
-  const robustSpan =
-    quantile(values, 0.95) - quantile(values, 0.05) || range || Math.max(noiseCeiling, 1);
   const rmse = Math.sqrt(squaredError / values.length);
   return {
-    threshold: round(safeThreshold),
+    threshold: safeThreshold,
     retainedUpdates: retained,
     reduction: round(1 - retained / values.length),
     noiseSuppression: round(noisy > 0 ? 1 - noisyRetained / noisy : 1),
     materialRetention: round(material > 0 ? materialRetained / material : 1),
-    fidelity: round(clamp01(1 - rmse / robustSpan)),
+    fidelity: round(clamp01(1 - rmse)),
   };
 }
 
@@ -172,7 +173,7 @@ function buildThresholds(
     ...[0.25, 0.5, 1, 1.5, 2, 3, 4, 6].map((factor) => noiseScale * factor),
     ...[0.25, 0.5, 0.75, 0.9, 0.95].map((q) => quantile(absoluteDeltas, q)),
   ];
-  return [...new Set(raw.filter((value) => Number.isFinite(value) && value >= 0).map((v) => round(v)))]
+  return [...new Set(raw.filter((value) => Number.isFinite(value) && value >= 0))]
     .sort((a, b) => a - b);
 }
 
@@ -187,7 +188,7 @@ export function analyzeSignalDeadband(
   const absoluteDeltas = deltas.map(Math.abs);
   const noise = estimateDeltaNoise(values);
   const range = Math.max(...values) - Math.min(...values);
-  const epsilon = Math.max(Number.EPSILON, range * 1e-12);
+  const epsilon = range * 1e-12;
   const unchanged = absoluteDeltas.filter((delta) => delta <= epsilon).length;
   const redundant = absoluteDeltas.filter(
     (delta) => delta <= Math.max(noise.noiseThreshold, epsilon),
