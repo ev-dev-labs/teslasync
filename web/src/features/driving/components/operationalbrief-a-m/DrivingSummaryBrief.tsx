@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { OperationalBrief } from '@/components/data-display';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import { QueryError } from '@/components/feedback';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
-import type { MetricPreferences } from '@/lib/metric-reference';
+import type { MetricPreferences } from '@/components/data-display';
 
 interface DrivingSummaryBriefProps {
   metrics: readonly StatMetric[];
@@ -40,7 +40,7 @@ export function DrivingSummaryBrief({
       statusLabel={statusLabel ?? (error
         ? t('driving.brief.unavailable', 'Source unavailable')
         : loading
-          ? t('driving.brief.loading', 'Loading evidence')
+          ? t('driving.brief.loading', 'Loading source')
           : retained
             ? t('driving.brief.retained', 'Retained evidence')
             : t('driving.brief.returned', 'Returned evidence'))}

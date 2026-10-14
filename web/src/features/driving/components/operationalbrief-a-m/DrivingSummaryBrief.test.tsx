@@ -2,10 +2,11 @@ import { fireEvent, render, renderHook, screen, within } from '@testing-library/
 import { MemoryRouter } from 'react-router-dom';
 import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { StatMetric } from '@/components/data-display';
 import type { UnitPref } from '@/lib/unitConversion';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { DrivingSummaryBrief } from './DrivingSummaryBrief';
+import summarySource from './DrivingSummaryBrief.tsx?raw';
 import { ExplorerKpis } from '../explorer/ExplorerKpis';
 import { summarizeExplorer } from '../../lib/explorer';
 import { summarizeColdStarts } from '../../lib/coldStart';
@@ -92,6 +93,13 @@ function summary(extra: Partial<ComponentProps<typeof DrivingSummaryBrief>> = {}
 }
 
 describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', () => {
+  it('consumes metric types through the public data-display category without internal dependencies', () => {
+    expect(summarySource).toMatch(/import type \{ StatMetric \} from '@\/components\/data-display';/);
+    expect(summarySource).toMatch(/import type \{ MetricPreferences \} from '@\/components\/data-display';/);
+    expect(summarySource).not.toMatch(/from ['"]@\/components\/data-display\//);
+    expect(summarySource).not.toContain('@/lib/metric-reference');
+  });
+
   it('retains raw SI operands and separates measured zero, missing and invalid', () => {
     const { result } = renderHook(() => useOperationalMetrics(metrics));
     expect(result.current.map(metric => metric.rawValue)).toEqual([1000, 0, null, Number.NaN]);
@@ -162,7 +170,25 @@ describe('DrivingSummaryBrief — real OperationalBrief and numerical bridge', (
     expect(container.querySelectorAll('[data-operational-metric]')).toHaveLength(4);
     expect(container.querySelector('[data-operational-value]')).toBeNull();
     expect(screen.getByText('Returned drive totals, not lifetime travel.')).toBeVisible();
-    expect(screen.getByText('Loading evidence')).toBeVisible();
+    expect(screen.getByText('Loading source')).toBeVisible();
+    expect(screen.queryByText('Loading evidence')).toBeNull();
+  });
+
+  it('preserves populated metrics and caller status overrides when loading uses the canonical fallback', () => {
+    const view = render(summary());
+    expect(screen.getByText('Returned evidence')).toBeVisible();
+    expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
+
+    view.rerender(summary({ loading: true }));
+    expect(screen.getByText('Loading source')).toBeVisible();
+
+    view.rerender(summary({ loading: true, statusLabel: 'Select a vehicle' }));
+    expect(screen.getByText('Select a vehicle')).toBeVisible();
+    expect(screen.queryByText('Loading source')).toBeNull();
+
+    view.rerender(summary());
+    expect(screen.getByText('Returned evidence')).toBeVisible();
+    expect(screen.getByText('1.00 km', { selector: '[data-operational-value]' })).toBeVisible();
   });
 
   it('keeps retained evidence and real drawer context after a refresh failure', () => {
