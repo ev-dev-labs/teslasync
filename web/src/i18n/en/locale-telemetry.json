@@ -59,6 +59,14 @@
     "topSignalsList": "Most active signals ranked by arrival frequency"
   },
   "mqtt": {
+    "uptimeMinutes": "{{minutes}}m",
+    "uptimeHoursMinutes": "{{hours}}h {{minutes}}m",
+    "localDeltaNote": "Local field-sample count changes between successful broker receipts; not a server throughput or signals-per-second measurement. Resets and unavailable comparisons remain gaps.",
+    "receiptWindowSeconds": "Receipt window (seconds)",
+    "vehicleCount_one": "{{formattedCount}} vehicle",
+    "vehicleCount_other": "{{formattedCount}} vehicles",
+    "staleVehicleCount_one": "{{formattedCount}} stale vehicle",
+    "staleVehicleCount_other": "{{formattedCount}} stale vehicles",
     "summary": {
       "period": "Latest broker status snapshot",
       "scope": "Vehicle totals sum the returned broker counters. Signals / sec sums the reported vehicle rates, not the throughput chart’s per-poll deltas.",

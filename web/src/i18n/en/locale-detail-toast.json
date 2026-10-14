@@ -1,5 +1,11 @@
 {
   "toast": {
+    "user": {
+      "teslaProfile": {
+        "success": "Tesla profile refreshed",
+        "error": "Failed to refresh Tesla profile"
+      }
+    },
     "common": {
       "error": "Something went wrong"
     },

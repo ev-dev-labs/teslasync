@@ -3395,6 +3395,11 @@
     "tokenRefreshFailed": "Token refresh failed",
     "tokenRefreshed": "Token refreshed",
     "unitsSynced": "Units synced from car",
+    "user": {
+      "teslaProfile": {
+        "success": "Tesla profile refreshed"
+      }
+    },
     "vehicles": {
       "delete": {
         "success": "Vehicle deleted"

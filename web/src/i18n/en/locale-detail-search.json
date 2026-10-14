@@ -342,7 +342,15 @@
     "kpis": "Search summary",
     "brief": {
       "description": "Result counts and category coverage for the current query and selected type filters.",
-      "scope": "Returned search hits, not an unbounded server total."
+      "scope": "Returned search hits, not an unbounded server total.",
+      "resultScope": "for “{{query}}” · result types: {{types}}",
+      "announcementScope": "search results for “{{query}}” · types: {{types}}",
+      "requestedScope": "Requested: “{{query}}” · types: {{types}}",
+      "responseDescription": "Result counts and category coverage for the displayed search response."
+    },
+    "paused": {
+      "title": "Search request paused",
+      "message": "The search request is paused. No response has been received, so result counts are unknown. Retry when the request can resume."
     },
     "result": {
       "open": "Open {{title}}"

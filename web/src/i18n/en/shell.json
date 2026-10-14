@@ -453,7 +453,8 @@
       "ready": "Ready",
       "loading": "Loading",
       "refreshing": "Refreshing",
-      "paused": "Paused offline",
+      "paused": "Refresh paused",
+      "pausedOffline": "Paused offline",
       "failed": "Failed",
       "refreshFailed": "Cached · refresh failed",
       "pending": "Pending"

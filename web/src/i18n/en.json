@@ -920,7 +920,8 @@
       "ready": "Ready",
       "loading": "Loading",
       "refreshing": "Refreshing",
-      "paused": "Paused offline",
+      "paused": "Refresh paused",
+      "pausedOffline": "Paused offline",
       "failed": "Failed",
       "refreshFailed": "Cached · refresh failed",
       "pending": "Pending"
@@ -7778,6 +7779,12 @@
     }
   },
   "toast": {
+    "user": {
+      "teslaProfile": {
+        "success": "Tesla profile refreshed",
+        "error": "Failed to refresh Tesla profile"
+      }
+    },
     "common": {
       "error": "Something went wrong"
     },
@@ -9000,7 +9007,15 @@
     "kpis": "Search summary",
     "brief": {
       "description": "Result counts and category coverage for the current query and selected type filters.",
-      "scope": "Returned search hits, not an unbounded server total."
+      "scope": "Returned search hits, not an unbounded server total.",
+      "resultScope": "for “{{query}}” · result types: {{types}}",
+      "announcementScope": "search results for “{{query}}” · types: {{types}}",
+      "requestedScope": "Requested: “{{query}}” · types: {{types}}",
+      "responseDescription": "Result counts and category coverage for the displayed search response."
+    },
+    "paused": {
+      "title": "Search request paused",
+      "message": "The search request is paused. No response has been received, so result counts are unknown. Retry when the request can resume."
     },
     "result": {
       "open": "Open {{title}}"
@@ -11191,7 +11206,7 @@
         "severity": "Severity"
       },
       "tableCount": "{{count}} hypertables",
-      "fleetCompressed": "Compressed",
+      "fleetCompressed": "After compression",
       "noData": "No data",
       "pageTitle": "Disk forecast",
       "severityOk": "OK",
@@ -11199,31 +11214,31 @@
       "severityCritical": "Critical",
       "colTotal": "Total",
       "colSeverity": "Severity",
-      "compressed": "Compressed",
+      "compressed": "After compression",
       "kpis": "Fleet disk summary",
       "growthSub": "Sum across all hypertables",
-      "percentSub": "{{pct}} of total",
+      "percentSub": "Compressed chunks only; not a share of current disk usage.",
       "fleetTotal": "Total disk",
-      "fleetUncompressed": "Uncompressed",
+      "fleetUncompressed": "Before compression",
       "fleetGrowth": "Growth (per day)",
       "largest": "Largest table",
       "soonestQuota": "Soonest quota",
       "colDays": "Days to quota",
-      "noQuota": "No quota configured",
+      "noQuota": "No quota estimate available",
       "colTable": "Hypertable",
       "chunkCount": "{{count}} chunks",
-      "colSplit": "Uncompressed / compressed",
-      "compressedSuffix": "compressed",
+      "colSplit": "Before / after compression",
+      "compressedSuffix": "after compression",
       "colGrowth": "Growth (per day)",
-      "subtitle": "Per-hypertable disk usage with compressed/uncompressed split and days-to-quota estimate. Severity reflects the configured quota threshold.",
+      "subtitle": "Current per-hypertable disk usage, before/after compression sizes for compressed chunks, and source-supplied days-to-quota estimates. Compression sizes are not additive parts of current disk usage.",
       "notConfigured": "TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible.",
       "criticalTitle": "Quota pressure",
       "criticalMessage": "{{count}} hypertable(s) are in the critical tier for their configured quota. Review retention, compression, or the quota threshold.",
-      "composition": "Storage composition",
-      "compositionTitle": "Compressed vs uncompressed",
-      "compositionAria": "Stacked bar chart of the largest hypertables split by uncompressed and compressed bytes",
+      "composition": "Compression size comparison",
+      "compositionTitle": "Before vs after compression",
+      "compositionAria": "Grouped bar chart comparing before and after compression sizes of compressed chunks in the largest hypertables",
       "noComposition": "No hypertable sizes to chart yet.",
-      "uncompressed": "Uncompressed",
+      "uncompressed": "Before compression",
       "severityTitle": "Severity mix",
       "severityAria": "Donut chart of hypertables grouped by quota severity tier",
       "noSeverity": "No severity data available yet.",
@@ -11231,8 +11246,8 @@
       "growthTitle": "Fastest-growing hypertables",
       "noGrowth": "No measurable daily growth yet.",
       "quotaTitle": "Days to quota",
-      "noQuotaTitle": "No quota configured",
-      "noQuotaMessage": "Set HYPERTABLE_QUOTA_BYTES to surface a days-to-quota estimate for each hypertable.",
+      "noQuotaTitle": "No quota estimate available",
+      "noQuotaMessage": "An estimate may be absent when there is no measurable growth. Missing estimates do not establish whether a quota is configured.",
       "daysValue": "{{days}} d",
       "tableTitle": "Hypertables",
       "emptyTitle": "No hypertables",
@@ -24044,6 +24059,7 @@
     }
   },
   "dbHealth": {
+    "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
     "summary": {
       "snapshot": "{{source}} snapshot",
       "unknownObservation": "Last successful fetch time unknown; this source is independent of the other database sources.",
@@ -24346,6 +24362,10 @@
     }
   },
   "teslaAccount": {
+    "source": {
+      "paused": "Profile loading is paused. No account snapshot has been received yet.",
+      "pending": "Account snapshot availability has not resolved yet."
+    },
     "statstrip": {
       "fetchedSnapshot": "Source fetched at {{date}}",
       "idDescription": "The source Tesla Fleet API account identity, not the local TeslaSync user ID.",
@@ -24478,6 +24498,14 @@
     "topSignalsList": "Most active signals ranked by arrival frequency"
   },
   "mqtt": {
+    "uptimeMinutes": "{{minutes}}m",
+    "uptimeHoursMinutes": "{{hours}}h {{minutes}}m",
+    "localDeltaNote": "Local field-sample count changes between successful broker receipts; not a server throughput or signals-per-second measurement. Resets and unavailable comparisons remain gaps.",
+    "receiptWindowSeconds": "Receipt window (seconds)",
+    "vehicleCount_one": "{{formattedCount}} vehicle",
+    "vehicleCount_other": "{{formattedCount}} vehicles",
+    "staleVehicleCount_one": "{{formattedCount}} stale vehicle",
+    "staleVehicleCount_other": "{{formattedCount}} stale vehicles",
     "summary": {
       "period": "Latest broker status snapshot",
       "scope": "Vehicle totals sum the returned broker counters. Signals / sec sums the reported vehicle rates, not the throughput chart’s per-poll deltas.",

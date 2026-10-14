@@ -636,6 +636,7 @@
     }
   },
   "dbHealth": {
+    "rowChartScope": "Showing {{shown}} of {{total}} returned tables by row count. The complete table list is below.",
     "summary": {
       "snapshot": "{{source}} snapshot",
       "unknownObservation": "Last successful fetch time unknown; this source is independent of the other database sources.",
@@ -3467,7 +3468,10 @@
       "title": "Search with natural language"
     },
     "brief": {
-      "description": "Result counts and category coverage for the current query and selected type filters.",
+      "announcementScope": "search results for “{{query}}” · types: {{types}}",
+      "requestedScope": "Requested: “{{query}}” · types: {{types}}",
+      "responseDescription": "Result counts and category coverage for the displayed search response.",
+      "resultScope": "for “{{query}}” · result types: {{types}}",
       "scope": "Returned search hits, not an unbounded server total."
     },
     "empty": {
@@ -3483,7 +3487,6 @@
       "allTypes": "All types shown",
       "categories": "Categories",
       "filtered": "of {{n}} types",
-      "forQuery": "for “{{query}}”",
       "noMatches": "No matches",
       "ofTypes": "of {{n}} searchable",
       "topCount": "{{n}} results",
@@ -3494,6 +3497,10 @@
     "noResults": {
       "message": "No matches for \"{{query}}\". Try fewer characters or open the command palette.",
       "title": "No results"
+    },
+    "paused": {
+      "message": "The search request is paused. No response has been received, so result counts are unknown. Retry when the request can resume.",
+      "title": "Search request paused"
     },
     "placeholder": "Search vehicles, drives, charging…",
     "refresh": "Refresh results",
@@ -4103,6 +4110,10 @@
     "profile": "Profile",
     "refresh": "Refresh from Tesla",
     "resource": "Tesla profile",
+    "source": {
+      "paused": "Profile loading is paused. No account snapshot has been received yet.",
+      "pending": "Account snapshot availability has not resolved yet."
+    },
     "statstrip": {
       "fetchedSnapshot": "Source fetched at {{date}}",
       "idDescription": "The source Tesla Fleet API account identity, not the local TeslaSync user ID.",
@@ -4342,6 +4353,11 @@
         "sync": {
           "success": "Vehicles synced"
         }
+      }
+    },
+    "user": {
+      "teslaProfile": {
+        "success": "Tesla profile refreshed"
       }
     },
     "vehicles": {
