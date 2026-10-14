@@ -195,6 +195,52 @@ describe('DashboardsPage', () => {
     expect(screen.getByRole('button', { name: /^Clear$/i })).toBeInTheDocument();
   });
 
+  it('associates the editor with the existing guidance and preserves raw text across locale changes', async () => {
+    renderPage();
+    const guidance = 'Edit the Grafana JSON model directly. Nothing is sent to Grafana — you copy it in yourself.';
+    const descriptionId = editor().getAttribute('aria-describedby');
+    expect(descriptionId).toBeTruthy();
+    expect(document.getElementById(descriptionId ?? '')).toBe(screen.getByText(guidance));
+    expect(editor()).toHaveAccessibleDescription(guidance);
+    expect(editor()).toHaveAttribute('spellcheck', 'false');
+
+    const rawText = '  not JSON: { unfinished }\n\tuser text  ';
+    typeInEditor(rawText);
+    expect(editor()).toHaveValue(rawText);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(rawText);
+
+    const translatedGuidance = 'Edita el modelo JSON de Grafana. Copia el texto manualmente; nada se envia a Grafana.';
+    descriptionI18n.addResourceBundle('es', 'translation', {
+      powerDashboards: { editor: { label: 'Editor JSON del panel', helper: translatedGuidance } },
+    });
+    await descriptionI18n.changeLanguage('es');
+    typeInEditor(`${rawText}\n`);
+    expect(screen.getByRole('textbox', { name: 'Editor JSON del panel' })).toBe(editor());
+    expect(editor()).toHaveAttribute('aria-describedby', descriptionId);
+    expect(document.getElementById(descriptionId ?? '')).toBe(screen.getByText(translatedGuidance));
+    expect(editor()).toHaveAccessibleDescription(translatedGuidance);
+    expect(screen.queryByText(guidance)).not.toBeInTheDocument();
+    expect(editor()).toHaveAttribute('spellcheck', 'false');
+    expect(editor()).toHaveValue(`${rawText}\n`);
+    expect(window.localStorage.getItem(DRAFT_KEY)).toBe(`${rawText}\n`);
+  });
+
+  it('gives each mounted editor its own guidance identity', () => {
+    const first = renderPage();
+    const second = renderPage();
+    const firstEditor = within(first.container).getByRole('textbox');
+    const secondEditor = within(second.container).getByRole('textbox');
+    const firstId = firstEditor.getAttribute('aria-describedby');
+    const secondId = secondEditor.getAttribute('aria-describedby');
+    expect(firstId).toBeTruthy();
+    expect(secondId).toBeTruthy();
+    expect(firstId).not.toBe(secondId);
+    expect(first.container.contains(document.getElementById(firstId ?? ''))).toBe(true);
+    expect(second.container.contains(document.getElementById(secondId ?? ''))).toBe(true);
+    expect(firstEditor).toHaveAccessibleDescription();
+    expect(secondEditor).toHaveAccessibleDescription();
+  });
+
   it('renders all six curated panels in alphabetical order', () => {
     const { container } = renderPage();
 

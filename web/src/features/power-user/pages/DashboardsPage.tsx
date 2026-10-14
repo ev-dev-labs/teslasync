@@ -19,7 +19,7 @@
 // State persistence: the JSON textarea is stored in localStorage under
 // 'ai.dashboardComposer.draft'.
 
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -132,6 +132,7 @@ interface ComposerStatus {
 
 export default function DashboardsPage() {
   const { t } = useTranslation();
+  const editorGuidanceId = useId();
   usePageTitle(t('powerDashboards.title', 'Dashboard composer'));
 
   const [dashboardJson, setDashboardJson] = useState<string>(() => loadPersistedJson());
@@ -292,7 +293,7 @@ export default function DashboardsPage() {
                 <Icon icon={Braces} className="text-[var(--text-secondary)]" />
                 {t('powerDashboards.editor.title', 'Manual dashboard JSON editor')}
               </Heading>
-              <HelperText className="mb-3">
+              <HelperText id={editorGuidanceId} className="mb-3">
                 {t(
                   'powerDashboards.editor.helper',
                   'Edit the Grafana JSON model directly. Nothing is sent to Grafana — you copy it in yourself.',
@@ -307,6 +308,7 @@ export default function DashboardsPage() {
                 )}
                 rows={18}
                 aria-label={t('powerDashboards.editor.label', 'Dashboard JSON editor')}
+                aria-describedby={editorGuidanceId}
                 spellCheck={false}
                 className="font-mono"
               />
