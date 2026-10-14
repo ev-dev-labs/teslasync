@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createInstance, type i18n } from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
@@ -172,6 +173,55 @@ describe('ChargingForensicsPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     resize(1440);
     expect(screen.getByRole('table', { name: 'Session reconciliation' })).toBeInTheDocument();
+  });
+
+  it('expands desktop records by keyboard with the same full fields as mobile quick view', async () => {
+    const user = userEvent.setup();
+    renderPage();
+    const table = screen.getByRole('table', { name: 'Session reconciliation' });
+    const expand = within(table).getByRole('button', { name: 'Expand row: Session #44' });
+    expect(expand).toHaveAttribute('aria-expanded', 'false');
+    expand.focus();
+    await user.keyboard('{Enter}');
+    expect(expand).toHaveAttribute('aria-expanded', 'true');
+    const expanded = table.querySelector('dl');
+    expect(expanded).not.toBeNull();
+    const detail = within(expanded!);
+    for (const label of ['Session', 'Started', 'Vehicle energy', 'Meter energy', 'Estimated loss',
+      'Recorded cost', 'Expected cost', 'Cost discrepancy', 'Status', 'Ended', 'Currency',
+      'Evidence sources', 'Limitations']) {
+      expect(detail.getByText(label)).toBeInTheDocument();
+    }
+    for (const value of ['#44', '12 kWh', '15 kWh', '3 kWh (2 kWh–4 kWh)', '$4.50', '$4.20',
+      '$0.30', 'recorded_only', 'USD', '2 Jun 2026, 01:30', 'test-ledger',
+      'Test-only recorded energy, not a meter reading.', 'Test-only tariff coverage is absent.']) {
+      expect(detail.getByText(value)).toBeInTheDocument();
+    }
+    resize(375);
+    const collapse = screen.getByRole('button', { name: 'Collapse row' });
+    expect(collapse).toHaveAttribute('aria-expanded', 'true');
+    collapse.focus();
+    await user.keyboard(' ');
+    expect(screen.getByRole('button', { name: 'Expand row' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('group', { name: 'Session reconciliation' }).querySelector('dl')).toBeNull();
+    const quickView = screen.getByRole('button', { name: 'Quick view' });
+    quickView.focus();
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog', { name: 'Session #44' });
+    expect(within(dialog).getByText('Test-only tariff coverage is absent.')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(quickView).toHaveFocus();
+  });
+
+  it('clears expanded records when the selected vehicle changes', async () => {
+    const view = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Expand row: Session #44' }));
+    expect(screen.getByRole('button', { name: 'Collapse row: Session #44' })).toBeInTheDocument();
+    mocks.vehicleId = 5;
+    view.rerender(<ChargingForensicsPage />);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Expand row: Session #44' }))
+      .toHaveAttribute('aria-expanded', 'false'));
   });
 
   describe('real-i18next mobile evidence sample counts', () => {
@@ -394,6 +444,40 @@ describe('ChargingForensicsPage', () => {
     } else {
       expect(vi.mocked(downloadCSV).mock.calls[0]?.[1]).toContain('vehicle_energy_wh,meter_energy_wh,estimated_loss_wh');
       expect(vi.mocked(downloadCSV).mock.calls[0]?.[1]).toContain('12000,15000,-1000,2000,4000,450,420,-30,USD,recorded_only');
+    }
+  });
+
+  it.each(['json', 'csv'] as const)('exports nulls, zeroes, and complete record disclosures appropriately as %s', async format => {
+    const unsupported = session({
+      ended_at: null, vehicle_energy_wh: null, meter_energy_wh: null,
+      estimated_loss_wh: null, estimated_loss_low_wh: null, estimated_loss_high_wh: null,
+      recorded_cost_minor: null, expected_cost_minor: null, cost_discrepancy_minor: null,
+      currency: null, evidence: [], limitations: [],
+    });
+    const recorded = session({
+      session_id: 99, vehicle_energy_wh: 0, meter_energy_wh: 0,
+      estimated_loss_wh: -1000, estimated_loss_low_wh: 0, estimated_loss_high_wh: 0,
+      recorded_cost_minor: 0, expected_cost_minor: 0, cost_discrepancy_minor: -30,
+      evidence: [{ source: 'meter,"A"', summary: 'Recorded reading\nnot an estimate.',
+        sample_count: 0, observed_at: null }],
+      limitations: ['Tariff, "unverified"\nNo inference.'],
+    });
+    mocks.fetchAll.mockResolvedValue([unsupported, recorded]);
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Export list' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: format === 'json' ? 'Download as JSON' : 'Download as CSV' }));
+    await waitFor(() => expect(format === 'json' ? downloadJSON : downloadCSV).toHaveBeenCalledOnce());
+    if (format === 'json') {
+      expect(downloadJSON).toHaveBeenCalledWith('charging-forensics', [unsupported, recorded]);
+    } else {
+      const csv = vi.mocked(downloadCSV).mock.calls[0]?.[1];
+      expect(csv).toBe([
+        'session_id,started_at,vehicle_energy_wh,meter_energy_wh,estimated_loss_wh,estimated_loss_low_wh,estimated_loss_high_wh,recorded_cost_minor,expected_cost_minor,cost_discrepancy_minor,currency,status,ended_at,evidence,limitations',
+        '44,2026-06-01T12:30:00Z,,,,,,,,,,recorded_only,,[],[]',
+        '99,2026-06-01T12:30:00Z,0,0,-1000,0,0,0,0,-30,USD,recorded_only,2026-06-01T13:30:00Z,' +
+          '"[{""source"":""meter,\\""A\\"""",""summary"":""Recorded reading\\nnot an estimate."",""sample_count"":0,""observed_at"":null}]",' +
+          '"[""Tariff, \\""unverified\\""\\nNo inference.""]"',
+      ].join('\r\n'));
     }
   });
 
