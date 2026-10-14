@@ -96,15 +96,16 @@ function formatHoursFromSeconds(seconds: number, fmtInt: (value: number) => stri
 
 function sumDwell(rows: ByStateRow[], states: readonly string[]): number | null {
   const matching = rows.filter(row => states.includes(row.state));
+  if (matching.length === 1) return matching[0].total_seconds;
   if (matching.length === 0 || matching.some(row => row.total_seconds == null)) return null;
-  if (matching.some(row => typeof row.total_seconds !== 'number' || !Number.isFinite(row.total_seconds))) {
+  if (matching.some(row => typeof row.total_seconds !== 'number' || !Number.isFinite(row.total_seconds) || row.total_seconds < 0)) {
     return NaN;
   }
   return matching.reduce((sum, row) => sum + row.total_seconds, 0);
 }
 
 function formatDurationFromSeconds(seconds: number, fmtInt: (value: number) => string): string {
-  if (!Number.isFinite(seconds) || seconds <= 0) return `${fmtInt(0)}s`;
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) return '—';
   const rounded = Math.round(seconds);
   // Only sub-minute durations render in seconds; once rounding tips the value
   // to a full minute defer to the h/m formatter so we never emit "60s".
@@ -276,8 +277,11 @@ export default function TimelinePage() {
   const timeByState = useMemo(
     () =>
       [...summaryRows]
-        .filter((r) => (r.total_seconds ?? 0) > 0)
-        .sort((a, b) => b.total_seconds - a.total_seconds)
+        .sort((a, b) => {
+          const aValid = typeof a.total_seconds === 'number' && Number.isFinite(a.total_seconds) && a.total_seconds >= 0;
+          const bValid = typeof b.total_seconds === 'number' && Number.isFinite(b.total_seconds) && b.total_seconds >= 0;
+          return aValid && bValid ? b.total_seconds - a.total_seconds : Number(bValid) - Number(aValid);
+        })
         .map((r) => ({ ...r, color: STATE_COLORS[r.state] ?? STATE_COLORS.offline })),
     [summaryRows],
   );
@@ -299,20 +303,21 @@ export default function TimelinePage() {
       label: t('timeline.drivingTime', 'Driving time'),
       description: t('timeline.summary.drivingDescription', 'Time in the driving state, rounded to whole minutes'),
       rawValue: summarySource.available ? drivingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
+      display: { durationStyle: 'roundedMinutes', formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
     { metricId: 'duration', occurrenceId: 'timeline-charging-time',
       label: t('timeline.chargingTime', 'Charging time'),
       description: t('timeline.summary.chargingDescription', 'Time in the charging state, rounded to whole minutes'),
       rawValue: summarySource.available ? chargingSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
+      display: { durationStyle: 'roundedMinutes', formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
     { metricId: 'duration', occurrenceId: 'timeline-idle-sleep-time',
       label: t('timeline.idleSleepTime', 'Idle / sleep time'),
       description: t('timeline.summary.idleSleepDescription', 'Combined online, parked, idle, asleep, sleeping and offline time, rounded to whole minutes'),
       rawValue: summarySource.available ? idleSleepSec : null,
-      display: { formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
+      display: { durationStyle: 'roundedMinutes', formatter: raw => ({ value: formatHoursFromSeconds(raw, fmtInt), unit: '' }) } },
   ];
   const summaryOperationalMetrics = useOperationalMetrics(summaryMetrics.map(metric => ({
-    ...metric, missingReason: t('timeline.summary.missing', 'No state summary is available for this window'),
+    ...metric, missingReason: metric.rawValue == null
+      ? t('timeline.summary.missing', 'No state summary is available for this window') : undefined,
   })));
 
   /* ─── Table columns ─── */
@@ -471,14 +476,14 @@ export default function TimelinePage() {
           size: 'full',
           content: <LayoutCard title={t('timeline.stateTimeline', 'State distribution')}>
             <TimelineSource source={distributionSource} label={t('timeline.stateTimeline', 'State distribution')}>
-          {summaryRows.length === 0 || totalSeconds === 0 ? (
+          {summaryRows.length === 0 ? (
               <EmptyState /* no-action: transient empty state — surfaces when no recent state activity exists for the vehicle */
                 icon={<Clock className="h-8 w-8" />}
                 message={t('timeline.noStateData', 'No state distribution available yet')}
               />
-          ) : summaryRows.some((row) =>
+          ) : totalSeconds < 0 || summaryRows.some((row) =>
             !Number.isFinite(row.total_seconds)
-            || (totalSeconds > 0 && (row.total_seconds < 0 || row.total_seconds > totalSeconds))
+            || row.total_seconds < 0 || row.total_seconds > totalSeconds
           ) ? (
             <div className="space-y-3">
               <Text variant="bodySm">
@@ -610,11 +615,12 @@ export default function TimelinePage() {
               />
           ) : (
             <div className="space-y-3">
-              {timeByState.map((row) => (
+              {timeByState.map((row, index) => (
                 <MetricBar
-                  key={row.state}
+                  key={`${row.state}:${index}`}
                   label={row.state.charAt(0).toUpperCase() + row.state.slice(1)}
-                  value={row.total_seconds}
+                  value={typeof row.total_seconds === 'number' && Number.isFinite(row.total_seconds) && row.total_seconds >= 0
+                    ? row.total_seconds : null}
                   max={totalSeconds || row.total_seconds}
                   color={row.color}
                   fill="solid"

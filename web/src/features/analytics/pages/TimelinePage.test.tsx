@@ -85,12 +85,18 @@ vi.mock('react-i18next', async () => {
 })
 
 import { request } from '@/api/client'
+import { useOperationalMetrics } from '@/hooks/useOperationalMetrics'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import TimelinePage from './TimelinePage'
 import type { Vehicle } from '@/types/vehicle'
 
 const mockedRequest = vi.mocked(request)
+
+vi.mock('@/hooks/useOperationalMetrics', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useOperationalMetrics')>('@/hooks/useOperationalMetrics')
+  return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) }
+})
 
 /* ── Fixtures ─────────────────────────────────────────── */
 
@@ -600,9 +606,12 @@ describe('TimelinePage', () => {
     { name: 'null', value: null, state: 'missing', text: null },
     { name: 'NaN', value: NaN, state: 'invalid', text: null },
     { name: 'infinity', value: Infinity, state: 'invalid', text: null },
+    { name: 'negative infinity', value: -Infinity, state: 'invalid', text: null },
     { name: 'numeric string', value: '0', state: 'invalid', text: null },
     { name: 'measured zero', value: 0, state: 'value', text: '0m' },
-    { name: 'signed duration', value: -90.5, state: 'value', text: '-2m' },
+    { name: 'signed zero', value: -0, state: 'value', text: '0m' },
+    { name: 'negative dwell', value: -90.5, state: 'invalid', text: null },
+    { name: 'negative sub-minute dwell', value: -0.49, state: 'invalid', text: null },
     { name: 'fractional duration', value: 90.5, state: 'value', text: '2m' },
   ])('distinguishes $name dwell from fabricated zero across all dwell metrics', async ({ value, state, text }) => {
     mockedRequest.mockImplementation((path: string) => {
@@ -624,9 +633,24 @@ describe('TimelinePage', () => {
     expect(within(brief).getByText('0', { exact: true })).toBeInTheDocument()
     if (text) expect(within(brief).getAllByText(text)).toHaveLength(3)
     else expect(within(brief).queryByText('0m')).toBeNull()
-    expect(screen.getAllByText('No state distribution available yet')).toHaveLength(
-      typeof value === 'number' && value > 0 ? 1 : 2,
-    )
+    expect(screen.queryByText('No state distribution available yet')).toBeNull()
+    const driving = screen.getByRole('progressbar', { name: 'Driving' })
+    if (state === 'value') {
+      expect(driving).toHaveAttribute('aria-valuenow', String(value))
+    } else {
+      expect(driving).not.toHaveAttribute('aria-valuenow')
+      expect(driving).toHaveAttribute('aria-valuetext', 'No reading')
+      expect(driving).toHaveTextContent('—')
+    }
+    const metrics = vi.mocked(useOperationalMetrics).mock.calls.at(-1)![0]
+    for (const metric of metrics.slice(1)) {
+      expect(Object.is(metric.rawValue, value)).toBe(true)
+      expect(metric.display?.durationStyle).toBe('roundedMinutes')
+    }
+    if (typeof value === 'number' && value < 0) {
+      fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }))
+      expect(await screen.findByRole('dialog')).toHaveTextContent('Expected a non-negative duration for this display')
+    }
   })
 
   it('keeps composition and transition-list emptiness independent', async () => {
@@ -637,6 +661,26 @@ describe('TimelinePage', () => {
     expect(screen.queryByText('No state transitions recorded')).toBeNull()
     const brief = screen.getByTestId('timeline-summary')
     expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(3)
+  })
+
+  it('preserves signed source percentages and fractional dwell without rewriting raw evidence', async () => {
+    const row = Object.freeze({
+      state: 'driving', total_seconds: 90.5, percentage: -12.5, transition_count: 1,
+    })
+    const summary = Object.freeze({ total_seconds: 90.5, by_state: Object.freeze([row]) })
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({ transitions: [] })
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve(summary)
+      return Promise.resolve({})
+    })
+    renderPage()
+    await screen.findByText('No state transitions recorded')
+    expect(screen.getByRole('progressbar', { name: 'Driving' })).toHaveTextContent(/2m · -12\.50?%/)
+    expect(screen.getByRole('progressbar', { name: 'Driving' })).toHaveAttribute('aria-valuenow', '90.5')
+    const metrics = vi.mocked(useOperationalMetrics).mock.calls.at(-1)![0]
+    expect(metrics.find(metric => metric.occurrenceId === 'timeline-driving-time')?.rawValue).toBe(90.5)
+    expect(summary.by_state[0]).toEqual(row)
   })
 
   it('retains explicit zero for one state without inventing dwell for absent states', async () => {
@@ -655,12 +699,15 @@ describe('TimelinePage', () => {
     expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(2)
     expect(brief.querySelectorAll('[data-value-state="value"]')).toHaveLength(2)
     expect(within(brief).getByText('0m')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Online' })).toHaveAttribute('aria-valuenow', '0')
+    expect(screen.queryByText('No state distribution available yet')).toBeNull()
   })
 
   it.each([
     { value: null, state: 'missing' },
     { value: '0', state: 'invalid' },
     { value: NaN, state: 'invalid' },
+    { value: -1, state: 'invalid' },
   ])('does not hide a $state operand inside combined idle / sleep dwell', async ({ value, state }) => {
     mockedRequest.mockImplementation((path: string) => {
       if (path === '/vehicles') return Promise.resolve([makeVehicle()])
