@@ -2,6 +2,53 @@
 
 ## Current phase
 
+### Bounded tick intake and confirmed corrective owners, 2026-10-14T06:53Z
+
+Continue `fix/dashboard-followups`; Phases0-5 remain closed, Phase6 unfinished,
+Phase7 NOTRUN. Actual COUNT at06:47Z found ACTIVE0/IDLE298/OVERTIME0.
+The five-minute intake stopped at06:53:00Z after28 individual commits/pushes.
+Numeric input, command hero and Activity page remain incomplete: retained WIP
+was committed and their original rows reset pending with attempts unchanged.
+The other25 deliveries are source/report receipts, not whole-page approval.
+Four released deliveries remain for the next tick: settings abort, default
+Drawer footer, quarantine scope and reviewed repair input. Do not redo or
+attribute their unstaged deltas to another actor.
+
+The literal production `npx tsc --noEmit` ran once06:08:18.5673224Z--
+06:09:50.7891202Z, exit0, empty stdout/stderr. It excludes fixtures and ran
+against concurrent writers; it is not an immutable/final gate. Most changed
+leaf tests were blocked before collection by normal generated-catalog drift.
+Zero execution is NOT pass; those failures are external and uncharged.
+Roadmap12pass/1unchanged motion-mock failure is retained, not full-file green.
+Native HomeEnergy44 remeasurement stopped on unapproved nonfixtureHTTP200:
+NOTRUN, no new captures/mutations; its browser/lock was actually released.
+The preview binding report establishes synthetic vehicle2/completeddrive3/
+ongoingdrive4 with16scopedGET200, not a proxy mismatch or native approval.
+Any native caller rebinding requires its own explicit safe scope.
+
+The existing QA disposition produced37 consolidated corrective groups from
+8reports/93findings, with5conditional groups held and201report filenames
+remaining. Parent registered these exact corrections, not a repeated audit.
+Next dispatch selects30 independent non-overlapping corrections, one serialized
+catalog-startup root and one bounded continuation of the existing report
+remainder. Actual new actor IDs and immutable clocks belong to the queue and
+session `files\tick-0647-dispatch.json`/`strict-live-actors.json`; those records
+are NOT themselves a running census. Catalog scope is current projections and
+two existing StatusApi leaves only, not an unapproved326-key Help campaign.
+No parent tests/source investigation, guard bypass, browser download or Docker
+rebuild. Docker3119 stays pinned to5590146, not this new checkout. Missing
+host close/cancel/scheduler operations remain explicit; never invent idle0.
+Preserve inherited package/EvidencePanel/CarbonCoverageBrief dirty deltas.
+
+Actual post-dispatch census07:04:40.426Z:32running,298retainedidle,
+max180s, overtime0. Canonical Phase6:397done/31pending/24failed/8blocked/
+36held/1excluded; the36held include32new actors and4unprocessed results,
+NOT36live workers. Full successful baseline Git read corrects "done today"
+to300: earlier337 was62too high from truncated baseline accounting; the
+true prior count275 plus25new completed deliveries is300. All28intake
+commits pushed; metadata count failure and its explicit64MiB recovery
+are recorded in session `files\tick-0647-report.json`, not application tests.
+
 ### Local Docker and safe fixture seed, actual05:19:18Z completed
 
 User-authorized local deployment is running at http://localhost:3119 from immutable
