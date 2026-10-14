@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/feedback';
@@ -77,7 +77,42 @@ vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div data-testid="vehicle-select" />,
 }));
 
+// Keep the real chart frames and legend/controller; replace only layout-dependent Recharts rendering.
+vi.mock('recharts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('recharts')>();
+  const series = ({ dataKey, hide, connectNulls }: {
+    dataKey?: string; hide?: boolean; connectNulls?: boolean;
+  }) => (
+    <span data-testid={`plot-series-${dataKey}`} data-hidden={String(!!hide)}
+      data-connect-nulls={String(connectNulls)} />
+  );
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    ComposedChart: ({ children, data }: { children?: ReactNode; data?: unknown }) => (
+      <div data-testid="profile-plot" data-rows={JSON.stringify(data)}>{children}</div>
+    ),
+    CartesianGrid: () => null,
+    XAxis: () => null,
+    YAxis: () => null,
+    Tooltip: () => null,
+    Bar: series,
+    Line: series,
+    Legend: ({ formatter }: {
+      formatter?: (value: string, entry: { dataKey: string; value: string }) => ReactNode;
+    }) => (
+      <div>
+        {['samples', 'concentration', 'leadingShare'].map((key) => (
+          <span key={key}>{formatter?.(key, { dataKey: key, value: key })}</span>
+        ))}
+      </div>
+    ),
+  };
+});
+
 import DestinationTransitionsPage from './DestinationTransitionsPage';
+import { DestinationTransitionProfilePlot } from '../components/destination-transitions/DestinationTransitionProfilePlot';
+import { OriginConcentrationPlot } from '../components/destination-transitions/OriginConcentrationPlot';
 
 let nextId = 1;
 
@@ -159,29 +194,34 @@ function query(overrides: Partial<QueryStub> = {}): QueryStub {
   };
 }
 
-function tree(client: QueryClient) {
+function LocationProbe() {
+  return <output data-testid="profile-url">{useLocation().search}</output>;
+}
+
+function tree(client: QueryClient, search = '') {
   return (
     <QueryClientProvider client={client}>
       <ToastProvider>
-        <MemoryRouter initialEntries={['/driving/destination-transitions']}>
+        <MemoryRouter initialEntries={[`/driving/destination-transitions${search}`]}>
           <DestinationTransitionsPage />
+          <LocationProbe />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>
   );
 }
 
-function renderPage() {
+function renderPage(search = '') {
   const client = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
-  const view = render(tree(client));
+  const view = render(tree(client, search));
   return {
     ...view,
-    rerenderPage: () => view.rerender(tree(client)),
+    rerenderPage: () => view.rerender(tree(client, search)),
   };
 }
 
@@ -216,6 +256,120 @@ beforeEach(() => {
 });
 
 describe('DestinationTransitionsPage', () => {
+  it('uses the origin host legend identity while retaining full evidence and exports', () => {
+    renderPage('?hidden_destination-origin-concentration=concentration&hidden_origin-concentration=leadingShare&hidden_destination-weekday-profile=concentration&keep=1');
+    const section = screen.getByTestId('destination-origin-concentration');
+    const origin = within(section);
+    expect(section.querySelectorAll('figure')).toHaveLength(1);
+    expect(origin.getAllByRole('table')).toHaveLength(1);
+    expect(origin.getAllByRole('columnheader').map((cell) => cell.textContent)).toEqual([
+      'Origin destination', 'Transition concentration index', 'Leading successor share (%)',
+      'Outgoing transitions', 'Distinct observed successors', 'Support index', 'Evidence band',
+    ]);
+    expect(origin.getAllByRole('button', { name: 'Export chart' })).toHaveLength(1);
+    fireEvent.click(origin.getByRole('button', { name: 'Export chart' }));
+    expect(screen.getByRole('menuitem', { name: 'Download data as CSV' })).toBeEnabled();
+    fireEvent.keyDown(screen.getByRole('menu', { name: 'Export chart' }), { key: 'Escape' });
+    expect(origin.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'true');
+    expect(origin.getByRole('button', { name: 'concentration' })).toHaveAttribute('aria-pressed', 'true');
+    expect(origin.getByTestId('plot-series-leadingShare')).toHaveAttribute('data-hidden', 'false');
+    fireEvent.click(origin.getByRole('button', { name: 'concentration' }));
+    fireEvent.click(origin.getByRole('button', { name: 'leadingShare' }));
+    expect(origin.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'false');
+    expect(origin.getByTestId('plot-series-leadingShare')).toHaveAttribute('data-hidden', 'true');
+    expect(origin.getByRole('button', { name: 'leadingShare' })).toHaveAttribute('aria-pressed', 'true');
+    const params = new URLSearchParams(screen.getByTestId('profile-url').textContent ?? '');
+    expect(params.get('hidden_destination-origin-concentration')).toBe('leadingShare');
+    expect(params.get('hidden_origin-concentration')).toBe('leadingShare');
+    expect(params.get('hidden_destination-weekday-profile')).toBe('concentration');
+    expect(params.get('keep')).toBe('1');
+    const points = JSON.parse(origin.getByTestId('profile-plot').getAttribute('data-rows') ?? '[]') as Array<Record<string, unknown>>;
+    expect(points.length).toBeGreaterThan(0);
+    expect(points[0]).toEqual(expect.objectContaining({
+      outgoing: expect.any(Number), successors: expect.any(Number),
+      supportIndex: expect.any(Number), support: expect.any(String),
+    }));
+    expectEverySection();
+  });
+
+  it('preserves the standalone origin identity and all evidence columns', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/?hidden_origin-concentration=leadingShare&keep=1']}>
+          <OriginConcentrationPlot
+            rows={[{ origin: 'Fixture origin', concentration: 75, leadingShare: 80, outgoing: 5, successors: 2, supportIndex: 60, support: 'Thin evidence' }]}
+            locale="en-US" concentrationName="Concentration" leadingName="Leading share"
+          />
+          <LocationProbe />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getAllByRole('columnheader')).toHaveLength(7);
+    expect(screen.getByRole('cell', { name: 'Fixture origin' })).toBeInTheDocument();
+    expect(screen.getByRole('cell', { name: 'Thin evidence' })).toBeInTheDocument();
+    expect(screen.getByTestId('plot-series-leadingShare')).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByRole('button', { name: 'leadingShare' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'leadingShare' }));
+    expect(screen.getByTestId('plot-series-leadingShare')).toHaveAttribute('data-hidden', 'false');
+    expect(screen.getByTestId('profile-url')).toHaveTextContent('?keep=1');
+  });
+
+  it('uses independent host URL controllers for plots and legends without nested chart frames', () => {
+    renderPage('?hidden_destination-two-hour-profile=samples&hidden_destination-weekday-profile=concentration&hidden_destination-transition-profile=samples&keep=1');
+    const twoHour = within(screen.getByTestId('destination-two-hour-profile'));
+    const weekday = within(screen.getByTestId('destination-weekday-profile'));
+    const month = within(screen.getByTestId('destination-month-trend'));
+    expect(twoHour.getByTestId('plot-series-samples')).toHaveAttribute('data-hidden', 'true');
+    expect(twoHour.getByRole('button', { name: 'samples' })).toHaveAttribute('aria-pressed', 'true');
+    expect(weekday.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'true');
+    expect(month.getByTestId('plot-series-samples')).toHaveAttribute('data-hidden', 'false');
+
+    fireEvent.click(twoHour.getByRole('button', { name: 'samples' }));
+    expect(twoHour.getByTestId('plot-series-samples')).toHaveAttribute('data-hidden', 'false');
+    expect(twoHour.getByRole('button', { name: 'samples' })).toHaveAttribute('aria-pressed', 'false');
+    expect(weekday.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'true');
+    const params = new URLSearchParams(screen.getByTestId('profile-url').textContent ?? '');
+    expect(params.has('hidden_destination-two-hour-profile')).toBe(false);
+    expect(params.get('hidden_destination-weekday-profile')).toBe('concentration');
+    expect(params.get('hidden_destination-transition-profile')).toBe('samples');
+    expect(params.get('keep')).toBe('1');
+
+    for (const id of ['destination-two-hour-profile', 'destination-weekday-profile', 'destination-month-trend']) {
+      const section = screen.getByTestId(id);
+      expect(section.querySelectorAll('figure')).toHaveLength(1);
+      expect(within(section).getAllByRole('table')).toHaveLength(1);
+      expect(within(section).getAllByRole('columnheader')).toHaveLength(7);
+      expect(within(section).getAllByRole('button', { name: 'Export chart' })).toHaveLength(1);
+      expect(within(section).getByTestId('plot-series-concentration')).toHaveAttribute('data-connect-nulls', 'false');
+    }
+    const points = JSON.parse(twoHour.getByTestId('profile-plot').getAttribute('data-rows') ?? '[]') as Array<{ samples: number; concentration: number | null; leadingShare: number | null; support: string }>;
+    expect(points).toHaveLength(12);
+    expect(points.some((point) => point.samples > 0 && point.concentration != null)).toBe(true);
+    expect(points.some((point) => point.samples === 0 && point.concentration === null && point.leadingShare === null)).toBe(true);
+    expectEverySection();
+  });
+
+  it('retains the legacy standalone URL key and complete accessible evidence', () => {
+    render(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/?hidden_destination-transition-profile=concentration']}>
+          <DestinationTransitionProfilePlot
+            rows={[{ label: 'Empty window', samples: 0, origins: 0, destinations: 0, concentration: null, leadingShare: null, support: 'Thin evidence' }]}
+            locale="en-US" countSeriesName="Samples" concentrationSeriesName="Concentration"
+          />
+          <LocationProbe />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(screen.getAllByRole('columnheader')).toHaveLength(7);
+    expect(screen.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'true');
+    expect(screen.getByRole('button', { name: 'concentration' })).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'concentration' }));
+    expect(screen.getByTestId('plot-series-concentration')).toHaveAttribute('data-hidden', 'false');
+    expect(screen.getByTestId('profile-url').textContent).toBe('');
+    expect(screen.getAllByRole('cell').filter((cell) => cell.textContent === '—')).toHaveLength(2);
+  });
+
   it('retains all four evidence populations and configuration readouts in real briefs', () => {
     renderPage();
     const expected = [
