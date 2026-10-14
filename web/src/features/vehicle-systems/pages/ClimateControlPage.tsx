@@ -74,9 +74,10 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { convertTempFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 
 import { CHART_COLORS } from '@/lib/colors';
 
@@ -375,15 +376,16 @@ function AutoClimateChip({
 function SeatHeaterCard({ label, labelKey, level, t }: {
   label: string; labelKey: string; level: number | null | undefined; t: Translate;
 }) {
-  const style = heatStyle(level ?? 0);
+  const presentationIndex = clampLevel(level ?? 0);
+  const style = heatStyle(presentationIndex);
   return (
     <GlassPanel className={cn('flex min-w-0 flex-col items-center gap-2 p-4 shadow-none', style.bg)}>
       <Icon icon={Flame} size="xl" className={level == null ? typography.color.muted : style.color} />
       <Text variant="bodySm" className="break-words text-center">
         {t(labelKey, label)}
       </Text>
-      {level != null ? <Badge variant={heatBadgeVariant(level)} size="sm">
-        {t(style.labelKey, style.label)} ({level}/3)
+      {level != null ? <Badge variant={heatBadgeVariant(presentationIndex)} size="sm">
+        {t(style.labelKey, style.label)} ({presentationIndex}/3)
       </Badge> : <Caption>—</Caption>}
     </GlassPanel>
   );
@@ -401,8 +403,8 @@ function SeatCoolingCard({
   level: number | null | undefined;
   t: Translate;
 }) {
-  const lvl = level ?? 0;
-  const style = coolStyle(lvl);
+  const presentationIndex = clampLevel(level ?? 0);
+  const style = coolStyle(presentationIndex);
   return (
     <GlassPanel className={cn('flex min-w-0 flex-col items-center gap-2 p-4 shadow-none', style.bg)}>
       <Icon icon={Snowflake} size="xl" className={level == null ? typography.color.muted : style.color} />
@@ -410,8 +412,8 @@ function SeatCoolingCard({
         {t(labelKey, label)}
       </Text>
       {level != null ? (
-        <Badge variant={coolBadgeVariant(lvl)} size="sm">
-          {t(style.labelKey, style.label)} ({Math.round(lvl)}/3)
+        <Badge variant={coolBadgeVariant(presentationIndex)} size="sm">
+          {t(style.labelKey, style.label)} ({presentationIndex}/3)
         </Badge>
       ) : (
         <Caption>—</Caption>
@@ -426,6 +428,7 @@ function SeatCoolingCard({
 
 export default function ClimateControlPage() {
   const { fmtNumber, fmtInt } = useNumberFormatting();
+  const { formatDateTime, formatTime, tz } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('widget.climatePanel.title', 'Climate control'));
 
@@ -444,6 +447,7 @@ export default function ClimateControlPage() {
   const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const activeIdNum = Number(activeId) || 0;
+  const canRefresh = Number.isSafeInteger(activeIdNum) && activeIdNum > 0;
 
   /* ─── Climate data ─── */
   const climateQuery = useClimate(activeId);
@@ -451,7 +455,11 @@ export default function ClimateControlPage() {
   const latestLoading = isLoading && !latest;
   const latestState = deriveDataState(climateQuery);
 
-  const historyQuery = useClimateHistory(activeId);
+  const { startInstant, endInstantExclusive } = useRangeState();
+  const historyQuery = useClimateHistory(activeId, {
+    start: startInstant,
+    end: endInstantExclusive,
+  });
   const { data: history } = historyQuery;
   const historyLoading = historyQuery.isLoading && !history;
   const historyState = deriveDataState(historyQuery, { provenance: 'historical' });
@@ -591,9 +599,8 @@ export default function ClimateControlPage() {
         ),
       },
     ],
-    // tempUnit + toTemperatureDisplay are captured by the render closures; the
-    // component re-renders (and rebuilds columns) whenever the unit changes.
-    [t, tempUnit, fmtNumber],
+    // Rebuild captured display closures when effective preferences change.
+    [t, tempUnit, fmtNumber, formatDateTime],
   );
 
   /* ─── Chronological history (backend returns newest-first) ─── */
@@ -630,7 +637,7 @@ export default function ClimateControlPage() {
       acActive: row.acActive,
       fanSpeed: row.fanSpeed,
     })),
-    [convertedChartData],
+    [convertedChartData, formatDateTime],
   );
   const temperatureDataColumns = useMemo<ChartDataColumn[]>(() => [
     { key: 'timestamp', label: t('widget.climateHistory.time', 'Time') },
@@ -662,7 +669,7 @@ export default function ClimateControlPage() {
         default: return null;
       }
     },
-  }), [t, tempUnit, fmtNumber]);
+  }), [t, tempUnit, fmtNumber, formatDateTime]);
 
   /* ─── Comfort score & temp delta ─── */
   const comfortScore = useMemo(() => {
@@ -722,10 +729,19 @@ export default function ClimateControlPage() {
             className="min-h-11 min-w-11 md:min-h-9"
             wrapLabel
             icon={<Icon icon={RefreshCw} />}
-            onClick={() => void refetch()}
+            disabled={!canRefresh}
+            aria-describedby={!canRefresh ? 'climate-refresh-prerequisite' : undefined}
+            onClick={() => {
+              if (canRefresh) void refetch();
+            }}
           >
             {t('common.refresh', 'Refresh')}
           </Button>
+          {!canRefresh && (
+            <Caption id="climate-refresh-prerequisite">
+              {t('vehicleManagement.state.vehicleRequired', 'Select a vehicle')}
+            </Caption>
+          )}
         </div>
       }
     >
@@ -1051,7 +1067,7 @@ export default function ClimateControlPage() {
                 }
                 subtitle={
                   latest?.hvacSteeringWheelHeatLevel != null
-                    ? `${t('common.level', 'Level')} ${fmtInt(latest.hvacSteeringWheelHeatLevel)}`
+                    ? `${t('common.level', 'Level')} ${fmtInt(clampLevel(latest.hvacSteeringWheelHeatLevel))}`
                     : undefined
                 }
               />
@@ -1387,6 +1403,7 @@ export default function ClimateControlPage() {
         label={t('widget.climateHistory.title', 'Climate history')}>
           {/* Temperature history */}
           <LayoutCard title={t('climate.history.title', 'Temperature history')}>
+            <Caption>{tz}</Caption>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
@@ -1427,7 +1444,7 @@ export default function ClimateControlPage() {
                           tickFormatter={(v: string) => formatTime(v)}
                         />
                         <YAxis tick={axisTick} unit={tempUnit} />
-                        <Tooltip content={<ChartTooltip />} />
+                        <Tooltip content={<ChartTooltip timezone={tz} labelFormatter={label => formatDateTime(typeof label === 'string' ? label : null)} />} />
                         <ChartLegend />
                         <Line
                           {...AREA_DEFAULTS}
@@ -1466,6 +1483,7 @@ export default function ClimateControlPage() {
       <ClimateRenderGroup id="climate-hvac-history" size="half" delay={0.25}>
           {/* AC state & fan speed history */}
           <LayoutCard title={t('climate.page.acStateFanSpeed', 'AC state & fan speed')}>
+            <Caption>{tz}</Caption>
             <ClimateSourceBoundary state={historyState} label={historyLabel}>
             {historyLoading ? (
               <Skeleton height={300} />
@@ -1513,7 +1531,7 @@ export default function ClimateControlPage() {
                           tick={axisTick}
                           width={36}
                         />
-                        <Tooltip content={<ChartTooltip />} />
+                        <Tooltip content={<ChartTooltip timezone={tz} labelFormatter={label => formatDateTime(typeof label === 'string' ? label : null)} />} />
                         <ChartLegend />
                         {areaGradient('climateAcGrad', CHART_COLORS[0])}
                         <Area

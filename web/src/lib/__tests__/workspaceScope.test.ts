@@ -27,6 +27,34 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns the shared range and vehicle on both climate-control aliases', () => {
+    for (const alias of ['/climate-control', '/climate']) {
+      for (const path of [alias, `${alias}/`, `${alias}?from=2026-10-10&to=2026-10-13`, `${alias}#history`, alias.slice(1)]) {
+        expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+      }
+      expect(getWorkspaceQuickRangePresets(alias)).toEqual(['24h', '7d', '30d', '90d']);
+    }
+  });
+  it('owns cabin thermal range and vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/cabin-thermal', '/cabin-thermal/',
+      '/cabin-thermal?from=2026-08-01&to=2026-08-08',
+      '/cabin-thermal#methodology', 'cabin-thermal',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/cabin-thermal')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the correlation range and selected vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/signal-correlation', '/signal-correlation/',
+      '/signal-correlation?from=2026-10-10&to=2026-10-13',
+      '/signal-correlation#overlay', 'signal-correlation',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/signal-correlation')).toEqual(['24h', '7d', '30d', '90d']);
+  });
   it('owns the deadband range and vehicle on its normalized route', () => {
     for (const path of ['/signal-deadband', '/signal-deadband/', '/signal-deadband?from=2026-10-10', '/signal-deadband#chart', 'signal-deadband']) {
       expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });

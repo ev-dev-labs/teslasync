@@ -11,7 +11,10 @@ import type { MediaSnapshot } from '@/api/types';
 
 export const vehicleSystemsKeys = {
   climate: (vehicleId: string) => ['climate', vehicleId] as const,
-  climateHistory: (vehicleId: string) => ['climate', 'history', vehicleId] as const,
+  climateHistory: (vehicleId: string, start = '', end = '') =>
+    start || end
+      ? ['climate', 'history', vehicleId, start, end] as const
+      : ['climate', 'history', vehicleId] as const,
   tirePressure: (vehicleId: string) => ['tire-pressure', vehicleId] as const,
   tirePressureHistory: (vehicleId: string) => ['tire-pressure', 'history', vehicleId] as const,
   tirePressureAnalysisHistory: (vehicleId: string, days: number) =>
@@ -22,7 +25,8 @@ export const vehicleSystemsKeys = {
   safety: (vehicleId: string) => ['safety', vehicleId] as const,
   safetyHistory: (vehicleId: string) => ['safety', 'history', vehicleId] as const,
   media: (vehicleId: string) => ['media', vehicleId] as const,
-  mediaHistory: (vehicleId: string) => ['media', 'history', vehicleId] as const,
+  mediaHistory: (vehicleId: string, start = '', end = '') =>
+    ['media', 'history', vehicleId, start, end] as const,
 };
 
 export function useClimate(vehicleId: string) {
@@ -34,10 +38,24 @@ export function useClimate(vehicleId: string) {
   });
 }
 
-export function useClimateHistory(vehicleId: string) {
+/**
+ * Workspace bounds are inclusive start / exclusive end instants, passed unchanged.
+ * Omitting the range preserves the endpoint's default seven-day history.
+ */
+export function useClimateHistory(
+  vehicleId: string,
+  range?: { start?: string; end?: string },
+) {
+  const start = range?.start ?? '';
+  const end = range?.end ?? '';
   return useQuery({
-    queryKey: vehicleSystemsKeys.climateHistory(vehicleId),
-    queryFn: ({ signal }) => request<ClimateState[]>(`/climate?vehicle_id=${vehicleId}`, { signal }),
+    queryKey: vehicleSystemsKeys.climateHistory(vehicleId, start, end),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({ vehicle_id: vehicleId });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<ClimateState[]>(`/climate?${params.toString()}`, { signal });
+    },
     enabled: !!vehicleId,
     select: safeArray,
   });
@@ -156,6 +174,7 @@ export function useMedia(vehicleId: string) {
   });
 }
 
+/** Workspace callers pass their inclusive start and exclusive end instants unchanged. */
 export function useMediaHistory(
   vehicleId: string,
   range?: { start?: string; end?: string },
@@ -163,7 +182,7 @@ export function useMediaHistory(
   const start = range?.start ?? '';
   const end = range?.end ?? '';
   return useQuery({
-    queryKey: [...vehicleSystemsKeys.mediaHistory(vehicleId), start, end] as const,
+    queryKey: vehicleSystemsKeys.mediaHistory(vehicleId, start, end),
     queryFn: ({ signal }) => {
       const params = new URLSearchParams({ vehicle_id: vehicleId });
       if (start) params.set('start', start);

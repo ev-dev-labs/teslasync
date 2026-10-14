@@ -26,7 +26,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent, act } from '@testing-library/react';
+import { render, renderHook, screen, within, fireEvent, act, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode, ComponentProps } from 'react';
@@ -36,6 +36,16 @@ import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { formatDateTime } from '@/lib/dateFormat';
 import { neonColorMap, typography } from '@/lib/tokens';
 import { buildMobileTableRow } from '@/components/ui/MobileDataTableAdapter';
+import * as apiClient from '@/api/client';
+
+const rangeState = vi.hoisted(() => ({
+  startInstant: '2026-10-13T21:55:16.618Z',
+  endInstantExclusive: '2026-10-14T21:55:16.618Z',
+}));
+
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => rangeState,
+}));
 
 const presentationSpies = vi.hoisted(() => ({
   chart: vi.fn<(props: EmbeddedChartProps) => void>(),
@@ -81,7 +91,12 @@ vi.mock('react-i18next', () => ({
 // Flippable temperature preference so one file exercises both the metric (°C)
 // and imperial (°F) display-conversion branches. Hoisted so the settings
 // factory can close over it.
-const unitState = vi.hoisted(() => ({ temp: 'C' as 'C' | 'F' }));
+const unitState = vi.hoisted(() => ({
+  temp: 'C' as 'C' | 'F',
+  locale: 'en-US',
+  timezone: '',
+  timezoneMode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+}));
 
 // File-level useSettings mock (overrides the global test-setup stub) so the
 // real `useUnits()` derives its temperature pref from a flippable preference.
@@ -107,9 +122,9 @@ vi.mock('@/hooks/useSettings', () => {
     quiet_hours_end: '07:00',
     alert_digest_mode: 'instant' as const,
     currency_symbol: '$',
-    locale: 'en-US',
-    tz_display_default: 'vehicle' as const,
-    timezone_user: '',
+    locale: unitState.locale,
+    tz_display_default: unitState.timezoneMode,
+    timezone_user: unitState.timezone,
     tab_badge_enabled: true,
     critical_flash_enabled: true,
     ui_density: 'comfortable' as const,
@@ -127,7 +142,7 @@ vi.mock('@/hooks/useSettings', () => {
       isFahrenheit: unitState.temp === 'F',
       isPSI: false,
       decimals: 2,
-      locale: 'en-US',
+      locale: unitState.locale,
       density: 'comfortable' as const,
       rangeType: 'rated' as const,
     }),
@@ -294,13 +309,13 @@ function install({ latest, latestOpts, history, historyOpts, charging }: Install
   mockCharging.mockReturnValue(qr({ data: charging ?? null }));
 }
 
-function renderPage() {
+function renderPage(path = '/climate-control') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/climate-control']}>
+      <MemoryRouter initialEntries={[path]}>
         <ClimateControlPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -325,9 +340,98 @@ function group(id: string): HTMLElement {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  rangeState.startInstant = '2026-10-13T21:55:16.618Z';
+  rangeState.endInstantExclusive = '2026-10-14T21:55:16.618Z';
   unitState.temp = 'C';
+  unitState.locale = 'en-US';
+  unitState.timezone = '';
+  unitState.timezoneMode = 'vehicle';
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
+});
+
+describe('climate date display preferences', () => {
+  it('updates desktop, mobile and chart dates across saved locale and timezone day boundaries', () => {
+    unitState.locale = 'de-DE';
+    unitState.timezoneMode = 'user';
+    unitState.timezone = 'America/Los_Angeles';
+    const timestamp = '2025-06-15T00:30:00Z';
+    const row = climate({ timestamp });
+    install({ latest: row, history: [row] });
+    const view = renderPage();
+
+    const assertDates = (locale: string, tz: string) => {
+      const expected = formatDateTime(timestamp, { locale, tz });
+      const table = presentationSpies.table.mock.lastCall![0];
+      const timeColumn = table.columns.find(column => column.key === 'timestamp')!;
+      const cell = render(<>{timeColumn.render(row)}</>);
+      expect(within(cell.container).getByText(expected)).toBeInTheDocument();
+      cell.unmount();
+      expect(table.mobilePresentation!.displayValue!(row, 'timestamp')).toBe(expected);
+      const charts = presentationSpies.chart.mock.calls.slice(-2).map(([props]) => props);
+      expect(charts).toHaveLength(2);
+      for (const chart of charts) expect(chart.data![0].timestamp).toBe(expected);
+      expect(screen.getAllByText(tz)).toHaveLength(2);
+    };
+
+    assertDates('de-DE', 'America/Los_Angeles');
+    expect(formatDateTime(timestamp, { locale: 'de-DE', tz: unitState.timezone }))
+      .toContain('14. Juni');
+    unitState.locale = 'ja-JP';
+    unitState.timezone = 'Asia/Tokyo';
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter initialEntries={['/climate-control']}>
+          <ClimateControlPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    assertDates('ja-JP', 'Asia/Tokyo');
+    expect(row.timestamp).toBe(timestamp);
+    expect(screen.getByTestId('ai-recommender').getAttribute('data-depart')).toMatch(/Z$/);
+  });
+
+  it('resolves the selected vehicle timezone and honors an explicit UTC preference', () => {
+    unitState.locale = 'fr-FR';
+    unitState.timezone = 'America/Los_Angeles';
+    const row = climate({ timestamp: '2025-06-15T00:30:00Z' });
+    install({ latest: row, history: [row] });
+    const selection = mockSelectedVehicle.getMockImplementation()!();
+    mockSelectedVehicle.mockReturnValue({
+      ...selection,
+      vehicle: { ...selection.vehicles[0], timezone: 'Asia/Tokyo' },
+    });
+    const view = renderPage();
+    expect(presentationSpies.chart.mock.lastCall![0].data![0].timestamp)
+      .toBe(formatDateTime(row.timestamp, { locale: 'fr-FR', tz: 'Asia/Tokyo' }));
+    unitState.timezoneMode = 'utc';
+    view.rerender(
+      <QueryClientProvider client={new QueryClient()}>
+        <MemoryRouter><ClimateControlPage /></MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(presentationSpies.chart.mock.lastCall![0].data![0].timestamp)
+      .toBe(formatDateTime(row.timestamp, { locale: 'fr-FR', tz: 'UTC' }));
+  });
+
+  it.each(['invalid-date', '', undefined])('keeps %s dates unknown without fabricating an instant', timestamp => {
+    unitState.locale = 'de-DE';
+    unitState.timezone = 'Europe/Berlin';
+    const row = climate({ timestamp });
+    install({ latest: row, history: [row] });
+    renderPage();
+    const table = presentationSpies.table.mock.lastCall![0];
+    const timeColumn = table.columns.find(column => column.key === 'timestamp')!;
+    const cell = render(<>{timeColumn.render(row)}</>);
+    expect(within(cell.container).getByText('—')).toBeInTheDocument();
+    cell.unmount();
+    const mobileValue = table.mobilePresentation!.displayValue!(row, 'timestamp');
+    expect(mobileValue == null || mobileValue === '—').toBe(true);
+    const chartValue = presentationSpies.chart.mock.lastCall![0].data![0].timestamp;
+    expect(chartValue == null || chartValue === '—').toBe(true);
+    expect(row.timestamp).toBe(timestamp);
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+  });
 });
 
 describe('climate efficiency measurement evidence', () => {
@@ -471,8 +575,36 @@ describe('ClimateControlPage — structure, wiring & a11y', () => {
 
     // Climate hooks take the string id; charging telemetry takes the numeric id.
     expect(mockClimate).toHaveBeenCalledWith('1');
-    expect(mockClimateHistory).toHaveBeenCalledWith('1');
+    expect(mockClimateHistory).toHaveBeenCalledWith('1', {
+      start: rangeState.startInstant,
+      end: rangeState.endInstantExclusive,
+    });
     expect(mockCharging).toHaveBeenCalledWith(1);
+  });
+
+  it.each(['/climate-control', '/climate'])('updates precise history bounds without range-scoping live reads on %s', (path) => {
+    install({ latest: climate(), history: HISTORY });
+    const view = renderPage(path);
+    expect(mockClimateHistory).toHaveBeenLastCalledWith('1', {
+      start: '2026-10-13T21:55:16.618Z',
+      end: '2026-10-14T21:55:16.618Z',
+    });
+    rangeState.startInstant = '2026-10-01T07:00:00.000Z';
+    rangeState.endInstantExclusive = '2026-10-08T07:00:00.000Z';
+    view.rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={[path]}>
+          <ClimateControlPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    expect(mockClimateHistory).toHaveBeenLastCalledWith('1', {
+      start: rangeState.startInstant,
+      end: rangeState.endInstantExclusive,
+    });
+    expect(mockClimate).toHaveBeenLastCalledWith('1');
+    expect(mockCharging).toHaveBeenLastCalledWith(1);
+    expect(screen.getByRole('heading', { level: 1, name: 'Climate control' })).toBeInTheDocument();
   });
 
   it('passes the selected vehicle + SI cabin/outside/target temps to the AI recommender', () => {
@@ -485,6 +617,71 @@ describe('ClimateControlPage — structure, wiring & a11y', () => {
     expect(ai).toHaveAttribute('data-outside', '15');
     expect(ai).toHaveAttribute('data-target', '21');
     expect(ai.getAttribute('data-depart')).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  });
+});
+
+describe('climate history workspace query contract', () => {
+  it('preserves precise server filters and separates vehicle, start and end cache identities', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useVehicleSystems')>('@/api/hooks/useVehicleSystems');
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValue(HISTORY);
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const start = '2026-10-13T21:55:16.618Z';
+    const end = '2026-10-14T21:55:16.618Z';
+    const view = renderHook(({ vehicleId, start, end }) =>
+      actual.useClimateHistory(vehicleId, { start, end }), {
+      wrapper, initialProps: { vehicleId: '1', start, end },
+    });
+    try {
+      await waitFor(() => expect(view.result.current.data).toEqual(HISTORY));
+      const [path, options] = request.mock.calls[0];
+      const url = new URL(path, 'http://localhost');
+      expect(url.pathname).toBe('/climate');
+      expect([...url.searchParams]).toEqual([['vehicle_id', '1'], ['start', start], ['end', end]]);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+      expect(client.getQueryData(['climate', 'history', '1', start, end])).toEqual(HISTORY);
+
+      view.rerender({ vehicleId: '1', start, end: '2026-10-15T21:55:16.618Z' });
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+      view.rerender({ vehicleId: '1', start: '2026-10-12T21:55:16.618Z', end });
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(3));
+      view.rerender({ vehicleId: '2', start, end });
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(4));
+      await waitFor(() => expect(client.getQueryData(['climate', 'history', '2', start, end])).toEqual(HISTORY));
+    } finally {
+      view.unmount();
+      client.clear();
+      request.mockRestore();
+    }
+  });
+
+  it('keeps unbounded callers and empty-vehicle enablement and aborts pending history reads', async () => {
+    const actual = await vi.importActual<typeof import('@/api/hooks/useVehicleSystems')>('@/api/hooks/useVehicleSystems');
+    const request = vi.spyOn(apiClient, 'request').mockImplementation(() => new Promise(() => {}));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const view = renderHook(({ vehicleId }) => actual.useClimateHistory(vehicleId), {
+      wrapper, initialProps: { vehicleId: '' },
+    });
+    try {
+      expect(request).not.toHaveBeenCalled();
+      view.rerender({ vehicleId: '1' });
+      await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+      expect(request.mock.calls[0][0]).toBe('/climate?vehicle_id=1');
+      expect(actual.vehicleSystemsKeys.climateHistory('1')).toEqual(['climate', 'history', '1']);
+      const signal = request.mock.calls[0][1]?.signal;
+      expect(signal?.aborted).toBe(false);
+      view.unmount();
+      expect(signal?.aborted).toBe(true);
+    } finally {
+      view.unmount();
+      client.clear();
+      request.mockRestore();
+    }
   });
 });
 
@@ -685,6 +882,30 @@ describe('ClimateControlPage — independent HVAC and AC states', () => {
 });
 
 describe('ClimateControlPage — interactions', () => {
+  it.each([null, 0, -1, NaN, Infinity, 1.5])(
+    'disables Refresh and explains its prerequisite for vehicle %s',
+    (vehicleId) => {
+      const refetch = vi.fn();
+      install({ latest: climate(), latestOpts: { refetch }, history: HISTORY });
+      mockSelectedVehicle.mockReturnValue({
+        vehicleId,
+        vehicle: null,
+        vehicles: [],
+        setVehicleId: vi.fn(),
+      });
+      renderPage();
+
+      const refresh = screen.getByText('Refresh').closest('button')!;
+      expect(refresh).toBeDisabled();
+      expect(refresh).toHaveAccessibleDescription('Select a vehicle');
+      fireEvent.click(refresh);
+      expect(refetch).not.toHaveBeenCalled();
+      expect(mockClimateHistory.mock.results[0].value.refetch).not.toHaveBeenCalled();
+      expect(mockCharging.mock.results[0].value.refetch).not.toHaveBeenCalled();
+      expect(screen.getByRole('table', { name: 'Climate history' })).toBeInTheDocument();
+    },
+  );
+
   it('refetches the latest snapshot when Refresh is clicked', () => {
     const refetch = vi.fn();
     install({ latest: climate(), latestOpts: { refetch }, history: HISTORY });
@@ -692,8 +913,13 @@ describe('ClimateControlPage — interactions', () => {
 
     // The page's own Refresh <button> carries visible text; the freshness chip
     // shares the "Refresh" accessible name but has no visible label.
-    fireEvent.click(screen.getByText('Refresh').closest('button') as HTMLButtonElement);
+    const refresh = screen.getByText('Refresh').closest('button')!;
+    expect(refresh).toBeEnabled();
+    expect(refresh).not.toHaveAttribute('aria-describedby');
+    fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
+    expect(mockClimateHistory.mock.results[0].value.refetch).not.toHaveBeenCalled();
+    expect(mockCharging.mock.results[0].value.refetch).not.toHaveBeenCalled();
   });
 
   it('re-sorts the history table when a sortable header is clicked', () => {
@@ -733,6 +959,59 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
     expect(within(swCard).getByText('Level 3')).toBeInTheDocument();
     // Front-right seat heater 1.6 → 2 → "Medium (2/3)".
     expect(screen.getByText('Medium (2/3)')).toBeInTheDocument();
+  });
+
+  it.each([
+    { raw: 0, index: 0, label: 'Off', heatTone: 'neutral', heatColor: typography.color.muted },
+    { raw: 0.4, index: 0, label: 'Off', heatTone: 'neutral', heatColor: typography.color.muted },
+    { raw: 1.4, index: 1, label: 'Low', heatTone: 'info', heatColor: neonColorMap.cyan.text },
+    { raw: 1.6, index: 2, label: 'Medium', heatTone: 'warning', heatColor: neonColorMap.amber.text },
+    { raw: 2.6, index: 3, label: 'High', heatTone: 'danger', heatColor: neonColorMap.red.text },
+    { raw: -2, index: 0, label: 'Off', heatTone: 'neutral', heatColor: typography.color.muted },
+    { raw: 8, index: 3, label: 'High', heatTone: 'danger', heatColor: neonColorMap.red.text },
+    { raw: NaN, index: 0, label: 'Off', heatTone: 'neutral', heatColor: typography.color.muted },
+    { raw: Infinity, index: 0, label: 'Off', heatTone: 'neutral', heatColor: typography.color.muted },
+  ])('uses one presentation index for raw seat level $raw without rewriting the signal', ({
+    raw, index, label, heatTone, heatColor,
+  }) => {
+    const latest = climate({
+      seatHeaterLeft: raw,
+      climateSeatCoolingFrontLeft: raw,
+    });
+    install({ latest, history: HISTORY });
+    renderPage();
+
+    const seats = group('climate-seats');
+    const [heater, cooling] = within(seats).getAllByText('Front left')
+      .map(node => node.parentElement!);
+    const heaterBadge = within(heater).getByText(`${label} (${index}/3)`);
+    const coolingBadge = within(cooling).getByText(`${label} (${index}/3)`);
+    expect(heaterBadge).toHaveClass(heatTone === 'neutral'
+      ? 'text-[var(--text-secondary)]'
+      : `text-[var(--semantic-${heatTone})]`);
+    expect(heater.querySelector('svg')).toHaveClass(heatColor);
+    expect(coolingBadge).toHaveClass(index === 0
+      ? 'text-[var(--text-secondary)]' : 'text-[var(--semantic-info)]');
+    expect(cooling.querySelector('svg')).toHaveClass(index === 0
+      ? typography.color.muted : neonColorMap.cyan.text);
+    expect(latest.seatHeaterLeft).toBe(raw);
+    expect(latest.climateSeatCoolingFrontLeft).toBe(raw);
+  });
+
+  it.each([
+    { raw: -2, index: 0, label: 'Off' },
+    { raw: 8, index: 3, label: 'High' },
+  ])('bounds the steering-wheel label and subtitle together for raw level $raw', ({
+    raw, index, label,
+  }) => {
+    const latest = climate({ hvacSteeringWheelHeatLevel: raw });
+    install({ latest, history: HISTORY });
+    renderPage();
+
+    const steering = card('Steering wheel heat level');
+    expect(within(steering).getByText(label)).toBeInTheDocument();
+    expect(within(steering).getByText(`Level ${index}`)).toBeInTheDocument();
+    expect(latest.hvacSteeringWheelHeatLevel).toBe(raw);
   });
 });
 
@@ -864,7 +1143,7 @@ describe('ClimateControlPage — independent charging source registry', () => {
       expect(props.pagination).toBe(true);
       const mobile = buildMobileTableRow(HISTORY[0], 10, props.columns, props.mobilePresentation!, 'Climate history');
       expect(mobile.details).toEqual([
-        { key: 'timestamp', label: 'Time', value: formatDateTime(HISTORY[0].timestamp!) },
+        { key: 'timestamp', label: 'Time', value: formatDateTime(HISTORY[0].timestamp!, { locale: 'en-US' }) },
         { key: 'insideTemp', label: 'Inside °F', value: '64.40 °F' },
         { key: 'outsideTemp', label: 'Outside °F', value: '53.60 °F' },
         { key: 'driverTempSetting', label: 'Set temp °F', value: '69.80 °F' },
