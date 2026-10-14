@@ -21,7 +21,7 @@ import {
   ComposedChart, LineChart, Line, Area, XAxis, YAxis, Tooltip, ReferenceLine,
   ResponsiveContainer, ChartGradient, ChartTooltip, ChartLegend, chartGrid, axisTick,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import type { StatMetric } from '@/components/data-display/stat-reference';
 import { DrivingSummaryBrief } from '../components/operationalbrief-n-z/DrivingSummaryBrief';
@@ -40,6 +40,7 @@ import { fmtInt } from '@/lib/numberFormat';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 
 const DASH = '—';
 
@@ -78,7 +79,8 @@ export default function SegmentsPage() {
   const segmentsQuery = useSegments(vehicleId);
   const segmentsState = useDataState(segmentsQuery, { provenance: 'historical' });
   const { data: segmentsData, refetch: refetchSegments } = segmentsQuery;
-  const segLoading = !noVehicle && segmentsState.status === 'initial';
+  const segPaused = !noVehicle && !segmentsState.hasData && segmentsState.isRefreshBlocked;
+  const segLoading = !noVehicle && segmentsState.status === 'initial' && !segPaused;
   const segError = segmentsState.fatalError;
   const segments = useMemo(() => segmentsData?.segments ?? [], [segmentsData]);
   const [page, setPage] = useUrlNumber('page', 1);
@@ -143,7 +145,8 @@ export default function SegmentsPage() {
   const lbQuery = useSegmentLeaderboard(selectedSegmentId);
   const leaderboardState = useDataState(lbQuery, { provenance: 'historical' });
   const { data: leaderboard, refetch: refetchLeaderboard } = lbQuery;
-  const lbLoading = selectedSegmentId != null && leaderboardState.status === 'initial';
+  const lbPaused = selectedSegmentId != null && !leaderboardState.hasData && leaderboardState.isRefreshBlocked;
+  const lbLoading = selectedSegmentId != null && leaderboardState.status === 'initial' && !lbPaused;
   const lbError = leaderboardState.fatalError;
 
   /* Default the two racers to the fastest run (the by-time PR) versus the
@@ -176,7 +179,8 @@ export default function SegmentsPage() {
   const ghostQuery = useSegmentGhost(selectedSegmentId, racerA, racerB);
   const ghostState = useDataState(ghostQuery, { provenance: 'historical' });
   const { data: ghost, refetch: refetchGhost } = ghostQuery;
-  const ghostLoading = racerA != null && racerB != null && ghostState.status === 'initial';
+  const ghostPaused = racerA != null && racerB != null && !ghostState.hasData && ghostState.isRefreshBlocked;
+  const ghostLoading = racerA != null && racerB != null && ghostState.status === 'initial' && !ghostPaused;
   const ghostError = ghostState.fatalError;
 
   const onRetrySegments = useCallback(() => { void refetchSegments(); }, [refetchSegments]);
@@ -289,6 +293,10 @@ export default function SegmentsPage() {
                 message={selectVehicleMsg}
               />
             </GlassPanel>
+          ) : segPaused ? (
+            <DataSourceNotice sources={[{
+              id: 'segments', label: t('segments.list.title', 'Route segments'), query: segmentsQuery,
+            }]} />
           ) : segLoading && !segmentsData ? (
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {Array.from({ length: 6 }).map((_, i) => (
@@ -339,13 +347,14 @@ export default function SegmentsPage() {
             actions={<>
                 <Trophy className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
               {/* by-time / by-efficiency toggle */}
-              <div className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
+              <div className="inline-flex max-w-full flex-wrap gap-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
                 {(['time', 'efficiency'] as const).map((mode) => (
                   <Button
                     key={mode}
                     type="button"
                     variant={board === mode ? 'secondary' : 'ghost'}
                     size="sm"
+                    className="min-h-11 min-w-11 md:min-h-9 md:min-w-0"
                     onClick={() => setBoard(mode)}
                     aria-pressed={board === mode}
                   >
@@ -364,6 +373,10 @@ export default function SegmentsPage() {
                 icon={<Trophy className="h-8 w-8" />}
                 message={noVehicle ? selectVehicleMsg : t('segments.board.select', 'Select a route segment to view its ranked attempts.')}
               />
+            ) : lbPaused ? (
+              <DataSourceNotice sources={[{
+                id: 'leaderboard', label: t('segments.board.title', 'Leaderboard'), query: lbQuery,
+              }]} />
             ) : lbLoading && !leaderboard ? (
               <Skeleton height={240} className="rounded-xl" />
             ) : lbError ? (
@@ -403,6 +416,10 @@ export default function SegmentsPage() {
                 icon={<Swords className="h-8 w-8" />}
                 message={t('segments.ghost.pick', 'Choose an A and a B attempt from the leaderboard to start the race.')}
               />
+            ) : ghostPaused ? (
+              <DataSourceNotice sources={[{
+                id: 'ghost', label: t('segments.ghost.title', 'Ghost Race'), query: ghostQuery,
+              }]} />
             ) : ghostLoading && !ghost ? (
               <Skeleton height={360} className="rounded-xl" />
             ) : ghostError ? (
@@ -420,7 +437,7 @@ export default function SegmentsPage() {
                   loading={ghostLoading}
                   unavailable={!ghost}
                   provenance={t('segments.brief.provenance', 'Selected A/B ghost comparison response; charts retain independent telemetry samples and recorded margin.')}
-                  retained={ghostState.isRefreshBlocked}
+                  retained={ghostState.hasData && ghostState.status === 'stale'}
                 />
 
                 {/* Elapsed time vs distance — the lower line is ahead */}
@@ -441,7 +458,9 @@ export default function SegmentsPage() {
                       ) : raceData.length === 0 ? (
                         <EmptyState /* no-action: transient — elapsed samples are unavailable */
                           icon={<Timer className="h-8 w-8" />}
-                          message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
+                          message={!ghost
+                            ? t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')
+                            : t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
                         />
                       ) : (
                         <ResponsiveContainer width="100%" height="100%">
@@ -513,7 +532,9 @@ export default function SegmentsPage() {
                         ) : gapData.length === 0 ? (
                           <EmptyState /* no-action: transient — comparison has no aligned splits */
                             icon={<Timer className="h-8 w-8" />}
-                            message={t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
+                            message={!ghost
+                              ? t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')
+                              : t('segments.ghost.noData', 'Not enough shared telemetry to align these two attempts.')}
                           />
                         ) : <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart data={gapData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
@@ -544,7 +565,7 @@ export default function SegmentsPage() {
                                 valueFormatter={(v) => signedDelta(v)}
                               />
                             } />
-                            <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 3" strokeOpacity={0.7} />
+                            <ReferenceLine y={0} stroke={chartTokens.axisStroke} strokeDasharray="4 3" strokeOpacity={0.7} />
                             <Area
                               type="monotone" dataKey="delta"
                               stroke={colorA} strokeWidth={2}
@@ -720,7 +741,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
       align: 'right',
       visibleOnMobile: true,
       render: (row) => (
-        <div className="inline-flex gap-1">
+        <div className="inline-flex shrink-0 gap-1">
           <RaceButton
             active={racerA === row.drive_id}
             onClick={() => onPickA(row.drive_id)}
@@ -742,7 +763,7 @@ function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: 
       data={rows}
       keyExtractor={(row) => row.drive_id}
       tableId="segments:leaderboard"
-      mobileColumns={['rank', 'date', 'race']}
+      mobileColumns={['rank', 'date', 'time', 'efficiency', 'delta', 'race']}
       compact
     />
   );
@@ -763,7 +784,7 @@ function RaceButton({ active, onClick, label }: RaceButtonProps) {
       onClick={onClick}
       aria-pressed={active}
       aria-label={`${label}${active ? ' (selected)' : ''}`}
-      className="h-7 w-7 p-0 text-xs font-bold"
+      className="h-11 w-11 min-h-11 min-w-11 shrink-0 p-0 md:h-7 md:w-7 md:min-h-0 md:min-w-0"
     >
       {label}
     </Button>
