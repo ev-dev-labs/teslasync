@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo, type FormEvent } from 'react';
+import { useState, useEffect, useRef, useMemo, type FormEvent, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Modal, Input, Button, Heading, HelperText } from '@/components/ui';
 import type { CommandDef } from '../commands';
@@ -10,6 +10,8 @@ interface CommandInputDialogProps {
   def: CommandDef;
   vehicle?: { display_name: string };
   loading?: boolean;
+  disabled?: boolean;
+  validationNotice?: ReactNode;
 }
 
 /**
@@ -71,6 +73,8 @@ export function CommandInputDialog({
   def,
   vehicle,
   loading,
+  disabled = false,
+  validationNotice,
 }: CommandInputDialogProps) {
   const { t } = useTranslation();
   const ic = def.inputConfig!;
@@ -131,7 +135,7 @@ export function CommandInputDialog({
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (loading) return;
+    if (loading || disabled) return;
     const newErrors: Record<string, FieldValidationError | null> = {};
     const newTouched: Record<string, boolean> = {};
     let valid = true;
@@ -210,6 +214,7 @@ export function CommandInputDialog({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {validationNotice}
           {fields ? (
             fields.map((field, i) => (
               <Input
@@ -260,7 +265,7 @@ export function CommandInputDialog({
               variant="primary"
               size="sm"
               loading={loading}
-              disabled={!isFormValid}
+              disabled={disabled || !isFormValid}
               className="bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 border border-neon-cyan/30"
             >
               {t('common.send', 'Send')}

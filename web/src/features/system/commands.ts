@@ -11,6 +11,32 @@
 
 import type { LucideIcon } from '@/lib/icons';
 import { Icons } from '@/lib/icons';
+import type { DataState } from '@/api/dataState';
+import type { VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
+
+/** Only the selected vehicle's current maximum-request signal can bound amps. */
+export function getChargingCurrentMaximum(
+  source: DataState<VehicleLiveSignalsResponse>,
+  vehicleId: number,
+  now = Date.now(),
+): number | null {
+  if (source.status !== 'ok' || source.provenance !== 'live'
+    || source.data?.vehicle_id !== vehicleId) return null;
+  const signal = source.data.signals?.ChargeCurrentRequestMax;
+  if (signal == null || typeof signal !== 'object' || Array.isArray(signal)) return null;
+  const entry = signal as Record<string, unknown>;
+  if (entry.kind !== 'ValueKindFloat' || entry.source !== 'l1'
+    || typeof entry.value !== 'number' || !Number.isFinite(entry.value)
+    || entry.value < 0 || entry.value > Number.MAX_SAFE_INTEGER
+    || typeof entry.ts !== 'string' || typeof entry.age_ms !== 'number'
+    || !Number.isFinite(entry.age_ms) || entry.age_ms < 0
+    || entry.age_ms > TELEMETRY_STALE_AFTER_MS) return null;
+  const observedAt = Date.parse(entry.ts);
+  const age = now - observedAt;
+  return Number.isFinite(observedAt) && age >= 0 && age <= TELEMETRY_STALE_AFTER_MS
+    ? entry.value : null;
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -456,7 +482,7 @@ export const COMMANDS: CommandDef[] = [
     inputConfig: {
       promptKey: 'commands.charging.enterAmps',
       promptFallback: 'Enter charging amps (e.g., 16, 32, 48):',
-      // Vehicle/charger-dependent limits are not supplied to this dialog.
+      // CommandDialogs supplies the current ChargeCurrentRequestMax, never a model guess.
       paramName: 'charging_amps', validation: 'number', min: 0,
     },
   },

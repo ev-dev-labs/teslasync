@@ -11,11 +11,13 @@ import {
   waitFor,
   within,
 } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 import { commandKeys, type CommandLogEntry } from '@/api/hooks/useCommands';
+import { vehicleKeys } from '@/api/hooks/useVehicles';
+import { telemetryKeys, type VehicleLiveSignalsResponse } from '@/api/hooks/useTelemetry';
 import type { Vehicle, VehicleState } from '../commands';
 import {
   CATEGORY_META,
@@ -102,6 +104,7 @@ let stateError: Error | null;
 let latestEntries: CommandLogEntry[];
 let latestError: Error | null;
 let commandResponse: () => Promise<unknown>;
+let capabilityResponse: VehicleLiveSignalsResponse;
 
 function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
   return {
@@ -138,6 +141,9 @@ function installRequestRouter() {
     }
     if (url === `/vehicles/${VEHICLE_ID}/commands/latest`) {
       return latestError ? Promise.reject(latestError) : Promise.resolve(latestEntries);
+    }
+    if (url === `/signals/${VEHICLE_ID}/live`) {
+      return Promise.resolve(capabilityResponse);
     }
     if (
       url === `/vehicles/${VEHICLE_ID}/command` &&
@@ -196,10 +202,63 @@ beforeEach(() => {
   latestEntries = [];
   latestError = null;
   commandResponse = () => Promise.resolve({ success: true, result: 'success' });
+  capabilityResponse = { vehicle_id: VEHICLE_ID, signals: {} };
   installRequestRouter();
 });
 
 describe('VehicleCommandCenter — summary and readiness', () => {
+  it('passes actual initial paused query state to the Hero without inventing empty telemetry', async () => {
+    onlineManager.setOnline(false);
+    try {
+      renderCenter();
+      const hero = screen.getByTestId('command-center-hero');
+      await waitFor(() => expect(hero).toHaveAttribute('data-refresh-blocked', 'true'));
+      expect(hero).toHaveAttribute('data-source-status', 'initial');
+      expect(hero).toHaveAttribute('data-source-provenance', 'unknown');
+      expect(within(hero).queryByText('Live state unavailable')).not.toBeInTheDocument();
+      expect(within(hero).getAllByText(/Refresh paused/).length).toBeGreaterThan(0);
+      expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
+      expect(postCalls()).toHaveLength(0);
+    } finally {
+      await act(async () => { onlineManager.setOnline(true); });
+    }
+  });
+
+  it('keeps retained Hero readings with cached provenance and targeted retry after state refresh failure', async () => {
+    const { queryClient } = renderCenter();
+    const hero = screen.getByTestId('command-center-hero');
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-provenance', 'live'));
+    stateError = new Error('state refresh failed');
+    await act(async () => { await queryClient.refetchQueries({ queryKey: vehicleKeys.state(VEHICLE_ID) }); });
+    expect(hero).toHaveAttribute('data-source-status', 'stale');
+    expect(hero).toHaveAttribute('data-source-provenance', 'cached');
+    expect(within(hero).getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(within(hero).getByText('85.00%', { selector: '[data-operational-value]' })).toBeInTheDocument();
+    expect(within(hero).queryByRole('alert')).not.toBeInTheDocument();
+    stateError = null;
+    fireEvent.click(within(hero).getByRole('button', { name: 'Refresh' }));
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-status', 'ok'));
+    expect(postCalls()).toHaveLength(0);
+  });
+
+  it('keeps paused retained Hero state cached and distinguishes a resolved unavailable response', async () => {
+    const { queryClient } = renderCenter();
+    const hero = screen.getByTestId('command-center-hero');
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-provenance', 'live'));
+    await act(async () => {
+      queryClient.getQueryCache().find({ queryKey: vehicleKeys.state(VEHICLE_ID) })!
+        .setState({ fetchStatus: 'paused' });
+    });
+    expect(hero).toHaveAttribute('data-source-provenance', 'cached');
+    expect(hero).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(within(hero).queryByText('Live state unavailable')).not.toBeInTheDocument();
+    stateResponse = null;
+    await act(async () => { await queryClient.refetchQueries({ queryKey: vehicleKeys.state(VEHICLE_ID) }); });
+    await waitFor(() => expect(hero).toHaveAttribute('data-source-status', 'unavailable'));
+    expect(within(hero).getByText('Live state unavailable')).toBeInTheDocument();
+    expect(postCalls()).toHaveLength(0);
+  });
+
   it('renders selected vehicle identity, converted telemetry, and all major sections', async () => {
     renderCenter();
 
@@ -294,7 +353,7 @@ describe('VehicleCommandCenter — complete command catalogue', () => {
     renderCenter();
 
     for (const domain of ['Access & security', 'Climate & comfort', 'Charging & schedules', 'Vehicle controls']) {
-      expect(screen.getByRole('tab', { name: domain })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: domain })).toBeInTheDocument();
     }
 
     const domainCategories = [
@@ -305,7 +364,7 @@ describe('VehicleCommandCenter — complete command catalogue', () => {
     ] as const;
 
     for (const [domain, categories] of domainCategories) {
-      fireEvent.click(screen.getByRole('tab', { name: domain }));
+      fireEvent.click(screen.getByRole('button', { name: domain }));
       for (const category of categories) {
         const escaped = CATEGORY_META[category].fallback.replace(
           /[.*+?^${}()|[\]\\]/g,
@@ -327,6 +386,56 @@ describe('VehicleCommandCenter — complete command catalogue', () => {
 });
 
 describe('VehicleCommandCenter — command execution', () => {
+  it('uses the actual selected-vehicle charging capability through the mounted input dialog and unchanged POST body', async () => {
+    capabilityResponse = {
+      vehicle_id: VEHICLE_ID,
+      signals: { ChargeCurrentRequestMax: {
+        kind: 'ValueKindFloat', value: 32, ts: new Date().toISOString(), source: 'l1', age_ms: 0,
+      } },
+    };
+    const { queryClient } = renderCenter();
+    searchFor('set_charging_amps');
+    fireEvent.click(screen.getByRole('button', { name: 'Set amps' }));
+    const dialog = screen.getByRole('dialog');
+    await within(dialog).findByText('Maximum: 32');
+    const input = within(dialog).getByLabelText('Amperage');
+    fireEvent.change(input, { target: { value: '33' } });
+    fireEvent.submit(within(dialog).getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+    expect(postCalls()).toHaveLength(0);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    capabilityResponse = {
+      ...capabilityResponse,
+      signals: { ChargeCurrentRequestMax: {
+        kind: 'ValueKindFloat', value: 16, ts: new Date().toISOString(), source: 'l1', age_ms: 0,
+      } },
+    };
+    await act(async () => { await queryClient.refetchQueries({ queryKey: telemetryKeys.liveSignals(VEHICLE_ID) }); });
+    expect(input).toHaveValue('33');
+    expect(within(dialog).getByRole('button', { name: 'Send' })).toBeDisabled();
+    fireEvent.change(input, { target: { value: '016' } });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+    await waitFor(() => expect(postCalls()).toHaveLength(1));
+    expect(lastPostBody()).toEqual({ command: 'set_charging_amps', params: { charging_amps: '16' } });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('keeps unknown amp capability blocked without hiding other commands or defaulting to 48 amps', async () => {
+    renderCenter();
+    searchFor('set_charging_amps');
+    fireEvent.click(screen.getByRole('button', { name: 'Set amps' }));
+    const dialog = screen.getByRole('dialog');
+    await within(dialog).findByText('Unknown');
+    fireEvent.change(within(dialog).getByLabelText('Amperage'), { target: { value: '0' } });
+    expect(within(dialog).getByRole('button', { name: 'Send' })).toBeDisabled();
+    fireEvent.submit(within(dialog).getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+    expect(postCalls()).toHaveLength(0);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    searchFor('flash_lights');
+    fireEvent.click(screen.getByRole('button', { name: 'Flash lights' }));
+    await waitFor(() => expect(postCalls()).toHaveLength(1));
+    expect(lastPostBody()).toEqual({ command: 'flash_lights' });
+  });
+
   it('disables command execution in historical mode', () => {
     operationalModeState.canWrite = false;
     renderCenter();

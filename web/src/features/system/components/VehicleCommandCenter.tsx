@@ -9,6 +9,7 @@ import {
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useDataState } from '@/hooks/useDataState';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 import { isTeslaAuthExpiredError } from '@/lib/resilience';
 import type { Vehicle } from '../commands';
 import { CommandCenterHero } from './command-center/CommandCenterHero';
@@ -59,6 +60,13 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
   useEffect(() => { setFeedback(null); }, [vehicle.id]);
 
   const state = stateQuery.data?.state ?? null;
+  const stateData = useDataState(stateQuery, {
+    provenance: operationalMode.mode === 'as_of'
+      ? 'historical'
+      : stateQuery.data?.live === true ? 'live' : 'unknown',
+    unavailable: stateQuery.data != null && state == null,
+    maxAgeMs: TELEMETRY_STALE_AFTER_MS,
+  });
   const latestCommands = latestQuery.data ?? [];
   const latestState = useDataState(latestQuery);
   const pendingLabel = pendingCommand
@@ -157,6 +165,7 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
         loading={stateQuery.isLoading}
         error={stateQuery.error}
         onRetry={() => void stateQuery.refetch()}
+        dataState={stateData}
       />
 
       <CommandReadinessStrip

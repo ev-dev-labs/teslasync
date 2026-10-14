@@ -110,9 +110,10 @@ function setup(
     open?: boolean;
     vehicle?: { display_name: string };
     loading?: boolean;
+    disabled?: boolean;
   } = {},
 ) {
-  const { def = pinDef, open = true, vehicle, loading } = overrides;
+  const { def = pinDef, open = true, vehicle, loading, disabled } = overrides;
   const onClose = vi.fn();
   const onSubmit = vi.fn();
   const view = render(
@@ -123,6 +124,7 @@ function setup(
       def={def}
       vehicle={vehicle}
       loading={loading}
+      disabled={disabled}
     />,
   );
   return { onClose, onSubmit, ...view };
@@ -198,6 +200,31 @@ describe('validateField', () => {
 
 // ── Component behaviour ─────────────────────────────────────────────────────
 describe('CommandInputDialog', () => {
+  it('blocks valid numeric drafts and direct form submission when capability is unknown', () => {
+    const { onSubmit } = setup({ def: speedDef, disabled: true });
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('Set MPH')).toHaveValue('70');
+  });
+
+  it('revalidates an existing amps draft when the current capability maximum changes', () => {
+    const def = COMMANDS.find(command => command.id === 'set_charging_amps')!;
+    const onSubmit = vi.fn();
+    const props = { open: true, onClose: vi.fn(), onSubmit, def: {
+      ...def, inputConfig: { ...def.inputConfig!, max: 32 },
+    } };
+    const { rerender } = render(<CommandInputDialog {...props} />);
+    fireEvent.change(screen.getByLabelText('Amperage'), { target: { value: '32' } });
+    expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled();
+    rerender(<CommandInputDialog {...props} def={{ ...def, inputConfig: { ...def.inputConfig!, max: 16 } }} />);
+    expect(screen.getByLabelText('Amperage')).toHaveValue('32');
+    expect(screen.getByRole('button', { name: 'Send' })).toBeDisabled();
+    fireEvent.submit(screen.getByRole('button', { name: 'Send' }).closest('form') as HTMLFormElement);
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(screen.getByText('Maximum: 16')).toBeInTheDocument();
+  });
+
   it.each(['valet_mode', 'adjust_volume'])(
     'numeric regression labels the actual configured %s field visibly without a sublabel',
     (id) => {
