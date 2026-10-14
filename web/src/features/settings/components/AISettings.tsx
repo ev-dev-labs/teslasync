@@ -405,6 +405,8 @@ export function AISettings() {
     !restoreDismissed &&
     archiveHasRestorableEntries(settings?.ai_features_archived)
   const isCloud = mode === 'cloud'
+  const savedCapCents = settings?.ai_cost_cap_cents ?? 0
+  const hasUnsavedEnforcement = mode !== serverMode || provider.cost_cap_cents !== savedCapCents
   const enabledCount = useMemo(
     () => Object.values(features).filter(Boolean).length,
     [features],
@@ -423,7 +425,7 @@ export function AISettings() {
       {/* Status band — at-a-glance summary, full-width metric grid. */}
       <FadeIn>
         <HelixStatusStrip
-          mode={serverMode === 'off' ? 'off' : mode}
+          mode={serverMode}
           enabledCount={enabledCount}
           providerName={provider.provider}
           settingsLoading={settingsState.status === 'initial'}
@@ -495,7 +497,12 @@ export function AISettings() {
               data-testid="ai-mode-cloud"
             />
           </div>
-          {mode === 'off' && (
+          {hasUnsavedEnforcement && (
+            <InlineCallout variant="info" data-testid="ai-settings-unsaved">
+              {t('forms.unsavedSettings', 'You have unsaved settings.')}
+            </InlineCallout>
+          )}
+          {serverMode === 'off' && mode === 'off' && (
             <InlineCallout
               variant="info"
               icon={<Power className="h-4 w-4" aria-hidden="true" />}
@@ -522,38 +529,40 @@ export function AISettings() {
 
       {/* Configuration bento: provider form is the hero (spans two columns
           on wide screens); usage + cost-cap sit in the context rail. */}
-      {showProviderSection && (
+      {(showProviderSection || serverMode !== 'off') && (
         <FadeIn delay={0.12}>
           <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-            <div className="xl:col-span-2">
-              <AIProviderSection
-                value={provider}
-                isCloud={isCloud}
-                onChange={handleProviderChange}
-              />
-            </div>
+            {showProviderSection && (
+              <div className="xl:col-span-2">
+                <AIProviderSection
+                  value={provider}
+                  isCloud={isCloud}
+                  onChange={handleProviderChange}
+                />
+              </div>
+            )}
             <div className="space-y-4">
               <AIUsageCard enabled={settings?.ai_mode === 'local' || settings?.ai_mode === 'cloud'} />
               {/*
-                Cost-cap spend bar. Cloud-only (local providers don't bill
-                per token) and only when a non-zero cap is set. Reads
+                Cost-cap spend bar. Saved cloud mode and cap govern enforcement;
+                draft edits do not change the live spend readout. Reads
                 today's spend from the same /ai/usage/today endpoint as
                 AIUsageCard so the numbers match. Passive read — it does
                 not gate saving the cap.
               */}
-              {isCloud && serverMode !== 'off' && provider.cost_cap_cents > 0 && (
-                <AICostCapSpendBar capCents={provider.cost_cap_cents} />
+              {serverMode === 'cloud' && savedCapCents > 0 && (
+                <AICostCapSpendBar capCents={savedCapCents} />
               )}
             </div>
           </div>
         </FadeIn>
       )}
 
-      {showProviderSection && (
+      {(showProviderSection || serverMode !== 'off') && (
         <FadeIn delay={0.14}>
           <AIFeatureSpendPanel
             enabled={serverMode !== 'off'}
-            capCents={provider.cost_cap_cents}
+            capCents={savedCapCents}
           />
         </FadeIn>
       )}

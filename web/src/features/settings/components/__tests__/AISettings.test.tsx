@@ -205,6 +205,82 @@ describe('AISettings — §I9 API key never displayed in off mode', () => {
   })
 })
 
+describe('AISettings — saved enforcement and unsaved preview', () => {
+  it('keeps a reached saved cap until a successful save updates the settings', async () => {
+    const saved = { ...baseSettings, ai_mode: 'cloud' as const, ai_cost_cap_cents: 1000 }
+    const { client } = renderPanel(saved)
+    act(() => {
+      client.setQueryData(aiUsageKeys.today(), {
+        user_subject: 'settings-test', call_count: 3, input_tokens: 10,
+        output_tokens: 20, cost_micro_cents: 10_000_000, error_count: 0, avg_latency_ms: 10,
+      })
+    })
+    await waitFor(() => expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'critical'))
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '20' } })
+    expect(screen.getByTestId('ai-provider-cost-cap')).toHaveValue(20)
+    expect(screen.getByTestId('ai-settings-unsaved')).toHaveTextContent('You have unsaved settings.')
+    expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'critical')
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
+
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '0' } })
+    expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'critical')
+    expect(screen.getByTestId('ai-feature-spend-panel')).not.toHaveTextContent('No daily spend cap is set')
+
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '20' } })
+    mockedRequest.mockImplementation(async (path, init) => {
+      if (path === '/settings' && init?.method === 'PUT') {
+        return { ...saved, ...JSON.parse(String(init.body)) }
+      }
+      if (path === '/settings') return { ...saved, ai_cost_cap_cents: 2000 }
+      throw new Error(`Unexpected request: ${path}`)
+    })
+    fireEvent.click(screen.getByTestId('ai-settings-save'))
+    await waitFor(() => expect(screen.getByTestId('ai-cost-cap-spend-bar')).toHaveAttribute('data-spend-level', 'ok'))
+    expect(screen.queryByTestId('ai-settings-unsaved')).toBeNull()
+  })
+
+  it.each(['local', 'off'] as const)('retains saved cloud enforcement when the unsaved mode is %s', (draftMode) => {
+    renderPanel({ ...baseSettings, ai_mode: 'cloud', ai_cost_cap_cents: 1000 })
+    fireEvent.click(screen.getByTestId(`ai-mode-${draftMode}`))
+    expect(screen.getByTestId('ai-settings-panel')).toHaveAttribute('data-ai-mode', draftMode)
+    expect(screen.getByTestId('helix-status-strip')).toHaveTextContent('Cloud')
+    expect(screen.getByTestId('ai-settings-unsaved')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-cost-cap-spend-bar')).toBeInTheDocument()
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
+    expect(screen.queryByText('Helix is off. Your app works fully without it. Enable a mode above to opt in.')).toBeNull()
+  })
+
+  it('does not present an unsaved cloud cap as active for saved local mode', () => {
+    renderPanel({ ...baseSettings, ai_mode: 'local', ai_cost_cap_cents: 0 })
+    fireEvent.click(screen.getByTestId('ai-mode-cloud'))
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '10' } })
+    expect(screen.getByTestId('helix-status-strip')).toHaveTextContent('Local-only')
+    expect(screen.getByTestId('ai-settings-unsaved')).toBeInTheDocument()
+    expect(screen.queryByTestId('ai-cost-cap-spend-bar')).toBeNull()
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('No daily spend cap is set')
+  })
+
+  it('preserves populated audited feature spend while the cap preview changes', async () => {
+    const { client } = renderPanel({ ...baseSettings, ai_mode: 'cloud', ai_cost_cap_cents: 1000 })
+    act(() => {
+      client.setQueryData(aiUsageKeys.byFeature(), {
+        since: '2026-09-18T00:00:00Z',
+        rows: [{
+          feature_id: 'chatbot-llm', call_count: 3, input_tokens: 100,
+          output_tokens: 200, cost_micro_cents: 2_000_000,
+          last_call_at: '2026-09-18T12:00:00Z',
+        }],
+      })
+    })
+    await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(1))
+    const populatedRow = screen.getByRole('listitem').textContent
+    fireEvent.change(screen.getByTestId('ai-provider-cost-cap'), { target: { value: '0' } })
+    expect(screen.getByRole('listitem').textContent).toBe(populatedRow)
+    expect(screen.getByTestId('ai-feature-spend-panel')).toHaveTextContent('The daily cap applies')
+    expect(screen.queryByText('No audited Helix calls in the last 7 days.')).toBeNull()
+  })
+})
+
 describe('AISettings — §I7 per-feature toggles generated from registry', () => {
   it('renders one toggle row per AI_FEATURE_IDS entry', () => {
     renderPanel({ ...baseSettings, ai_mode: 'local' })
