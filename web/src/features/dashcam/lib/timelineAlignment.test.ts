@@ -66,6 +66,89 @@ describe('retained measurement evidence', () => {
     expect(result.series[0].coverage).toBe('good');
   });
 
+  describe('aggregate reconstruction coverage', () => {
+    const window = { clipStartEpochMs, clipDurationSeconds: 100, preRollSeconds: 0, postRollSeconds: 0 };
+    const populated = {
+      signal: 'DoorState',
+      points: [0, 25, 50, 75, 100].map((seconds) => ({
+        timestamp: timestamp(seconds),
+        valueBool: seconds >= 50,
+      })),
+    };
+
+    it.each([
+      { signal: 'Empty', points: [] },
+      { signal: 'Unusable', points: [{ timestamp: timestamp(0), valueNum: NaN }] },
+      { signal: 'Outside', points: samples([101]) },
+    ])('reports partial for good coverage mixed with missing $signal coverage', (missing) => {
+      const baseline = alignSignalHistoryToClip({ ...window, seriesInput: [populated] });
+      const result = alignSignalHistoryToClip({ ...window, seriesInput: [missing, populated] });
+
+      expect(baseline.overallQuality).toBe('good');
+      expect(result.overallQuality).toBe('partial');
+      expect(result.series.map((series) => series.signal)).toEqual([missing.signal, populated.signal]);
+      expect(result.series[0].coverage).toBe('none');
+      expect(result.series[0].points).toEqual(missing.signal === 'Unusable'
+        ? [{ atSeconds: 0, timestamp: timestamp(0), value: null }]
+        : []);
+      expect(result.series[0].gapNotes).toHaveLength(1);
+      expect(result.series[0].gapNotes[0]).toContain(`"${missing.signal}"`);
+      expect(result.series[1]).toEqual(baseline.series[0]);
+      expect(result.qualityNotes).toEqual(result.series.flatMap((series) => series.gapNotes));
+      expect(baseline.incidentSequence).toHaveLength(1);
+      expect(result.incidentSequence).toEqual([
+        { ...baseline.incidentSequence[0], id: expect.any(String) },
+      ]);
+      expect(result.clipWindow).toEqual(baseline.clipWindow);
+      expect(result.reconstructionWindow).toEqual(baseline.reconstructionWindow);
+    });
+
+    it('retains none and per-series evidence when all selected coverage is missing', () => {
+      const result = alignSignalHistoryToClip({
+        ...window,
+        seriesInput: [
+          { signal: 'Empty', points: [] },
+          { signal: 'Unusable', points: [{ timestamp: timestamp(0) }] },
+        ],
+      });
+
+      expect(result.overallQuality).toBe('none');
+      expect(result.series.map((series) => series.coverage)).toEqual(['none', 'none']);
+      expect(result.series.map((series) => series.signal)).toEqual(['Empty', 'Unusable']);
+      expect(result.series[1].points).toEqual([{ atSeconds: 0, timestamp: timestamp(0), value: null }]);
+      expect(result.qualityNotes).toHaveLength(2);
+      expect(result.incidentSequence).toEqual([]);
+    });
+
+    it.each([
+      { offsets: [0, 25], coverage: 'sparse', overallQuality: 'partial' },
+      { offsets: [0, 1, 100], coverage: 'partial', overallQuality: 'partial' },
+      { offsets: [0, 25, 50, 75, 100], coverage: 'good', overallQuality: 'good' },
+    ])('preserves populated $coverage coverage', ({ offsets, coverage, overallQuality }) => {
+      const result = alignSignalHistoryToClip({
+        ...window,
+        seriesInput: [populated, { signal: 'Measured', points: samples(offsets) }],
+      });
+
+      expect(result.overallQuality).toBe(overallQuality);
+      expect(result.series.map((series) => series.coverage)).toEqual(['good', coverage]);
+      expect(result.series[1].points.map((point) => point.atSeconds)).toEqual(offsets);
+      expect(result.series[1].gapNotes).toHaveLength(coverage === 'good' ? 0 : 1);
+      expect(result.incidentSequence).toEqual([
+        expect.objectContaining({ signal: 'DoorState', kind: 'state_change', atSeconds: 50 }),
+      ]);
+    });
+
+    it('retains the explicit no-selection result', () => {
+      const result = alignSignalHistoryToClip({ ...window, seriesInput: [] });
+
+      expect(result.overallQuality).toBe('none');
+      expect(result.series).toEqual([]);
+      expect(result.qualityNotes).toEqual(['No telemetry signals were selected for this reconstruction.']);
+      expect(result.incidentSequence).toEqual([]);
+    });
+  });
+
   it('retains missing and non-finite values as null, not measured zero or coverage', () => {
     const points: SignalPointLike[] = [
       { timestamp: timestamp(0) },
