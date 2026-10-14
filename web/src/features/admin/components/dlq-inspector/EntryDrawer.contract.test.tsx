@@ -17,18 +17,19 @@ vi.mock('react-i18next', () => ({
   Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
-vi.mock('framer-motion', () => ({
-  motion: new Proxy({}, {
-    get: () => ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
-      const safe = Object.fromEntries(Object.entries(rest).filter(([key]) =>
-        !['animate', 'initial', 'exit', 'transition', 'variants', 'layout',
-          'whileHover', 'whileTap', 'whileInView'].includes(key)));
-      return <div {...safe}>{children}</div>;
-    },
-  }),
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useReducedMotion: () => true,
-}));
+vi.mock('framer-motion', () => {
+  const MotionElement = ({ children, ...rest }: { children?: ReactNode } & Record<string, unknown>) => {
+    const safe = Object.fromEntries(Object.entries(rest).filter(([key]) =>
+      !['animate', 'initial', 'exit', 'transition', 'variants', 'layout',
+        'whileHover', 'whileTap', 'whileInView'].includes(key)));
+    return <div {...safe}>{children}</div>;
+  };
+  return {
+    motion: new Proxy({}, { get: () => MotionElement }),
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    useReducedMotion: () => true,
+  };
+});
 vi.mock('@/api/client', async () => ({
   ...await vi.importActual<typeof import('@/api/client')>('@/api/client'),
   request: vi.fn().mockResolvedValue({}),
@@ -118,11 +119,25 @@ describe('EntryDrawer detail trust contract', () => {
     expect(screen.queryByText('Server error')).toBeNull();
   });
   it('retains copy and tab focus during refresh while replay is interlocked', async () => {
-    mount(props({ data: full, isFetching: true }));
-    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Updating…');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    const { rerender } = render(<MemoryRouter><QueryClientProvider client={client}>
+      <EntryDrawer {...props({ data: full })} />
+    </QueryClientProvider></MemoryRouter>);
     const raw = screen.getByRole('tab', { name: 'Raw envelope' });
-    screen.getByRole('tab', { name: 'Inner payload' }).focus();
-    fireEvent.keyDown(screen.getByRole('tab', { name: 'Inner payload' }), { key: 'ArrowRight' });
+    fireEvent.click(raw);
+    // Synthetic click does not perform the browser's native focus transfer.
+    raw.focus();
+    expect(raw).toHaveFocus();
+    const rawId = raw.id;
+    const panelId = raw.getAttribute('aria-controls');
+    rerender(<MemoryRouter><QueryClientProvider client={client}>
+      <EntryDrawer {...props({ data: full, isFetching: true })} />
+    </QueryClientProvider></MemoryRouter>);
+    expect(screen.getByRole('status', { name: '' })).toHaveTextContent('Updating…');
+    expect(screen.getByRole('tab', { name: 'Raw envelope' })).toBe(raw);
+    expect(raw).toHaveAttribute('id', rawId);
+    expect(raw).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', panelId);
     await waitFor(() => expect(raw).toHaveFocus());
     expect(screen.getByRole('tabpanel')).toHaveTextContent('{"raw":true}');
     fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
