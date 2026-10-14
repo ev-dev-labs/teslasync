@@ -7,7 +7,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
 import type { DataState } from '@/api/dataState';
 import type { OperationalBriefProps } from '@/components/data-display/OperationalBrief';
-import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
+import { getGlobalLocale, getGlobalPrecision, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
+import { AccountingPanel } from '../components/journey-fragmentation/AccountingPanel';
+import { analyzeJourneyFragmentation } from '../lib/journeyFragmentation';
 
 const FROZEN_NOW = Date.parse('2026-08-08T12:00:00.000Z');
 const h = vi.hoisted(() => ({
@@ -16,6 +18,7 @@ const h = vi.hoisted(() => ({
   historyHook: vi.fn(),
   timezoneHook: vi.fn(),
   timeZone: 'America/Los_Angeles',
+  locale: 'en-US',
   failedChartTitle: null as string | null,
   gapMinutesTemplate: '{{count}} min',
 }));
@@ -81,6 +84,13 @@ vi.mock('@/lib/timezone', () => ({
 
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/lib/errorReporter', () => ({ reportFrontendError: vi.fn() }));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { tz_display_default: 'user', timezone_user: 'Asia/Tokyo' },
+    locale: h.locale,
+  }),
+}));
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({ currencySymbol: '$' }),
@@ -366,6 +376,7 @@ beforeEach(() => {
   vi.spyOn(Date, 'now').mockReturnValue(FROZEN_NOW);
   h.vehicleId = 7;
   h.timeZone = 'America/Los_Angeles';
+  h.locale = 'en-US';
   h.failedChartTitle = null;
   h.gapMinutesTemplate = '{{count}} min';
   h.history = {
@@ -381,6 +392,58 @@ beforeEach(() => {
 });
 
 describe('JourneyFragmentationPage', () => {
+  it.each(['de-DE', 'en-US'])('formats accounting with saved %s locale and its hour cycle in the source timezone', (locale) => {
+    h.locale = locale;
+    h.timeZone = 'Asia/Tokyo';
+    const previousLocale = getGlobalLocale();
+    const previousPrecision = getGlobalPrecision();
+    setGlobalLocale(locale);
+    setGlobalPrecision(3);
+    const start = '2026-08-02T06:45:00.000Z';
+    const end = '2026-08-02T07:15:00.000Z';
+    const result = analyzeJourneyFragmentation(
+      [driveAt(start)], FROZEN_NOW, 'America/Los_Angeles',
+    );
+    const snapshot = structuredClone(result);
+    try {
+      render(<AccountingPanel result={result} />);
+      const format = (value: string) => new Intl.DateTimeFormat(locale, {
+        timeZone: result.timeZone,
+        year: 'numeric', month: 'short', day: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+      }).format(new Date(value));
+      expect(screen.getByText(
+        `Returned span: ${format(start)} – ${format(end)}. Included span: ${format(start)} – ${format(end)}.`,
+      )).toBeInTheDocument();
+      expect(screen.getByText('Returned rows: 1')).toBeInTheDocument();
+      expect(screen.getByText('Adjacent pairs: 0')).toBeInTheDocument();
+      const days = result.daysSinceLatestIncludedDrive!.toLocaleString(locale, {
+        minimumFractionDigits: 3, maximumFractionDigits: 3,
+      });
+      expect(screen.getByText(
+        `${days} days since the latest included drive; 1 active local days and 1 active local weeks.`,
+      )).toBeInTheDocument();
+      expect(result).toEqual(snapshot);
+      expect(result.timeZone).toBe('America/Los_Angeles');
+    } finally {
+      setGlobalLocale(previousLocale);
+      setGlobalPrecision(previousPrecision);
+    }
+  });
+
+  it('shows accounting placeholders for missing, invalid, and out-of-range dates without substituting epoch zero', () => {
+    const result = analyzeJourneyFragmentation(readyHistory(), FROZEN_NOW, h.timeZone);
+    result.returnedSpanStartMs = null;
+    result.returnedSpanEndMs = Number.NaN;
+    result.includedSpanStartMs = Number.POSITIVE_INFINITY;
+    result.includedSpanEndMs = 8.64e15 + 1;
+    result.daysSinceLatestIncludedDrive = null;
+    render(<AccountingPanel result={result} />);
+    expect(screen.getByText('Returned span: — – —. Included span: — – —.')).toBeInTheDocument();
+    expect(screen.getByText(/^— days since the latest included drive/)).toBeInTheDocument();
+    expect(screen.queryByText(/Invalid Date|1970/)).not.toBeInTheDocument();
+  });
+
   it('renders every persistent analytical shell, requests 1,000 rows, and uses vehicle time', () => {
     renderPage();
     expect(h.historyHook).toHaveBeenCalledWith('7', 1_000);
@@ -400,6 +463,36 @@ describe('JourneyFragmentationPage', () => {
     expect(screen.queryByText('No data available')).not.toBeInTheDocument();
     expect(screen.queryByRole('img')).not.toBeInTheDocument();
     expect(h.historyHook).toHaveBeenCalledWith(undefined, 1_000);
+  });
+
+  it.each([
+    { groups: 0, label: 'Unavailable', difference: '—' },
+    { groups: 1, label: 'Thin', difference: '0.00 kWh / km' },
+    { groups: 2, label: 'Thin', difference: '0.00 kWh / km' },
+    { groups: 3, label: 'Supported', difference: '0.00 kWh / km' },
+  ])('shows the human energy support label $label without changing populated metrics', ({ groups, label, difference }) => {
+    const data = groups === 0 ? [driveAt('2026-08-01T08:00:00.000Z')] :
+      Array.from({ length: groups }, (_, index) => {
+        const day = `2026-08-${String(index + 1).padStart(2, '0')}`;
+        return [
+          driveAt(`${day}T08:00:00.000Z`, { endAddress: 'A' }),
+          driveAt(`${day}T09:00:00.000Z`, { startAddress: 'A', endAddress: 'B' }),
+          driveAt(`${day}T14:00:00.000Z`),
+        ];
+      }).flat();
+    h.history = { data, isLoading: false, isError: false, error: null, refetch };
+    renderPage();
+    expectPersistentAnalyticalShells();
+    const brief = screen.getByRole('region', { name: 'Whole-journey intensity' });
+    expect(within(brief).getByText(
+      `Support band: ${label}; recommended minimum: 3 complete-energy journeys per group`,
+    )).toBeInTheDocument();
+    const metric = within(brief).getByText('Observed energy-intensity difference')
+      .closest('[data-operational-metric]');
+    expect(metric?.querySelector('[data-operational-value]')).toHaveTextContent(difference);
+    expect(within(brief).getByText('Single-drive journeys')).toBeInTheDocument();
+    expect(within(brief).getByText('Multi-drive journeys')).toBeInTheDocument();
+    expect(h.historyHook).toHaveBeenCalledWith('7', 1_000);
   });
 
   it('keeps all shells visible during selected-vehicle loading', () => {
