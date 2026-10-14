@@ -33900,6 +33900,8 @@
     "evidence": {
       "empty": "No supporting evidence was returned.",
       "sampleLine": "{{count}} samples · {{date}}",
+      "sampleLine_one": "{{formattedCount}} sample · {{date}}",
+      "sampleLine_other": "{{formattedCount}} samples · {{date}}",
       "sources": "Evidence sources",
       "subtitle": "Supported observations are separated from assumptions and unsupported fields.",
       "title": "Evidence, quality, and limitations"
