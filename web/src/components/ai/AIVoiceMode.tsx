@@ -1,7 +1,8 @@
 // Browser-native voice front-end for the chatbot stream. SpeechRecognition
 // turns microphone input into text, useAiStream POSTs it to /api/v1/ai/voice/chat,
-// and speechSynthesis reads the streamed response aloud. Audio never leaves
-// the browser; only transcribed text is sent through the same guards as chat.
+// and speechSynthesis reads the streamed response aloud. The app submits only
+// transcribed text through the chat guards; the browser's speech recognition
+// service may process audio remotely, so this does not guarantee local processing.
 //
 // Voice mode is an opt-in wrapper around the typed chatbot, not a replacement.
 // withAiFeature removes the panel entirely when AI mode or this feature is off,
@@ -563,8 +564,8 @@ function InnerSection(): JSX.Element {
     <AIFeatureCard
       title={t('voiceMode.title', 'Voice mode')}
       description={t(
-        'voiceMode.description',
-        'Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.',
+        'voiceMode.processingDisclosure',
+        "Speak to Helix and hear the reply out loud. TeslaSync sends transcribed text, not microphone audio, to the assistant. Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
       )}
       buttonLabel={t('voiceMode.button', 'Speak to Helix')}
       emptyHint={

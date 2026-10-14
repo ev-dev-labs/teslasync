@@ -34,6 +34,8 @@
 // mounted, so assertions read the defaults.
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { createInstance } from 'i18next'
+import * as reactI18next from 'react-i18next'
 import {
   render,
   screen,
@@ -360,6 +362,71 @@ describe('AIVoiceMode — AI-off render gate', () => {
   })
 })
 
+describe('AIVoiceMode — qualified browser processing disclosure', () => {
+  it.each([true, false])(
+    'discloses possible remote recognition before any action (speech support: %s)',
+    (supported) => {
+      mockUseSettings.mockReturnValue(enabledSettings())
+      if (!supported) removeSpeechRecognition()
+
+      render(<AIVoiceMode />)
+
+      const disclosure = screen.getByText(/TeslaSync sends transcribed text/i)
+      expect(disclosure).toHaveTextContent(
+        'TeslaSync sends transcribed text, not microphone audio, to the assistant.',
+      )
+      expect(disclosure).toHaveTextContent(
+        "Your browser's speech recognition service may process audio remotely; on-device recognition is not guaranteed.",
+      )
+      expect(disclosure).not.toHaveTextContent(/both stay on this device/i)
+      expect(recognitions).toHaveLength(0)
+      expect(globalThis.fetch).not.toHaveBeenCalled()
+      expect(speakMock).not.toHaveBeenCalled()
+      expect(screen.getByRole('button', { name: SEND_BUTTON })).toBeDisabled()
+    },
+  )
+
+  it('uses the localized disclosure instead of the old on-device assurance key', async () => {
+    const i18n = createInstance()
+    const localizedDisclosure =
+      'TeslaSync sendet nur transkribierten Text an den Assistenten. Der Spracherkennungsdienst Ihres Browsers kann Audio auf entfernten Servern verarbeiten; eine Verarbeitung auf diesem Gerät ist nicht garantiert.'
+    await i18n.init({
+      lng: 'de',
+      fallbackLng: 'en',
+      resources: {
+        en: {
+          translation: {
+            voiceMode: {
+              description: 'Voice input and playback both stay on this device.',
+            },
+          },
+        },
+        de: {
+          translation: {
+            voiceMode: { processingDisclosure: localizedDisclosure },
+          },
+        },
+      },
+    })
+    vi.spyOn(reactI18next, 'useTranslation').mockReturnValue(
+      Object.assign([i18n.t, i18n, true] as [typeof i18n.t, typeof i18n, boolean], {
+        t: i18n.t,
+        i18n,
+        ready: true,
+      }),
+    )
+    mockUseSettings.mockReturnValue(enabledSettings())
+
+    render(<AIVoiceMode />)
+
+    expect(screen.getByText(localizedDisclosure)).toBeInTheDocument()
+    expect(screen.queryByText(/both stay on this device/i)).not.toBeInTheDocument()
+    expect(recognitions).toHaveLength(0)
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+    expect(speakMock).not.toHaveBeenCalled()
+  })
+})
+
 describe('AIVoiceMode — speech-to-text transcript', () => {
   it('commits only final results and never duplicates interim revisions (regression guard)', async () => {
     mockUseSettings.mockReturnValue(enabledSettings())
@@ -470,6 +537,10 @@ describe('AIVoiceMode — send wiring', () => {
     expect(parsed.message).toBe('how full is my battery')
     expect(typeof parsed.session_id).toBe('string')
     expect(parsed.session_id.length).toBeGreaterThan(0)
+    expect(parsed).toEqual({
+      message: 'how full is my battery',
+      session_id: expect.any(String),
+    })
 
     const headers = new Headers(init?.headers)
     expect(headers.get('Accept')).toBe('text/event-stream')
