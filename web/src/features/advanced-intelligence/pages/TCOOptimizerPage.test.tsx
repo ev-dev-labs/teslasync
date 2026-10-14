@@ -44,6 +44,7 @@ vi.mock('@/hooks/useNumberFormatting', () => ({
 vi.mock('@/hooks/useDateFormat', () => ({
   useDateFormat: () => ({
     formatDateTime: (value: string) => `display date ${value}`,
+    formatTime: (value: Date) => `display time ${value.toISOString()}`,
   }),
 }));
 vi.mock('react-i18next', () => ({
@@ -116,6 +117,21 @@ function assertSections() {
   for (const name of ['Data quality', 'Evidence sources', 'Limitations']) {
     expect(screen.getByRole('region', { name })).toBeInTheDocument();
   }
+}
+
+function evidenceSource() {
+  return screen.getByRole('region', { name: 'Data quality' }).parentElement;
+}
+
+function assertUnknownEvidence() {
+  for (const name of ['Data quality', 'Evidence sources', 'Limitations']) {
+    const section = within(screen.getByRole('region', { name }));
+    expect(section.getByText('Unknown')).toBeInTheDocument();
+    expect(section.queryByRole('status', { name: `Loading ${name}` })).not.toBeInTheDocument();
+  }
+  expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
+  expect(screen.queryByText('No additional limitations were returned.')).not.toBeInTheDocument();
+  expect(screen.getByText(/Purchases, charging changes, or financial guarantees/)).toBeInTheDocument();
 }
 
 beforeEach(() => {
@@ -224,6 +240,15 @@ describe('TCOOptimizerPage', () => {
     expect(action).toBeDisabled();
     expect(action).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('status', { name: 'Loading Pareto-like alternatives' })).toBeInTheDocument();
+    for (const name of ['Data quality', 'Evidence sources', 'Limitations']) {
+      expect(within(screen.getByRole('region', { name })).getByRole('status', {
+        name: `Loading ${name}`,
+      })).toBeInTheDocument();
+    }
+    expect(evidenceSource()).toHaveAttribute('aria-busy', 'true');
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'initial');
+    expect(screen.queryByText('No supporting evidence was returned.')).not.toBeInTheDocument();
+    expect(screen.getByText(/Purchases, charging changes, or financial guarantees/)).toBeInTheDocument();
     expect(action).toHaveClass('min-h-11', 'max-w-full');
     run();
     expect(mocks.mutate).not.toHaveBeenCalled();
@@ -237,6 +262,9 @@ describe('TCOOptimizerPage', () => {
     expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
     expect(screen.queryByText('No supported data is available.')).not.toBeInTheDocument();
+    assertUnknownEvidence();
+    expect(evidenceSource()).toHaveAttribute('aria-busy', 'false');
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'initial');
   });
 
   it('retains every named strategy row, evidence, assumptions and neutral embedded matrix', () => {
@@ -292,8 +320,12 @@ describe('TCOOptimizerPage', () => {
     expect(screen.getByRole('table', { name: 'test_supported_mix' })).toBeInTheDocument();
     expect(screen.getByText('20000000 m display')).toBeInTheDocument();
     expect(screen.getByText('4.00')).toBeInTheDocument();
-    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByText('The refresh failed; the most recently loaded evidence remains visible.')).toBeInTheDocument();
     expect(screen.getByText('Test-only later run failed')).toBeInTheDocument();
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'stale');
+    expect(screen.getByText(/Test-only supported cost evidence/)).toBeInTheDocument();
+    expect(screen.getByText(/Test-only maintenance coverage/)).toBeInTheDocument();
+    expect(screen.getByText(/Test-only projections are not guarantees/)).toBeInTheDocument();
     expect(screen.getByRole('spinbutton', { name: /Annual distance/ })).toHaveValue(30000000);
     assertSections();
   });
@@ -306,11 +338,15 @@ describe('TCOOptimizerPage', () => {
     view.rerender(<TCOOptimizerPage />);
     expect(screen.getByRole('table', { name: 'test_supported_mix' })).toBeInTheDocument();
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(evidenceSource()).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText(/Test-only supported cost evidence/)).toBeInTheDocument();
     mocks.state.isPaused = true;
     view.rerender(<TCOOptimizerPage />);
     expect(screen.getByText('Cached evidence remains visible while its refresh is paused.')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'test_supported_mix' })).toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
+    expect(evidenceSource()).toHaveAttribute('aria-busy', 'false');
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'stale');
   });
 
   it('shows resolved-empty alternatives independently from idle and retains response provenance', () => {
@@ -330,8 +366,56 @@ describe('TCOOptimizerPage', () => {
     assertSections();
     expect(screen.getByText('Intelligence evidence could not be loaded.')).toBeInTheDocument();
     expect(screen.getByText('Test-only initial failure')).toBeInTheDocument();
+    assertUnknownEvidence();
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'initialFailure');
     expect(screen.getByRole('button', { name: 'Generate confirmed alternatives' })).toBeEnabled();
     run();
     expect(mocks.mutate).toHaveBeenCalledOnce();
+  });
+
+  it('renders successful empty evidence and real zero quality rather than unresolved placeholders', () => {
+    const result = payload({ strategies: [], evidence: [], limitations: [] });
+    result.data_quality.sample_count = 0;
+    mocks.mutate.mockImplementation((_request, options) => options?.onSuccess?.(result));
+    renderPage();
+    run();
+    assertSections();
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok');
+    expect(screen.queryByText('Unknown')).not.toBeInTheDocument();
+    const quality = within(screen.getByRole('region', { name: 'Data quality' }));
+    expect(quality.getByText('0')).toBeInTheDocument();
+    expect(quality.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.getByText('No supporting evidence was returned.')).toBeInTheDocument();
+    expect(screen.getByText('No additional limitations were returned.')).toBeInTheDocument();
+    expect(screen.getByText(/Purchases, charging changes, or financial guarantees/)).toBeInTheDocument();
+  });
+
+  it('replaces retained evidence only after a successful recovery and clears the refresh warning', () => {
+    mocks.mutate.mockImplementation((_request, options) => options?.onSuccess?.(payload()));
+    const view = renderPage();
+    run();
+    mocks.state.error = new Error('Test-only refresh failure');
+    view.rerender(<TCOOptimizerPage />);
+    expect(screen.getByText('The refresh failed; the most recently loaded evidence remains visible.')).toBeInTheDocument();
+    expect(screen.getByText(/Test-only supported cost evidence/)).toBeInTheDocument();
+    mocks.state.error = null;
+    mocks.state.isPending = true;
+    view.rerender(<TCOOptimizerPage />);
+    expect(evidenceSource()).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText(/Test-only supported cost evidence/)).toBeInTheDocument();
+    mocks.state.isPending = false;
+    mocks.mutate.mockImplementation((_request, options) => options?.onSuccess?.(payload({
+      generated_at: '2026-10-02T12:00:00Z',
+      evidence: [], limitations: [],
+    })));
+    view.rerender(<TCOOptimizerPage />);
+    run();
+    assertSections();
+    expect(evidenceSource()).toHaveAttribute('data-source-status', 'ok');
+    expect(evidenceSource()).toHaveAttribute('aria-busy', 'false');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Test-only supported cost evidence/)).not.toBeInTheDocument();
+    expect(screen.getByText('No supporting evidence was returned.')).toBeInTheDocument();
+    expect(screen.getByText('Last updated: display date 2026-10-02T12:00:00Z')).toBeInTheDocument();
   });
 });
