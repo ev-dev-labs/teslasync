@@ -2464,7 +2464,9 @@
     "controls": {
       "baseLabel": "Window-start odometer",
       "baseInput": "Odometer immediately before the chronologically first eligible returned drive",
-      "baseHelpBody": "Enter the odometer reading immediately before the first eligible drive in this returned history window."
+      "baseHelpBody": "Enter the odometer reading immediately before the first eligible drive in this returned history window.",
+      "unassignedCalibration": "A previous calibration is saved without a vehicle or history-window assignment. It has not been applied. Enter a reading for this vehicle and returned history window; the previous value will be preserved.",
+      "invalidCalibration": "The saved calibration cannot be used with this returned history window. It has been preserved. Enter a valid reading to recover."
     },
     "actions": {
       "browseDrives": "Browse drives"
@@ -4346,7 +4348,8 @@
     "chargerHealth": {
       "iconLabel": "More info about site grouping",
       "sites": "Each location is judged only against itself. Comparing a home wall box to a Supercharger would be meaningless, so instead every site establishes its own demonstrated ceiling from its cleanest past sessions, and recent sessions are measured against that. Sessions that sat mostly above the taper threshold are excluded, because a slow charge from 80 % is physics, not a fault.",
-      "detail": "Sites are grouped by place name where one is known, and otherwise by a rounded coordinate cell, so the same physical stall is recognised across visits even when the reported address wobbles slightly. AC and DC are labelled separately because their expected power differs by an order of magnitude."
+      "detail": "Sites are grouped by place name where one is known, and otherwise by a rounded coordinate cell, so the same physical stall is recognised across visits even when the reported address wobbles slightly. AC and DC are labelled separately because their expected power differs by an order of magnitude.",
+      "locationAggregation": "Sessions are grouped approximately by case-insensitive place name, or by a rounded 0.01-degree coordinate cell when no name is known. A group can combine multiple stalls and AC / DC sessions. Its single AC / DC class is inferred from admitted mean power, not a hardware or individual-stall identity."
     },
     "chargingThermalTax": {
       "detail": "Delivered energy is preferably read from the charger's own cumulative counters; if those are missing or reset mid-session, it falls back to integrating instantaneous power instead — the source used is always disclosed below.",
@@ -29930,6 +29933,11 @@
   "chargerHealth": {
     "title": "Charger Health",
     "subtitle": "Every charging location benchmarked against its own best behaviour, so a stall that has quietly slowed down cannot hide",
+    "presentation": {
+      "subtitle": "Compare session-derived performance within approximate location groups; individual stalls and charger faults are not identified.",
+      "admission": "Returned sessions: {{returned}}; model-admitted: {{admitted}}; clean for scoring: {{clean}}; excluded before admission: {{excluded}}. Admitted tapered sessions contribute to usage, not scoring.",
+      "locationScope": "Visits, energy and last visit describe model-admitted sessions only, including tapered sessions. Excluded observations are not included. Annual time loss is a model estimate: rated zero means no modeled loss; unrated remains unknown."
+    },
     "layout": {
       "panels": "Charger health analysis"
     },

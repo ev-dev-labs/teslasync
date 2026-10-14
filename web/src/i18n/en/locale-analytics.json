@@ -1087,7 +1087,9 @@
     "controls": {
       "baseLabel": "Window-start odometer",
       "baseInput": "Odometer immediately before the chronologically first eligible returned drive",
-      "baseHelpBody": "Enter the odometer reading immediately before the first eligible drive in this returned history window."
+      "baseHelpBody": "Enter the odometer reading immediately before the first eligible drive in this returned history window.",
+      "unassignedCalibration": "A previous calibration is saved without a vehicle or history-window assignment. It has not been applied. Enter a reading for this vehicle and returned history window; the previous value will be preserved.",
+      "invalidCalibration": "The saved calibration cannot be used with this returned history window. It has been preserved. Enter a valid reading to recover."
     },
     "actions": {
       "browseDrives": "Browse drives"

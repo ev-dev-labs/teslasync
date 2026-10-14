@@ -221,6 +221,11 @@
   "chargerHealth": {
     "title": "Charger Health",
     "subtitle": "Every charging location benchmarked against its own best behaviour, so a stall that has quietly slowed down cannot hide",
+    "presentation": {
+      "subtitle": "Compare session-derived performance within approximate location groups; individual stalls and charger faults are not identified.",
+      "admission": "Returned sessions: {{returned}}; model-admitted: {{admitted}}; clean for scoring: {{clean}}; excluded before admission: {{excluded}}. Admitted tapered sessions contribute to usage, not scoring.",
+      "locationScope": "Visits, energy and last visit describe model-admitted sessions only, including tapered sessions. Excluded observations are not included. Annual time loss is a model estimate: rated zero means no modeled loss; unrated remains unknown."
+    },
     "layout": {
       "panels": "Charger health analysis"
     },
@@ -2324,6 +2329,7 @@
     },
     "chargerHealth": {
       "iconLabel": "More info about site grouping",
+      "locationAggregation": "Sessions are grouped approximately by case-insensitive place name, or by a rounded 0.01-degree coordinate cell when no name is known. A group can combine multiple stalls and AC / DC sessions. Its single AC / DC class is inferred from admitted mean power, not a hardware or individual-stall identity.",
       "sites": "Each location is judged only against itself. Comparing a home wall box to a Supercharger would be meaningless, so instead every site establishes its own demonstrated ceiling from its cleanest past sessions, and recent sessions are measured against that. Sessions that sat mostly above the taper threshold are excluded, because a slow charge from 80 % is physics, not a fault."
     },
     "chargerResilience": {
