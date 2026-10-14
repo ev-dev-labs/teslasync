@@ -463,7 +463,11 @@ describe('Causal window field validation', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     windowLabels.forEach((label) => expect(screen.getByLabelText(label, { exact: false })).not.toHaveAttribute('aria-invalid', 'true'));
     const dialog = within(screen.getByRole('dialog'));
-    values.forEach((value) => expect(dialog.getByText(`${new Date(value).toISOString()} · UTC`)).toBeInTheDocument());
+    values.forEach((value, index) => {
+      const row = dialog.getByText(windowLabels[index], { selector: 'dt' }).parentElement;
+      if (!row) throw new Error('Expected the reviewed window field row');
+      expect(within(row).getByText(`${new Date(value).toISOString()} · UTC`)).toBeInTheDocument();
+    });
     expect(mocks.reset).toHaveBeenCalledOnce();
     expect(mocks.mutate).not.toHaveBeenCalled();
   });
