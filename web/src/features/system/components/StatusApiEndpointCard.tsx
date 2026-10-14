@@ -53,11 +53,11 @@ export function StatusApiEndpointCard({
       <div className="flex flex-wrap items-center gap-2">
         <Badge variant="info" size="sm">{method}</Badge>
         {icon && (
-          <span className="inline-flex text-cyan-300 [&>svg]:h-4 [&>svg]:w-4" aria-hidden="true">
+          <span className={cn('inline-flex [&>svg]:h-4 [&>svg]:w-4', typography.color.secondary)} aria-hidden="true">
             {icon}
           </span>
         )}
-        <Text as="code" mono size="sm" className="min-w-0 break-all text-cyan-300">
+        <Text as="code" mono size="sm" color="secondary" className="min-w-0 break-all">
           {path}
         </Text>
         <CopyButton
@@ -65,7 +65,7 @@ export function StatusApiEndpointCard({
           iconOnly
           size="sm"
           ariaLabel={t('statusApi.copyPath', 'Copy endpoint path {{path}}', { path })}
-          className="ml-auto shrink-0"
+          className="ms-auto shrink-0"
         />
       </div>
 
