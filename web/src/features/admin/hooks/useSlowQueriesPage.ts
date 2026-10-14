@@ -6,7 +6,7 @@ import { isApiError } from '@/lib/resilience';
 import type { SlowQueryOrderBy, SlowQueryRow } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
-import { ORDER_BY_OPTIONS, ORDER_TO_METRIC, formatMs, shortFingerprint, cacheHitRatioValue } from '../components/structural-closure/slow-queries/helpers';
+import { ORDER_BY_OPTIONS, ORDER_TO_METRIC, formatMs, shortFingerprint, cacheHitRatioValue, cacheHitRatioTotalValue } from '../components/structural-closure/slow-queries/helpers';
 
 export function useSlowQueriesPage() {
   const { fmtInt, fmtCompact, fmtNumber, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
@@ -40,21 +40,21 @@ export function useSlowQueriesPage() {
     let calls = 0;
     let totalMs = 0;
     let rowsReturned = 0;
-    let hit = 0;
-    let read = 0;
-    let maxMean = 0;
-    let maxPeak = 0;
+    // Keep numeric metric APIs while distinguishing unmeasured maxima from zero.
+    let maxMean = Number.NaN;
+    let maxPeak = Number.NaN;
     for (const r of rows) {
       calls += r.calls ?? 0;
       totalMs += r.total_time_ms ?? 0;
       rowsReturned += r.rows_returned ?? 0;
-      hit += r.shared_blks_hit ?? 0;
-      read += r.shared_blks_read ?? 0;
-      if ((r.mean_time_ms ?? 0) > maxMean) maxMean = r.mean_time_ms ?? 0;
-      if ((r.max_time_ms ?? 0) > maxPeak) maxPeak = r.max_time_ms ?? 0;
+      if (Number.isFinite(r.mean_time_ms) && (!Number.isFinite(maxMean) || r.mean_time_ms > maxMean)) {
+        maxMean = r.mean_time_ms;
+      }
+      if (Number.isFinite(r.max_time_ms) && (!Number.isFinite(maxPeak) || r.max_time_ms > maxPeak)) {
+        maxPeak = r.max_time_ms;
+      }
     }
-    const cacheTotal = hit + read;
-    const cacheRatio = cacheTotal > 0 ? (hit / cacheTotal) * 100 : null;
+    const cacheRatio = cacheHitRatioTotalValue(rows);
     return { calls, totalMs, rowsReturned, cacheRatio, maxMean, maxPeak };
   }, [rows]);
 
