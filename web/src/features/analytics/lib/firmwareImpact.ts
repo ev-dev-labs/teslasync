@@ -50,7 +50,7 @@ export interface FirmwareImpact {
   deltaWhPerKm: number;
   /** {@link deltaWhPerKm} as a share of the before-mean. */
   deltaShare: number;
-  /** Welch t statistic; `null` when a sample is too small. */
+  /** Welch t statistic; `null` when samples cannot support the test. */
   t: number | null;
   /** Welch–Satterthwaite degrees of freedom. */
   df: number | null;
@@ -63,7 +63,7 @@ export interface FirmwareImpact {
 
 export interface FirmwareImpactSummary {
   impacts: FirmwareImpact[];
-  /** Installs skipped for want of drives on one side. */
+  /** Installs with insufficient observations or undefined test statistics. */
   skipped: number;
   /** Installs whose p-value cleared `alpha`. */
   significantCount: number;
@@ -188,15 +188,22 @@ export function welchTTest(
   a: { n: number; mean: number; sd: number },
   b: { n: number; mean: number; sd: number },
 ): WelchResult | null {
-  if (a.n < 2 || b.n < 2) return null;
+  for (const sample of [a, b]) {
+    if (
+      !Number.isInteger(sample.n) || sample.n < 2 ||
+      !Number.isFinite(sample.mean) ||
+      !Number.isFinite(sample.sd) || sample.sd < 0
+    ) return null;
+  }
   const va = (a.sd * a.sd) / a.n;
   const vb = (b.sd * b.sd) / b.n;
   const denom = va + vb;
-  if (denom <= 0) return null;
+  if (!Number.isFinite(denom) || denom <= 0) return null;
 
   const t = (b.mean - a.mean) / Math.sqrt(denom);
-  const df =
-    (denom * denom) / ((va * va) / (a.n - 1) + (vb * vb) / (b.n - 1));
+  // Normalize variance weights before squaring to avoid near-zero underflow.
+  const df = 1 / ((va / denom) ** 2 / (a.n - 1) + (vb / denom) ** 2 / (b.n - 1));
+  if (!Number.isFinite(t) || !Number.isFinite(df)) return null;
   return { t, df, p: twoSidedTP(t, df) };
 }
 
@@ -212,7 +219,7 @@ function toSamples(drives: readonly Drive[]): DriveSample[] {
   const out: DriveSample[] = [];
   for (const d of drives) {
     if (!Number.isFinite(d.distanceM) || d.distanceM < 2000) continue;
-    if (d.energyUsedWh == null || !Number.isFinite(d.energyUsedWh) || d.energyUsedWh <= 0) continue;
+    if (d.energyUsedWh == null || !Number.isFinite(d.energyUsedWh)) continue;
     const ms = new Date(d.startTs).getTime();
     if (!Number.isFinite(ms)) continue;
     out.push({ ms, whPerKm: d.energyUsedWh / (d.distanceM / 1000), distanceM: d.distanceM });
@@ -330,9 +337,11 @@ export function analyzeFirmwareImpact(
         Math.max(1, beforeStats.n + afterStats.n - 2),
     );
     const delta = afterStats.meanWhPerKm - beforeStats.meanWhPerKm;
-    const cohensD = pooledSd > 0 ? delta / pooledSd : null;
+    const effect = pooledSd > 0 ? delta / pooledSd : null;
+    const cohensD = effect != null && Number.isFinite(effect) ? effect : null;
 
-    let verdict: ImpactVerdict = 'noChange';
+    let verdict: ImpactVerdict = welch == null || cohensD == null ? 'insufficient' : 'noChange';
+    if (verdict === 'insufficient') skipped += 1;
     if (
       welch != null &&
       welch.p < opts.alpha &&
