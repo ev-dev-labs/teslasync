@@ -29,6 +29,10 @@ vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: (title: string) => pageTitleMock(title),
 }));
 
+vi.mock('@/hooks/useOnlineStatus', () => ({
+  useOnlineStatus: () => true,
+}));
+
 vi.mock('@/components/layout', () => ({
   PageLayout: ({
     title,
@@ -160,6 +164,10 @@ describe('DriveCalendarPage', () => {
     expect(screen.queryByRole('spinbutton', { name: 'Jump to year' })).not.toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('data-has-local-actions', 'false');
     expect(screen.getByRole('main')).toHaveAttribute('data-has-freshness-chip', 'false');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '0');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '0');
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /retry unavailable sources/i })).not.toBeInTheDocument();
   });
 
   it.each([
@@ -176,7 +184,9 @@ describe('DriveCalendarPage', () => {
   });
 
   it.each([
-    ['loading', query({ data: undefined, isLoading: true })],
+    ['loading', query({
+      data: undefined, isLoading: true, isPending: true, isFetching: true, fetchStatus: 'fetching',
+    })],
     ['error', query({ data: undefined, isError: true, error: new Error('unavailable') })],
   ])('threads the %s state to every independent section', (expected, result) => {
     useHistoryMock.mockReturnValue(result);
@@ -185,19 +195,55 @@ describe('DriveCalendarPage', () => {
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent(expected);
     }
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+  });
+
+  it('surfaces an initial paused request with recovery without inferring offline or empty results', () => {
+    const retry = vi.fn();
+    const path = '/drive-calendar?from=2024-07-01&to=2024-09-30';
+    useHistoryMock.mockReturnValue(query({
+      data: undefined, isPending: true, fetchStatus: 'paused', refetch: retry,
+    }));
+    const view = renderCalendar(path);
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Refresh paused');
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('loading');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive calendar' }));
+    expect(retry).toHaveBeenCalledOnce();
+
+    useHistoryMock.mockReturnValue(query({ isSuccess: true, fetchStatus: 'idle' }));
+    view.rerender(<MemoryRouter initialEntries={[path]}><DriveCalendarPage /></MemoryRouter>);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '0');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '0');
   });
 
   it('retains all six independently mounted sections during a failed history refresh', () => {
     const retry = vi.fn();
+    const data = [{ id: 1, startTs: new Date(2024, 6, 1, 9).toISOString(), distanceM: 1000 }];
     useHistoryMock.mockReturnValue(query({
-      data: [], isError: true, error: new Error('refresh unavailable'), refetch: retry,
+      data, isError: true, error: new Error('refresh unavailable'), refetch: retry,
     }));
-    renderCalendar('/drive-calendar?from=2024-07-01&to=2024-09-30');
+    const path = '/drive-calendar?from=2024-07-01&to=2024-09-30';
+    const view = renderCalendar(path);
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-drives', '1');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '1000');
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /refresh/i }));
     expect(retry).toHaveBeenCalledOnce();
     expect(useHistoryMock).toHaveBeenCalledWith('42', expect.any(String), expect.any(String));
+
+    useHistoryMock.mockReturnValue(query({ data, isSuccess: true, fetchStatus: 'idle' }));
+    view.rerender(<MemoryRouter initialEntries={[path]}><DriveCalendarPage /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready');
+    expect(screen.getByTestId('calendar-summary')).toHaveAttribute('data-distance-m', '1000');
   });
 
   it('preserves the no-vehicle selection state', () => {

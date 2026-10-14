@@ -7,7 +7,7 @@ import { deriveDataState } from '@/api/dataState';
 
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, StaleRefreshWarning } from '@/components/feedback';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -62,7 +62,18 @@ function DriveCalendarContent() {
       title={t('driveCalendar.title', 'Drive calendar')}
       subtitle={t('driveCalendar.subtitle', 'Driving activity and streaks in the selected period')}
     >
-      <StaleRefreshWarning state={source} />
+      {!source.hasData && source.isRefreshBlocked ? (
+        <DataSourceNotice
+          title={t('dataSources.status.paused', 'Refresh paused')}
+          sources={[{
+            id: 'drive-history',
+            label: t('driveCalendar.title', 'Drive calendar'),
+            query: drivesQuery,
+          }]}
+        />
+      ) : (
+        <StaleRefreshWarning state={source} />
+      )}
       <FadeIn>
         <CalendarSummaryCards calendar={calendar} rangeEnd={end} {...sectionState}
           retained={source.status === 'stale' || source.isRefreshBlocked}
