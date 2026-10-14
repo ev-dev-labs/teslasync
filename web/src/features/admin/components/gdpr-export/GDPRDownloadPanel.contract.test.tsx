@@ -123,8 +123,12 @@ describe('GDPRDownloadPanel canonical manifest contract', () => {
   });
 
   it('is one focusable link whose synthetic activation remains browser-owned', () => {
-    render(<GDPRDownloadPanel artifact={manifest()} downloadUrl={HREF} />);
+    const { container } = render(<GDPRDownloadPanel artifact={manifest()} downloadUrl={HREF} />);
     const link = screen.getByRole('link', { name: 'Download bundle' });
+    expect(container.querySelectorAll('a')).toHaveLength(1);
+    expect(container.querySelectorAll('button')).toHaveLength(0);
+    expect(link.tagName).toBe('A');
+    expect(link).toHaveAttribute('download', '');
     link.focus();
     expect(link).toHaveFocus();
     // Cancel the synthetic event before any jsdom navigation or download.
@@ -133,11 +137,15 @@ describe('GDPRDownloadPanel canonical manifest contract', () => {
       event.preventDefault();
     });
     link.addEventListener('click', preventNavigation);
+    // jsdom focus queues selectionchange; canceled activation must add no timers.
+    const timersBeforeActivation = vi.getTimerCount();
     fireEvent.click(link);
     expect(preventNavigation).toHaveBeenCalledTimes(1);
+    expect(preventNavigation.mock.calls[0][0].defaultPrevented).toBe(true);
+    expect(link).toHaveFocus();
     expect(link).toHaveAttribute('href', HREF);
     link.removeEventListener('click', preventNavigation);
-    expect(vi.getTimerCount()).toBe(0);
+    expect(vi.getTimerCount()).toBe(timersBeforeActivation);
   });
 
   it('retains the eligible link and best-effort explanation during a background refresh', () => {
