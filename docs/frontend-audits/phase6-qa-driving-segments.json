@@ -1,0 +1,1113 @@
+{
+  "item": "phase6-qa-driving-segments",
+  "attempt": 1,
+  "status": "REPORT_COMPLETE_FINDINGS_OPEN",
+  "mode": "first-report/no-source-change",
+  "repo": "D:\\repos\\teslasync",
+  "cwd": "web",
+  "actor": "5a4803a8-15dc-4dfa-a943-b01342050f54",
+  "sourceUTC": "2026-10-14T01:25:02.1635214Z",
+  "page": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+  "routes": [
+    "/segments"
+  ],
+  "sourceAcceptance": "Preserved accepted Phase5 ed9c62ca12e160481101b7b8ca8b88e239c39a39; no remigration. Phases0-5 remain closed; Phase6 unfinished; Phase7 NOTRUN.",
+  "authority": {
+    "reservationUTC": "2026-10-14T01:10:24.802Z",
+    "returnUTC": "2026-10-14T01:30:24.802Z",
+    "hardUTC": "2026-10-14T01:35:24.802Z",
+    "firstObservedToolUTC": "2026-10-14T01:12:18Z",
+    "targetMinutes": 10,
+    "returnMinutes": 20,
+    "hardMinutes": 25,
+    "clockRule": "Earlier reservation or actual-start limits win; no renewal.",
+    "requiredReads": [
+      "docs/orchestrator-loop.md FULL 1-296",
+      "docs/frontend-design-contract.md FULL 1-2539",
+      "docs/session-handoff.md current 1-48",
+      "docs/frontend-mission.md sections43-45 1416-1518",
+      "frontend SI instructions FULL",
+      "React instructions FULL 1-629",
+      "observability instructions FULL",
+      "unit instructions FULL",
+      "exact reserved and accepted queue rows"
+    ],
+    "queueRows": [
+      {
+        "file": "migration-queue.md",
+        "line": 409,
+        "raw": "| [~] | 6 | phase6-qa-driving-segments | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-segments.json | phase5-page-driving-segments | 1 | conservative reservation=2026-10-14T01:10:24.802Z; return=2026-10-14T01:30:24.802Z; hard=2026-10-14T01:35:24.802Z; actor=5a4803a8-15dc-4dfa-a943-b01342050f54; LastConsumed=-1 | - | CurrentacceptedSegmentsPage/directparts source-onlyQA; report/logonly/no realroutes/API/browser/native/source/test/catalog/fullsuite. Segmentidentity/meterbounds/unknownzero/SI/sign/preferences/scopes/independenttrust/actions/sections; no remigration. Actual ready exact scope reserved; NOT a running worker, no browserlock. Actual built-in launch accepted; exact exclusive files/no browserlock. |"
+      },
+      {
+        "file": "migration-queue.md",
+        "line": 1876,
+        "raw": "| [x] | 5 | phase5-page-driving-segments | original-page-migration | web\\src\\features\\driving\\pages\\SegmentsPage.tsx; web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx | - | 1 | actual terminal/log/scope consumed and released | ed9c62ca12e160481101b7b8ca8b88e239c39a39 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/segments; audit=docs\\frontend-audits\\audit-page-124.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Exact exclusive reservation for supported fresh task start; real actor metadata follows, not a running-count projection. Actualfreshactor=a0293b2f-a995-4d6f-a019-dcc4805e4f61; harddeadline=2026-10-13T05:30:41.538Z; attempt=1; continue retained WIP/no remigration; previous owner archived; lastConsumed=-1. Restart killed all workers; runtime list empty. Exact disk scope and existing receipt checked; preserved work is incomplete/unproven, NOT a pass. Reset pending with attempts UNCHANGED (restart or false heartbeat stop, not failure). Continue retained source and covering proof, never remodernize. Necessary owned reruns allowed; old unknown startup timeouts are not catalog diagnoses. Fresh continuation must retain this same attempt. Exact partial files committed as WIP 3f103ecf503707e7bb7814c1c1e7fff396f54aef. Built-in-only fresh continuation after user restart; same retained attempt unchanged; reservation is NOT an actor/count. No custom tools/status-file enforcement/external messages.20min return/25min hard limit, bounded commands under15min; actual actor metadata follows launch. Actual built-in actor=26a3532b-6fad-49eb-bebc-3122b8cc4400; running verified in32actor census; age atcensus=251s (recorded 2026-10-13T06:53:24.343Z, not a fabricated exact start);20min conclude/25min cap measured by real runtime elapsed; LastConsumed=-1; original attempts unchanged. Currentexactindividualintake: Minimal always-visible summary/chart fix; lint/syntax/preservation/routes0. Actual Vitest1 at external generated-catalog guard, ZEROexecuted of7staticcases, NOTpass. Needs ONEcurrent parent catalogroot, then scoped/combined proof; guards unchanged, sourcewritesreleased. Rawlog=web\\logs\\phase5-page-driving-segments.log; attempt1 preserved. SOURCE ONLY external0tests, NOTbehavior/native; currentcatalogroot handles shared startup, no own assertion/type failure waived. Actualreceiptcommit=ed9c62ca12e160481101b7b8ca8b88e239c39a39 pushed=true. |"
+      }
+    ]
+  },
+  "writableFiles": [
+    "docs\\frontend-audits\\phase6-qa-driving-segments.json",
+    "web\\logs\\phase6-qa-driving-segments.log"
+  ],
+  "sourceFilesChanged": [],
+  "firstNoChangeDecision": "The accepted page needs no remigration or source writes in this QA claim. Its three sections and both independent charts remain mounted; source findings require separately assigned followups, not unauthorized repairs.",
+  "sourcePins": [
+    {
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lineCount": 771,
+      "byteCount": 33004,
+      "sha256": "cbe7f61b548bf1ce7831b6c5a2c0a0f6facbf15709942946a218782abfba9183",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "lineCount": 53,
+      "byteCount": 1767,
+      "sha256": "bcb8c5bb0646613a424b14c4a22b04b456a7507195ff2b4e4bd5c45be5948060",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useSegments.ts",
+      "lineCount": 184,
+      "byteCount": 5769,
+      "sha256": "27535ccfff912e9f8bc4481b706e6b119080d908fc024ea04aa98bbfce809a57",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "lineCount": 919,
+      "byteCount": 68125,
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "lineCount": 168,
+      "byteCount": 4411,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "lineCount": 174,
+      "byteCount": 6593,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "lineCount": 65,
+      "byteCount": 2035,
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "lineCount": 434,
+      "byteCount": 15482,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "lineCount": 194,
+      "byteCount": 6545,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "lineCount": 47,
+      "byteCount": 2095,
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\lib\\numberFormat.ts",
+      "lineCount": 172,
+      "byteCount": 6443,
+      "sha256": "513e7edf9f917d3b085d36c9449b9d2fe2de7ee17a7b08d4c10a5a0329da52c3",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "lineCount": 462,
+      "byteCount": 18863,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "lineCount": 17,
+      "byteCount": 658,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "lineCount": 259,
+      "byteCount": 10783,
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "lineCount": 115,
+      "byteCount": 4093,
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+      "lineCount": 58,
+      "byteCount": 2977,
+      "sha256": "f736cb0cacc4f6d7095cf14d4ab34c328d133d6c1c6d7fce95f8b8a1a0ebba20",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\ui\\Button.tsx",
+      "lineCount": 93,
+      "byteCount": 5174,
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "lineCount": 1707,
+      "byteCount": 77157,
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx",
+      "lineCount": 48,
+      "byteCount": 1958,
+      "sha256": "896c670550e1d719c8abbdf1709e92f8712ffacc18525a3470436edb873d1b67",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "docs\\frontend-audits\\audit-page-124.json",
+      "lineCount": 351,
+      "byteCount": 27006,
+      "sha256": "f49f296715b10711cb0341b7a548ac6858e3d835c14c630507ba8a10ab9d2d56",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "docs\\orchestrator-loop.md",
+      "lineCount": 296,
+      "byteCount": 16978,
+      "sha256": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "docs\\frontend-design-contract.md",
+      "lineCount": 2539,
+      "byteCount": 182554,
+      "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "docs\\frontend-mission.md",
+      "lineCount": 1593,
+      "byteCount": 31079,
+      "sha256": "2bd35429e32d06abf109dd371c2dd011cb974ef6b8c1915b298d1a0c3d7fd98f",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "docs\\session-handoff.md",
+      "lineCount": 2460,
+      "byteCount": 163930,
+      "sha256": "7a967a20c91c809a1f830967c49949120697397058dfa66a4a610b050660f7e2",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "migration-queue.md",
+      "lineCount": 2043,
+      "byteCount": 2554417,
+      "sha256": "7f70f73c4af8db47c66f4a8d4b5399f7a077f3c13c34bb6e5bea332bfd6541ab",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": ".github\\instructions\\frontend-si-cutover.instructions.md",
+      "lineCount": 94,
+      "byteCount": 3585,
+      "sha256": "d50c51dda3ad98344d3b494dde488e93247647352893b2ae75a68f399d619ca4",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": ".github\\instructions\\react-frontend.instructions.md",
+      "lineCount": 629,
+      "byteCount": 22645,
+      "sha256": "4583e9b2c262d1eda8a0b22d24f58befb65414f2ad4b6657035221abb48ec83e",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": ".github\\instructions\\observability.instructions.md",
+      "lineCount": 45,
+      "byteCount": 4267,
+      "sha256": "b56e5b2639ac71dc6c7755e943eae19dce41a4bd372b00304819d99472301a42",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": ".github\\instructions\\unit-conversion.instructions.md",
+      "lineCount": 221,
+      "byteCount": 6501,
+      "sha256": "76b05e945142640b465ced30f3189d21678c6700e3bbd54f86811bd676941315",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\hooks\\useDateFormat.ts",
+      "lineCount": 148,
+      "byteCount": 5230,
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\i18n\\en.json",
+      "lineCount": 38994,
+      "byteCount": 1842282,
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\layout\\index.ts",
+      "lineCount": 27,
+      "byteCount": 1523,
+      "sha256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\charts\\EmbeddedChart.tsx",
+      "lineCount": 42,
+      "byteCount": 1225,
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "lineCount": 1006,
+      "byteCount": 41517,
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "evidence": "Exact-byte initial pin in raw log; 32 non-queue/non-handoff pins rechecked without drift."
+    }
+  ],
+  "pinLimits": "32 static source/instruction/catalog pins matched recheck; queue/handoff are parent-owned mutable input snapshots, not a write barrier. Initial queue lines403/1870 shifted to409/1876 by parent activity. No Git baseline or immutable original was read.",
+  "counts": {
+    "pageFiles": 1,
+    "directImportedFeaturePresentationFiles": 1,
+    "inlinePresentationFunctions": 3,
+    "pageLines": 771,
+    "directPresentationLines": 53,
+    "pagePlusDirectPresentationLines": 824,
+    "typedHookLines": 184,
+    "topLevelSections": 3,
+    "subsections": 3,
+    "charts": 2,
+    "summaryMetrics": 3,
+    "leaderboardColumns": 6,
+    "actionGroups": 13,
+    "pageActionGroups": 10,
+    "inheritedActionGroups": 2,
+    "externalHeaderActionGroups": 1,
+    "confirmedMechanisms": 12,
+    "candidateMechanisms": 5,
+    "findingsByRule": {
+      "measured-zero-as-unknown": 1,
+      "hardcoded-string": 1,
+      "missing-canonical-i18n-key": 1,
+      "mobile-touch-target": 1,
+      "mobile-hidden-measurements": 1,
+      "listbox-keyboard-contract": 1,
+      "initial-paused-state": 1,
+      "retained-summary-trust": 1,
+      "token-bypass-reference-paint": 1,
+      "date-display-preferences": 1,
+      "chart-equivalent-alternative": 1,
+      "plot-motion-preference": 1
+    },
+    "filesWithMostIssues": [
+      {
+        "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "confirmedMechanisms": 12
+      }
+    ],
+    "jsxOpeningTagOccurrences": {
+      "PageLayout": 1,
+      "GlassPanel": 3,
+      "LayoutCard": 2,
+      "ChartCard": 2,
+      "DrivingSummaryBrief": 1,
+      "DataTable": 1,
+      "Pagination": 1,
+      "StaleRefreshWarning": 3,
+      "FadeIn": 3,
+      "Button": 2,
+      "RaceButton": 2,
+      "SelectableCard": 1,
+      "Skeleton": 5,
+      "EmptyState": 7,
+      "QueryError": 3
+    },
+    "pageLiteralTkeys": 39,
+    "briefLiteralTkeys": 6,
+    "canonicalMissingKeys": 1,
+    "sourceStaticPinRechecks": 32,
+    "sourceStaticPinDrift": 0,
+    "failedCommandProbes": 2
+  },
+  "preservation": {
+    "acceptedInventory": "docs/frontend-audits/audit-page-124.json",
+    "recordedPageLines": 770,
+    "recordedPageSHA256": "6a824ef8b2c461846fcaa43c617135bcebf4734a0354896b85cd5d110d4cf52e",
+    "comparison": "Current 771 versus recorded 770 is a source snapshot comparison only, NOT original>=70% preservation-gate PASS. Direct brief adds53; inline components are already included, never double-counted.",
+    "previousMissingGapSection": "Current summary, elapsed frame, gap frame and signed-direction explanation remain mounted even with missing samples; prior conditional-gap finding is no longer present at current source. This does not close unrelated findings."
+  },
+  "sections": [
+    {
+      "name": "Detected route segments",
+      "line": 279,
+      "data": "name/addresses/id, raw median distance_m, attempt_count, best time, nullable best efficiency; latest retained in typed response but not newly claimed displayed",
+      "states": "selection instruction, source-shaped six skeletons, fatal QueryError, authoritative empty copy, all returned cards and URL pagination"
+    },
+    {
+      "name": "Selected segment leaderboard",
+      "line": 337,
+      "data": "Both original orderings, rank/date/PR/time/efficiency/time-PR delta/A-B columns; drive_id identity and stable tableId",
+      "states": "Always-mounted LayoutCard, selection instruction, own loading/fatal/empty/retained state and retry"
+    },
+    {
+      "name": "Ghost race",
+      "line": 392,
+      "data": "Original winner/null tie/margin, A/B duration/date context, original separate elapsed samples, all backend signed split deltas, gap direction copy",
+      "states": "Always-mounted LayoutCard with two-distinct-attempt instruction, own loading/fatal/retained state and retry; summary and both chart shells always mounted"
+    }
+  ],
+  "subsections": [
+    {
+      "name": "Winner and attempt summary",
+      "line": 414
+    },
+    {
+      "name": "Elapsed time along route",
+      "line": 430
+    },
+    {
+      "name": "Signed time gap",
+      "line": 503
+    }
+  ],
+  "actions": [
+    {
+      "lines": [
+        135,
+        310,
+        588
+      ],
+      "scope": "page",
+      "id": "select-segment",
+      "preserved": "Positive id selection; visible disabled id<=0; clears A/B."
+    },
+    {
+      "lines": [
+        103,
+        119,
+        327
+      ],
+      "scope": "page",
+      "id": "change-page",
+      "preserved": "12-row URL paging, clamp, selection reset."
+    },
+    {
+      "lines": [
+        342,
+        349
+      ],
+      "scope": "page",
+      "id": "order-by-time",
+      "preserved": "Toggle selects original by_time ordering."
+    },
+    {
+      "lines": [
+        342,
+        349
+      ],
+      "scope": "page",
+      "id": "order-by-efficiency",
+      "preserved": "Toggle selects original by_efficiency ordering."
+    },
+    {
+      "lines": [
+        167,
+        725
+      ],
+      "scope": "page",
+      "id": "pick-toggle-a",
+      "preserved": "Pick/toggle A and clear duplicate B."
+    },
+    {
+      "lines": [
+        171,
+        730
+      ],
+      "scope": "page",
+      "id": "pick-toggle-b",
+      "preserved": "Pick/toggle B and clear duplicate A."
+    },
+    {
+      "lines": [
+        182,
+        300
+      ],
+      "scope": "page",
+      "id": "retry-segments",
+      "preserved": "Own refetch and retained warning retry."
+    },
+    {
+      "lines": [
+        183,
+        370
+      ],
+      "scope": "page",
+      "id": "retry-leaderboard",
+      "preserved": "Own refetch and retained warning retry."
+    },
+    {
+      "lines": [
+        184,
+        408
+      ],
+      "scope": "page",
+      "id": "retry-ghost",
+      "preserved": "Own refetch and retained warning retry."
+    },
+    {
+      "lines": [
+        431,
+        474,
+        481,
+        489
+      ],
+      "scope": "page",
+      "id": "elapsed-hidden-series",
+      "preserved": "Stable segment-ghost-elapsed chartKey, ChartLegend, a/b hide identities."
+    },
+    {
+      "lines": [
+        414
+      ],
+      "scope": "inherited",
+      "id": "brief-details",
+      "preserved": "Existing OperationalBrief details contract; mounted interaction NOTRUN."
+    },
+    {
+      "lines": [
+        744
+      ],
+      "scope": "inherited",
+      "id": "table-controls",
+      "preserved": "Stable segments:leaderboard ID; existing DataTable column-control pipeline, mounted behavior NOTRUN."
+    },
+    {
+      "lines": [
+        75
+      ],
+      "scope": "external-header",
+      "id": "header-vehicle-selection",
+      "preserved": "useSelectedVehicle consumes header/URL/store ownership; no local duplicate."
+    }
+  ],
+  "identityPopulationBounds": {
+    "segmentIdentity": "id<=0 remains visible disabled; no fabricated persisted ID. Segment/page/established-vehicle changes clear dependent racers. Leaderboard defaults once per returned segment.id from by_time; manual A/B choices cannot duplicate.",
+    "queryIdentity": "segments+vehicleId; leaderboard+segmentId; ghost+segmentId+a+b; positive-ID enablement, distinct racers, AbortSignal, ANALYTICS staleTime preserved.",
+    "populations": "Pagination total is returned segments.length, not a claimed server-wide total. attempt_count is backend supplied. by_time/by_efficiency arrays retain their own populations; zero/missing energy inclusion and full server completeness remain unknown.",
+    "denominators": "No frontend aggregate percentage/denominator recomputation. Wh/km and route fractions are precomputed response quantities; integrated-distance and energy denominator policy requires authorized backend evidence.",
+    "linearMetreBounds": "distance_m is representative median metres rendered via useUnits.formatDistance. Both X axes declare type=number, domain=[0,1] and percent tick labels; no map/coordinates or logarithmic scale is declared. Per-Line A/B arrays retain original fractions/elapsed samples; rounded union-grid does not establish data loss. Candidate C02 records validation/composed-bound limits.",
+    "signs": "Backend negative delta_s means A ahead; positive B ahead; source signs remain. Confirmed F01 records valid zero hidden as unknown.",
+    "provenance": "Three DataStates request historical provenance. Brief uses actual selected comparison context and unknown observation-time copy, not a fabricated live timestamp. F07/F08 record initial-paused and stale-summary gaps."
+  },
+  "workspace": {
+    "actualRoute": "/segments",
+    "routeEvidence": {
+      "lines": [
+        152,
+        854
+      ],
+      "file": "web\\src\\App.tsx",
+      "sourceOnly": true
+    },
+    "range": false,
+    "vehicle": true,
+    "scopeEvidence": {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "lines": [
+        23,
+        156,
+        165,
+        166
+      ]
+    },
+    "startBoundPassed": false,
+    "exclusiveEndBoundPassed": false,
+    "bothBounds": "NOT PRESENT in page or typed hooks; current range ownership is explicitly opt-in/off. Product/server intent UNKNOWN, candidate C01, not guessed API support.",
+    "selection": "Header/URL/store/first-known selection via useSelectedVehicle; no new picker, VIN override or scope=local bypass."
+  },
+  "siDisplay": {
+    "raw": "distance_m metres; duration_s/elapsed_s/delta_s seconds; speed_mps retained in typed series; wh_per_km precomputed fixed source quotient. Hooks perform no conversions and request URLs omit /api/v1/.",
+    "distance": "Existing useUnits derives user distance/locale/precision and formats at render boundary.",
+    "numbers": "useNumberFormatting subscribes page/table to formatter preferences; signed nonzero values use fmtNumber and explicit plus/minus; null/nonfinite duration/efficiency render dash, valid distance/efficiency zero not blanket-coerced.",
+    "dates": "Confirmed F10: bare short-date helper omits configured timezone/locale options.",
+    "efficiency": "Candidate C04: specialist whole-number fixed Wh/km display policy, not an invented conversion incident."
+  },
+  "sourceStates": {
+    "independence": "No all-page loading/error gate is passed to PageLayout; PageLayout delegates PageContainer without erasing neighboring source content. Fatal errors wired separately; retained errors do not drop query payloads.",
+    "initial": "Own skeletons and selection gating declared; F07 initial-paused distinction is missing.",
+    "fatal": "Three own QueryError+retry callbacks; only fatalError, not raw query.error, replaces source body.",
+    "retained": "Three StaleRefreshWarning sources retain payload/retry; F08 summary retained prop only covers refresh-blocked, not ordinary stale refresh error.",
+    "empty": "Separate selection/list/no-ranked-attempt/insufficient-telemetry copy; both charts and summary remain mounted.",
+    "retry": "Independent segments/leaderboard/ghost refetch plus canonical retained-state retries; actual recovery NOTRUN."
+  },
+  "importsAndExceptions": {
+    "categoryImports": "Page uses layout/ui/charts/feedback/motion categories and one existing local DrivingSummaryBrief; StatMetric imports are type-only from existing stat-reference API. Layout barrel exports PageLayout/LayoutCard/ChartCard; PageLayout wraps PageContainer, so no missing-page-container violation.",
+    "effects": "Four page useEffects manage URL/selection/default-racer state; none loads data, so not fetch-useeffect violations.",
+    "protectedTags": "No raw protected elements in three primary files. Raw button/table inside shared ui building blocks is expected, not an extra violation.",
+    "dynamicStyles": "No inline-style candidate in three primary files; palette-indexed chart color props and Recharts API props are acceptable. F09 is a separate theme-token contract, not a static-inline-style violation.",
+    "asciiUnitSymbols": "Wh/km, A/B, # and direction symbols are not automatically English-string violations. F02 is the exact literal English selected suffix.",
+    "patternLimits": "Native textual scans plus cited manual source review, not an AST/tooling or whole-repository guarantee."
+  },
+  "a11yMobileDeclarations": {
+    "positive": "Native selectable buttons, translated card/group/chart names, aria-pressed/aria-selected, disabled IDs, semantic dl/dt/dd, decorative aria-hidden, canonical PageContainer route focus/error boundary.",
+    "mobile": "Base/md/xl one/two/three card grid; min-w-0/shared full allocated-width layout; chart height pairs288/256 and224/192; source-only, no bounding-box acceptance.",
+    "openIssues": [
+      "F04 target sizing",
+      "F05 missing mobile measurement recovery",
+      "F06 composite listbox keyboard",
+      "F11 chart equivalents/forced-colors",
+      "F12 plot motion guard"
+    ],
+    "matrixNotRun": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "themes": "Dark/light/saved custom/forced-colors/RTL/200% text/reduced-motion/low-bandwidth NOTRUN."
+  },
+  "checks": {
+    "method": "Native PowerShell Select-String/regex/Get-Content/Get-FileHash and JSON parse only; no custom helper file/script installed or executed.",
+    "scope": [
+      "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+      "web\\src\\api\\hooks\\useSegments.ts"
+    ],
+    "patternCounts": {
+      "staticInlineStyleCandidates": 0,
+      "rawHtml": 0,
+      "directLibraryImport": 0,
+      "oldApiImport": 0,
+      "doublePrefix": 0,
+      "camelcaseParamCorrectedCaseSensitive": 0,
+      "hiddenPanelAndGateCandidates": 0,
+      "hardcodedJsxTextCandidates": 0,
+      "pageLayoutOpen": 1,
+      "fetch": 0,
+      "useEffectCandidates": 4,
+      "fixedWhKmPageLines": 3,
+      "zeroGapPageLines": 2,
+      "literalSelectedPageLines": 1,
+      "smallRaceTargetPageLines": 1,
+      "hexReferencePaintPageLines": 1
+    },
+    "semanticWarning": "Pattern match counts are not violation counts. Hardcoded JSX text regex was zero but manual accessible-name scan confirmed F02. Case-insensitive camelcase scan matched lowercase a/b falsely; corrected -CaseSensitive scan is zero.",
+    "rawBoundedCommandReceipts": [
+      {
+        "command": "Native Select-String -LiteralPath exact page, direct brief, hook for ordered patterns (stored verbatim below); all match counts are line counts, not semantic violation counts.",
+        "numericExit": 0,
+        "rawOutput": "Native Select-String -LiteralPath exact page, direct brief, hook for ordered patterns (stored verbatim below); all match counts are line counts, not semantic violation counts.\nFILE: web\\src\\features\\driving\\pages\\SegmentsPage.tsx\nCHECK: static-inline-style-candidate; regex=style\\s*=\\s*\\{\\{; match_lines=0; numeric_exit=0\nCHECK: raw-html; regex=<\\s*(button|input|textarea|select|table)(\\s|>); match_lines=0; numeric_exit=0\nCHECK: direct-library-import; regex=from\\s+[\"'](recharts|react-leaflet|framer-motion)[\"']; match_lines=0; numeric_exit=0\nCHECK: old-api-import; regex=from\\s+[\"']\\.\\./(\\.\\./)?api[\"']; match_lines=0; numeric_exit=0\nCHECK: double-prefix; regex=/api/v1/; match_lines=0; numeric_exit=0\nCHECK: camelcase-param; regex=[?&][a-z_]*[A-Z][a-zA-Z_]*=; match_lines=0; numeric_exit=0\nCHECK: hidden-section-candidate; regex=&&\\s*<(GlassPanel|LayoutCard|ChartCard|PageLayout|PageContainer); match_lines=0; numeric_exit=0\nCHECK: hardcoded-JSX-English-candidate; regex=>\\s*[A-Za-z][A-Za-z ]+\\s*<; match_lines=0; numeric_exit=0\nCHECK: page-wrapper; regex=<Page(Layout|Container)\\b; match_lines=1; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:271:    <PageLayout\nCHECK: fetch-loading; regex=\\bfetch\\s*\\(; match_lines=0; numeric_exit=0\nCHECK: useEffect-candidate; regex=\\buseEffect\\s*\\(; match_lines=4; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:103:  useEffect(() => {\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:107:  useEffect(() => {\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:127:  useEffect(() => {\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:153:  useEffect(() => {\nCHECK: physical-fixed-unit; regex=Wh/km; match_lines=3; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:54:/** Energy efficiency, already Wh/km from the API (a fixed unit). */\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:56:  return v == null || !Number.isFinite(v) ? DASH : `${fmtInt(v)} Wh/km`;\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:695:      header: t('segments.table.eff', 'Wh/km'),\nCHECK: zero-gap; regex=s === 0|delta_to_best_s === 0; match_lines=2; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:61:  if (!Number.isFinite(s) || s === 0) return '—';\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:713:          {row.delta_to_best_s === 0 ? DASH : signedDelta(row.delta_to_best_s)}\nCHECK: literal-selected-name; regex=\\(selected\\); match_lines=1; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:765:      aria-label={`${label}${active ? ' (selected)' : ''}`}\nCHECK: fixed-small-target; regex=h-7 w-7; match_lines=1; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:766:      className=\"h-7 w-7 p-0 text-xs font-bold\"\nCHECK: literal-chart-paint; regex=#[0-9a-fA-F]{6}; match_lines=1; numeric_exit=0\nweb\\src\\features\\driving\\pages\\SegmentsPage.tsx:547:                            <ReferenceLine y={0} stroke=\"#94a3b8\" strokeDasharray=\"4 3\" strokeOpacity={0.7} />\nFILE: web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx\nCHECK: static-inline-style-candidate; regex=style\\s*=\\s*\\{\\{; match_lines=0; numeric_exit=0\nCHECK: raw-html; regex=<\\s*(button|input|textarea|select|table)(\\s|>); match_lines=0; numeric_exit=0\nCHECK: direct-library-import; regex=from\\s+[\"'](recharts|react-leaflet|framer-motion)[\"']; match_lines=0; numeric_exit=0\nCHECK: old-api-import; regex=from\\s+[\"']\\.\\./(\\.\\./)?api[\"']; match_lines=0; numeric_exit=0\nCHECK: double-prefix; regex=/api/v1/; match_lines=0; numeric_exit=0\nCHECK: camelcase-param; regex=[?&][a-z_]*[A-Z][a-zA-Z_]*=; match_lines=0; numeric_exit=0\nCHECK: hidden-section-candidate; regex=&&\\s*<(GlassPanel|LayoutCard|ChartCard|PageLayout|PageContainer); match_lines=0; numeric_exit=0\nCHECK: hardcoded-JSX-English-candidate; regex=>\\s*[A-Za-z][A-Za-z ]+\\s*<; match_lines=0; numeric_exit=0\nCHECK: page-wrapper; regex=<Page(Layout|Container)\\b; match_lines=0; numeric_exit=0\nCHECK: fetch-loading; regex=\\bfetch\\s*\\(; match_lines=0; numeric_exit=0\nCHECK: useEffect-candidate; regex=\\buseEffect\\s*\\(; match_lines=0; numeric_exit=0\nCHECK: physical-fixed-unit; regex=Wh/km; match_lines=0; numeric_exit=0\nCHECK: zero-gap; regex=s === 0|delta_to_best_s === 0; match_lines=0; numeric_exit=0\nCHECK: literal-selected-name; regex=\\(selected\\); match_lines=0; numeric_exit=0\nCHECK: fixed-small-target; regex=h-7 w-7; match_lines=0; numeric_exit=0\nCHECK: literal-chart-paint; regex=#[0-9a-fA-F]{6}; match_lines=0; numeric_exit=0\nFILE: web\\src\\api\\hooks\\useSegments.ts\nCHECK: static-inline-style-candidate; regex=style\\s*=\\s*\\{\\{; match_lines=0; numeric_exit=0\nCHECK: raw-html; regex=<\\s*(button|input|textarea|select|table)(\\s|>); match_lines=0; numeric_exit=0\nCHECK: direct-library-import; regex=from\\s+[\"'](recharts|react-leaflet|framer-motion)[\"']; match_lines=0; numeric_exit=0\nCHECK: old-api-import; regex=from\\s+[\"']\\.\\./(\\.\\./)?api[\"']; match_lines=0; numeric_exit=0\nCHECK: double-prefix; regex=/api/v1/; match_lines=0; numeric_exit=0\nCHECK: camelcase-param; regex=[?&][a-z_]*[A-Z][a-zA-Z_]*=; match_lines=3; numeric_exit=0\nweb\\src\\api\\hooks\\useSegments.ts:12: *   GET /segments/{segmentID}/ghost?a=<driveID>&b=<driveID>  (head-to-head race)\nweb\\src\\api\\hooks\\useSegments.ts:118: * Body of GET /segments/{segmentID}/ghost?a=&b=. `winner_drive_id` is the\nweb\\src\\api\\hooks\\useSegments.ts:173:      request<GhostResponse>(`/segments/${segmentId}/ghost?a=${a}&b=${b}`, { signal }),\nCHECK: hidden-section-candidate; regex=&&\\s*<(GlassPanel|LayoutCard|ChartCard|PageLayout|PageContainer); match_lines=0; numeric_exit=0\nCHECK: hardcoded-JSX-English-candidate; regex=>\\s*[A-Za-z][A-Za-z ]+\\s*<; match_lines=0; numeric_exit=0\nCHECK: page-wrapper; regex=<Page(Layout|Container)\\b; match_lines=0; numeric_exit=0\nCHECK: fetch-loading; regex=\\bfetch\\s*\\(; match_lines=0; numeric_exit=0\nCHECK: useEffect-candidate; regex=\\buseEffect\\s*\\(; match_lines=0; numeric_exit=0\nCHECK: physical-fixed-unit; regex=Wh/km; match_lines=0; numeric_exit=0\nCHECK: zero-gap; regex=s === 0|delta_to_best_s === 0; match_lines=0; numeric_exit=0\nCHECK: literal-selected-name; regex=\\(selected\\); match_lines=0; numeric_exit=0\nCHECK: fixed-small-target; regex=h-7 w-7; match_lines=0; numeric_exit=0\nCHECK: literal-chart-paint; regex=#[0-9a-fA-F]{6}; match_lines=0; numeric_exit=0\nnumeric_exit=0"
+      },
+      {
+        "command": "Select-String exact page/brief/hook -Pattern '[?&][a-z_]*[A-Z][a-zA-Z_]*=' -CaseSensitive",
+        "numericExit": 0,
+        "rawOutput": "Select-String exact page/brief/hook -Pattern '[?&][a-z_]*[A-Z][a-zA-Z_]*=' -CaseSensitive\nCORRECTION: preceding camelcase-param scan was PowerShell case-insensitive and falsely matched lowercase a/b; all three matches were acceptable lowercase params (two comments, one request), not camelCase.\nFILE: web\\src\\features\\driving\\pages\\SegmentsPage.tsx; camelcase-param CaseSensitive=True; match_lines=0; numeric_exit=0\nFILE: web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx; camelcase-param CaseSensitive=True; match_lines=0; numeric_exit=0\nFILE: web\\src\\api\\hooks\\useSegments.ts; camelcase-param CaseSensitive=True; match_lines=0; numeric_exit=0\nnumeric_exit=0"
+      },
+      {
+        "command": "read-only regex literal tkeys in exact page/brief, canonical en.json ConvertFrom-Json nested key traversal; no generator/catalog writes.",
+        "numericExit": 0,
+        "rawOutput": "read-only regex literal tkeys in exact page/brief, canonical en.json ConvertFrom-Json nested key traversal; no generator/catalog writes.\nFILE: D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\SegmentsPage.tsx; distinct_literal_tkeys=39\nKEY: segments.board.byEfficiency; canonical_exists=True\nKEY: segments.board.byTime; canonical_exists=True\nKEY: segments.board.empty; canonical_exists=True\nKEY: segments.board.orderBy; canonical_exists=True\nKEY: segments.board.select; canonical_exists=False\nKEY: segments.board.title; canonical_exists=True\nKEY: segments.brief.description; canonical_exists=True\nKEY: segments.brief.provenance; canonical_exists=True\nKEY: segments.card.aria; canonical_exists=True\nKEY: segments.card.attempts; canonical_exists=True\nKEY: segments.card.best; canonical_exists=True\nKEY: segments.card.distance; canonical_exists=True\nKEY: segments.card.eff; canonical_exists=True\nKEY: segments.ghost.elapsed; canonical_exists=True\nKEY: segments.ghost.elapsedAria; canonical_exists=True\nKEY: segments.ghost.gap; canonical_exists=True\nKEY: segments.ghost.gapAria; canonical_exists=True\nKEY: segments.ghost.gapHelp; canonical_exists=True\nKEY: segments.ghost.margin; canonical_exists=True\nKEY: segments.ghost.noData; canonical_exists=True\nKEY: segments.ghost.pick; canonical_exists=True\nKEY: segments.ghost.racerA; canonical_exists=True\nKEY: segments.ghost.racerB; canonical_exists=True\nKEY: segments.ghost.subtitle; canonical_exists=True\nKEY: segments.ghost.tie; canonical_exists=True\nKEY: segments.ghost.tieHelp; canonical_exists=True\nKEY: segments.ghost.title; canonical_exists=True\nKEY: segments.ghost.winner; canonical_exists=True\nKEY: segments.list.empty; canonical_exists=True\nKEY: segments.list.title; canonical_exists=True\nKEY: segments.selectVehicle; canonical_exists=True\nKEY: segments.subtitle; canonical_exists=True\nKEY: segments.table.date; canonical_exists=True\nKEY: segments.table.delta; canonical_exists=True\nKEY: segments.table.eff; canonical_exists=True\nKEY: segments.table.pr; canonical_exists=True\nKEY: segments.table.race; canonical_exists=True\nKEY: segments.table.time; canonical_exists=True\nKEY: segments.title; canonical_exists=True\nFILE: D:\\repos\\teslasync\\web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx; distinct_literal_tkeys=6\nKEY: driving.brief.available; canonical_exists=True\nKEY: driving.brief.eyebrow; canonical_exists=True\nKEY: driving.brief.loading; canonical_exists=True\nKEY: driving.brief.observationUnknown; canonical_exists=True\nKEY: driving.brief.retained; canonical_exists=True\nKEY: driving.brief.unavailable; canonical_exists=True\ncanonical_missing_occurrences=1; numeric_exit=0\nnumeric_exit=0"
+      },
+      {
+        "command": "native regex exact opening tags in SegmentsPage.tsx and Get-Content line counts; no component execution.",
+        "numericExit": 0,
+        "rawOutput": "native regex exact opening tags in SegmentsPage.tsx and Get-Content line counts; no component execution.\nOPEN_TAG: PageLayout; count=1\nOPEN_TAG: GlassPanel; count=3\nOPEN_TAG: LayoutCard; count=2\nOPEN_TAG: ChartCard; count=2\nOPEN_TAG: DrivingSummaryBrief; count=1\nOPEN_TAG: DataTable; count=1\nOPEN_TAG: Pagination; count=1\nOPEN_TAG: StaleRefreshWarning; count=3\nOPEN_TAG: FadeIn; count=3\nOPEN_TAG: Button; count=2\nOPEN_TAG: RaceButton; count=2\nOPEN_TAG: SelectableCard; count=1\nOPEN_TAG: Skeleton; count=5\nOPEN_TAG: EmptyState; count=7\nOPEN_TAG: QueryError; count=3\npage_lines=771\ndirect_feature_presentation_lines=53\npage_plus_direct_feature_presentation_lines=824\ninline_feature_presentation_functions=3 (SegmentCard, LeaderboardTable, RaceButton; already counted within page lines)\nnumeric_exit=0"
+      },
+      {
+        "command": "final queue literal Select-String -SimpleMatch, table-only and exclude original-plan aggregate, exact patterns=segments.board.select;RaceButton;signedDelta;SegmentsPage.tsx;StaleRefreshWarning.tsx",
+        "numericExit": 0,
+        "rawOutput": "final queue literal Select-String -SimpleMatch, table-only and exclude original-plan aggregate, exact patterns=segments.board.select;RaceButton;signedDelta;SegmentsPage.tsx;StaleRefreshWarning.tsx\nQUEUE_LITERAL: segments.board.select; matched_rows=0\nQUEUE_LITERAL: RaceButton; matched_rows=0\nQUEUE_LITERAL: signedDelta; matched_rows=1\nline=451; item=phase6-qa-battery-cells\nQUEUE_LITERAL: SegmentsPage.tsx; matched_rows=2\nline=621; item=audit-page-124\nline=1876; item=phase5-page-driving-segments\nQUEUE_LITERAL: StaleRefreshWarning.tsx; matched_rows=1\nline=1454; item=phase3-stale-refresh-warning\nnumeric_exit=0"
+      },
+      {
+        "command": "final readonly Get-FileHash recheck pinned static inventory (queue/handoff excluded as parent-owned mutable inputs). UTC=2026-10-14T01:21:06.1277676Z",
+        "numericExit": 0,
+        "rawOutput": "final readonly Get-FileHash recheck pinned static inventory (queue/handoff excluded as parent-owned mutable inputs). UTC=2026-10-14T01:21:06.1277676Z\nPIN_RECHECK: web\\src\\features\\driving\\pages\\SegmentsPage.tsx; matches=True\nPIN_RECHECK: web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx; matches=True\nPIN_RECHECK: web\\src\\api\\hooks\\useSegments.ts; matches=True\nPIN_RECHECK: web\\src\\App.tsx; matches=True\nPIN_RECHECK: web\\src\\lib\\workspaceScope.ts; matches=True\nPIN_RECHECK: web\\src\\hooks\\useSelectedVehicle.ts; matches=True\nPIN_RECHECK: web\\src\\hooks\\useDataState.ts; matches=True\nPIN_RECHECK: web\\src\\api\\dataState.ts; matches=True\nPIN_RECHECK: web\\src\\hooks\\useUnits.ts; matches=True\nPIN_RECHECK: web\\src\\hooks\\useNumberFormatting.ts; matches=True\nPIN_RECHECK: web\\src\\lib\\numberFormat.ts; matches=True\nPIN_RECHECK: web\\src\\lib\\dateFormat.ts; matches=True\nPIN_RECHECK: web\\src\\components\\layout\\layout-reference\\PageLayout.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\layout\\PageContainer.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\feedback\\StaleRefreshWarning.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\ui\\SelectableCard.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\ui\\Button.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\ui\\DataTable.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\layout\\layout-reference\\ChartCard.tsx; matches=True\nPIN_RECHECK: docs\\frontend-audits\\audit-page-124.json; matches=True\nPIN_RECHECK: docs\\orchestrator-loop.md; matches=True\nPIN_RECHECK: docs\\frontend-design-contract.md; matches=True\nPIN_RECHECK: docs\\frontend-mission.md; matches=True\nPIN_RECHECK: .github\\instructions\\frontend-si-cutover.instructions.md; matches=True\nPIN_RECHECK: .github\\instructions\\react-frontend.instructions.md; matches=True\nPIN_RECHECK: .github\\instructions\\observability.instructions.md; matches=True\nPIN_RECHECK: .github\\instructions\\unit-conversion.instructions.md; matches=True\nPIN_RECHECK: web\\src\\hooks\\useDateFormat.ts; matches=True\nPIN_RECHECK: web\\src\\i18n\\en.json; matches=True\nPIN_RECHECK: web\\src\\components\\layout\\index.ts; matches=True\nPIN_RECHECK: web\\src\\components\\charts\\EmbeddedChart.tsx; matches=True\nPIN_RECHECK: web\\src\\components\\charts\\ChartContainer.tsx; matches=True\nscoped_static_pin_count=32\nstatic_pin_drift_count=0\nNOTE: queue is parent-owned/live and gained six lines during review; historical rows1870->1876 and615->621 are retained snapshots, not source edits by this worker.\nCORRECTION: full orchestrator-loop read ends at line296, not297 as initial descriptive log header stated.\nnumeric_exit=0"
+      },
+      {
+        "command": "final exact reserved QA and accepted Phase5 queue rows; UTC=2026-10-14T01:21:06.1595455Z",
+        "numericExit": 0,
+        "rawOutput": "final exact reserved QA and accepted Phase5 queue rows; UTC=2026-10-14T01:21:06.1595455Z\n409:| [~] | 6 | phase6-qa-driving-segments | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-segments.json | phase5-page-driving-segments | 1 | conservative reservation=2026-10-14T01:10:24.802Z; return=2026-10-14T01:30:24.802Z; hard=2026-10-14T01:35:24.802Z; actor=5a4803a8-15dc-4dfa-a943-b01342050f54; LastConsumed=-1 | - | CurrentacceptedSegmentsPage/directparts source-onlyQA; report/logonly/no realroutes/API/browser/native/source/test/catalog/fullsuite. Segmentidentity/meterbounds/unknownzero/SI/sign/preferences/scopes/independenttrust/actions/sections; no remigration. Actual ready exact scope reserved; NOT a running worker, no browserlock. Actual built-in launch accepted; exact exclusive files/no browserlock. |\n1876:| [x] | 5 | phase5-page-driving-segments | original-page-migration | web\\src\\features\\driving\\pages\\SegmentsPage.tsx; web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx | - | 1 | actual terminal/log/scope consumed and released | ed9c62ca12e160481101b7b8ca8b88e239c39a39 | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/segments; audit=docs\\frontend-audits\\audit-page-124.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Exact exclusive reservation for supported fresh task start; real actor metadata follows, not a running-count projection. Actualfreshactor=a0293b2f-a995-4d6f-a019-dcc4805e4f61; harddeadline=2026-10-13T05:30:41.538Z; attempt=1; continue retained WIP/no remigration; previous owner archived; lastConsumed=-1. Restart killed all workers; runtime list empty. Exact disk scope and existing receipt checked; preserved work is incomplete/unproven, NOT a pass. Reset pending with attempts UNCHANGED (restart or false heartbeat stop, not failure). Continue retained source and covering proof, never remodernize. Necessary owned reruns allowed; old unknown startup timeouts are not catalog diagnoses. Fresh continuation must retain this same attempt. Exact partial files committed as WIP 3f103ecf503707e7bb7814c1c1e7fff396f54aef. Built-in-only fresh continuation after user restart; same retained attempt unchanged; reservation is NOT an actor/count. No custom tools/status-file enforcement/external messages.20min return/25min hard limit, bounded commands under15min; actual actor metadata follows launch. Actual built-in actor=26a3532b-6fad-49eb-bebc-3122b8cc4400; running verified in32actor census; age atcensus=251s (recorded 2026-10-13T06:53:24.343Z, not a fabricated exact start);20min conclude/25min cap measured by real runtime elapsed; LastConsumed=-1; original attempts unchanged. Currentexactindividualintake: Minimal always-visible summary/chart fix; lint/syntax/preservation/routes0. Actual Vitest1 at external generated-catalog guard, ZEROexecuted of7staticcases, NOTpass. Needs ONEcurrent parent catalogroot, then scoped/combined proof; guards unchanged, sourcewritesreleased. Rawlog=web\\logs\\phase5-page-driving-segments.log; attempt1 preserved. SOURCE ONLY external0tests, NOTbehavior/native; currentcatalogroot handles shared startup, no own assertion/type failure waived. Actualreceiptcommit=ed9c62ca12e160481101b7b8ca8b88e239c39a39 pushed=true. |\nnumeric_exit=0"
+      },
+      {
+        "command": "exact final bounded trust/chart/address/range/motion declarations Select-String; no renderer or API execution.",
+        "numericExit": 0,
+        "rawOutput": "exact final bounded trust/chart/address/range/motion declarations Select-String; no renderer or API execution.\nFILE: D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\SegmentsPage.tsx; regex=const (segLoading|lbLoading|ghostLoading)|chart-a11y:no-table|<ChartCard|start_address|end_address|ariaDescription|dataColumns|isAnimationActive|useRangeState|startInstant|endInstantExclusive; match_lines=10\n81:  const segLoading = !noVehicle && segmentsState.status === 'initial';\n146:  const lbLoading = selectedSegmentId != null && leaderboardState.status === 'initial';\n179:  const ghostLoading = racerA != null && racerB != null && ghostState.status === 'initial';\n313:                  key={s.id || `${s.name}-${s.start_address}`}\n429:                    {/* chart-a11y:no-table dense route telemetry trace — variable-length, not meaningfully tabular */}\n430:                    <ChartCard\n502:                      {/* chart-a11y:no-table route-fraction time-gap area — dense trace, not tabular */}\n503:                      <ChartCard\n553:                              isAnimationActive={false}\n607:          {s.start_address} → {s.end_address}\nFILE: D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\SegmentsPage.tsx; regex=useRangeState|startInstant|endInstantExclusive; match_lines=0\nFILE: D:\\repos\\teslasync\\web\\src\\features\\driving\\pages\\SegmentsPage.tsx; regex=ariaDescription|dataColumns; match_lines=0\nFILE: D:\\repos\\teslasync\\web\\src\\api\\hooks\\useSegments.ts; regex=useRangeState|startInstant|endInstantExclusive; match_lines=0\nFILE: D:\\repos\\teslasync\\web\\src\\api\\hooks\\useSegments.ts; regex=ariaDescription|dataColumns; match_lines=0\nFILE: D:\\repos\\teslasync\\web\\src\\components\\charts\\ChartContainer.tsx; motion_guard_regex=useMotionPreference|isAnimationActive|cloneElement; match_lines=0\nFILE: D:\\repos\\teslasync\\web\\src\\components\\charts\\EmbeddedChart.tsx; motion_guard_regex=useMotionPreference|isAnimationActive|cloneElement; match_lines=0\nFILE: D:\\repos\\teslasync\\web\\src\\components\\layout\\layout-reference\\ChartCard.tsx; motion_guard_regex=useMotionPreference|isAnimationActive|cloneElement; match_lines=0\nnumeric_exit=0"
+      }
+    ],
+    "rawLog": "web\\logs\\phase6-qa-driving-segments.log",
+    "failures": [
+      {
+        "command": "rg --files ... (discovery, shell747)",
+        "rawError": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+        "numericExit": 1,
+        "recovery": "Native Select-String; no install; not an application failure."
+      },
+      {
+        "command": "Queue mechanism probe (shell899)",
+        "rawError": "InvalidOperation: You cannot call a method on a null-valued expression.",
+        "numericExit": 1,
+        "recovery": "A non-table matching row caused field parsing failure. Corrected table-only/item-field queries exited0; no source changes."
+      }
+    ],
+    "testCounts": {
+      "failed": null,
+      "skipped": null,
+      "exit": null,
+      "status": "NOTRUN",
+      "passed": null,
+      "discovered": null,
+      "executed": 0
+    },
+    "typeScript": "NOTRUN: user prohibits global npx tsc --noEmit; no pass claim.",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
+    "tests": "NOTRUN",
+    "browser": "NOTRUN",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "pagePASS": "NOTRUN"
+  },
+  "findings": [
+    {
+      "id": "SEG-QA-01",
+      "rule": "measured-zero-as-unknown",
+      "severity": "high",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        61,
+        539,
+        544,
+        713
+      ],
+      "mechanism": "signedDelta returns an em dash for s === 0; the leaderboard also branches zero delta to DASH. Valid equal-time/best-run zero is therefore indistinguishable from missing evidence in leaderboard and gap-axis/tooltip formatting.",
+      "fix": "Keep nonfinite/missing input unknown, but format measured zero explicitly and preserve negative=A ahead / positive=B ahead.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-02",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        765
+      ],
+      "mechanism": "RaceButton accessible name appends literal English ' (selected)' without t(); A/B letters themselves are identity labels, not additional English violations. aria-pressed already carries selection.",
+      "fix": "Use existing localized Attempt A/B labels with actual attempt context; retain visible letters and aria-pressed; remove redundant untranslated selection suffix.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-03",
+      "rule": "missing-canonical-i18n-key",
+      "severity": "medium",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        365
+      ],
+      "mechanism": "t('segments.board.select', 'Select a route segment to view its ranked attempts.') references a key absent from pinned canonical en.json. Read-only key traversal found 39 page keys, 6 brief keys, exactly 1 missing. This is not a runtime catalog-guard incident.",
+      "fix": "Parent canonical-copy owner must add the exact existing fallback under segments.board.select and integrate only normally established generated outputs; do not change catalogs from this claim.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-04",
+      "rule": "mobile-touch-target",
+      "severity": "high",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        348,
+        766
+      ],
+      "mechanism": "Board toggles use size=sm with no mobile minimum; RaceButton overrides sizing with h-7 w-7. Button.tsx:35-42 supplies sm h-9 and no global 44px minimum; :66-73 gives caller classes last precedence. Thus declared targets are 36px and 28px at the standard root, not a measured browser rectangle. One control-family mechanism, not per-row/button counting.",
+      "fix": "Use existing below-md min-h-11/min-w-11 and explicit desktop restoration while keeping adjacent A/B and ordering actions reachable; later mounted touch proof requires authorization.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-05",
+      "rule": "mobile-hidden-measurements",
+      "severity": "high",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        739,
+        745
+      ],
+      "related": {
+        "file": "web\\src\\components\\ui\\DataTable.tsx",
+        "lines": [
+          239,
+          506,
+          733,
+          743,
+          1404
+        ]
+      },
+      "mechanism": "mobileColumns contains only rank/date/race. DataTable maps excluded time/efficiency/delta to hidden md:table-cell; mobilePresentation is not passed and no expansion/detail renderer is supplied. Essential comparison measurements have no declared phone recovery path.",
+      "fix": "Adopt the existing mobile presentation/detail contract with all six fields and identical formatters, or retain an intentional full-column contained-scroll presentation; preserve tableId and A/B actions.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-06",
+      "rule": "listbox-keyboard-contract",
+      "severity": "medium",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        310,
+        585
+      ],
+      "related": {
+        "file": "web\\src\\components\\ui\\SelectableCard.tsx",
+        "lines": [
+          29,
+          35,
+          39
+        ]
+      },
+      "mechanism": "Listbox/options are independent native buttons without caller arrow/Home/End or roving-focus handling. SelectableCard supplies selection ARIA and native button behavior, not a composite keyboard implementation.",
+      "fix": "Prefer a localized group of native selection buttons preserving Tab/Enter/Space, or use the established full listbox keyboard contract. No mounted keyboard failure is claimed.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-07",
+      "rule": "initial-paused-state",
+      "severity": "high",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        81,
+        146,
+        179,
+        292,
+        367,
+        405
+      ],
+      "related": {
+        "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+        "lines": [
+          59,
+          60
+        ]
+      },
+      "mechanism": "Each loading boolean uses DataState status=initial without distinguishing isRefreshBlocked. deriveDataState keeps a no-data paused source initial with isRefreshBlocked=true; StaleRefreshWarning returns null when hasData=false. Initial paused segment/leaderboard/ghost sources therefore have only loading skeleton declarations, not paused explanation/recovery. This is one shared leaf wiring mechanism across three sources, not an observed offline incident.",
+      "fix": "Render explicit paused/deferred initial feedback through existing source/feedback owners, preserving independent sections and retries; do not assert device/vehicle offline from paused state.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-08",
+      "rule": "retained-summary-trust",
+      "severity": "medium",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        423
+      ],
+      "related": {
+        "file": "web\\src\\features\\driving\\components\\operationalbrief-n-z\\DrivingSummaryBrief.tsx",
+        "lines": [
+          28,
+          30,
+          36
+        ]
+      },
+      "mechanism": "DrivingSummaryBrief receives retained only from ghostState.isRefreshBlocked. An ordinary retained refresh error or other stale state with refresh not paused passes retained=false and unavailable=false, so the summary chooses Source available even while its sibling stale warning downgrades trust.",
+      "fix": "Use sourceStatus or accurately derive retained/trust from the same ghost DataState; preserve actual retained metrics and avoid duplicate notices. Do not redefine the shared warning or call retained data fresh.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-09",
+      "rule": "token-bypass-reference-paint",
+      "severity": "low",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        547
+      ],
+      "mechanism": "The zero ReferenceLine uses fixed #94a3b8 rather than an existing theme-aware chart/reference role. This is not static-inline-style: it is a Recharts API paint prop, and no composed contrast failure is inferred.",
+      "fix": "Use the established neutral theme-aware reference/grid role without changing y=0, dashes, opacity or split signs; later light/dark/forced-colors review remains required.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-10",
+      "rule": "date-display-preferences",
+      "severity": "medium",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        38,
+        200,
+        672
+      ],
+      "related": {
+        "file": "web\\src\\lib\\dateFormat.ts",
+        "lines": [
+          75,
+          79
+        ]
+      },
+      "mechanism": "Attempt labels/table dates call the bare formatDateShort helper without locale/timezone options. That helper defaults to browser locale/timezone; useDateFormat.ts:73-87,108-111 provides the existing settings-bound timezone/locale formatter. Thus declared date display does not follow the user/vehicle/UTC preference bridge.",
+      "fix": "Use the existing useDateFormat formatter at both render boundaries, preserve raw started_at and callback/memo dependencies, and retain attempt identity rather than changing timestamps.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-11",
+      "rule": "chart-equivalent-alternative",
+      "severity": "high",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        429,
+        430,
+        502,
+        503
+      ],
+      "related": {
+        "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+        "lines": [
+          779,
+          861,
+          873,
+          890
+        ]
+      },
+      "mechanism": "Both dense-chart no-table comments omit data/dataColumns and ariaDescription. Canonical ChartContainer hides the SVG in forced colors and renders prose/table only when corresponding data is supplied. Localized chart labels explain direction but do not supply equivalent actual trace evidence. One missing alternative contract across both plots, not an invented loss of export capability.",
+      "fix": "Supply a source-backed detailed alternative and/or canonical full-data table through existing ChartCard props, preserving both independent elapsed series and every signed gap sample.",
+      "count": 1
+    },
+    {
+      "id": "SEG-QA-12",
+      "rule": "plot-motion-preference",
+      "severity": "medium",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        480,
+        488,
+        553
+      ],
+      "mechanism": "Elapsed Lines declare animationDuration=700 without preference-controlled isAnimationActive. Gap Area correctly disables animation. Native source scans found zero useMotionPreference/isAnimationActive/cloneElement matches in ChartCard, EmbeddedChart and ChartContainer, so FadeIn/shared button preferences do not establish a plot-animation guard.",
+      "fix": "Use the existing motion preference to suppress elapsed plot animation for reduced motion/low bandwidth, preserving telemetry and hidden-series identities. This is missing source wiring, not an observed OS-animation result.",
+      "count": 1
+    }
+  ],
+  "candidates": [
+    {
+      "id": "SEG-C-01",
+      "topic": "workspace-range-product-intent",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        78
+      ],
+      "related": {
+        "file": "web\\src\\api\\hooks\\useSegments.ts",
+        "lines": [
+          136,
+          150,
+          165
+        ]
+      },
+      "evidence": "Actual route /segments is absent from RANGE_ENABLED_PATHS; route scope declares vehicle=true, range=false. Page/hooks contain zero useRangeState/startInstant/endInstantExclusive references, so neither bound is conveyed. No duplicate local picker is present.",
+      "needs": "Parent must establish whether this inherently repeated-route history page intentionally remains all-history. If dated scope is required, separately claim route registration plus typed hook/list/whole-aggregate bound support for both start and exclusive end. Backend capability is UNKNOWN; do not invent query fields or call the current opt-in omission a confirmed bounds incident."
+    },
+    {
+      "id": "SEG-C-02",
+      "topic": "linear-fraction-and-metre-bounds",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        212,
+        217,
+        218,
+        222,
+        226,
+        233,
+        449,
+        526,
+        615
+      ],
+      "evidence": "Representative distance_m is formatted at the SI render boundary; elapsed and gap plots use numeric normalized 0..1 route-fraction domains, not raw metres or coordinates. Mapping/union-grid code has no explicit finite/[0,1] validation, while the typed hook documents normalized fractions. Exact A/B per-series arrays remain unrounded even though the parent union grid is rounded to 0.2%.",
+      "needs": "Authorized synthetic/source contract evidence must establish finite nonnegative metres and valid normalized fractions, zero-distance denominator policy and extreme inputs. No malformed payload, clipping, sample deletion or server normalization failure is asserted."
+    },
+    {
+      "id": "SEG-C-03",
+      "topic": "response-identity-and-nullability",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        154,
+        155,
+        217,
+        218,
+        240,
+        241
+      ],
+      "evidence": "Positive selected segment/drive keys and distinct A/B enablement are explicit. Returned ghost a/b/series/split_deltas are required by the interface and dereferenced accordingly; winner labels use racerA comparison with B fallback. There is no separate runtime response segment/racer-membership validator.",
+      "needs": "If authorized later, establish response segment/drive coherence and nullable/malformed-response behavior using exact source-owned contracts. Do not manufacture a cross-vehicle disclosure, invalid winner, null-array crash or payload incident."
+    },
+    {
+      "id": "SEG-C-04",
+      "topic": "specialist-efficiency-display-policy",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        54,
+        56,
+        633,
+        695,
+        703
+      ],
+      "evidence": "Precomputed source wh_per_km is retained and labelled Wh/km; fmtInt deliberately rounds this specialist value to whole units despite number-preference subscription. Distance itself uses useUnits. No hook converts raw measurements.",
+      "needs": "Parent/domain owner must decide specialist fixed-unit/precision intent before any display change. Preserve API quotient, energy population and ordering; do not guess backend joule conversions or invent Wh/mi support."
+    },
+    {
+      "id": "SEG-C-05",
+      "topic": "long-label-address-disclosure",
+      "file": "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "lines": [
+        595,
+        606,
+        607
+      ],
+      "evidence": "Route-card name and start/end address text use truncate; full source text remains in DOM/payload and the localized card name carries the full segment name, but no explicit full-address disclosure is declared.",
+      "needs": "Later authorized synthetic long-label/mobile/RTL/200%-text mounted evidence should check readable full content and unclipped focus. No real location/route/address data was accessed."
+    }
+  ],
+  "queueDedup": {
+    "method": "Whole queue text was read with native bounded projections; exact page/objective and item/file-field/literal mechanism checks, aggregate history excluded. Broad historical matches are not proposed fix duplicates.",
+    "exactPageExisting": [
+      "audit-page-124 accepted history",
+      "phase5-page-driving-segments accepted migration",
+      "this phase6-qa-driving-segments reserved report"
+    ],
+    "exactMechanismFixRowsFound": 0,
+    "literalCounts": {
+      "segments:leaderboard": 0,
+      "RaceButton": 0,
+      "segments.board.select": 0,
+      "signedDelta": 1
+    },
+    "unrelatedMatches": "signedDelta belongs to Battery Cells QA; other ghost/Wh-per-km/history matches belong to Grok fixture/FleetCompare or different-source trust fixes. StaleRefreshWarning accepted shared source is preserved; leaf initial-paused wiring does not require redoing it.",
+    "needs": "Parent must serialize page followups under one exact page/test lease or split released leaf scopes, not add a second QA/migration objective."
+  },
+  "preciseNeeds": [
+    {
+      "ids": [
+        "SEG-QA-01",
+        "SEG-QA-07",
+        "SEG-QA-08"
+      ],
+      "owner": "parent-queued narrow page trust/numeric repair",
+      "need": "Measured zero, initial paused recovery, summary stale trust; preserve three independent queries and all retained content.",
+      "files": [
+        "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx"
+      ],
+      "priority": 1
+    },
+    {
+      "ids": [
+        "SEG-QA-04",
+        "SEG-QA-05",
+        "SEG-QA-06",
+        "SEG-QA-11"
+      ],
+      "owner": "parent-queued page mobile/a11y repair",
+      "need": "Existing mobile/detail and chart-alternative APIs; reachable targets; correct composite semantics. No new shared root assumed; serialize overlapping page lease.",
+      "files": [
+        "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx"
+      ],
+      "priority": 1
+    },
+    {
+      "ids": [
+        "SEG-QA-02",
+        "SEG-QA-09",
+        "SEG-QA-10",
+        "SEG-QA-12"
+      ],
+      "owner": "parent-queued page presentation repair",
+      "need": "Localized identity names, neutral reference token, existing settings-bound dates and motion preference; no backend/unit rewriting.",
+      "files": [
+        "web\\src\\features\\driving\\pages\\SegmentsPage.tsx",
+        "web\\src\\features\\driving\\pages\\SegmentsPage.test.tsx"
+      ],
+      "priority": 2
+    },
+    {
+      "ids": [
+        "SEG-QA-03"
+      ],
+      "owner": "parent canonical-copy integration",
+      "need": "Exactly segments.board.select with existing fallback; normal generated output scope must be established by owner, not guessed or hand-edited.",
+      "files": [
+        "web\\src\\i18n\\en.json"
+      ],
+      "priority": 2
+    },
+    {
+      "ids": [
+        "SEG-C-01",
+        "SEG-C-02",
+        "SEG-C-03",
+        "SEG-C-04",
+        "SEG-C-05"
+      ],
+      "owner": "parent product/source contract or later authorized mounted proof",
+      "need": "Resolve range intent/actual both-bound capability, extreme/schema contracts, specialist precision and long-content presentation before assigning implementation.",
+      "files": [],
+      "priority": 3
+    }
+  ],
+  "limits": [
+    "Source-only report, not native/runtime/visual/page/application acceptance. No real route/coordinates/location/identity/vehicle/device data or API calls, production mutations, browser/screenshots, tests/lint/build/globalTSC, Git, subagents, installs, servers, Docker, custom helpers/extensions or heartbeats.",
+    "Parent-owned preview5173 is inherited metadata only; no server probe/launch. No browser lock/grant. Installed Edge channel msedge only if explicitly authorized later; no downloads.",
+    "Tests/catalog/backend/config/queue/handoff/source remained readonly in this claim. No backend routes/handlers/data were inspected; hook comments are not proof of backend completeness, authorization, units or date-bound support.",
+    "Dependencies were read only at necessary cited ranges/patterns; full current page/hook/direct brief and required full instruction/contracts were read. No whole-repository audit or original immutable preservation gate is claimed.",
+    "Historical Phase0/Phase5 receipts are not fresh gates; preserved current chart-shell fix does not close unrelated QA findings.",
+    "Queue changed concurrently under parent authority; exact captured queue rows and SHA snapshots have different timestamps. Static source pins are stable; no Git/working-tree ownership inference was used."
+  ],
+  "release": {
+    "report": "docs\\frontend-audits\\phase6-qa-driving-segments.json",
+    "log": "web\\logs\\phase6-qa-driving-segments.log",
+    "scope": "Report, ignored raw log and command scope released by this finalization; no later writes. Source/tests/catalog/backend/config/queue/handoff remain readonly.",
+    "sourceWriteRelease": "No source write claim held or used.",
+    "commandRelease": "No persistent service, background bounded command or helper started; all native probes completed.",
+    "browserLock": "NONE",
+    "artifacts": "Raw ignored log retained; JSON parse and SHA256 pins checked in final receipt.",
+    "completedUTC": "2026-10-14T01:25:58.3846784Z"
+  },
+  "finalValidation": {
+    "utc": "2026-10-14T01:25:58.3846784Z",
+    "jsonParse": "PASS: actual ConvertFrom-Json, numeric exit0",
+    "itemAttempt": "phase6-qa-driving-segments attempt1",
+    "confirmedMechanisms": 12,
+    "candidateMechanisms": 5,
+    "actionGroups": 13,
+    "staticPinsRechecked": 32,
+    "staticPinDrift": 0,
+    "sourceFilesChanged": 0,
+    "applicationGates": "Native/runtime/pagePASS/tests/lint/build/globalTSC NOTRUN",
+    "rawFinalReceipt": "web\\logs\\phase6-qa-driving-segments.log",
+    "artifactHash": "Final exact report SHA256 is retained in raw final receipt (not recursively embedded)."
+  }
+}
