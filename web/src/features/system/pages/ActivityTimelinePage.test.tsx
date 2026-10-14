@@ -28,12 +28,22 @@ import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityItem } from '@/types/activity';
 import { Button } from '@/components/ui';
+import { deriveDataState } from '@/api/dataState';
+import { useRangeState } from '@/hooks/useRangeState';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
   vehicles: [{ id: 7 }] as Array<{ id: number }>,
+  fleetResolved: true,
+  fleetError: null as unknown,
+  fleetFetching: false,
+  fleetFetchStatus: 'idle' as 'fetching' | 'paused' | 'idle',
+  retryFleet: vi.fn(),
   useActivityMock: vi.fn(),
+  rangeMock: vi.fn(),
+  useActualRange: false,
   refetch: vi.fn(),
   setRange: vi.fn(),
   asOf: null as string | null,
@@ -44,6 +54,7 @@ const h = vi.hoisted(() => ({
     end: '2026-01-31',
     startInstant: '2026-01-01T00:00:00.000Z',
     endInstantExclusive: '2026-02-01T00:00:00.000Z',
+    timezone: 'UTC',
   },
 }));
 
@@ -70,7 +81,17 @@ vi.mock('@/hooks/useSettings', async importOriginal => ({
 }));
 
 vi.mock('@/hooks/useSelectedVehicle', () => ({
-  useSelectedVehicle: () => ({ vehicleId: h.vehicleId, vehicles: h.vehicles }),
+  useSelectedVehicle: () => ({
+    vehicleId: h.vehicleId,
+    vehicles: h.vehicles,
+    vehiclesState: deriveDataState({
+      data: h.fleetResolved ? h.vehicles : undefined,
+      error: h.fleetError,
+      isFetching: h.fleetFetching,
+      fetchStatus: h.fleetFetchStatus,
+      refetch: h.retryFleet,
+    }, { unavailable: h.fleetResolved && h.vehicles.length === 0 }),
+  }),
 }));
 
 vi.mock('@/lib/timezone', () => ({
@@ -85,12 +106,14 @@ vi.mock('@/hooks/useUnits', () => ({
   }),
 }));
 
-vi.mock('@/hooks/useRangeState', () => ({
-  useRangeState: () => ({
-    ...h.range,
-    setRange: h.setRange,
-  }),
-}));
+vi.mock('@/hooks/useRangeState', async importOriginal => {
+  const actual = await importOriginal<typeof import('@/hooks/useRangeState')>();
+  return {
+    ...actual,
+    useRangeState: (options?: Parameters<typeof actual.useRangeState>[0]) =>
+      h.useActualRange ? actual.useRangeState(options) : h.rangeMock(options),
+  };
+});
 
 vi.mock('@/hooks/useOperationalMode', () => ({
   useOperationalMode: () => ({
@@ -174,11 +197,37 @@ function renderPage() {
   );
 }
 
+function SharedRangeProbe() {
+  const range = useRangeState({ enableCompare: true });
+  return (
+    <>
+      <output data-testid="shared-range-authority">{JSON.stringify({
+        start: range.start,
+        end: range.end,
+        startInstant: range.startInstant,
+        endInstantExclusive: range.endInstantExclusive,
+        timezone: range.timezone,
+      })}</output>
+      <Button type="button" onClick={() => range.setRange({ start: '2026-11-01', end: '2026-11-01' }, 'custom')}>
+        Apply shared custom window
+      </Button>
+    </>
+  );
+}
+
 beforeEach(() => {
   h.vehicleId = 7;
   h.vehicles = [{ id: 7 }];
+  h.fleetResolved = true;
+  h.fleetError = null;
+  h.fleetFetching = false;
+  h.fleetFetchStatus = 'idle';
+  h.retryFleet.mockReset();
   h.refetch.mockReset();
   h.setRange.mockReset();
+  h.rangeMock.mockReset();
+  h.rangeMock.mockImplementation(() => ({ ...h.range, setRange: h.setRange }));
+  h.useActualRange = false;
   h.useActivityMock.mockReset();
   h.asOf = null;
   h.downloadCsv.mockReset();
@@ -188,6 +237,7 @@ beforeEach(() => {
     end: '2026-01-31',
     startInstant: '2026-01-01T00:00:00.000Z',
     endInstantExclusive: '2026-02-01T00:00:00.000Z',
+    timezone: 'UTC',
   };
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
@@ -195,11 +245,80 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.restoreAllMocks();
+  localStorage.removeItem('teslasync.date-range.v2');
+  localStorage.removeItem('activity.timeline.range');
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
 });
 
 describe('ActivityTimelinePage preferences', () => {
+  it('uses the shared effective calendar timezone for feed grouping, page-day counts and export bounds', () => {
+    h.range = {
+      start: '2026-03-08',
+      end: '2026-03-08',
+      ...calendarRangeToInstants({
+        startDate: '2026-03-08',
+        endDate: '2026-03-08',
+        timezone: 'America/New_York',
+      }),
+      timezone: 'America/New_York',
+    };
+    const items = [
+      makeItem({ occurred_at: '2026-03-08T05:30:00Z' }),
+      makeItem({ id: 'drives:2', source_id: 2, occurred_at: '2026-03-08T08:30:00Z' }),
+    ];
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items, total: 2, limit: 50, offset: 0, generated_at: '' },
+    }));
+    renderPage();
+    expect(h.rangeMock).toHaveBeenCalledWith({ persistKey: 'activity.timeline.range' });
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      start: '2026-03-08T05:00:00.000Z',
+      end: '2026-03-09T04:00:00.000Z',
+    }));
+    // Both events are Sunday in the shared zone, but straddle Saturday/Sunday in the vehicle zone.
+    expect(screen.getByRole('heading', { level: 3, name: /March 8, 2026/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: /March 7, 2026/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Days on this page1');
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenCalledWith(
+      'activity-2026-03-08T05-00-00.000Z-2026-03-09T04-00-00.000Z-page-1', items,
+    );
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+  });
+
+  it('re-buckets events in a changed shared timezone without replacing the exact rolling instants', () => {
+    h.range.startInstant = '2026-01-15T12:34:00.000Z';
+    h.range.endInstantExclusive = '2026-01-16T12:34:00.000Z';
+    const items = [
+      makeItem({ occurred_at: '2026-01-15T23:30:00Z' }),
+      makeItem({ id: 'drives:2', source_id: 2, occurred_at: '2026-01-16T00:30:00Z' }),
+    ];
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items, total: 75, limit: 50, offset: 0, generated_at: '' },
+    }));
+    const view = renderPage();
+    expect(screen.getByRole('heading', { level: 3, name: /January 15, 2026/ })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: /January 16, 2026/ })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^older$/i }));
+    h.range.timezone = 'America/Los_Angeles';
+    view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
+    expect(screen.getByRole('heading', { level: 3, name: /January 15, 2026/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 3, name: /January 16, 2026/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Days on this page1');
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      start: '2026-01-15T12:34:00.000Z',
+      end: '2026-01-16T12:34:00.000Z',
+      offset: 0,
+    }));
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenCalledWith(
+      'activity-2026-01-15T12-34-00.000Z-2026-01-16T12-34-00.000Z-page-1', items,
+    );
+  });
+
   it('reactively localizes page ordinals without changing numeric query scope or precision', () => {
     h.useActivityMock.mockImplementation(({ offset }: { offset: number }) =>
       mockQueryResult({
@@ -292,6 +411,235 @@ describe('ActivityTimelinePage preferences', () => {
     expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
       start: h.range.startInstant, end: h.range.endInstantExclusive,
     }));
+  });
+});
+
+describe('ActivityTimelinePage actual shared range authority', () => {
+  it.each([
+    {
+      label: 'spring DST',
+      timezone: 'America/New_York',
+      start: '2026-03-08',
+      end: '2026-03-08',
+      startInstant: '2026-03-08T05:00:00.000Z',
+      endInstantExclusive: '2026-03-09T04:00:00.000Z',
+    },
+    {
+      label: 'fall DST',
+      timezone: 'America/New_York',
+      start: '2026-11-01',
+      end: '2026-11-01',
+      startInstant: '2026-11-01T04:00:00.000Z',
+      endInstantExclusive: '2026-11-02T05:00:00.000Z',
+    },
+    {
+      label: 'custom non-hour offset',
+      timezone: 'Asia/Kathmandu',
+      start: '2026-01-01',
+      end: '2026-01-02',
+      startInstant: '2025-12-31T18:15:00.000Z',
+      endInstantExclusive: '2026-01-02T18:15:00.000Z',
+    },
+    {
+      label: 'UTC fallback',
+      timezone: '',
+      start: '2026-01-01',
+      end: '2026-01-01',
+      startInstant: '2026-01-01T00:00:00.000Z',
+      endInstantExclusive: '2026-01-02T00:00:00.000Z',
+    },
+  ])('uses the same $label half-open instants as the header range hook, not the vehicle timezone', scope => {
+    h.useActualRange = true;
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolvedOptions.call(this), timeZone: scope.timezone };
+    });
+    const item = makeItem({ occurred_at: scope.startInstant });
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 1, limit: 50, offset: 0, generated_at: '' },
+    }));
+    render(
+      <MemoryRouter initialEntries={[`/activity?from=${scope.start}&to=${scope.end}&time_scope=custom`]}>
+        <SharedRangeProbe />
+        <ActivityTimelinePage />
+      </MemoryRouter>,
+    );
+    expect(JSON.parse(screen.getByTestId('shared-range-authority').textContent ?? '{}')).toEqual({
+      start: scope.start,
+      end: scope.end,
+      startInstant: scope.startInstant,
+      endInstantExclusive: scope.endInstantExclusive,
+      timezone: scope.timezone || 'UTC',
+    });
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      start: scope.startInstant,
+      end: scope.endInstantExclusive,
+      vehicle_id: 7,
+    }));
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenCalledWith(
+      `activity-${scope.startInstant.replace(/:/g, '-')}-${scope.endInstantExclusive.replace(/:/g, '-')}-page-1`, [item],
+    );
+    expect(screen.queryByTestId('range-picker')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('vehicle-select')).not.toBeInTheDocument();
+  });
+
+  it('inherits a committed shared custom range and resets paging while ignoring the old page-specific preference', () => {
+    h.useActualRange = true;
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolvedOptions.call(this), timeZone: 'America/New_York' };
+    });
+    localStorage.setItem('activity.timeline.range', JSON.stringify({
+      version: 2, start: '2024-01-01', end: '2024-12-31',
+    }));
+    localStorage.setItem('teslasync.date-range.v2', JSON.stringify({
+      version: 2, start: '2026-03-08', end: '2026-03-08',
+    }));
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [makeItem()], total: 75, limit: 50, offset: 0, generated_at: '' },
+    }));
+    render(
+      <MemoryRouter initialEntries={['/activity']}>
+        <SharedRangeProbe />
+        <ActivityTimelinePage />
+      </MemoryRouter>,
+    );
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      start: '2026-03-08T05:00:00.000Z',
+      end: '2026-03-09T04:00:00.000Z',
+    }));
+    fireEvent.click(screen.getByRole('button', { name: /^older$/i }));
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 50 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Apply shared custom window' }));
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      start: '2026-11-01T04:00:00.000Z',
+      end: '2026-11-02T05:00:00.000Z',
+      offset: 0,
+    }));
+    expect(JSON.parse(screen.getByTestId('shared-range-authority').textContent ?? '{}')).toEqual(expect.objectContaining({
+      start: '2026-11-01', end: '2026-11-01', timezone: 'America/New_York',
+    }));
+    expect(h.setRange).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { preset: '24h', start: '2026-03-07T16:34:56.789Z' },
+    { preset: 'live', start: '2026-03-08T16:29:56.789Z' },
+  ])('preserves the exact elapsed $preset window across DST instead of reinterpreting it as calendar midnights', ({ preset, start }) => {
+    h.useActualRange = true;
+    const end = '2026-03-08T16:34:56.789Z';
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse(end));
+    const resolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
+    vi.spyOn(Intl.DateTimeFormat.prototype, 'resolvedOptions').mockImplementation(function (this: Intl.DateTimeFormat) {
+      return { ...resolvedOptions.call(this), timeZone: 'America/New_York' };
+    });
+    const item = makeItem({ occurred_at: start });
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 1, limit: 50, offset: 0, generated_at: '' },
+    }));
+    render(
+      <MemoryRouter initialEntries={[`/activity?time_scope=${preset}`]}>
+        <SharedRangeProbe />
+        <ActivityTimelinePage />
+      </MemoryRouter>,
+    );
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ start, end }));
+    expect(JSON.parse(screen.getByTestId('shared-range-authority').textContent ?? '{}')).toEqual(expect.objectContaining({
+      startInstant: start, endInstantExclusive: end, timezone: 'America/New_York',
+    }));
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenCalledWith(
+      `activity-${start.replace(/:/g, '-')}-${end.replace(/:/g, '-')}-page-1`, [item],
+    );
+  });
+});
+
+describe('ActivityTimelinePage fleet prerequisites', () => {
+  it.each(['fetching', 'paused'] as const)('keeps %s unresolved fleet on the loading shells instead of setup or measured zero', fetchStatus => {
+    h.vehicles = [];
+    h.fleetResolved = false;
+    h.fleetFetchStatus = fetchStatus;
+    h.useActivityMock.mockReturnValue(mockQueryResult({ data: undefined, isPending: true }));
+    renderPage();
+    expect(screen.queryByTestId('no-vehicle-selected')).not.toBeInTheDocument();
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }));
+    expect(within(screen.getByRole('region', { name: 'Activity overview' })).getAllByText('Loading source')).toHaveLength(2);
+    expect(screen.queryByText(/no activity in this window/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/showing 0–0 of 0 events/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
+    expect(screen.getByText(/exports include only the loaded page/i)).toBeInTheDocument();
+    expect(screen.getByText(/dated service records will join this timeline/i)).toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
+  });
+
+  it('retries the actual initial fleet failure and recovers without calling the disabled activity request', () => {
+    h.vehicles = [];
+    h.fleetResolved = false;
+    h.fleetError = new Error('fleet unavailable');
+    h.useActivityMock.mockReturnValue(mockQueryResult({ data: undefined, isPending: true }));
+    const view = renderPage();
+    expect(screen.queryByTestId('no-vehicle-selected')).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range—');
+    expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+    expect(h.retryFleet).toHaveBeenCalledTimes(1);
+    expect(h.refetch).not.toHaveBeenCalled();
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }));
+
+    h.fleetResolved = true;
+    h.fleetError = null;
+    h.vehicles = [{ id: 7 }];
+    const item = makeItem();
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 1, limit: 50, offset: 0, generated_at: '' },
+    }));
+    view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: true, vehicle_id: 7 }));
+    expect(screen.getByText('12 min')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
+  });
+
+  it.each(['failed', 'paused'] as const)('retains known fleet and activity scope during a %s fleet refresh and routes recovery to the prerequisite', status => {
+    h.fleetError = status === 'failed' ? new Error('fleet refresh failed') : null;
+    h.fleetFetchStatus = status === 'paused' ? 'paused' : 'idle';
+    const item = makeItem({ duration_s: 120, energy_added_wh: 2500 });
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 75, limit: 50, offset: 0, generated_at: '' },
+    }));
+    const view = renderPage();
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: true, vehicle_id: 7 }));
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Vehicle registry may be out of date');
+    expect(screen.getByRole('region', { name: 'Activity overview' })).toHaveTextContent('Events in selected range75');
+    expect(screen.getByRole('link', { name: /0\.0 h · 2\.5 kWh · 12 min/ })).toHaveAttribute('href', '/drives/1');
+    expect(screen.getByRole('button', { name: /^older$/i })).toBeEnabled();
+    expect(screen.getByTestId('activity-export-trigger')).toBeEnabled();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: /^refresh$/i }));
+    expect(h.retryFleet).toHaveBeenCalledTimes(1);
+    expect(h.refetch).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenCalledWith(
+      'activity-2026-01-01T00-00-00.000Z-2026-02-01T00-00-00.000Z-page-1', [item],
+    );
+
+    h.fleetError = null;
+    h.fleetFetchStatus = 'idle';
+    view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('0.0 h · 2.5 kWh · 12 min')).toBeInTheDocument();
+  });
+
+  it('does not turn a retained empty fleet refresh failure into authoritative setup guidance', () => {
+    h.vehicles = [];
+    h.fleetError = new Error('fleet refresh failed');
+    h.useActivityMock.mockReturnValue(mockQueryResult({ data: undefined, isPending: true }));
+    renderPage();
+    expect(screen.queryByTestId('no-vehicle-selected')).not.toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ enabled: false }));
   });
 });
 

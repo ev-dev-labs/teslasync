@@ -13,7 +13,6 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useActivity } from '@/api/hooks/useActivity';
 import { ListExportMenu } from '@/components/forms';
@@ -75,10 +74,9 @@ export default function ActivityTimelinePage() {
   const { fmtInt } = useNumberFormatting();
   usePageTitle(t('activity.timeline.title', 'Activity timeline'));
 
-  const { vehicleId, vehicles } = useSelectedVehicle();
+  const { vehicleId, vehicles, vehiclesState } = useSelectedVehicle();
   const operationalMode = useOperationalMode();
-  const tz = useTimezone('vehicle');
-  const { startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, timezone: tz } = useRangeState({
     persistKey: 'activity.timeline.range',
   });
   const [kinds, setKinds] = useState<ActivityKind[]>([]);
@@ -92,7 +90,7 @@ export default function ActivityTimelinePage() {
   // Any scope change invalidates the current page position.
   useEffect(() => {
     setOffset(0);
-  }, [vehicleId, activityWindow.start, activityWindow.end, kinds]);
+  }, [vehicleId, activityWindow.start, activityWindow.end, tz, kinds]);
 
   const query = useActivity({
     vehicle_id: vehicleId ?? undefined,
@@ -101,17 +99,18 @@ export default function ActivityTimelinePage() {
     kind: kinds.length > 0 ? kinds : undefined,
     limit: PAGE_LIMIT,
     offset,
-    enabled: vehicles.length > 0,
+    enabled: vehiclesState.hasData && vehicles.length > 0,
   });
   const { data, refetch } = query;
-  const state = useDataState(query, { provenance: 'historical' });
+  const activityState = useDataState(query, { provenance: 'historical' });
+  const state = vehiclesState.hasData ? activityState : vehiclesState;
   const isLoading = state.status === 'initial';
   const error = state.fatalError;
   const isError = !!error;
   const items = data?.items ?? [];
   const total = data?.total ?? 0;
 
-  if (vehicles.length === 0) {
+  if (vehiclesState.status === 'unavailable' && vehicles.length === 0) {
     return (
       <NoVehicleSelected
         pageTitle={t('activity.timeline.title', 'Activity timeline')}
@@ -154,7 +153,11 @@ export default function ActivityTimelinePage() {
         />
       }
     >
-      <StaleRefreshWarning state={state} />
+      <StaleRefreshWarning
+        state={vehiclesState}
+        label={t('dataSources.labels.vehicleRegistry', 'Vehicle registry')}
+      />
+      <StaleRefreshWarning state={activityState} />
       <FadeIn>
         <ActivityOverview
           items={items}
@@ -178,7 +181,10 @@ export default function ActivityTimelinePage() {
           isLoading={isLoading}
           isError={isError}
           error={error}
-          onRetry={() => void refetch()}
+          onRetry={() => {
+            if (!vehiclesState.hasData) vehiclesState.retry?.();
+            else void refetch();
+          }}
           timezone={tz}
         />
       </FadeIn>
