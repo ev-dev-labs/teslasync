@@ -21,6 +21,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { chartTokens, typography } from '@/lib/tokens';
 import { formatDateShort, formatDateTime } from '@/lib/dateFormat';
 import { useTimezone } from '@/lib/timezone';
@@ -46,6 +47,7 @@ const GRADE_DEFAULT: Record<ReliabilityGrade, string> = {
 
 export default function CommandReliabilityPage() {
   const { t, i18n } = useTranslation();
+  const { fmtInt, fmtNumber } = useNumberFormatting();
   const [chartWidth, setChartWidth] = useState(0);
   usePageTitle(t('commandReliability.title', 'Command reliability'));
 
@@ -85,6 +87,13 @@ export default function CommandReliabilityPage() {
     () => chartData.map(({ grade, ...rest }) => ({ ...rest, grade: String(grade) })),
     [chartData],
   );
+  const displayData = useMemo(
+    () => chartData.map((row) => ({
+      ...row,
+      grade: t(`commandReliability.grade.${row.grade}`, GRADE_DEFAULT[row.grade]),
+    })),
+    [chartData, t],
+  );
   const operationalMetrics = useOperationalMetrics(
     commandReliabilityMetrics(historyQuery.data != null ? summary : null, t),
   );
@@ -99,6 +108,8 @@ export default function CommandReliabilityPage() {
   const dateOptions = { tz: timeZone, locale: i18n.language };
   const chartHeight = Math.max(380, chartData.length * 32 + 64);
   const mobileChartHeight = Math.max(320, chartData.length * 32 + 64);
+  const formatRate = (value: unknown) => typeof value === 'number' && Number.isFinite(value)
+    ? fmtNumber(value, Number.isInteger(value) ? 0 : 1) : '—';
 
   return (
     <PageLayout
@@ -167,14 +178,14 @@ export default function CommandReliabilityPage() {
               ? t('common.unknown', 'Unknown') : undefined}
             height={chartHeight}
             mobileHeight={mobileChartHeight}
-            data={exportData}
+            data={displayData}
             exportData={exportData}
             dataColumns={[
               { key: 'command', label: t('commandReliability.col.command', 'Command') },
-              { key: 'lower', label: t('commandReliability.col.lower', 'Lower bound (%)') },
-              { key: 'naive', label: t('commandReliability.col.naive', 'Raw rate (%)') },
-              { key: 'upper', label: t('commandReliability.col.upper', 'Upper bound (%)') },
-              { key: 'attempts', label: t('commandReliability.col.attempts', 'Attempts') },
+              { key: 'lower', label: t('commandReliability.col.lower', 'Lower bound (%)'), format: formatRate },
+              { key: 'naive', label: t('commandReliability.col.naive', 'Raw rate (%)'), format: formatRate },
+              { key: 'upper', label: t('commandReliability.col.upper', 'Upper bound (%)'), format: formatRate },
+              { key: 'attempts', label: t('commandReliability.col.attempts', 'Attempts'), kind: 'count' },
               { key: 'grade', label: t('commandReliability.col.grade', 'Grade') },
             ]}
           >
@@ -189,6 +200,7 @@ export default function CommandReliabilityPage() {
                   type="number"
                   domain={[0, 100]}
                   unit="%"
+                  tickFormatter={(value: number) => fmtInt(value)}
                   tick={{ fill: chartTokens.axisStroke, fontSize: 12 }}
                 />
                 <YAxis
@@ -202,7 +214,7 @@ export default function CommandReliabilityPage() {
                   }}
                   tick={{ fill: chartTokens.axisStroke, fontSize: 12 }}
                 />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip content={<ChartTooltip valueFormatter={formatRate} />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
                 <ReferenceLine x={95} stroke={chartTokens.axisStroke} strokeDasharray="4 4" />
                 <Bar
@@ -267,8 +279,8 @@ export default function CommandReliabilityPage() {
                     </Text>
                     <Text as="dd" variant="bodySm" className="min-w-0 break-words">
                       {t('commandReliability.outcomeValue', '{{ok}} ok · {{bad}} failed', {
-                        ok: c.success,
-                        bad: c.failure,
+                        ok: fmtInt(c.success),
+                        bad: fmtInt(c.failure),
                       })}
                     </Text>
                     <Text as="dt" variant="caption">
@@ -276,7 +288,7 @@ export default function CommandReliabilityPage() {
                     </Text>
                     <Text as="dd" variant="bodySm" className="min-w-0 break-words">
                       {c.success + c.failure > 0
-                        ? `${Math.round(c.interval.lower * 100)}–${Math.round(c.interval.upper * 100)}%`
+                        ? `${fmtInt(Math.round(c.interval.lower * 100))}–${fmtInt(Math.round(c.interval.upper * 100))}%`
                         : t('common.unknown', 'Unknown')}
                     </Text>
                     <Text as="dt" variant="caption">
@@ -284,8 +296,8 @@ export default function CommandReliabilityPage() {
                     </Text>
                     <Text as="dd" variant="bodySm" className="min-w-0 break-words">
                       {t('commandReliability.effortValue', '{{n}} · {{retried}} retried', {
-                        n: Math.round(c.attemptsPerIntent * 100) / 100,
-                        retried: c.retriedIntents,
+                        n: fmtNumber(c.attemptsPerIntent, Math.min(2, String(c.attemptsPerIntent).split('.')[1]?.length ?? 0)),
+                        retried: fmtInt(c.retriedIntents),
                       })}
                     </Text>
                     <Text as="dt" variant="caption">
@@ -302,7 +314,7 @@ export default function CommandReliabilityPage() {
                         <Text as="dd" variant="bodySm" className="min-w-0 break-words text-[var(--semantic-danger)] sm:col-span-3">
                           {t('commandReliability.topErrorValue', '{{msg}} (×{{n}})', {
                             msg: c.topError,
-                            n: c.topErrorCount,
+                            n: fmtInt(c.topErrorCount),
                           })}
                         </Text>
                       </>

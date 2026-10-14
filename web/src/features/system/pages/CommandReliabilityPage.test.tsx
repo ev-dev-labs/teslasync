@@ -1,9 +1,14 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
+
+const translationFixture = vi.hoisted(() => ({
+  language: 'en',
+  labels: {} as Record<string, string>,
+}));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -11,11 +16,11 @@ vi.mock('react-i18next', async () => {
     ...actual,
     useTranslation: () => ({
       t: (key: string, fallback?: unknown, vars?: Record<string, unknown>) => {
-        const template = typeof fallback === 'string' ? fallback : key;
+        const template = translationFixture.labels[key] ?? (typeof fallback === 'string' ? fallback : key);
         return template.replace(/{{(\w+)}}/g, (match, name: string) =>
           vars && name in vars ? String(vars[name]) : match);
       },
-      i18n: { language: 'en', changeLanguage: vi.fn() },
+      i18n: { language: translationFixture.language, changeLanguage: vi.fn() },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   };
@@ -35,9 +40,15 @@ vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
   return { ...actual, useTimezone: () => 'UTC' };
 });
+vi.mock('@/lib/csvExport', async () => {
+  const actual = await vi.importActual<typeof import('@/lib/csvExport')>('@/lib/csvExport');
+  return { ...actual, downloadCSV: vi.fn() };
+});
 
 import { useCommandReliabilityHistory } from '@/api/hooks/useCommands';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { downloadCSV } from '@/lib/csvExport';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import CommandReliabilityPage from './CommandReliabilityPage';
 
 const mockHistory = useCommandReliabilityHistory as unknown as ReturnType<typeof vi.fn>;
@@ -86,8 +97,17 @@ function stat(label: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  translationFixture.language = 'en';
+  translationFixture.labels = {};
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   mockVehicle.mockReturnValue({ vehicleId: 7 });
   mockHistory.mockReturnValue(query([]));
+});
+
+afterEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
 });
 
 describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
@@ -176,7 +196,7 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
       const failure = within(table).getByText('Lock').closest('tr');
       if (!pending || !failure) throw new Error('Missing original command rows');
       expect(within(pending).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
-        'Wake up', '—', '—', '—', '1', 'unproven',
+        'Wake up', '—', '—', '—', '1', 'Not enough attempts',
       ]);
       expect(within(failure).getAllByRole('cell')[2]).toHaveTextContent('0');
       const detail = screen.getAllByText('Wake up').find((node) => node.closest('li'))?.closest('li');
@@ -185,6 +205,100 @@ describe('CommandReliabilityPage — genuine summary OperationalBrief', () => {
       expect(interval.tagName).toBe('DT');
       expect(interval.nextElementSibling).toHaveTextContent('Unknown');
       expect(interval.nextElementSibling?.tagName).toBe('DD');
+    });
+
+    describe('NEED02 translated grades and locale display', () => {
+      it.each([
+        ['excellent', 40, 40, 'Hervorragend'],
+        ['good', 10, 10, 'Gut'],
+        ['flaky', 8, 7, 'Wechselhaft'],
+        ['unreliable', 5, 0, 'Unzuverlässig'],
+        ['unproven', 1, 1, 'Zu wenige Versuche'],
+      ] as const)('translates %s in both the six-column fallback and detail badge without changing the CSV grade', (grade, total, successes, label) => {
+        // Controlled translation fixture proves lookup, not canonical key presence.
+        translationFixture.language = 'de';
+        translationFixture.labels = { [`commandReliability.grade.${grade}`]: label };
+        const data = Array.from({ length: total }, (_, index) => ({
+          id: index + 1, vehicle_id: 7, command: 'lock', params: '',
+          status: index < successes ? 'success' : 'failed', error: '',
+          created_at: new Date(Date.UTC(2026, 0, 15, 0, index)).toISOString(),
+        }));
+        const original = structuredClone(data);
+        mockHistory.mockReturnValue(query(data));
+        renderPage();
+        const table = screen.getByRole('table');
+        expect(within(table).getAllByRole('columnheader')).toHaveLength(6);
+        expect(within(table).getByText(label)).toBeInTheDocument();
+        const detail = screen.getAllByText('Lock').find((node) => node.closest('li'))?.closest('li');
+        if (!detail) throw new Error('Missing original command detail');
+        expect(within(detail).getByText(label)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+        expect(downloadCSV).toHaveBeenCalledOnce();
+        const csv = vi.mocked(downloadCSV).mock.calls[0]?.[1];
+        expect(csv).toContain('command,command_id,lower,naive,upper,attempts,grade');
+        expect(csv).toContain(`,${total},${grade}`);
+        expect(csv).not.toContain(label);
+        expect(data).toEqual(original);
+      });
+
+      it('localizes confidence, retry effort and counts while exporting raw decimals and full colliding identities', () => {
+        setGlobalLocale('de-DE');
+        const first = 'command_prefix_shares_twenty_four_chars_alpha';
+        const second = 'command_prefix_shares_twenty_four_chars_beta';
+        const data = [
+          { id: 81, vehicle_id: 7, command: first, params: '', status: 'success', error: '', created_at: '2026-01-15T12:00:00Z' },
+          { id: 82, vehicle_id: 7, command: first, params: '', status: 'failed', error: 'Vehicle offline', created_at: '2026-01-15T12:01:00Z' },
+          { id: 83, vehicle_id: 7, command: first, params: '', status: 'success', error: '', created_at: '2026-01-15T12:10:00Z' },
+          ...Array.from({ length: 1234 }, (_, index) => ({
+            id: index + 100, vehicle_id: 7, command: second, params: '',
+            status: 'failed', error: 'Vehicle offline',
+            created_at: new Date(Date.UTC(2026, 0, 15, 13, index)).toISOString(),
+          })),
+        ];
+        const original = structuredClone(data);
+        mockHistory.mockReturnValue(query(data));
+        renderPage();
+        const table = screen.getByRole('table');
+        const row = within(table).getByText('Command prefix shares twenty four chars alpha').closest('tr');
+        if (!row) throw new Error('Missing full command identity');
+        expect(within(row).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+          'Command prefix shares twenty four chars alpha', '20,8', '66,7', '93,9', '3', 'Not enough attempts',
+        ]);
+        expect(within(table).getByText('Command prefix shares twenty four chars beta')).toBeInTheDocument();
+        expect(within(table).getByText('1.234')).toBeInTheDocument();
+        expect(screen.getByText('1,5 · 1 retried')).toBeInTheDocument();
+        expect(screen.getByText('21–94%')).toBeInTheDocument();
+        expect(screen.getByText('0 ok · 1.234 failed')).toBeInTheDocument();
+        expect(screen.getByText('1.234 · 1 retried')).toBeInTheDocument();
+        expect(screen.getByText('Vehicle offline (×1.234)')).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+        const csv = vi.mocked(downloadCSV).mock.calls[0]?.[1];
+        expect(csv).toContain(`${first},20.8,66.7,93.9,3,unproven`);
+        expect(csv).toContain(`${second},0,0,0.3,1234,unreliable`);
+        expect(csv).not.toContain('1.234');
+        expect(data).toEqual(original);
+      });
+
+      it('updates number presentation on locale changes without refetching or changing raw exports', () => {
+        mockHistory.mockReturnValue(query([
+          { id: 91, vehicle_id: 7, command: 'lock', params: '', status: 'success', error: '', created_at: '2026-01-15T12:00:00Z' },
+          { id: 92, vehicle_id: 7, command: 'lock', params: '', status: 'failed', error: '', created_at: '2026-01-15T12:01:00Z' },
+          { id: 93, vehicle_id: 7, command: 'lock', params: '', status: 'success', error: '', created_at: '2026-01-15T12:10:00Z' },
+        ]));
+        renderPage();
+        expect(screen.getByText('1.5 · 1 retried')).toBeInTheDocument();
+        expect(within(screen.getByRole('table')).getByText('66.7')).toBeInTheDocument();
+        act(() => setGlobalLocale('de-DE'));
+        expect(screen.getByText('1,5 · 1 retried')).toBeInTheDocument();
+        expect(within(screen.getByRole('table')).getByText('66,7')).toBeInTheDocument();
+        expect(mockHistory).toHaveBeenLastCalledWith(7, '2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z');
+        expect(mockHistory.mock.results[mockHistory.mock.results.length - 1]?.value.refetch).not.toHaveBeenCalled();
+        fireEvent.click(screen.getByRole('button', { name: 'Export chart' }));
+        fireEvent.click(screen.getByRole('menuitem', { name: 'Download data as CSV' }));
+        expect(vi.mocked(downloadCSV).mock.calls[0]?.[1]).toContain('Lock,lock,20.8,66.7,93.9,3,unproven');
+      });
     });
 
     it('keeps full normalized failure evidence in semantic definition pairs', () => {
