@@ -27,7 +27,7 @@ import { useCostBreakdown, useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertSpeedFromSI, formatEnergyPerDistance } from '@/lib/unitConversion';
 import { useChartPalette } from '@/hooks/useChartPalette';
 
 import { cn } from '@/lib/cn';
@@ -317,16 +317,16 @@ export default function FleetComparePage() {
 
   const distanceUnit = unitPrefs.distance;
   const speedUnit = unitPrefs.speed;
-  const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
   // backend `useDrivingStats` returns explicit-SI fields:
   // totalDistanceKm (km), avgSpeedKmh / topSpeedKmh (km/h), avgEfficiencyWhKm (Wh/km).
   // Convert through the SI boundary helpers so both preference unit choices render
   // correctly (never call the legacy mi/mph/Wh-per-mi converters).
-  const KM_PER_MILE = 1.609344;
   const fromKm = (km: number) => convertDistanceFromSI(km * 1000, distanceUnit);
   const fromKmh = (kmh: number) => convertSpeedFromSI((kmh * 1000) / 3600, speedUnit);
-  const whPerKmToDisplay = (whPerKm: number) =>
-    distanceUnit === 'mi' ? whPerKm * KM_PER_MILE : whPerKm;
+  const formatEfficiency = useCallback(
+    (whPerKm: number) => formatEnergyPerDistance(whPerKm / 1000, unitPrefs),
+    [unitPrefs],
+  );
 
   // reactive chart palette (CB-safe / neon per user pref).
   const palette = useChartPalette();
@@ -439,19 +439,21 @@ export default function FleetComparePage() {
   /* ── Monthly mileage chart data (merged & aligned) ──
      Backend `/mileage/monthly` returns
      `MonthlyMileageBucket{year_month, total_km, drive_count, …}`.
-     Distances stay in km here — the chart axis already reads in km. */
+     Convert only the derived chart values; query data stays in source km. */
   const monthlyChartData = useMemo(() => {
     const arrA = monthlyA ?? [];
     const arrB = monthlyB ?? [];
     const monthMap = new Map<string, { month: string; distA: number | null; distB: number | null; drivesA: number | null; drivesB: number | null }>();
     const known = (value: number | null | undefined) =>
       value != null && Number.isFinite(value) ? value : null;
+    const displayDistance = (km: number | null | undefined) =>
+      km != null && Number.isFinite(km) ? convertDistanceFromSI(km * 1000, distanceUnit) : null;
 
     for (const m of arrA) {
       const ym = m.year_month ?? '';
       monthMap.set(ym, {
         month: ym,
-        distA: known(m.total_km),
+        distA: displayDistance(m.total_km),
         distB: null,
         drivesA: known(m.drive_count),
         drivesB: null,
@@ -461,13 +463,13 @@ export default function FleetComparePage() {
       const ym = m.year_month ?? '';
       const existing = monthMap.get(ym);
       if (existing) {
-        existing.distB = known(m.total_km);
+        existing.distB = displayDistance(m.total_km);
         existing.drivesB = known(m.drive_count);
       } else {
         monthMap.set(ym, {
           month: ym,
           distA: null,
-          distB: known(m.total_km),
+          distB: displayDistance(m.total_km),
           drivesA: null,
           drivesB: known(m.drive_count),
         });
@@ -476,7 +478,7 @@ export default function FleetComparePage() {
 
     return Array.from(monthMap.values())
       .sort((a, b) => a.month.localeCompare(b.month));
-  }, [monthlyA, monthlyB]);
+  }, [monthlyA, monthlyB, distanceUnit]);
 
   /* ── Drives per month (bar chart) ── */
   const drivesChartData = useMemo(
@@ -519,8 +521,8 @@ export default function FleetComparePage() {
       },
       {
         metric: t('comparison.avgEfficiency', 'Avg efficiency'),
-        valueA: formatKnown(dsA?.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`),
-        valueB: formatKnown(dsB?.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`),
+        valueA: formatKnown(dsA?.avgEfficiencyWhKm, formatEfficiency),
+        valueB: formatKnown(dsB?.avgEfficiencyWhKm, formatEfficiency),
         rawA: dsA?.avgEfficiencyWhKm ?? null,
         rawB: dsB?.avgEfficiencyWhKm ?? null,
         winner: 'neutral',
@@ -584,8 +586,8 @@ export default function FleetComparePage() {
     ];
   }, [
     drivingStatsA, drivingStatsB, costA, costB,
-    t, fromKm, fromKmh, whPerKmToDisplay, formatCurrency, formatEnergy,
-    distanceUnit, speedUnit, efficiencyUnit, currencySymbol, fmtNumber, fmtInt,
+    t, fromKm, fromKmh, formatEfficiency, formatCurrency, formatEnergy,
+    distanceUnit, speedUnit, currencySymbol, fmtNumber, fmtInt,
   ]);
 
   const tableColumns: Column<ComparisonRow>[] = useMemo(
@@ -735,13 +737,13 @@ export default function FleetComparePage() {
               metricId: 'efficiency',
               rawA: drivingStatsA?.avgEfficiencyWhKm != null ? drivingStatsA.avgEfficiencyWhKm / 1000 : null,
               rawB: drivingStatsB?.avgEfficiencyWhKm != null ? drivingStatsB.avgEfficiencyWhKm / 1000 : null,
-              format: value => `${fmtNumber(whPerKmToDisplay(value * 1000))} ${efficiencyUnit}`,
+              format: value => formatEnergyPerDistance(value, unitPrefs),
               retained: (drivingStatsA != null && (statsQueryA.isError || statsQueryA.fetchStatus === 'paused'))
                 || (drivingStatsB != null && (statsQueryB.isError || statsQueryB.fetchStatus === 'paused')),
-              value: `${vs(
-                formatKnown(drivingStatsA?.avgEfficiencyWhKm, value => fmtNumber(whPerKmToDisplay(value))),
-                formatKnown(drivingStatsB?.avgEfficiencyWhKm, value => fmtNumber(whPerKmToDisplay(value))),
-              )} ${efficiencyUnit}`,
+              value: vs(
+                formatKnown(drivingStatsA?.avgEfficiencyWhKm, formatEfficiency),
+                formatKnown(drivingStatsB?.avgEfficiencyWhKm, formatEfficiency),
+              ),
               loading: statsLoading && !drivingStatsA && !drivingStatsB,
             },
             {
@@ -806,7 +808,7 @@ export default function FleetComparePage() {
           description={t(
             'comparison.trendContext.scope',
             'Monthly charts use the server’s default window starting 24 months ago, rounded to the start of that month. Distances are in km; lifetime statistics are not limited to this window.',
-          )}
+          ).replace(/\bkm\b/g, distanceUnit)}
         >
           <CardGrid label={t('comparison.trends', 'Trends over time')} items={[
             { id: 'monthly-distance', size: 'half', content: (
@@ -821,8 +823,8 @@ export default function FleetComparePage() {
                   data={monthlyChartData}
                   dataColumns={[
                     { key: 'month', label: t('comparison.month', 'Month') },
-                    { key: 'distA', label: nameA, format: (value) => formatKnown(typeof value === 'number' ? value : null, fmtNumber) },
-                    { key: 'distB', label: nameB, format: (value) => formatKnown(typeof value === 'number' ? value : null, fmtNumber) },
+                    { key: 'distA', label: `${nameA} (${distanceUnit})`, format: (value) => formatKnown(typeof value === 'number' ? value : null, value => `${fmtNumber(value)} ${distanceUnit}`) },
+                    { key: 'distB', label: `${nameB} (${distanceUnit})`, format: (value) => formatKnown(typeof value === 'number' ? value : null, value => `${fmtNumber(value)} ${distanceUnit}`) },
                   ]}
                   chartKey="fleet-compare-monthly-distance"
                 >
@@ -831,7 +833,7 @@ export default function FleetComparePage() {
                       <LineChart data={monthlyChartData} margin={chartMarginLabeled}>
                         <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                         <XAxis dataKey="month" tick={axisTick} />
-                        <YAxis tick={axisTick} />
+                        <YAxis tick={axisTick} unit={` ${distanceUnit}`} />
                         <Tooltip
                           content={({ active, payload, label }) => (
                             <ChartTooltip
@@ -849,8 +851,8 @@ export default function FleetComparePage() {
                           )}
                         />
                         <ChartLegend />
-                        <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} stroke={palette[0]} connectNulls={false} hide={hiddenSeries?.isHidden('distA')} {...chartAnimation} />
-                        <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} stroke={palette[1]} connectNulls={false} hide={hiddenSeries?.isHidden('distB')} {...chartAnimation} />
+                        <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} unit={` ${distanceUnit}`} stroke={palette[0]} connectNulls={false} hide={hiddenSeries?.isHidden('distA')} {...chartAnimation} />
+                        <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} unit={` ${distanceUnit}`} stroke={palette[1]} connectNulls={false} hide={hiddenSeries?.isHidden('distB')} {...chartAnimation} />
                       </LineChart>
                     </ResponsiveContainer>
                   )}

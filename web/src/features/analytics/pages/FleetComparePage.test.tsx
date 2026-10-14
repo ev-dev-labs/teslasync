@@ -36,6 +36,11 @@ import { MemoryRouter, useLocation } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
 
 const trendEvidence = vi.hoisted(() => vi.fn())
+const chartEvidence = vi.hoisted(() => ({
+  line: vi.fn(),
+  axis: vi.fn(),
+  tooltip: vi.fn(),
+}))
 
 vi.mock('../components/fleet-compare-modernization', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../components/fleet-compare-modernization')>()
@@ -51,7 +56,28 @@ vi.mock('../components/fleet-compare-modernization', async (importOriginal) => {
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>()
   const { chartTestDoubles } = await import('@/test/chartTestDoubles')
-  return { ...actual, ...chartTestDoubles }
+  return {
+    ...actual,
+    ...chartTestDoubles,
+    ResponsiveContainer: ({ children }: ComponentProps<typeof actual.ResponsiveContainer>) => <>{children}</>,
+    LineChart: ({ children }: ComponentProps<typeof actual.LineChart>) => <>{children}</>,
+    BarChart: ({ children }: ComponentProps<typeof actual.BarChart>) => <>{children}</>,
+    XAxis: () => null,
+    CartesianGrid: () => null,
+    Bar: () => null,
+    Line: (props: ComponentProps<typeof actual.Line>) => {
+      chartEvidence.line(props)
+      return null
+    },
+    YAxis: (props: ComponentProps<typeof actual.YAxis>) => {
+      chartEvidence.axis(props)
+      return null
+    },
+    Tooltip: (props: ComponentProps<typeof actual.Tooltip>) => {
+      chartEvidence.tooltip(props)
+      return null
+    },
+  }
 })
 vi.mock('@/components/charts/EmbeddedChart', async () => {
   const { chartTestDoubles } = await import('@/test/chartTestDoubles')
@@ -105,6 +131,10 @@ import type { DrivingStats } from '@/types/driving'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
 import { analyticsKeys } from '@/api/hooks/useAnalytics'
 import type { CostBreakdown } from '@/types/analytics'
+import * as settingsHook from '@/hooks/useSettings'
+import type { Tooltip } from '@/components/charts'
+import { isValidElement } from 'react'
+import type { ChartTooltipProps } from '@/components/charts/ChartTooltip'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -304,8 +334,10 @@ afterEach(() => {
 })
 
 beforeEach(() => {
+  vi.restoreAllMocks()
   mockedRequest.mockReset()
   trendEvidence.mockClear()
+  Object.values(chartEvidence).forEach(mock => mock.mockClear())
   window.localStorage.clear()
   // Formatting is driven by module-global precision/locale that useSettings
   // would normally seed; pin them so the assertions are deterministic.
@@ -411,7 +443,7 @@ describe('FleetComparePage evidence preservation', () => {
         ? Promise.resolve({ state: makeState({ battery_level: 50, sentry_mode: true }), live: false })
         : workingRequest(path, ...args))
     await act(async () => { await client.refetchQueries({ queryKey: vehicleKeys.state(1), exact: true }) })
-    expect(await screen.findByText('50%')).toBeInTheDocument()
+    expect((await screen.findAllByText('50%')).length).toBeGreaterThan(0)
     expect(screen.queryByText("Can't reach server")).toBeNull()
     expect(screen.getAllByText('Sentry OFF')).toHaveLength(1)
   })
@@ -437,7 +469,46 @@ describe('FleetComparePage evidence preservation', () => {
     ]))
     const formatA = distanceEvidence().dataColumns?.find(column => column.key === 'distA')?.format
     expect(formatA?.(null)).toBe('—')
-    expect(formatA?.(0)).toBe('0.00')
+    expect(formatA?.(0)).toBe('0.00 km')
+  })
+
+  it.each(['km', 'mi'] as const)('uses saved %s for monthly chart, tooltip and tables without changing source data', async (unit) => {
+    const defaults = settingsHook.useSettings()
+    vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
+      ...defaults,
+      settings: { ...defaults.settings, unit_of_length: unit },
+    })
+    const { client } = renderPage()
+    const january = unit === 'mi' ? 400000 / 1609.344 : 400
+    await waitFor(() => expect(distanceEvidence().data).toEqual([
+      { month: '2025-01', distA: january, distB: null, drivesA: 20, drivesB: null },
+      { month: '2025-02', distA: unit === 'mi' ? 550000 / 1609.344 : 550, distB: unit === 'mi' ? 300000 / 1609.344 : 300, drivesA: 25, drivesB: 18 },
+      { month: '2025-03', distA: null, distB: unit === 'mi' ? 480000 / 1609.344 : 480, drivesA: null, drivesB: 22 },
+    ]))
+    const column = distanceEvidence().dataColumns?.find(column => column.key === 'distA')
+    expect(column?.label).toBe(`Model 3 LR (${unit})`)
+    expect(column?.format?.(january)).toBe(`${unit === 'mi' ? '248.55' : '400.00'} ${unit}`)
+    expect(column?.format?.(null)).toBe('—')
+    expect(column?.format?.(0)).toBe(`0.00 ${unit}`)
+    expect(chartEvidence.axis.mock.calls.some(([props]) => props.unit === ` ${unit}`)).toBe(true)
+    expect(chartEvidence.line.mock.calls.filter(([props]) => props.dataKey === 'distA').at(-1)?.[0]).toMatchObject({
+      unit: ` ${unit}`, connectNulls: false,
+    })
+    const tooltip = chartEvidence.tooltip.mock.calls.map(([props]) =>
+      props as ComponentProps<typeof Tooltip>).find(props => typeof props.content === 'function')
+    if (!tooltip || typeof tooltip.content !== 'function') throw new Error('Monthly tooltip must expose content')
+    const content = tooltip.content({
+      active: true, label: '2025-01',
+      payload: [{ name: 'Model 3 LR', value: january, unit: ` ${unit}`, dataKey: 'distA' }],
+    })
+    if (!isValidElement<ChartTooltipProps>(content)) throw new Error('Monthly tooltip must render ChartTooltip')
+    expect(content.props.payload?.[0]).toMatchObject({ value: january, unit: ` ${unit}` })
+    const table = within(await screen.findByRole('table'))
+    await waitFor(() => expect(table.getAllByText(`${unit === 'mi' ? '3,106.86' : '5,000.00'} ${unit}`)).toHaveLength(2))
+    expect(table.getByText(unit === 'mi' ? '273.59 Wh/mi' : '170.00 Wh/km')).toBeInTheDocument()
+    expect(screen.getByText(new RegExp(`Distances are in ${unit};`))).toBeInTheDocument()
+    expect(client.getQueryData(analyticsKeys.monthlyMileage('1'))).toEqual(monthlyA)
+    expect(monthlyA.months[0].total_km).toBe(400)
   })
 
   it.each([
@@ -477,7 +548,7 @@ describe('FleetComparePage evidence preservation', () => {
       verified_fields: ['battery_level', 'rated_range', 'is_locked'],
     } })
     renderPage()
-    await screen.findByText('72%')
+    await screen.findAllByText('72%')
     expect(screen.getAllByText(/Telemetry stream · Last real observation/)).toHaveLength(2)
     expect(screen.getAllByText(/Telemetry stream.*Stale/)).toHaveLength(2)
     expect(screen.getAllByText('Unverified')).toHaveLength(10)
