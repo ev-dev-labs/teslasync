@@ -45,8 +45,10 @@ const menuItemClassName =
 export interface ChartExportMenuProps {
   /** Triggered when "Save as PNG" is selected. */
   onExportPNG: () => void | Promise<void>;
-  /** Triggered when "Save as SVG" is selected. */
-  onExportSVG: () => void | Promise<void>;
+  /** Triggered when "Save as SVG" is selected. Omit when unsupported.
+   * Within a chart figure, this action requires a capture-eligible SVG;
+   * HTML/CSS charts must use PNG rather than an invented SVG snapshot. */
+  onExportSVG?: () => void | Promise<void>;
   /** Triggered when "Copy image to clipboard" is selected. Must resolve
    *  to one of the `ClipboardOutcome` values so the menu can announce
    *  the result. */
@@ -76,12 +78,24 @@ export function ChartExportMenu({
   const { t } = useTranslation();
   const toast = useOptionalToast();
   const [open, setOpen] = useState(false);
+  const [svgAvailable, setSvgAvailable] = useState(false);
   const [pendingAction, setPendingAction] = useState<
     'csv' | 'png' | 'svg' | 'copy' | null
   >(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
+
+  const canExportSvg = useCallback(() => {
+    if (!onExportSVG) return false;
+    const figure = containerRef.current?.closest('figure');
+    // Standalone menus rely on the supplied handler's capability. Chart
+    // figures must contain a real plot, not an ignored toolbar icon.
+    return !figure || Array.from(figure.querySelectorAll('svg')).some(
+      (svg) => !svg.closest('[data-html2canvas-ignore="true"]') &&
+        !containerRef.current?.contains(svg),
+    );
+  }, [onExportSVG]);
 
   // Close on outside click / Escape.
   useEffect(() => {
@@ -141,8 +155,12 @@ export function ChartExportMenu({
   }, [onExportPNG, runDownload]);
 
   const handleSvg = useCallback(() => {
-    void runDownload('svg', onExportSVG);
-  }, [onExportSVG, runDownload]);
+    if (!onExportSVG) return;
+    void runDownload('svg', () => {
+      if (!canExportSvg()) throw new Error('Chart SVG is no longer available');
+      return onExportSVG();
+    });
+  }, [onExportSVG, canExportSvg, runDownload]);
 
   const handleCopy = useCallback(async () => {
     if (pendingAction) return;
@@ -186,7 +204,10 @@ export function ChartExportMenu({
         size="sm"
         className="h-11 w-11 md:h-7 md:w-7 p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
         icon={<Icon icon={Download} size="sm" />}
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setSvgAvailable(canExportSvg());
+          setOpen((v) => !v);
+        }}
         disabled={disabled || pendingAction !== null}
         loading={pendingAction !== null}
         aria-haspopup="menu"
@@ -230,7 +251,7 @@ export function ChartExportMenu({
           >
             <Text variant="bodySm">{t('chart.export.png', 'Save as PNG')}</Text>
           </Button>
-          <Button
+          {svgAvailable && onExportSVG && <Button
             type="button"
             role="menuitem"
             variant="ghost"
@@ -242,7 +263,7 @@ export function ChartExportMenu({
             className={menuItemClassName}
           >
             <Text variant="bodySm">{t('chart.export.svg', 'Save as SVG')}</Text>
-          </Button>
+          </Button>}
           <Button
             type="button"
             role="menuitem"
