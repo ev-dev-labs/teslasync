@@ -1,6 +1,12 @@
 {
   "chargingPlaces": {
     "workspace": {
+      "bulkFailureReason": "Place {{id}}: {{reason}}",
+      "bulkIncomplete": "Some deletions did not complete. Failed selections remain available for review.",
+      "bulkUnconfirmed": "Deletion was not confirmed. Selections remain available for review.",
+      "initialPaused": "{{source}} loading is paused. No data has been loaded yet.",
+      "pausedRetained": "{{source}} refresh is paused. Previously loaded data remains visible.",
+      "staleRetained": "{{source}} has not refreshed successfully. Previously loaded data remains visible.",
       "title": "Charging places",
       "unifiedTitle": "Places & charging zones",
       "unifiedAria": "Places and charging zones",
@@ -290,11 +296,23 @@
     "geolocationUnsupported": "Geolocation is not supported by this browser"
   },
   "locations": {
+    "loadPaused": {
+      "message": "The request is paused. Location counts and remaining pages are unknown until it resumes.",
+      "title": "Location loading paused"
+    },
+    "loadUnknown": {
+      "message": "The request has not resolved. Location counts and remaining pages are unknown.",
+      "title": "Locations not loaded yet"
+    },
+    "paging": {
+      "exploratory": "Next checks another page when this page is full; total locations and remaining pages are unknown."
+    },
     "filterLabel": {
       "search": "Search"
     },
     "empty": {
       "cta": "View drives",
+      "page": "No locations returned on this page. Use Previous or First page to return to earlier results.",
       "title": "No locations",
       "message": "No visited locations recorded yet"
     },
@@ -304,6 +322,7 @@
     "lastVisited": "Last visited",
     "preview": {
       "eyebrow": "Location evidence",
+      "loadedAt": "Page loaded at",
       "lastVisited": "Last visited {{date}}"
     },
     "aiAutoName": {

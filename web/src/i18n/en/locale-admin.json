@@ -409,6 +409,12 @@
       }
     },
     "flags": {
+      "toast": {
+        "deleteError": "Failed to delete flag",
+        "deleteSuccess": "Flag \"{{key}}\" deleted",
+        "saveError": "Failed to save flag",
+        "saveSuccess": "Flag \"{{key}}\" saved"
+      },
       "audit": {
         "cols": {
           "changedAt": "Changed at",
@@ -2808,6 +2814,19 @@
     "runtimeUnavailable": "Backend runtime error summary unavailable.",
     "service": "Service",
     "serviceCount": "{{tracked}} with data · {{known}} known",
+    "services": {
+      "eia": "EIA",
+      "geocoder-azure": "Geocoder (Azure)",
+      "geocoder-google": "Geocoder (Google)",
+      "geocoder-nominatim": "Geocoder (Nominatim)",
+      "geocoder-search": "Geocoder (search)",
+      "github-releases": "GitHub releases",
+      "notify-generic": "Notifications",
+      "system-dns-check": "DNS health check",
+      "tesla-api": "Tesla API",
+      "tesla-auth": "Tesla auth",
+      "teslasync-api": "TeslaSync API"
+    },
     "showing": "Showing {{from}}–{{to}} of {{total}}",
     "statsScope": "API call totals and service counts use the View settings range. Service, method, status, endpoint, app key, and installation filters apply only to the request list.",
     "status": "Status",
@@ -3446,6 +3465,11 @@
     "sheetDone": "Done",
     "sheetTitle": "Filters",
     "sheetTrigger": "Filters"
+  },
+  "fleetOps": {
+    "brief": {
+      "refreshBlocked": "Refresh paused"
+    }
   },
   "freshness": {
     "noData": "No recent data",
