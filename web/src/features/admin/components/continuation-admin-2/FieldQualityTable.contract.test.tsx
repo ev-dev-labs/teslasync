@@ -117,7 +117,7 @@ describe('FieldQualityTable presentation and preservation contracts', () => {
     expect(detail).toHaveTextContent('VehicleSpeed');
     expect(detail).toHaveTextContent('1m');
     expect(detail).toHaveTextContent('Partially attested');
-    fireEvent.click(within(detail).getByRole('button', { name: 'Close' }));
+    fireEvent.click(within(detail).getByText('Close'));
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -188,7 +188,7 @@ describe('FieldQualityTable presentation and preservation contracts', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Field filter' }));
     const dialog = screen.getByRole('dialog', { name: 'Field filter' });
     fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Select all shown values' }));
-    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Keep' }));
+    fireEvent.click(within(dialog).getByRole('checkbox', { name: 'Keep 1,234 samples' }));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Done' }));
     expect(within(screen.getByRole('table')).getByText('Keep')).toBeInTheDocument();
     expect(within(screen.getByRole('table')).queryByText('Drop')).toBeNull();
