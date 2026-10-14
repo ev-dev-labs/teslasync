@@ -26,13 +26,14 @@ import { useMedia, useMediaHistory } from '@/api/hooks/useVehicleSystems';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { formatDateTime } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
 import type { MediaSnapshot } from '@/api/types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { deriveDataState } from '@/api/dataState';
 import { VehicleSourceContent } from '../components/VehicleSourceContent';
+import { VehicleSourcePause } from '../components/VehicleSourcePause';
 import {
   MediaSlot, MediaStats, finiteReading, playbackProgress,
 } from '../components/media-player-modernization';
@@ -54,6 +55,10 @@ const VOLUME_FALLBACK_MAX = 11;
 
 function formatVolumeLevel(value: number | null | undefined): string {
   return typeof value === 'number' && Number.isFinite(value) ? fmtNumber(value) : '—';
+}
+
+function reportedTitle(value: unknown): string | null {
+  return typeof value === 'string' && value.trim() ? value : null;
 }
 
 /** Milliseconds → `m:ss` play-time label. Non-finite/negative input clamps to
@@ -78,18 +83,18 @@ function SourceIcon({ source }: { source: string }) {
 }
 
 function statusVariant(status: string): 'success' | 'warning' | 'neutral' {
-  const s = (status ?? '').toLowerCase();
-  if (s.includes('playing')) return 'success';
-  if (s.includes('paused')) return 'warning';
+  const s = typeof status === 'string' ? status.trim().toLowerCase() : '';
+  if (s === 'playing') return 'success';
+  if (s === 'paused') return 'warning';
   return 'neutral';
 }
 
 function statusLabel(status: string, t: TFunction): string {
-  const s = (status ?? '').toLowerCase();
+  const s = typeof status === 'string' ? status.trim().toLowerCase() : '';
   if (!s) return t('media.modernization.unknownStatus', 'Unknown status');
-  if (s.includes('playing')) return t('media.status.playing', 'Playing');
-  if (s.includes('paused')) return t('media.status.paused', 'Paused');
-  if (s.includes('stopped')) return t('media.status.stopped', 'Stopped');
+  if (s === 'playing') return t('media.status.playing', 'Playing');
+  if (s === 'paused') return t('media.status.paused', 'Paused');
+  if (s === 'stopped') return t('media.status.stopped', 'Stopped');
   return status;
 }
 
@@ -97,6 +102,7 @@ function statusLabel(status: string, t: TFunction): string {
 
 export default function MediaPlayerPage() {
   const { fmtNumber, fmtInt, precision: displayPrecision, locale: displayLocale } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   usePageTitle(t('media.title', 'Media player'));
 
@@ -104,7 +110,7 @@ export default function MediaPlayerPage() {
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const hasVehicle = activeId !== '';
 
-  const { start, end } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'media-player.range',
     defaultPresetId: '7d',
   });
@@ -115,7 +121,9 @@ export default function MediaPlayerPage() {
   /* ── Queries (via @/api/hooks) ────────────────────────────── */
 
   const mediaQuery = useMedia(activeId);
-  const historyQuery = useMediaHistory(activeId, { start, end });
+  const historyQuery = useMediaHistory(activeId, {
+    start: startInstant, end: endInstantExclusive,
+  });
 
   const latest = mediaQuery.data ?? null;
   const history = historyQuery.data ?? [];
@@ -135,17 +143,17 @@ export default function MediaPlayerPage() {
     available: historySource.hasData,
   };
 
-  /* ── Filtered history (client-side range guard) ───────────── */
+  /* ── History inside the shared half-open interval ────────── */
 
   const filtered = useMemo<MediaSnapshot[]>(() => {
     if (!history.length) return [];
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
+    const startMs = Date.parse(startInstant);
+    const endMs = Date.parse(endInstantExclusive);
     return history.filter((s) => {
-      const ts = new Date(s.created_at).getTime();
-      return Number.isNaN(ts) ? true : ts >= startMs && ts <= endMs;
+      const ts = Date.parse(s.created_at ?? s.ts ?? '');
+      return Number.isFinite(ts) && ts >= startMs && ts < endMs;
     });
-  }, [history, start, end]);
+  }, [history, startInstant, endInstantExclusive]);
 
   /* ── Volume chart data ────────────────────────────────────── */
 
@@ -161,7 +169,7 @@ export default function MediaPlayerPage() {
           typeof s.audio_volume === 'number' && Number.isFinite(s.audio_volume),
       )
       .map((s) => ({ time: formatDateTime(s.created_at), volume: s.audio_volume }));
-  }, [filtered]);
+  }, [filtered, formatDateTime]);
 
   /* ── Volume axis ceiling ──────────────────────────────────── */
   // Derive the Y-axis max from the data actually being charted so historical
@@ -209,12 +217,12 @@ export default function MediaPlayerPage() {
       },
       {
         key: 'now_playing_title',
-        filterValue: (row) => row.now_playing_title || null,
+        filterValue: (row) => reportedTitle(row.now_playing_title),
         header: t('media.col.track', 'Track'),
         sortable: true,
         render: (row) => (
           <Text as="span" size="sm" weight="medium" color="primary" className="block max-w-[200px] truncate">
-            {row.now_playing_title || '—'}
+            {reportedTitle(row.now_playing_title) ?? '—'}
           </Text>
         ),
       },
@@ -333,6 +341,14 @@ export default function MediaPlayerPage() {
       {/* ── Row 1 — Now Playing hero + Volume gauge ──────────── */}
       <FadeIn>
         <section aria-label={t('media.nowPlayingSection', 'Now playing')}>
+        {hasVehicle && latest != null && (
+          <Caption className="mb-3 break-words">
+            {t('media.modernization.retrievedAt', 'Media retrieved at')}:{' '}
+            <TimeStamp value={mediaSource.updatedAt} format="absolute" />
+            {' · '}
+            {t('media.modernization.measurementTimeUnavailable', 'Measurement time unavailable; the latest media response does not include observation timestamps.')}
+          </Caption>
+        )}
         <CardGrid label={t('media.nowPlayingSection', 'Now playing')} items={[
           { id: 'media-now-playing', size: 'half', content: <MediaSlot>
           {/* Now Playing — retained metadata in the shared packed layout */}
@@ -344,6 +360,10 @@ export default function MediaPlayerPage() {
                 <Music className="h-8 w-8" />,
                 t('media.selectVehicle', 'Select a vehicle to see what’s playing'),
               )
+            ) : mediaSource.isRefreshBlocked && !mediaSource.hasData ? (
+              <VehicleSourcePause label={t('media.nowPlaying', 'Now playing')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { mediaSource.retry?.(); }} />
             ) : mediaQuery.isLoading && !latest ? (
               <div className="flex items-start gap-4 sm:gap-6">
                 <div className="h-16 w-16 shrink-0 rounded-xl bg-[var(--surface-3)] sm:h-28 sm:w-28" aria-hidden="true" />
@@ -376,7 +396,8 @@ export default function MediaPlayerPage() {
                 <div className="min-w-0 flex-1 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <Text as="p" size="lg" weight="bold" color="primary" className="break-words">
-                      {latest?.now_playing_title || t('media.noTrack', 'No track')}
+                      {reportedTitle(latest.now_playing_title)
+                        ?? t('media.modernization.unknownReading', 'No reading reported')}
                     </Text>
                     <Badge variant={statusVariant(latest.playback_status ?? '')} dot>
                       {statusLabel(latest.playback_status ?? '', t)}
@@ -443,13 +464,18 @@ export default function MediaPlayerPage() {
             {!hasVehicle ? noVehicleState(
               <Volume2 className="h-8 w-8" />,
               t('media.selectVehicle', 'Select a vehicle to see what’s playing'),
+            ) : mediaSource.isRefreshBlocked && !mediaSource.hasData ? (
+              <VehicleSourcePause label={t('media.volume', 'Volume')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { mediaSource.retry?.(); }} />
             ) : mediaState.loading ? <Skeleton height={128} />
               : mediaState.fatal ? <QueryError error={mediaQuery.error} onRetry={() => mediaQuery.refetch()} />
               : !latest ? <EmptyState message={t('media.modernization.noSnapshot', 'No media snapshot available')}
                 action={{ label: t('common.refresh', 'Refresh'), onClick: () => { void mediaQuery.refetch(); } }} />
               : <div className="flex flex-1 flex-col items-center justify-center gap-2 py-2">
               <LinearGauge
-                value={latest?.audio_volume}
+                value={finiteReading(latest.audio_volume) ? latest.audio_volume : null}
+                preserveReadingAndScale
                 max={finiteReading(latest.audio_volume_max) && latest.audio_volume_max > 0 ? latest.audio_volume_max : VOLUME_FALLBACK_MAX}
                 label={t('media.volume', 'Volume')}
                 unit=""
@@ -484,7 +510,7 @@ export default function MediaPlayerPage() {
           filtered={filtered} history={historyQuery.data} latest={latest}
           hasVehicle={hasVehicle} historyLoading={historyQuery.isLoading}
           mediaLoading={mediaQuery.isLoading} historyError={historyQuery.error}
-          mediaError={mediaQuery.error} start={start} end={end}
+          mediaError={mediaQuery.error} start={startInstant} end={endInstantExclusive}
         />
         </div>
       </FadeIn>
@@ -503,6 +529,10 @@ export default function MediaPlayerPage() {
                 <BarChart3 className="h-8 w-8" />,
                 t('media.selectVehicleChart', 'Select a vehicle to view volume history'),
               )
+            ) : historySource.isRefreshBlocked && !historySource.hasData ? (
+              <VehicleSourcePause label={t('media.volumeOverTime', 'Volume over time')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { historySource.retry?.(); }} />
             ) : historyState.loading ? (
               <Skeleton height={256} />
             ) : historyState.fatal ? (
@@ -514,10 +544,14 @@ export default function MediaPlayerPage() {
               />
             ) : (
               <div className="h-56 sm:h-64 xl:h-72">
-                {/* chart-a11y:no-table media volume time-series — continuous audio levels, not tabular */}
                 <EmbeddedChart
                   title={t('media.volumeOverTime', 'Volume over time')}
                   ariaLabel={t('media.volumeAria', 'Media volume over time area chart')}
+                  data={volumeChartData}
+                  dataColumns={[
+                    { key: 'time', label: t('media.col.time', 'Time') },
+                    { key: 'volume', label: t('media.col.volume', 'Volume') },
+                  ]}
                   fluid
                 >
                   <ResponsiveContainer width="100%" height="100%">
@@ -529,8 +563,8 @@ export default function MediaPlayerPage() {
                       <XAxis dataKey="time" {...axisTickSm} />
                       <YAxis
                         {...axisTickSm}
-                        allowDecimals={false}
-                        domain={[0, volumeAxisMax]}
+                        allowDecimals
+                        domain={[volumeChartData.reduce((min, point) => Math.min(min, point.volume), 0), volumeAxisMax]}
                       />
                       <Tooltip content={<ChartTooltip />} />
                       <Area
@@ -560,6 +594,10 @@ export default function MediaPlayerPage() {
                 <Disc3 className="h-8 w-8" />,
                 t('media.selectVehicleSource', 'Select a vehicle to view sources'),
               )
+            ) : historySource.isRefreshBlocked && !historySource.hasData ? (
+              <VehicleSourcePause label={t('media.sourceDistribution', 'Source distribution')}
+                message={t('dataSources.status.pausedOffline', 'Paused offline')}
+                retained={false} onRetry={() => { historySource.retry?.(); }} />
             ) : historyState.loading ? (
               <Skeleton height={224} />
             ) : historyState.fatal ? (
@@ -636,6 +674,10 @@ export default function MediaPlayerPage() {
               <Music className="h-8 w-8" />,
               t('media.selectVehicleHistory', 'Select a vehicle to view playback history'),
             )
+          ) : historySource.isRefreshBlocked && !historySource.hasData ? (
+            <VehicleSourcePause label={t('media.playbackHistory', 'Playback history')}
+              message={t('dataSources.status.pausedOffline', 'Paused offline')}
+              retained={false} onRetry={() => { historySource.retry?.(); }} />
           ) : historyState.loading ? (
             <Skeleton height={320} />
           ) : historyState.fatal ? (
@@ -649,7 +691,7 @@ export default function MediaPlayerPage() {
             <DataTable<MediaSnapshot>
               tableId="vehicle-systems:media-history"
               enableValueFilters
-              filterData={history ?? []}
+              filterData={filtered}
               columns={columns}
               mobileColumns={['now_playing_title', 'playback_status', 'created_at']}
               mobilePresentation={{

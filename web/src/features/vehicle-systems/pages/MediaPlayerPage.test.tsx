@@ -48,6 +48,8 @@ import type { ComponentProps, ReactNode } from 'react';
 
 import type { MediaSnapshot } from '@/api/types';
 import { setGlobalPrecision } from '@/lib/numberFormat';
+import * as dateFormatting from '@/hooks/useDateFormat';
+import { formatDateTime } from '@/lib/dateFormat';
 
 // ── i18n stub: resolve the string fallback (or an options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -103,9 +105,10 @@ vi.mock('@/components/charts', async () => {
     ResponsiveContainer: Passthrough,
     // Real <svg> so the page's <defs> gradient node is valid markup (no
     // "unrecognized tag" warning) while children still mount.
-    AreaChart: ({ children, data }: { children?: ReactNode; data?: { volume: number }[] }) => (
+    AreaChart: ({ children, data }: { children?: ReactNode; data?: { time: string; volume: number }[] }) => (
       <svg data-testid="volume-chart" data-points={String(Array.isArray(data) ? data.length : -1)}
-        data-values={JSON.stringify(data?.map(point => point.volume))}>
+        data-values={JSON.stringify(data?.map(point => point.volume))}
+        data-times={JSON.stringify(data?.map(point => point.time))}>
         {children}
       </svg>
     ),
@@ -411,6 +414,51 @@ describe('MediaPlayerPage — retrieval versus measurement time', () => {
     mockMedia.mockReturnValue(makeQuery({ data }));
     renderPage();
     expect(within(nowPlayingRegion()).queryByText(/Media retrieved at:/)).not.toBeInTheDocument();
+  });
+});
+
+describe('MediaPlayerPage — date formatting preferences', () => {
+  it('updates absolute chart labels and mobile history strings when the bound formatter changes', () => {
+    const useActualDateFormat = dateFormatting.useDateFormat;
+    const spy = vi.spyOn(dateFormatting, 'useDateFormat');
+    const utcOptions = { locale: 'en-US', tz: 'UTC' };
+    const localOptions = { locale: 'de-DE', tz: 'America/Los_Angeles' };
+    const utcFormatter: dateFormatting.DateFormatter = value => formatDateTime(value, utcOptions);
+    const localFormatter: dateFormatting.DateFormatter = value => formatDateTime(value, localOptions);
+    spy.mockImplementation(() => ({ ...useActualDateFormat(), formatDateTime: utcFormatter }));
+
+    try {
+      const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const ui = () => (
+        <MemoryRouter initialEntries={['/media']}>
+          <QueryClientProvider client={client}>
+            <MediaPlayerPage />
+          </QueryClientProvider>
+        </MemoryRouter>
+      );
+      const view = render(ui());
+      const mobileHistory = view.container.querySelector('[data-mobile-table]');
+      if (!(mobileHistory instanceof HTMLElement)) throw new Error('Missing mobile history');
+
+      expect(screen.getByTestId('volume-chart')).toHaveAttribute(
+        'data-times', JSON.stringify(HISTORY.map(row => utcFormatter(row.created_at))),
+      );
+      expect(mobileHistory).toHaveTextContent(utcFormatter(HISTORY[0].created_at));
+
+      spy.mockImplementation(() => ({ ...useActualDateFormat(), formatDateTime: localFormatter }));
+      view.rerender(ui());
+
+      const expectedLabels = HISTORY.map(row => localFormatter(row.created_at));
+      expect(expectedLabels).not.toEqual(HISTORY.map(row => utcFormatter(row.created_at)));
+      expect(screen.getByTestId('volume-chart')).toHaveAttribute('data-times', JSON.stringify(expectedLabels));
+      expect(mobileHistory).toHaveTextContent(expectedLabels[0]);
+      expect(mobileHistory).not.toHaveTextContent(utcFormatter(HISTORY[0].created_at));
+      expect(screen.getByTestId('volume-chart')).toHaveAttribute('data-values', '[4,8,6]');
+      expect(bodyRows()).toHaveLength(HISTORY.length);
+      expect(within(nowPlayingRegion()).getByText('Now Song')).toBeInTheDocument();
+    } finally {
+      spy.mockRestore();
+    }
   });
 });
 
