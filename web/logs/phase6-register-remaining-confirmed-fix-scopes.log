@@ -1,0 +1,84 @@
+ITEM phase6-register-remaining-confirmed-fix-scopes
+ASSIGNMENT_RECEIPT_UTC 2026-10-14T06:07:20.443Z
+CANONICAL_CONSERVATIVE_LAUNCH_UTC 2026-10-14T06:07:14.379Z
+RETURN_DEADLINE_UTC 2026-10-14T06:27:14.379Z
+AUTHORITY docs\orchestrator-loop.md read in full; exact migration-queue.md row 2632 read-only
+WRITABLE docs\frontend-audits\phase6-confirmed-fix-owner-map.json
+WRITABLE_IGNORED_EXACT_LOG web\logs\phase6-register-remaining-confirmed-fix-scopes.log
+
+Read-only evidence intake used inline Python through PowerShell to parse existing Phase6 QA JSON reports and the canonical queue. No helper/script file was created. No production source/test file was read or changed. No Git/queue/catalog/config/source writes, nested agents, installs, server, Docker, browser/API, audits, application tests or compilation were performed.
+Initial broad output was truncated by the tool; subsequent bounded field inventories, exact owner needs, original finding dispositions and reported path inventories were read directly from the authorized JSON/queue inputs.
+One initial Locations metadata stdout attempt exited 1 on Windows cp1252 UnicodeEncodeError; subsequent UTF-8 stdout metadata read succeeded. No finding or test result was inferred from that failed read.
+
+ARTIFACT_STRUCTURE_REFERENCE_CHECK_UTC 2026-10-14T06:20:20.811445+00:00
+COMMAND inline Python JSON parse; validate reported source/test path presence in original report JSON strings; check evidence fields, scope-ID/dependency uniqueness, proposed source-file overlap and exact report inventory. No production paths opened.
+RAW_OUTPUT
+STRUCTURE scopes 37 conditional 5 reviewed 8 remaining 200
+CONFIRMED_OWNER_SOURCE_OVERLAPS {}
+ERRORS [["inventory mismatch", ["phase6-qa-vehicle-systems-hvac-cycling.json"], []]]
+PROCESS_EXIT 0
+LOGICAL_RESULT One omitted remainder filename found; corrected in owned owner-map only. This was not a passing inventory check.
+
+CANONICAL_QUEUE_EXACT_FILE_SNAPSHOT_UTC 2026-10-14T06:20:20.791507+00:00
+CANONICAL_QUEUE_SHA256 3bc77677d832fe420b5f83bfe8b7c3653e72d43a7168b9333736b5e382b64fe2
+COMMAND inline Python read-only queue files-column intersection against proposed source/test claims across all phases; distinguish actual correction, test-only fixture repair and source migration/QA delivery.
+PROCESS_EXIT 0
+MATCHING_PENDING_ACTIVE_SOURCE_CLAIM phase6-copy-command-grades-roadmap [~] web\src\i18n\en.json; original exact six-leaf objective retained; Help/Helix/maps needs must not expand it.
+MATCHING_COMPLETED_ACTUAL_CORRECTIONS repair-inbox-offline-state; repair-report-offline-state; repair-temperature-icon; phase3-retained-ai-output-error; phase6-fix-evidence-plural-catalog; phase5-dashboards-description-catalog
+COMPLETED_TEST_ONLY_OBJECTIVES Explicitly retained separately in map; no source correction/native acceptance inferred from fixture passes.
+COMPLETED_MIGRATION_QA_REPORTS Not accepted as evidence that reported source defects were repaired.
+ACTOR_CENSUS NOTRUN; queue markers are not actor lifecycle and cannot release a live/unconfirmed claim.
+
+ORIGINAL_FINDING_ACCOUNTING_AND_REMAINDER_CHECK_UTC 2026-10-14T06:21:47.146368+00:00
+COMMAND inline Python compare original reported finding IDs against owner-map confirmed and conditional references; verify exact current Phase6 QA filename inventory.
+RAW_OUTPUT
+FINDING_ACCOUNTING inbox reported 16 mapped 16 missing [] unknown []
+FINDING_ACCOUNTING dashboards reported 10 mapped 10 missing [] unknown []
+FINDING_ACCOUNTING geofences reported 12 mapped 12 missing [] unknown []
+FINDING_ACCOUNTING locations reported 13 mapped 13 missing [] unknown []
+FINDING_ACCOUNTING mapOverview reported 8 mapped 8 missing [] unknown []
+FINDING_ACCOUNTING temperature reported 9 mapped 12 missing [] unknown ['TI-C-002', 'TI-C-005', 'TI-C-006']
+FINDING_ACCOUNTING chatbot reported 15 mapped 15 missing [] unknown []
+FINDING_ACCOUNTING help reported 10 mapped 10 missing [] unknown []
+CANDIDATE_FIELD_LOCATOR_MISMATCH locations ['candidates'] actual ['unprovedCandidates', 'nativeCandidates']
+INVENTORY 209 209 missing [] extraneous []
+ERRORS []
+PROCESS_EXIT 0
+INTERPRETATION All 93 original confirmed findings accounted for, including findings conservatively held conditional. Temperature's additional three IDs are explicitly original candidates, not newly confirmed findings. Candidate-set field locator corrected to unprovedCandidates/nativeCandidates in owned map; original reports unchanged.
+
+CURRENT_RELATED_QUEUE_OWNER_CHECK_UTC 2026-10-14T06:21:47.183592+00:00
+COMMAND inline Python read exact existing queue rows for phase6-live-vehicle-identity-reset, phase6-fix-relative-future-dates, phase6-fix-selection-prerequisite-trust, phase6-copy-command-grades-roadmap, and this exact task.
+PROCESS_EXIT 0
+phase6-live-vehicle-identity-reset [x] useVehicleLive scalar merge identity reset, not MapOverview caller camera/replay.
+phase6-fix-relative-future-dates [x] reuse existing completed formatter helper, no duplicate rewrite.
+phase6-fix-selection-prerequisite-trust [~] original existing owner retained for TI-C-006 conditional overlap, no new root.
+phase6-copy-command-grades-roadmap [~] exact existing canonical writer retained; parent-confirmed release required before any separate copy.
+phase6-register-remaining-confirmed-fix-scopes [~] actor a689cf45-7fb0-4222-a6ab-a31a99b88a4a; canonical return deadline 2026-10-14T06:27:14.379Z; no attempt/clock reset.
+
+SCOPE_OF_DELIVERY Bounded report-only subset: 37 consolidated confirmed owner groups, five conditional groups, eight original report sets; exact 201 remaining report filenames listed in map.
+NATIVE_PAGE_APPLICATION_APPROVAL NOT_ESTABLISHED
+PRODUCTION_TEST_AUDIT_COMPILE_BROWSER_API_COMMANDS NOTRUN_PROHIBITED
+QUEUE_ITEMS_REGISTERED 0
+SOURCE_WRITES 0
+EXISTING_QA_REPORT_WRITES 0
+PARENT_ALONE_REGISTERS_AND_DISPATCHES after rereading current queue and real actors; unknown test/DTO/form/catalog paths remain explicitly unknown.
+
+FINAL_ARTIFACT_CHECK_UTC 2026-10-14T06:23:36.104575+00:00
+COMMAND inline Python read own JSON and eight original report JSON objects; validate every reported source/test path and evidence/candidate locator against report contents; check scope dependencies, original-finding accounting, non-overlapping confirmed source/test claims and exact remainder inventory. No production files opened, no existing report written.
+RAW_OUTPUT
+FINAL_ARTIFACT_CHECK JSON_PARSE_OK
+REPORTED_PATH_AND_EVIDENCE_LOCATORS_OK True
+CONFIRMED_OWNER_GROUPS 37 CONDITIONAL_GROUPS 5 REVIEWED_REPORTS 8 REMAINING_REPORTS 201
+ORIGINAL_CONFIRMED_FINDINGS_ACCOUNTED 93
+CONFIRMED_SOURCE_TEST_CLAIM_OVERLAPS 0
+EXACT_REPORT_INVENTORY 209 ACCOUNTED 209
+ERRORS []
+RELEASE_DECISION_UTC 2026-10-14T06:23:36.104575+00:00
+PROCESS_EXIT 0
+
+REPORT_RELEASE_UTC 2026-10-14T06:23:36.104575+00:00
+COMMAND_RELEASE_UTC 2026-10-14T06:23:36.104575+00:00
+RELEASE_MEANING Final release decision after last completed bounded command; this final report/log metadata receipt is the only remaining delivery write.
+SOURCE_BROWSER_API_GIT_QUEUE_CATALOG_CLAIMS None acquired or performed.
+POST_RETURN_WRITES NONE
+RESULT DONE | phase6-register-remaining-confirmed-fix-scopes | docs\frontend-audits\phase6-confirmed-fix-owner-map.json; web\logs\phase6-register-remaining-confirmed-fix-scopes.log | bounded subset: 37 consolidated owners, 5 conditional groups, 8 reports, 93 original confirmed findings accounted; 201 exact remaining report filenames; parent alone registers; no native/application approval
