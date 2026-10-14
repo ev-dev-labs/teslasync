@@ -1,0 +1,1314 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-driving-cold-start",
+  "attempt": 1,
+  "actor": "0d5a392e-b50f-4e29-b887-1657902f3d09",
+  "status": "DONE",
+  "page": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+  "routes": [
+    "/cold-start"
+  ],
+  "createdUtc": "2026-10-14T01:18:25.5798169Z",
+  "writableFiles": [
+    "docs\\frontend-audits\\phase6-qa-driving-cold-start.json",
+    "web\\logs\\phase6-qa-driving-cold-start.log"
+  ],
+  "initialCheck": {
+    "exitCode": 0,
+    "noChange": "No existing QA report; accepted source preserved without remigration",
+    "logExists": false,
+    "reportExists": false,
+    "utc": "2026-10-14T01:02:06.4307416Z"
+  },
+  "queue": {
+    "completedPhasesRestarted": [],
+    "dependency": "phase5-page-driving-cold-start",
+    "queueEdited": false,
+    "sourceOnlyAcceptance": true,
+    "acceptedCommit": "2470ffa15bec2aa4f327e649a3c0173a22091fbc",
+    "acceptedDependencyStatus": "[x]",
+    "exactRows": [
+      {
+        "line": 393,
+        "raw": "| [~] | 6 | phase6-qa-driving-cold-start | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-driving-cold-start.json | phase5-page-driving-cold-start | 1 | conservative reservation=2026-10-14T01:00:00.625Z; return=2026-10-14T01:20:00.625Z; hard=2026-10-14T01:25:00.625Z; actor=0d5a392e-b50f-4e29-b887-1657902f3d09; LastConsumed=-1 | - |CurrentacceptedColdStartPage/directparts source-onlyQA; report/logonly/no source/tests/API/catalog/browser/native/fullsuite. Thermal/evidence/timeenergy/sign/scopes/unknownzero/SI/preferences/trust/actions/sections; no remigration. Historical start preserved: -. New-machine rolling reservation only, NOT a running worker; exact exclusive files, same recovered attempt or first QA attempt; no browser lock. Actual built-in background launch accepted; exact files owned by 0d5a392e-b50f-4e29-b887-1657902f3d09, no browser lock. |"
+      },
+      {
+        "line": 1857,
+        "raw": "| [x] | 5 | phase5-page-driving-cold-start | original-page-migration | web\\src\\features\\driving\\pages\\ColdStartPage.tsx; web\\src\\features\\driving\\pages\\ColdStartPage.test.tsx | - | 1 | 2026-10-12T14:32:17.5543916Z | 2470ffa15bec2aa4f327e649a3c0173a22091fbc | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/cold-start; audit=docs\\frontend-audits\\audit-page-104.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Genuinely unstarted third-wave page/test source claim after exact caller fixture correction and normal i18n check0. Prior completed/zero-turn objectives not redispatched. Actual agent launch ID follows; held delivery claims excluded. Actual third-wave source agent=52b04a97-eb6f-4a14-a89b-dadc8c80e20c; no source/QA result inferred from launch. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Receipt lint0/style0;144-to163 page/7sections preserved; exact bounds/SI/rate tests unexecuted due external catalog startup1; privacy/locks native blocked, no native QA; commit=2470ffa15bec2aa4f327e649a3c0173a22091fbc; pushed. |"
+      }
+    ],
+    "branch": "Keep inherited fix/dashboard-followups per handoff; no Git used"
+  },
+  "timebox": {
+    "targetMinutes": 10,
+    "effectiveHardUtc": "2026-10-14T01:25:00.625Z",
+    "maxCommandSeconds": 15,
+    "reservationUtc": "2026-10-14T01:00:00.625Z",
+    "effectiveReturnUtc": "2026-10-14T01:20:00.625Z",
+    "clocksRenewed": false
+  },
+  "guidanceRead": [
+    "FULL docs/orchestrator-loop.md 1-296",
+    "FULL docs/frontend-design-contract.md 1-2539, truncated outputs completed by followup ranges",
+    "Latest docs/session-handoff.md:2026-10-14T00:44Z,lines1-145",
+    "docs/frontend-mission.md 43-45,lines1416-1518",
+    "FULL frontend-si-cutover/react-frontend/observability/unit-conversion instructions",
+    "FULL docs/frontend-worker-conventions.md",
+    "Historical audit-page-104 selected preservation/issues only"
+  ],
+  "sourcePins": [
+    {
+      "lineCount": 163,
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "sha256": "19E618457458018F18EBA857CA251B8675C1B00B13C3A348644D160B4F7022F6",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.5644592Z"
+    },
+    {
+      "lineCount": 51,
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx",
+      "sha256": "084BC726DBBADB2EC57E732EA959B4580F9BF5AE2FAFE4E00E8A5674E91DDFFF",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "lineCount": 337,
+      "file": "web\\src\\features\\driving\\lib\\coldStart.ts",
+      "sha256": "3454203EA261AD894110E5A7D91EB0717D9F780C030225A222BA5A3C47A8F4C1",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-13T06:09:18.2794829Z"
+    },
+    {
+      "lineCount": 109,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx",
+      "sha256": "DF649911996FA056FF3C2364DAFC0697A73843CCEB1C77B8CCA65CD9F48391F0",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4725911Z"
+    },
+    {
+      "lineCount": 137,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+      "sha256": "9F909690CF2EEE95DA961DD10BB8BAD24881125BEFF3A558B4A8C4A0138A027D",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-13T06:09:18.2210804Z"
+    },
+    {
+      "lineCount": 153,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx",
+      "sha256": "8F0EC88B2538876E56C7E2D76DBAB003AFF66CD26A10DA767EC001CD7BB0BED2",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4725911Z"
+    },
+    {
+      "lineCount": 45,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx",
+      "sha256": "C1C5E932358365F8EA0568B32A65DBED5A072E3C7F5F03E4833FDAD6F11D5AE5",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-13T06:09:18.2210804Z"
+    },
+    {
+      "lineCount": 190,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "sha256": "CF234B26D1BF9FE30226BEEC63761D69971C4957551B101E1A21063EC2A78329",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4745976Z"
+    },
+    {
+      "lineCount": 9,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\index.ts",
+      "sha256": "29524FFACAA596F7C477A37AC4D730DA9043115545388ED700483528E959BD5B",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-13T06:09:18.222079Z"
+    },
+    {
+      "lineCount": 201,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx",
+      "sha256": "315262EE849CE5BADC2BB70F01DF3DF514744C9FCF90DAFE2E32B5D3A460091B",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4745976Z"
+    },
+    {
+      "lineCount": 167,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx",
+      "sha256": "1B932F3E1DE856A5E6DA1857A772820AB238C7ED1892151C75EC9772D95BFF83",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4745976Z"
+    },
+    {
+      "lineCount": 198,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+      "sha256": "1F1C807B3D8B2A9A3D863D8465A52452F401E9A737CB215425894B979EE138AB",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4745976Z"
+    },
+    {
+      "lineCount": 5,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\types.ts",
+      "sha256": "C522B56E7B1ABB5CA10E5CA3969F5BB73F73EB814AFB9E35A70FFB389085854E",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-13T06:09:18.222079Z"
+    },
+    {
+      "lineCount": 61,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\useColdStartDisplay.ts",
+      "sha256": "9ED38F30970ADC866C322357986F4DDE39A4A6123E5CCB39A8F53CB29053FE75",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.4745976Z"
+    },
+    {
+      "lineCount": 53,
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+      "sha256": "29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "lineCount": 63,
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx",
+      "sha256": "682A5D14BB65BA04739960E8C9E08AD15A8C39D32B9D6E5941A7946C226891BA",
+      "reviewScope": "full source",
+      "sourceUtc": "2026-10-14T00:29:41.5354103Z"
+    },
+    {
+      "lineCount": 454,
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "sha256": "C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.8549213Z"
+    },
+    {
+      "lineCount": 434,
+      "file": "web\\src\\api\\dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:17.7649888Z"
+    },
+    {
+      "lineCount": 458,
+      "file": "web\\src\\api\\client.ts",
+      "sha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.8468672Z"
+    },
+    {
+      "lineCount": 411,
+      "file": "web\\src\\types\\driving.ts",
+      "sha256": "EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9942654Z"
+    },
+    {
+      "lineCount": 65,
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.5649346Z"
+    },
+    {
+      "lineCount": 694,
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "sha256": "BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "lineCount": 174,
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "sha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "lineCount": 194,
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.5715117Z"
+    },
+    {
+      "lineCount": 106,
+      "file": "web\\src\\hooks\\useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "lineCount": 47,
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "lineCount": 24,
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "lineCount": 148,
+      "file": "web\\src\\hooks\\useDateFormat.ts",
+      "sha256": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.5649346Z"
+    },
+    {
+      "lineCount": 146,
+      "file": "web\\src\\hooks\\useSettings.ts",
+      "sha256": "F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.8646135Z"
+    },
+    {
+      "lineCount": 88,
+      "file": "web\\src\\hooks\\useHiddenSeries.ts",
+      "sha256": "A7CFECEBBB60E53783E13DBFABCCA5CA685B06F72AB6684FE3B6F712409D876E",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.5679402Z"
+    },
+    {
+      "lineCount": 462,
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "sha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9809331Z"
+    },
+    {
+      "lineCount": 500,
+      "file": "web\\src\\lib\\unitConversion.ts",
+      "sha256": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9890728Z"
+    },
+    {
+      "lineCount": 168,
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9890728Z"
+    },
+    {
+      "lineCount": 137,
+      "file": "web\\src\\lib\\metric-reference\\formatMetric.ts",
+      "sha256": "0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9809331Z"
+    },
+    {
+      "lineCount": 289,
+      "file": "web\\src\\lib\\routeRegistry.ts",
+      "sha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9890728Z"
+    },
+    {
+      "lineCount": 127,
+      "file": "web\\src\\lib\\routeLoaders.ts",
+      "sha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.986012Z"
+    },
+    {
+      "lineCount": 919,
+      "file": "web\\src\\App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.8444677Z"
+    },
+    {
+      "lineCount": 17,
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.9682184Z"
+    },
+    {
+      "lineCount": 259,
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.9542141Z"
+    },
+    {
+      "lineCount": 115,
+      "file": "web\\src\\components\\feedback\\StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.9392577Z"
+    },
+    {
+      "lineCount": 93,
+      "file": "web\\src\\components\\data-display\\MetricBar.tsx",
+      "sha256": "A7681D29402E9C208E21C01F2D87D7BD5E4CEC18A59CC5C994511E6CF6E1F5FC",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.9014093Z"
+    },
+    {
+      "lineCount": 342,
+      "file": "web\\src\\components\\data-display\\DataFreshness.tsx",
+      "sha256": "B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.8945434Z"
+    },
+    {
+      "lineCount": 193,
+      "file": "web\\src\\components\\charts\\ChartLegend.tsx",
+      "sha256": "E5F0B49F6F1159224D3B000CE2C57800DC13CE33C3053DC72EE1E35B2DA67095",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.8847524Z"
+    },
+    {
+      "lineCount": 1006,
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:40.8764844Z"
+    },
+    {
+      "lineCount": 77,
+      "file": "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+      "sha256": "D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-13T06:09:18.3540415Z"
+    },
+    {
+      "lineCount": 38994,
+      "file": "web\\src\\i18n\\en.json",
+      "sha256": "8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.8787917Z"
+    },
+    {
+      "lineCount": 892,
+      "file": "web\\src\\i18n\\en\\locale-driving-cold-start.json",
+      "sha256": "62B55967930552C9702337F7C688B2FB0AB7D3BE60B5748554CB354D7E036231",
+      "reviewScope": "necessary cited portions; hash covers full bytes",
+      "sourceUtc": "2026-10-14T00:29:41.9275001Z"
+    }
+  ],
+  "sourceUtcMeaning": "File LastWriteTimeUtc, not runtime/capture/fetch/acceptance time; SHA256 covers entire exact bytes",
+  "scannedFiles": [
+    "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx",
+    "web\\src\\features\\driving\\lib\\coldStart.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\index.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+    "web\\src\\features\\driving\\components\\cold-start\\types.ts",
+    "web\\src\\features\\driving\\components\\cold-start\\useColdStartDisplay.ts",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx",
+    "web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx"
+  ],
+  "composition": {
+    "indexLines": 9,
+    "summaryMetrics": 4,
+    "pageFiles": 1,
+    "gapBuckets": 5,
+    "sections": 7,
+    "sectionStateTypeLines": 5,
+    "comparisonBars": 2,
+    "mountedPresentationTsxLines": 1258,
+    "domainModelLines": 337,
+    "localDisplayHookLines": 61,
+    "temperatureSeries": 2,
+    "monthlySeries": 4,
+    "unmountedKpiLines": 109,
+    "historical": "Original144/1285-line audit and Phase5 lint/style receipts historical only; current1421 includes both brief adapters, not identical accounting scope",
+    "pageLines": 163,
+    "glassPanels": 3,
+    "analysisGridRows": 3,
+    "scannedFiles": 16,
+    "pinnedFiles": 47,
+    "mountedPresentationTsxFiles": 10,
+    "chartContainers": 3,
+    "pagePlusMountedTsxLines": 1421,
+    "comparisonMetrics": 3
+  },
+  "sections": [
+    {
+      "pageLine": 97,
+      "preserve": "Signed penalty, extraWh, cold share, analyzed, currency, precise period, provenance",
+      "name": "Summary metrics"
+    },
+    {
+      "pageLine": 115,
+      "preserve": "3 metrics,2 bars, signed delta, samples, null cohorts, help/takeaway",
+      "name": "Cold/warm comparison"
+    },
+    {
+      "pageLine": 121,
+      "preserve": "cold/5,warm/5,classified,ambiguous/unclassified,eligibility,1000-cap",
+      "name": "Confidence/methodology"
+    },
+    {
+      "pageLine": 133,
+      "preserve": "UTC months,2 lines/null gaps,2 sample bars,dual axes,legend/table",
+      "name": "Monthly trend"
+    },
+    {
+      "pageLine": 138,
+      "preserve": "5 buckets,count/share,source order",
+      "name": "Parking-gap distribution"
+    },
+    {
+      "pageLine": 149,
+      "preserve": "Measured Celsius including0/negative,2 cohorts,distance size,freezing reference,dates/table",
+      "name": "Temperature/consumption"
+    },
+    {
+      "pageLine": 154,
+      "preserve": "Top5 deterministic rank,date,gap,distance,nullable temperature,above-baselineWh,distinct empty reasons",
+      "name": "Opportunities"
+    }
+  ],
+  "actions": [
+    {
+      "citations": [
+        "ColdStartPage.tsx:38-39",
+        "useSelectedVehicle.ts:60-77,168-173",
+        "workspaceScope.ts:157-168"
+      ],
+      "name": "Workspace vehicle"
+    },
+    {
+      "citations": [
+        "ColdStartPage.tsx:43-53",
+        "workspaceScope.ts:32",
+        "useRangeState.ts:299-318,656-684"
+      ],
+      "name": "Workspace range"
+    },
+    {
+      "citations": [
+        "ColdStartPage.tsx:78-95",
+        "ColdStartSectionBody.tsx:24-28",
+        "DrivingSummaryBrief.tsx:51",
+        "StaleRefreshWarning.tsx:93-108",
+        "DataFreshness.tsx:326-333"
+      ],
+      "name": "Drive source retry"
+    },
+    {
+      "citations": [
+        "ColdWarmComparison.tsx:89-94"
+      ],
+      "name": "Method help"
+    },
+    {
+      "citations": [
+        "MonthlyColdStartChart.tsx:70,152-192",
+        "useHiddenSeries.ts:57-82"
+      ],
+      "name": "Monthly legend"
+    },
+    {
+      "citations": [
+        "TemperatureEfficiencyChart.tsx:86,176-190",
+        "ChartLegend.tsx:40-48,167-190"
+      ],
+      "name": "Temperature legend"
+    },
+    {
+      "limit": "No exportData/CSV or fullscreen prop at page callsites; none attempted",
+      "name": "3 chart image export menus",
+      "citations": [
+        "ChartContainer.tsx:477-483,720-729"
+      ],
+      "commands": [
+        "PNG",
+        "SVG",
+        "copy image"
+      ]
+    },
+    {
+      "citations": [
+        "ColdStartPage.tsx:70-76",
+        "NoVehicleSelected.tsx:64-69"
+      ],
+      "name": "No-vehicle setup"
+    }
+  ],
+  "actionFamilyCount": 8,
+  "states": {
+    "insufficient": ">=5 each before aggregate claim; descriptive monthly/scatter remain",
+    "initial": "deriveDataState:204-219 initial with no data; all7 shells/skeletons preserved; F03 confidence label defect",
+    "fatal": "Only fatalError gates bodies and source retries, no page-wide error prop; F03 remains",
+    "initialPaused": "initial+isRefreshBlocked, no fake error/zero; StaleRefreshWarning:60 hides with no retained data; qualifier C03",
+    "retained": "dataState:234-250 retains refresh-error/paused data; page:95 warning,109 top retained; nested F04",
+    "noVehicle": "NoVehicleSelected PageContainer fallback; hook disabled without id; parent gating C10",
+    "retry": "refetch forwarded, signal cancellation maintained, no network retry executed",
+    "empty": "Successful [] has contextual empty explanations, not hidden sections; missing cohorts F01"
+  },
+  "dataProvenance": {
+    "scope": "Selected vehicle_id,startInstant,endInstantExclusive,limit1000; key includes bounds,cap; signal passed; server enforcement NOTRUN",
+    "signs": "Signed penalty preserved; nonnegative extra energy intentionally clamps only negative extra estimate. Valid0/negative Celsius preserved; missing temperatures null. Zero rate incorrectly suppressed F05.",
+    "time": "Vehicle-zone precise/exclusive scope; model months explicitly UTC; date bypass F06; predecessor validity C01",
+    "transport": "client.ts:73-93 strips old prefix/adds /api/v1 once",
+    "cap": "Returned subset<=1000, cap warning, first returned predecessor unknown; not full-range/lifetime",
+    "thermal": "No pack/cabin thermal or first-kilometre/causal segmentation; F02",
+    "endpoint": "/drives",
+    "hook": "useDriving.ts:107-135",
+    "preferences": "useUnits/useFormatting/useNumberFormatting at display boundary; raw/cache SI unchanged; precision F07/count locale F08",
+    "rawSi": [
+      "distanceM:m",
+      "energyUsedWh:Wh",
+      "durationS/precedingGapS:s",
+      "outsideTempAvgC:C"
+    ],
+    "model": "coldStart.ts:121-148,235-294 whole-drive weighting,positive finite energy,>=1000m,chronological predecessor,<=1h warm,>=6h cold,ambiguous1-6h,minimum5 each",
+    "denominators": "SumWh/(sumM/1000),coldCount/all analyzed INCLUDING ambiguous,bucketCount/all analyzed; warm denominator>0 guard:293"
+  },
+  "layoutAccessibility": {
+    "wrapper": "PageLayout.tsx:10-15 wraps PageContainer; NoVehicleSelected also wraps PageContainer",
+    "route": "App.tsx:148 lazy import and850 /cold-start SafeRoute; routeRegistry.ts:86; mounted acceptance NOTRUN",
+    "alternatives": "All3 charts supply dataColumns; ChartContainer:502-510,890-945 shared table/forced-colors fallback, not exercised",
+    "allocations": "Narrow containers,200% text,long labels/RTL,safe areas,forced colors/reduced motion NOTRUN",
+    "tokens": "CSS-variable Tailwind/Recharts paint props accepted; decorative comparison gradient F09; composed theme/contrast NOTRUN",
+    "imports": "Runtime category barrels;4 stat-reference imports type-only, not direct vendor imports",
+    "semantics": "Named sections/regions,decorative icons aria-hidden,ordered list,shared headings; bar ARIA F01; labels F03/F04",
+    "workspace": "workspaceScope.ts:32,157-168 enables range/vehicle; useRangeState ignores local persist/default on header-owned route; no duplicate picker",
+    "declaredMobile": "3 default1/xl5 grids with3/2 spans; panels p5/sm6; charts340,340,350px; methodology/opportunities3 columns; w-full/min-w-0 shared layout",
+    "touch": "PageContainer info h11/w11 then sm9; ChartLegend min11 then md9; retained retry min-h11 then md9; no measured rectangles",
+    "matrix": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ]
+  },
+  "confirmedFindingCount": 10,
+  "confirmedSourceSiteCount": 22,
+  "confirmedFindings": [
+    {
+      "mechanism": [
+        "ColdWarmComparison:42-46,98,138-150",
+        "coldStart.ts:137-148 empty-group efficiency null",
+        "MetricBar.tsx:50-63,80-90 reading/ARIA/fill"
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "line": 138,
+      "priority": "P1",
+      "ownerNeed": "N01",
+      "detail": "Only one populated cohort still mounts both bars (classified>0); missing efficiency null becomes value0. MetricBar then hasReading=true, aria-valuenow=0 and a measured fill despite the visible dash.",
+      "rule": "unknown-as-zero",
+      "siteLines": [
+        138,
+        147
+      ],
+      "id": "F01",
+      "fix": "Pass nullable efficiency unchanged; retain guarded max calculation and measured zero distinction",
+      "sourceSiteCount": 2,
+      "confidence": "high"
+    },
+    {
+      "sites": [
+        {
+          "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+          "line": 91
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+          "line": 92
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+          "line": 123
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+          "line": 166
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+          "line": 174
+        }
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "line": 92,
+      "priority": "P1",
+      "ownerNeed": "N02",
+      "detail": "Subtitle promises first kilometres; help says weighting isolates battery/cabin warm-up; takeaway attributes warm-up overhead and shifting it to the wall. Model uses whole-drive energy/distance and parking-gap groups only: no first-kilometre segmentation, pack/cabin measurements, route matching, preconditioning evidence or causal test. Main brief explicitly says non-causal.",
+      "rule": "unsupported-thermal-attribution",
+      "fix": "Align existing localized messages to observed whole-drive cohort differences and conditional advice; preserve all evidence/sections; invent no adjusted model or guaranteed savings",
+      "id": "F02",
+      "mechanism": [
+        "coldStart.ts:121-148,235-294",
+        "ColdStartBrief.tsx:44-45",
+        "Existing canonical/route catalog contains same comparison.help/takeaway/takeawayCost/subtitle"
+      ],
+      "sourceSiteCount": 5,
+      "confidence": "high"
+    },
+    {
+      "mechanism": [
+        "ColdStartMethodology:42,56-63",
+        "ColdStartPage:54-56,78-84",
+        "ColdStartSectionBody:24-42"
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+      "line": 56,
+      "priority": "P1",
+      "ownerNeed": "N03",
+      "detail": "Confidence Badge is outside body trust gate and reads only sampleSufficient. Initial/first-load fatal states therefore announce More samples needed from an unresolved empty summary, not an authoritative sample result.",
+      "rule": "initial-fatal-evidence-mislabel",
+      "siteLines": [
+        56
+      ],
+      "id": "F03",
+      "fix": "Derive initial/fatal label before sample confidence, retaining shell/readings",
+      "sourceSiteCount": 1,
+      "confidence": "high"
+    },
+    {
+      "mechanism": [
+        "ColdStartPage:109 retained only top brief",
+        "types.ts:1-5 lacks retained",
+        "ColdWarmComparison:118-123",
+        "NestedDrivingBrief:27-28,57-63",
+        "api/dataState:234-250 retention"
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "line": 118,
+      "priority": "P1",
+      "ownerNeed": "N03",
+      "detail": "Top brief receives retained trust; nested comparison never passes retained, defaults false, and labels retained refresh-error/paused data Returned evidence beside the page retained warning.",
+      "rule": "retained-evidence-as-returned",
+      "siteLines": [
+        118
+      ],
+      "id": "F04",
+      "fix": "Thread existing retained trust through local section state into NestedDrivingBrief; no new trust model",
+      "sourceSiteCount": 1,
+      "confidence": "high"
+    },
+    {
+      "mechanism": [
+        "ColdStartPage:57-68",
+        "useFormatting:44-46,54-57"
+      ],
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "line": 62,
+      "priority": "P2",
+      "ownerNeed": "N04",
+      "detail": "costPerKwh>0 gate converts known free electricity rate to no cost; useFormatting preserves configured finite zero.",
+      "rule": "measured-zero-price-suppressed",
+      "siteLines": [
+        62
+      ],
+      "id": "F05",
+      "fix": "Accept finite nonnegative rates including0; retain null for absent/invalid pricing",
+      "sourceSiteCount": 1,
+      "confidence": "high"
+    },
+    {
+      "sites": [
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx",
+          "line": 109
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+          "line": 34
+        }
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx",
+      "line": 109,
+      "priority": "P2",
+      "ownerNeed": "N05",
+      "detail": "Opportunity/scatter-table dates pass locale only to formatDate, which defaults browser timezone; precise scope/bounds use vehicle zone. Dates can differ when those zones differ, without disclosure.",
+      "rule": "date-timezone-preference-bypass",
+      "fix": "Use existing intended-zone date formatter; preserve explicit UTC monthly grouping",
+      "id": "F06",
+      "mechanism": [
+        "dateFormat:29-42,67-75",
+        "ColdStartPage:41-47,105-106",
+        "useDateFormat:74-97"
+      ],
+      "sourceSiteCount": 2,
+      "confidence": "high"
+    },
+    {
+      "sites": [
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx",
+          "line": 34
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx",
+          "line": 38
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+          "line": 40
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+          "line": 43
+        },
+        {
+          "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+          "line": 44
+        }
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx",
+      "line": 34,
+      "priority": "P2",
+      "ownerNeed": "N06",
+      "detail": "Converted chart rows round to1 decimal before preference-aware tooltip/table formatting; selected2+ decimal precision cannot recover temperature/distance/efficiency presentation. Raw SI/cache unchanged.",
+      "rule": "display-precision-pre-rounding",
+      "fix": "Retain unrounded converted rows; apply established precision at labels/tables; preserve documented model rounding",
+      "id": "F07",
+      "mechanism": [
+        "MonthlyColdStartChart:28-43,77-86",
+        "TemperatureEfficiencyChart:31-47,94-106",
+        "useNumberFormatting:28-30",
+        "unitConversion:130-166,194-203"
+      ],
+      "sourceSiteCount": 5,
+      "confidence": "high"
+    },
+    {
+      "mechanism": [
+        "ColdStartMethodology:75-86",
+        "useNumberFormatting:28-40"
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+      "line": 77,
+      "priority": "P2",
+      "ownerNeed": "N07",
+      "detail": "Cold/5,warm/5,classified render raw JSX numbers, bypassing locale-aware digits/grouping.",
+      "rule": "unlocalized-evidence-counts",
+      "siteLines": [
+        77,
+        81,
+        85
+      ],
+      "id": "F08",
+      "fix": "Format all count operands/denominators through existing fmtInt; retain fields",
+      "sourceSiteCount": 3,
+      "confidence": "high"
+    },
+    {
+      "detail": "Cyan-to-emerald panel wash encodes no data/trust, conflicts neutral-surface contract. One declaration, not4 violations from4 regex tokens.",
+      "mechanism": [
+        "ColdWarmComparison:77-80",
+        "Design contract MDC-010/MDC-015"
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+      "limit": "Source styling defect, not measured composed contrast",
+      "ownerNeed": "N01",
+      "line": 79,
+      "siteLines": [
+        79
+      ],
+      "fix": "Use existing neutral panel surface; retain cohort identities/saved palettes",
+      "id": "F09",
+      "sourceSiteCount": 1,
+      "rule": "decorative-panel-gradient",
+      "confidence": "high",
+      "priority": "P2"
+    },
+    {
+      "detail": "Energy metadata uses physical text-right rather than logical end; RTL direction does not change alignment.",
+      "mechanism": [
+        "ColdStartOpportunities:139-143",
+        "Design contract MDC-044 logical alignment"
+      ],
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx",
+      "limit": "Static direction mismatch; mounted RTL NOTRUN",
+      "ownerNeed": "N07",
+      "line": 139,
+      "siteLines": [
+        139
+      ],
+      "fix": "Use existing text-end; retain complete energy value/label",
+      "id": "F10",
+      "sourceSiteCount": 1,
+      "rule": "physical-rtl-alignment",
+      "confidence": "high",
+      "priority": "P2"
+    }
+  ],
+  "unpromotedCandidateCount": 10,
+  "unpromotedCandidates": [
+    {
+      "line": 170,
+      "file": "web\\src\\features\\driving\\lib\\coldStart.ts",
+      "candidate": "Invalid predecessor duration fallback0/negative-duration gap",
+      "id": "C01",
+      "reason": "Explicit risk branch, but no invalid response/backend invariant established; do not claim observed wrong gap"
+    },
+    {
+      "line": 182,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+      "candidate": "Localized scatter hidden-series identity",
+      "id": "C02",
+      "reason": "ChartLegend:40-48 prefers actual vendor dataKey; useHiddenSeries:57-82 exact string persistence; actual payload/mounted language-change NOTRUN"
+    },
+    {
+      "line": 79,
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "candidate": "Initial-paused qualifier absent",
+      "id": "C03",
+      "reason": "DataState:204-219 initial+blocked is correct; StaleRefreshWarning:60 hides with no data; header lacks fetchStatus. No fake failure/empty promoted"
+    },
+    {
+      "line": 75,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+      "candidate": "3-column narrow/mobile/200%-text clipping",
+      "id": "C04",
+      "reason": "No actual geometry or authorized browser evidence"
+    },
+    {
+      "line": 29,
+      "file": "web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx",
+      "candidate": "Five palette colors rainbow/contrast",
+      "id": "C05",
+      "reason": "Five genuine strata; no composed theme/palette measured"
+    },
+    {
+      "line": 40,
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "candidate": "Retained pricing trust not separate",
+      "id": "C06",
+      "reason": "useFormatting:40-46 exposes pricingState,withholds unresolved rate; retained user setting not established as failed measured price"
+    },
+    {
+      "line": 140,
+      "file": "web\\src\\features\\driving\\lib\\coldStart.ts",
+      "candidate": "Extreme sums overflow/tiny warm denominator rounds0",
+      "id": "C07",
+      "reason": "No supported bounds/extreme payload; ratio guard:293 withholds nonpositive denominator; testsNOTRUN"
+    },
+    {
+      "line": 22,
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx",
+      "candidate": "14 fallback/canonical disagreements",
+      "id": "C08",
+      "reason": "All109 literal keys present in both catalogs; translation-backed,not missing i18n;3 disagreements unmountedKPI. Preserve exact raw differences for catalog owner, do not reopen accepted closure"
+    },
+    {
+      "file": "web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx",
+      "reason": "formatMetric:35-64 preserves finite signed efficiency and passes custom formatter; nonnegative total extraWh intentional",
+      "candidate": "Negative stats efficiency rejected",
+      "line": 20,
+      "id": "C09",
+      "disposition": "DISPROVED_BY_SOURCE"
+    },
+    {
+      "line": 70,
+      "file": "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+      "candidate": "Null vehicle may be unresolved fleet",
+      "id": "C10",
+      "reason": "useSelectedVehicle:68-77,168-173; NoVehicleSelected:54-76; parent onboarding/auth not fully audited/mounted, no identity access"
+    }
+  ],
+  "exactExistingOwnerNeeds": [
+    {
+      "queue": "No pending matching ColdStart repair; completed phase3-metric-bar already handles null; do not restart",
+      "need": "Nullable existing MetricBar adoption+neutral panel in one caller lease",
+      "findings": [
+        "F01",
+        "F09"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx"
+      ],
+      "id": "N01"
+    },
+    {
+      "files": [
+        "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+        "web\\src\\features\\driving\\components\\cold-start\\",
+        "ColdWarmComparison.tsx",
+        "web\\src\\i18n\\en.json"
+      ],
+      "keys": [
+        "coldStart.subtitle",
+        "coldStart.comparison.help",
+        "coldStart.takeaway",
+        "coldStart.takeawayCost"
+      ],
+      "need": "Serialize existing canonical English owner and source fallback adoption for proven overclaims only; generator owner must establish exact generated write set before regeneration",
+      "queue": "phase5-current-source-catalog-closure row487 [x]91650fc9de1b96f60f00a01e24f2f73a716bd817, not a pending fix. New narrow followup, no remigration",
+      "id": "N02",
+      "findings": [
+        "F02"
+      ]
+    },
+    {
+      "queue": "No pending matching root; NestedDrivingBrief already supports retained; shared trust/layout stay complete",
+      "need": "One drive-source trust root: initial/fatal badge precedence and existing retained prop thread",
+      "findings": [
+        "F03",
+        "F04"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\pages\\ColdStartPage.tsx",
+        "web\\src\\features\\driving\\components\\cold-start\\",
+        "types.ts",
+        "web\\src\\features\\driving\\components\\cold-start\\",
+        "ColdStartMethodology.tsx",
+        "web\\src\\features\\driving\\components\\cold-start\\",
+        "ColdWarmComparison.tsx"
+      ],
+      "id": "N03"
+    },
+    {
+      "queue": "New bounded page predicate fix only",
+      "need": "Accept measured finite zero electricity rate; existing useFormatting sufficient",
+      "findings": [
+        "F05"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\pages\\ColdStartPage.tsx"
+      ],
+      "id": "N04"
+    },
+    {
+      "queue": "Existing phase6-fix-relative-future-dates row316 [~] owns different shared relative-time issue; do not duplicate/edit dateFormat root",
+      "need": "Use existing intended-zone date formatter; keep UTC months",
+      "findings": [
+        "F06"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx"
+      ],
+      "id": "N05"
+    },
+    {
+      "queue": "New bounded local presentation fix",
+      "need": "Remove presentation pre-rounding; preserve SI/model/series",
+      "findings": [
+        "F07"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx"
+      ],
+      "id": "N06"
+    },
+    {
+      "queue": "New bounded local locale/direction adoption",
+      "need": "Existing fmtInt/logical text-end adoption, no missing translation campaign",
+      "findings": [
+        "F08",
+        "F10"
+      ],
+      "files": [
+        "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx"
+      ],
+      "id": "N07"
+    }
+  ],
+  "deduplicatedOwnerNeedCount": 7,
+  "scanCommands": [
+    {
+      "exitCode": 0,
+      "rawOutput": "C01 Test-Path report/log; read existing if present\r\nUTC_NOW=2026-10-14T01:02:06.4307416Z\r\nREPORT_EXISTS=False\r\nLOG_EXISTS=False\r\nCOMMAND_EXIT=0\r\nNo existing report; no completed QA restarted. Accepted Phase5 source retained.",
+      "rawCounts": [],
+      "id": "C01",
+      "command": "Test-Path report/log; read existing if present"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C02 initial source pins: Get-Item; Get-FileHash -Algorithm SHA256; Get-Content line count\r\nPIN|web\\src\\features\\driving\\pages\\ColdStartPage.tsx|2026-10-14T00:29:41.5644592Z|19E618457458018F18EBA857CA251B8675C1B00B13C3A348644D160B4F7022F6|163\r\nPIN|web\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx|2026-10-14T00:29:41.5354103Z|084BC726DBBADB2EC57E732EA959B4580F9BF5AE2FAFE4E00E8A5674E91DDFFF|51\r\nPIN|web\\src\\features\\driving\\lib\\coldStart.ts|2026-10-13T06:09:18.2794829Z|3454203EA261AD894110E5A7D91EB0717D9F780C030225A222BA5A3C47A8F4C1|337\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx|2026-10-14T00:29:41.4725911Z|DF649911996FA056FF3C2364DAFC0697A73843CCEB1C77B8CCA65CD9F48391F0|109\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx|2026-10-13T06:09:18.2210804Z|9F909690CF2EEE95DA961DD10BB8BAD24881125BEFF3A558B4A8C4A0138A027D|137\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx|2026-10-14T00:29:41.4725911Z|8F0EC88B2538876E56C7E2D76DBAB003AFF66CD26A10DA767EC001CD7BB0BED2|153\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\ColdStartSectionBody.tsx|2026-10-13T06:09:18.2210804Z|C1C5E932358365F8EA0568B32A65DBED5A072E3C7F5F03E4833FDAD6F11D5AE5|45\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx|2026-10-14T00:29:41.4745976Z|CF234B26D1BF9FE30226BEEC63761D69971C4957551B101E1A21063EC2A78329|190\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\index.ts|2026-10-13T06:09:18.2220790Z|29524FFACAA596F7C477A37AC4D730DA9043115545388ED700483528E959BD5B|9\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx|2026-10-14T00:29:41.4745976Z|315262EE849CE5BADC2BB70F01DF3DF514744C9FCF90DAFE2E32B5D3A460091B|201\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx|2026-10-14T00:29:41.4745976Z|1B932F3E1DE856A5E6DA1857A772820AB238C7ED1892151C75EC9772D95BFF83|167\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx|2026-10-14T00:29:41.4745976Z|1F1C807B3D8B2A9A3D863D8465A52452F401E9A737CB215425894B979EE138AB|198\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\types.ts|2026-10-13T06:09:18.2220790Z|C522B56E7B1ABB5CA10E5CA3969F5BB73F73EB814AFB9E35A70FFB389085854E|5\r\nPIN|web\\src\\features\\driving\\components\\cold-start\\useColdStartDisplay.ts|2026-10-14T00:29:41.4745976Z|9ED38F30970ADC866C322357986F4DDE39A4A6123E5CCB39A8F53CB29053FE75|61\r\nCOMMAND_EXIT=0",
+      "rawCounts": [],
+      "id": "C02",
+      "command": "initial source pins: Get-Item; Get-FileHash -Algorithm SHA256; Get-Content line count"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C03 route / range / formatter / existing root locators: Select-String -Pattern\r\nFILE=web\\src\\App.tsx\r\n79: const SleepEfficiency = lazy(routeLoaders.SleepEfficiency)\r\n102: const SeasonalEfficiency = lazy(() => import('./features/driving/pages/SeasonalEfficiencyPage'))\r\n125: const Efficiency = lazy(routeLoaders.Efficiency)\r\n127: const RegenEfficiency = lazy(routeLoaders.RegenEfficiency)\r\n128: const RouteEfficiency = lazy(routeLoaders.RouteEfficiency)\r\n146: const EfficiencyTarget = lazy(() => import('./features/driving/pages/EfficiencyTargetPage'))\r\n148: const ColdStart = lazy(() => import('./features/driving/pages/ColdStartPage'))\r\n212: const SignalsWorkspace = lazy(() => import('./features/telemetry/pages/SignalsWorkspacePage'))\r\n441:  * Given the value stashed in `sessionStorage['teslasync-return-url']`\r\n462:     // Malformed value stored — ignore rather than throw on mount.\r\n570:         <main className=\"mx-auto min-w-0 max-w-6xl p-4\">\r\n676:         <Route path=\"efficiency\" element={<SafeRoute name=\"Efficiency\"><Efficiency /></SafeRoute>} />\r\n734:         <Route path=\"signals\" element={<SafeRoute name=\"SignalsWorkspace\"><SignalsWorkspace /></SafeRoute>} />\r\n832:         <Route path=\"route-efficiency\" element={<SafeRoute name=\"RouteEfficiency\"><RouteEfficiency /></SafeRoute>} />\r\n833:         <Route path=\"regen-efficiency\" element={<SafeRoute name=\"RegenEfficiency\"><RegenEfficiency /></SafeRoute>} />\r\n848:                 <Route path=\"efficiency-target\" element={<SafeRoute name=\"EfficiencyTarget\"><EfficiencyTarget /></SafeRoute>} />\r\n850:                 <Route path=\"cold-start\" element={<SafeRoute name=\"ColdStart\"><ColdStart /></SafeRoute>} />\r\n872:         <Route path=\"seasonal-efficiency\" element={<SafeRoute name=\"SeasonalEfficiency\"><SeasonalEfficiency /></SafeRoute>} />\r\n901:         <Route path=\"sleep-efficiency\" element={<SafeRoute name=\"SleepEfficiency\"><SleepEfficiency /></SafeRoute>} />\r\n910:             render with the sidebar/header chrome instead of a blank Outlet. */}\r\nFILE=web\\src\\lib\\routeRegistry.ts\r\n86:   { path: \"/cold-start\", name: \"ColdStart\", label: \"Cold start\", i18nKey: \"routes.coldStart\" },\r\n121:   { path: \"/efficiency\", name: \"Efficiency\", label: \"Efficiency\", i18nKey: \"routes.efficiency\" },\r\n122:   { path: \"/efficiency-target\", name: \"EfficiencyTarget\", label: \"Efficiency target\", i18nKey: \"routes.efficiencyTarget\" },\r\n207:   { path: \"/regen-efficiency\", name: \"RegenEfficiency\", label: \"Regen efficiency\", i18nKey: \"routes.regenEfficiency\" },\r\n210:   { path: \"/route-efficiency\", name: \"RouteEfficiency\", label: \"Route efficiency\", i18nKey: \"routes.routeEfficiency\" },\r\n215:   { path: \"/seasonal-efficiency\", name: \"SeasonalEfficiency\", label: \"Seasonal efficiency\", i18nKey: \"routes.seasonalEfficiency\" },\r\n234:   { path: \"/signals\", name: \"SignalsWorkspace\", label: \"Signals workspace\", i18nKey: \"routes.signalsWorkspace\" },\r\n235:   { path: \"/sleep-efficiency\", name: \"SleepEfficiency\", label: \"Sleep efficiency\", i18nKey: \"routes.sleepEfficiency\" },\r\nFILE=web\\src\\lib\\routeLoaders.ts\r\n34: export const SleepEfficiency = () => import('../features/battery/pages/SleepEfficiencyPage')\r\n43: export const Efficiency = () => import('../features/driving/pages/EfficiencyPage')\r\n45: export const RegenEfficiency = () => import('../features/driving/pages/RegenEfficiencyPage')\r\n46: export const RouteEfficiency = () => import('../features/driving/pages/RouteEfficiencyPage')\r\nFILE=web\\src\\hooks\\useRangeState.ts\r\n12:  * Header-owned routes ignore page preferences and use the header's product\r\n13:  * default, so a fresh visit cannot render a range different from the header.\r\n27: import { getWorkspaceRouteScope, isWorkspaceRangePresetAvailable } from '@/lib/workspaceScope';\r\n70:   /** Ignore the workspace-wide range when this page needs its own default. */\r\n85:    * IANA timezone the calendar dates are interpreted in when computing\r\n87:    * resolved timezone. Vehicle-centric pages should pass the vehicle's\r\n88:    * IANA tz (via `useTimezone('vehicle')`) so the API filter spans the\r\n92:   timezone?: string;\r\n95: export interface RangeValue {\r\n100: interface StoredRangePreference extends RangeValue {\r\n123:   /** IANA timezone used to compute `startInstant`/`endInstantExclusive`. */\r\n124:   timezone: string;\r\n130:   comparePrev: RangeValue | undefined;\r\n132:   setRange: (range: RangeValue, presetId?: string) => void;\r\n135:     range: RangeValue,\r\n157: function clampRange(range: RangeValue, minDate: string | undefined): RangeValue {\r\n208:   value: StoredRangePreference,\r\n212:     window.localStorage.setItem(storageKey, JSON.stringify(value));\r\n230: function resolvePreference(preference: StoredRangePreference, allowPreset = true): RangeValue {\r\n241:   range: RangeValue,\r\n263:   for (const [key, value] of Object.entries(updates)) {\r\n264:     if (value == null || value === '') {\r\n267:       params.set(key, value);\r\n282: function computeComparePrev(start: string, end: string): RangeValue | undefined {\r\n301:   const headerOwned = getWorkspaceRouteScope(pathname).range &&\r\n310:     timezone,\r\n312:   const defaultPresetId = headerOwned\r\n313:     ? isWorkspaceRangePresetAvailable(pathname, preferences.defaultAnalysisRange)\r\n317:   const persistKey = headerOwned ? undefined : opts.persistKey;\r\n318:   const inheritSharedPreference = headerOwned || (opts.inheritSharedPreference ?? true);\r\n324:   const resolvedTimezone = useMemo(() => {\r\n325:     if (timezone && timezone.trim()) return timezone;\r\n327:       return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';\r\n331:   }, [timezone]);\r\n338:     !headerOwned || isWorkspaceRangePresetAvailable(pathname, id);\r\n346:         urlScopedPreset.resolve(new Date(rollingNow), resolvedTimezone),\r\n354:   const fallback = useMemo<RangeValue>(\r\n359:           resolvedTimezone,\r\n363:     [defaultPresetId, minDate, rollingNow, resolvedTimezone],\r\n377:   const urlRange: RangeValue | null =\r\n386:   const effective = useMemo<RangeValue>(() => {\r\n406:       range: RangeValue,\r\n442:     (range: RangeValue, presetId?: string) =>\r\n449:       range: RangeValue,\r\n460:       const r: DatePresetRange = preset.resolve(new Date(), resolvedTimezone);\r\n461:       setRange(r, headerOwned && !isWorkspaceRangePresetAvailable(pathname, id) ? 'custom' : id);\r\n463:     [setRange, resolvedTimezone, headerOwned, pathname],\r\n485:     const defaultRange = preset.resolve(new Date(), resolvedTimezone);\r\n512:     resolvedTimezone,\r\n544:     headerOwned,\r\n550:     if (!headerOwned || !storedPreference?.presetId ||\r\n551:         isWorkspaceRangePresetAvailable(pathname, storedPreference.presetId)) return;\r\n558:   }, [headerOwned, pathname, storedPreference?.presetId, storedPreference?.start, storedPreference?.end, sourceId]);\r\n561:     if (!urlPreset || urlScopedPreset || !headerOwned) return;\r\n569:   }, [urlPreset, urlScopedPreset, headerOwned, setParams, fromKey, toKey, scopeKey, effective.start, effective.end]);\r\n611:   // workspace/status control. Canonical from/to keys are removed after the\r\n668:         timezone: resolvedTimezone,\r\n674:     resolvedTimezone,\r\n683:     timezone: resolvedTimezone,\r\nFILE=web\\src\\lib\\metric-reference\\formatMetric.ts\r\n3: import { formatCurrencyValue } from '@/lib/currencyFormat';\r\n6:   convertEfficiencyFromSI, convertEnergyFromSI, convertPowerFromSI,\r\n20:     return { value: '—', unit: '', text: '—', state, reason,\r\n22:       accessibility: reason, rawValue: raw };\r\n26:   const measurement = (value: string, unit = ''): FormattedMetric => {\r\n28:     const text = unit ? `${value}${separator}${unit}` : value;\r\n29:     return { value, unit, text, state: 'value', accessibility: text, rawValue: raw };\r\n34:     return { value: raw, unit: '', text: raw, state: 'value', accessibility: raw, rawValue: raw };\r\n45:     return unavailable('invalid', 'count', 'Expected a non-negative safe integer count');\r\n47:     return unavailable('invalid', 'identifier', 'Expected a non-negative safe integer identifier');\r\n49:     return unavailable('invalid', 'bytes', 'Expected a non-negative byte count');\r\n51:     return unavailable('invalid', 'latency', 'Expected a non-negative latency');\r\n53:     return unavailable('invalid', 'duration', 'Expected a non-negative duration for this display');\r\n56:     return unavailable('invalid', 'countTotal', 'Expected a non-negative safe integer total');\r\n59:     if (!formatted.value.trim())\r\n61:     return measurement(formatted.value, formatted.unit);\r\n73:     const value = formatted.slice(0, separator);\r\n76:     return measurement(value, unit);\r\n92:     case 'efficiency': {\r\n93:       // Existing efficiency helper expects Wh/km. This is a display-boundary adaptation only.\r\n97:         : convertEfficiencyFromSI(whPerKm, units.distance);\r\n112:     const value = `${fmtNumber(display, 0, locale)}/${fmtNumber(total, 0, locale)}`;\r\n113:     return measurement(value);\r\n116:     const value = formatDurationMinutes(convertDurationFromSI(raw, 'min'));\r\n117:     return { value, unit: '', text: value, state: 'value', accessibility: value, rawValue: raw };\r\n120:   // Suppress a display-rounded negative zero without changing the retained raw measurement.\r\n124:   let value = options?.notation === 'source' ? String(display) : options?.notation === 'compact'\r\n130:         value = formatCurrencyValue(display, prefs.currency.value, locale, digits, { useGrouping: true });\r\n132:         value = formatCurrencyValue(display, prefs.currency.value, 'en-US', digits, { useGrouping: true });\r\n134:     } else value = `${prefs.currency.value}${value}`;\r\n136:   return measurement(value, unit);\r\nMISSING=web\\src\\lib\\metric-reference\\registry.ts\r\nFILE=web\\src\\components\\data-display\\MetricBar.tsx\r\n10:   value: number | null | undefined\r\n11:   max: number\r\n16:   /** Accessible name independent of the optional visible header. Defaults to label. */\r\n21:   showHeader?: boolean\r\n22:   /** False suppresses only the header's readout, retaining the visible label. */\r\n23:   showValue?: boolean\r\n35:  * readout beside the bar when the same value is already displayed\r\n37:  * `undefined` (omitted), the formatted value is shown — that's the\r\n39:  * intentional empty string isn't silently treated as \"show the value\"\r\n44:   value, max, color, label, ariaLabel, sublabel,\r\n45:   showHeader = true, showValue = true, size = 'default', fill = 'gradient',\r\n50:   const hasReading = typeof value === 'number' && Number.isFinite(value)\r\n51:   const safeValue = hasReading ? value : 0\r\n52:   const safeMax = Number.isFinite(max) && max > 0 ? max : 0\r\n53:   const pct = safeMax > 0 ? Math.min(Math.max((safeValue / safeMax) * 100, 0), 100) : 0\r\n54:   const boundedValue = safeMax > 0 ? Math.min(Math.max(safeValue, 0), safeMax) : 0\r\n58:       role=\"progressbar\"\r\n60:       aria-valuemin={0}\r\n61:       aria-valuemax={safeMax}\r\n62:       aria-valuenow={hasReading ? boundedValue : undefined}\r\n63:       aria-valuetext={hasReading ? undefined : t('common.noReading', 'No reading')}\r\n65:       {showHeader && (label != null || showValue) && (\r\n68:           {showValue && (\r\n69:             <Text mono size=\"sm\" color=\"primary\" className=\"min-w-0 max-w-full break-words text-end\">\r\n70:               {sublabel ?? (hasReading ? fmtNumber(safeValue) : '—')}\r\nFILE=web\\src\\lib\\dateFormat.ts\r\n5:  * These helpers convert to the user's local timezone for display,\r\n9:  * `FormatOptions` argument carrying an IANA timezone name and a BCP-47\r\n11:  * locale + browser timezone) so existing callers stay byte-for-byte\r\n19:  * negative duration, or a non-number masquerading via a cast) and returns\r\n29: /** Optional locale + timezone overrides for the shared formatters. */\r\n31:   /** IANA timezone name, e.g. 'America/Los_Angeles'. Defaults to browser. */\r\n39:     return { ...base, timeZone: opts.tz }\r\n85:  * Cached time-only Intl formatters keyed by locale + timezone.\r\n91:  * microsecond. The key space (locales × timezones) is tiny, so no eviction\r\n146:   if (seconds < 60) return formatter.format(Math.max(1, seconds), 'second')\r\n162:  * date label (e.g. group header showing \"Apr 24, 2026 · 18d ago\").\r\n164:  * Day deltas are computed in the *target* timezone (defaults to the\r\n187:  * timezone. Use it for grouped list headers whose keys already came from\r\n205: /*  Timezone-aware day primitives                                     */\r\n231:  * Extract a `YYYY-MM-DD` string from a Date in the requested timezone.\r\n250:       timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',\r\n253:     const get = (type: string) => parts.find(p => p.type === type)?.value\r\n270:  * round-tripping through a `Date` (which would re-introduce timezone\r\n288:   // day in negative-offset zones. Noon-anchoring also avoids the\r\n293:     ? { timeZone: 'UTC', month: 'short', day: 'numeric' }\r\n294:     : { timeZone: 'UTC', year: 'numeric', month: 'short', day: 'numeric' }\r\n330: /** Measured duration uses selected precision; nullish/non-finite values remain unknown. */\r\n390: /** Media/player clock duration: \"3:07\". Returns \"—\" for nullish, non-finite, or negative durations. */\r\n399: /** Local datetime string for `<input type=\"datetime-local\">` value: \"2026-04-04T14:30:00\" */\r\n406:  * Stored UTC ISO instant → `<input type=\"datetime-local\">` value\r\n408:  * directly: the input interprets the value as LOCAL time, so slicing shifts\r\n419:  * `<input type=\"datetime-local\">` value → stored UTC ISO instant. Returns null\r\n421:  * crash the form — callers keep the previous value or show a validation error).\r\n423: export function localDatetimeInputToIso(value: string | null | undefined): string | null {\r\n424:   if (!value) return null\r\n425:   const d = new Date(value)\r\n441:  * Returns the short timezone abbreviation (e.g. \"PST\", \"EDT\") for the\r\n446: export function tzAbbreviation(value: string | Date, tz: string): string {\r\n447:   const date = value instanceof Date ? value : new Date(value)\r\n450:     const parts = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'short' }).formatToParts(date)\r\n451:     return parts.find(p => p.type === 'timeZoneName')?.value ?? ''\r\n457: function formatRoundedInt(value: number): string {\r\n458:   return value.toLocaleString('en-US', {\r\n459:     minimumFractionDigits: 0,\r\n460:     maximumFractionDigits: 0,\r\nCOMMAND_EXIT=0",
+      "rawCounts": [],
+      "id": "C03",
+      "command": "route / range / formatter / existing root locators: Select-String -Pattern"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C04 bounded native grep: Select-String -LiteralPath <16 listed page/domain/presentation files> -Pattern <patterns below>; counts = matches and matching lines, not confirmed violations\r\nSCANNED_FILES=\r\n16\r\nRULE=static-inline-style|REGEX=style\\s*=\\s*\\{\\{|var\\(--|RAW_OCCURRENCES=9|RAW_MATCHING_LINES=8\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx:76:               <div className=\"rounded-xl bg-[var(--surface-2)] p-3\">\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx:80:               <div className=\"rounded-xl bg-[var(--surface-2)] p-3\">\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx:84:               <div className=\"rounded-xl bg-[var(--surface-2)] p-3\">\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx:117:             <div className=\"rounded-xl border border-[var(--border-subtle)] p-3\">\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx:95:             className=\"divide-y divide-[var(--border-subtle)]\"\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx:126:                 <div className=\"grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-2)] p-3\">\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:155:             <div className=\"rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4\">\r\nweb\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx:129:                   stroke=\"var(--glass-border)\"\r\nRULE=raw-html|REGEX=<(?:button|input|textarea|select|table)(?=\\s|>)|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=direct-library-import|REGEX=(?:from\\s*|import\\s*)['\"](?:recharts|react-leaflet|framer-motion)['\"]|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=old-api-import|REGEX=from\\s*['\"](?:\\.\\./)+api['\"]|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=double-prefix|REGEX=/api/v1/|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=camelcase-param|REGEX=(?:[?&]|params\\.set\\(['\"])(?:[a-z]+[A-Z][a-zA-Z]*)|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=hidden-section|REGEX=&&\\s*<|\\?\\s*\\(|RAW_OCCURRENCES=16|RAW_MATCHING_LINES=16\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:63:       ? (summary.totalPenaltyWh / 1_000) * costPerKwh\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:48:     available && summary.analyzed === 0 && <EmptyState\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:40:       statusLabel={statusLabel ?? (error\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:51:     {showError && error != null && <QueryError error={error} onRetry={onRetry} />}\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx:50:         {error ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx:54:         ) : isLoading ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx:94:             {summary.analyzed === 0 ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx:64:         {observedDrives === 0 ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx:87:         {opportunities.length === 0 ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:98:         {classified === 0 ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx:99:           state.error ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx:103:           ) : !hasData ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx:109:         {state.error ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\ParkingGapDistribution.tsx:113:         ) : !hasData ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx:111:           state.error ? (\r\nweb\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx:115:           ) : !hasData ? (\r\nRULE=hardcoded-string|REGEX=>\\s*[A-Za-z][A-Za-z ]+\\s*<|(?:aria-label|title|placeholder)=\"[A-Za-z][^\"]*\"|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=missing-page-container|REGEX=<(?:PageLayout|PageContainer|NoVehicleSelected)\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:72:       <NoVehicleSelected\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:87:     <PageLayout\r\nRULE=fetch-useeffect|REGEX=\\b(?:fetch|useEffect)\\s*\\(|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r\nRULE=decorative-gradient|REGEX=bg-gradient|from-(?:cyan|emerald)|via-transparent|to-emerald|RAW_OCCURRENCES=4|RAW_MATCHING_LINES=1\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:79:         'h-full overflow-hidden bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-emerald-500/[0.06] p-5 sm:p-6',\r\nRULE=unknown-zero|REGEX=\\?\\?\\s*0|RAW_OCCURRENCES=4|RAW_MATCHING_LINES=4\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:44:     summary.cold.whPerKm ?? 0,\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:45:     summary.warm.whPerKm ?? 0,\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:138:                   value={summary.cold.whPerKm ?? 0}\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:147:                   value={summary.warm.whPerKm ?? 0}\r\nRULE=deep-component-import|REGEX=from\\s*['\"]@/components/[^'\"]+/[^'\"]+|RAW_OCCURRENCES=4|RAW_MATCHING_LINES=4\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:3: import type { StatMetric } from '@/components/data-display/stat-reference';\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:4: import type { StatMetric } from '@/components/data-display/stat-reference';\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx:4: import type { StatMetric, StatPeriod } from '@/components/data-display/stat-reference';\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:6: import type { StatMetric } from '@/components/data-display/stat-reference';\r\nCOMMAND_EXIT=0",
+      "rawCounts": [
+        "SCANNED_FILES=\r",
+        "RULE=static-inline-style|REGEX=style\\s*=\\s*\\{\\{|var\\(--|RAW_OCCURRENCES=9|RAW_MATCHING_LINES=8\r",
+        "RULE=raw-html|REGEX=<(?:button|input|textarea|select|table)(?=\\s|>)|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=direct-library-import|REGEX=(?:from\\s*|import\\s*)['\"](?:recharts|react-leaflet|framer-motion)['\"]|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=old-api-import|REGEX=from\\s*['\"](?:\\.\\./)+api['\"]|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=double-prefix|REGEX=/api/v1/|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=camelcase-param|REGEX=(?:[?&]|params\\.set\\(['\"])(?:[a-z]+[A-Z][a-zA-Z]*)|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=hidden-section|REGEX=&&\\s*<|\\?\\s*\\(|RAW_OCCURRENCES=16|RAW_MATCHING_LINES=16\r",
+        "RULE=hardcoded-string|REGEX=>\\s*[A-Za-z][A-Za-z ]+\\s*<|(?:aria-label|title|placeholder)=\"[A-Za-z][^\"]*\"|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=missing-page-container|REGEX=<(?:PageLayout|PageContainer|NoVehicleSelected)\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r",
+        "RULE=fetch-useeffect|REGEX=\\b(?:fetch|useEffect)\\s*\\(|RAW_OCCURRENCES=0|RAW_MATCHING_LINES=0\r",
+        "RULE=decorative-gradient|REGEX=bg-gradient|from-(?:cyan|emerald)|via-transparent|to-emerald|RAW_OCCURRENCES=4|RAW_MATCHING_LINES=1\r",
+        "RULE=unknown-zero|REGEX=\\?\\?\\s*0|RAW_OCCURRENCES=4|RAW_MATCHING_LINES=4\r",
+        "RULE=deep-component-import|REGEX=from\\s*['\"]@/components/[^'\"]+/[^'\"]+|RAW_OCCURRENCES=4|RAW_MATCHING_LINES=4\r"
+      ],
+      "id": "C04",
+      "command": "bounded native grep: Select-String -LiteralPath <16 listed page/domain/presentation files> -Pattern <patterns below>; counts = matches and matching lines, not confirmed violations"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C05 exact existing queue owner lookup: Select-String -Pattern ColdStart|MetricBar|DataFreshness|NoVehicleSelected|previousEnd|coldStart|initial-paused; pipe row fields only\r\n320|STATUS=[~]|ITEM=phase6-fix-data-quality-semantic-attestation|FILES=web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.tsx; web\\src\\features\\admin\\components\\continuation-admin-2\\NormalizationVersionPanel.contract.test.tsx|DEPENDENCIES=phase6-qa-admin-data-quality\r\n330|STATUS=[ ]|ITEM=phase6-fix-disk-forecast-contracts|FILES=web\\src\\features\\admin\\pages\\DiskForecastPage.tsx; web\\src\\features\\admin\\pages\\DiskForecastPage.test.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\usage-manifest.json|DEPENDENCIES=phase6-qa-admin-disk-forecast\r\n385|STATUS=[~]|ITEM=phase6-qa-driving-cold-start|FILES=docs\\frontend-audits\\phase6-qa-driving-cold-start.json|DEPENDENCIES=phase5-page-driving-cold-start\r\n487|STATUS=[x]|ITEM=phase5-current-source-catalog-closure|FILES=web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-action-center.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\locale-analytics.json; web\\src\\i18n\\en\\locale-automations.json; web\\src\\i18n\\en\\locale-battery.json; web\\src\\i18n\\en\\locale-benchmarks.json; web\\src\\i18n\\en\\locale-charging.json; web\\src\\i18n\\en\\locale-dashboard.json; web\\src\\i18n\\en\\locale-dashcam.json; web\\src\\i18n\\en\\locale-detail-achievements.json; web\\src\\i18n\\en\\locale-detail-activity.json; web\\src\\i18n\\en\\locale-detail-addressInput.json; web\\src\\i18n\\en\\locale-detail-alerts.json; web\\src\\i18n\\en\\locale-detail-annotation.json; web\\src\\i18n\\en\\locale-detail-anomalies.json; web\\src\\i18n\\en\\locale-detail-apiLogs.json; web\\src\\i18n\\en\\locale-detail-app.json; web\\src\\i18n\\en\\locale-detail-arrivalReliability.json; web\\src\\i18n\\en\\locale-detail-battery.json; web\\src\\i18n\\en\\locale-detail-browserNotifications.json; web\\src\\i18n\\en\\locale-detail-bulk.json; web\\src\\i18n\\en\\locale-detail-calculationDetails.json; web\\src\\i18n\\en\\locale-detail-carbon.json; web\\src\\i18n\\en\\locale-detail-chart.json; web\\src\\i18n\\en\\locale-detail-chatbot.json; web\\src\\i18n\\en\\locale-detail-coldStart.json; web\\src\\i18n\\en\\locale-detail-combobox.json; web\\src\\i18n\\en\\locale-detail-commands.json; web\\src\\i18n\\en\\locale-detail-consent.json; web\\src\\i18n\\en\\locale-detail-dashboard.json; web\\src\\i18n\\en\\locale-detail-dataState.json; web\\src\\i18n\\en\\locale-detail-date.json; web\\src\\i18n\\en\\locale-detail-dayLog.json; web\\src\\i18n\\en\\locale-detail-delta.json; web\\src\\i18n\\en\\locale-detail-departure.json; web\\src\\i18n\\en\\locale-detail-departureForecast.json; web\\src\\i18n\\en\\locale-detail-destinationTransitions.json; web\\src\\i18n\\en\\locale-detail-developerReference.json; web\\src\\i18n\\en\\locale-detail-diagnostic.json; web\\src\\i18n\\en\\locale-detail-digitalTwin.json; web\\src\\i18n\\en\\locale-detail-draft.json; web\\src\\i18n\\en\\locale-detail-driveCompare.json; web\\src\\i18n\\en\\locale-detail-driveDetail.json; web\\src\\i18n\\en\\locale-detail-driveDna.json; web\\src\\i18n\\en\\locale-detail-drives.json; web\\src\\i18n\\en\\locale-detail-driveScore.json; web\\src\\i18n\\en\\locale-detail-drivetrain.json; web\\src\\i18n\\en\\locale-detail-driving.json; web\\src\\i18n\\en\\locale-detail-drivingSecondary.json; web\\src\\i18n\\en\\locale-detail-dynamics.json; web\\src\\i18n\\en\\locale-detail-editConflict.json; web\\src\\i18n\\en\\locale-detail-efficiency.json; web\\src\\i18n\\en\\locale-detail-effTarget.json; web\\src\\i18n\\en\\locale-detail-emptyState.json; web\\src\\i18n\\en\\locale-detail-energyAnatomy.json; web\\src\\i18n\\en\\locale-detail-entityContext.json; web\\src\\i18n\\en\\locale-detail-error.json; web\\src\\i18n\\en\\locale-detail-explorer.json; web\\src\\i18n\\en\\locale-detail-export.json; web\\src\\i18n\\en\\locale-detail-exports.json; web\\src\\i18n\\en\\locale-detail-feedback.json; web\\src\\i18n\\en\\locale-detail-feedbackTriage.json; web\\src\\i18n\\en\\locale-detail-filters.json; web\\src\\i18n\\en\\locale-detail-forms.json; web\\src\\i18n\\en\\locale-detail-freshness.json; web\\src\\i18n\\en\\locale-detail-fsd.json; web\\src\\i18n\\en\\locale-detail-fsm.json; web\\src\\i18n\\en\\locale-detail-glossary.json; web\\src\\i18n\\en\\locale-detail-guard.json; web\\src\\i18n\\en\\locale-detail-helix.json; web\\src\\i18n\\en\\locale-detail-help.json; web\\src\\i18n\\en\\locale-detail-impersonation.json; web\\src\\i18n\\en\\locale-detail-journeyFragmentation.json; web\\src\\i18n\\en\\locale-detail-kiosk.json; web\\src\\i18n\\en\\locale-detail-landscape.json; web\\src\\i18n\\en\\locale-detail-live.json; web\\src\\i18n\\en\\locale-detail-liveLogs.json; web\\src\\i18n\\en\\locale-detail-logbook.json; web\\src\\i18n\\en\\locale-detail-maps.json; web\\src\\i18n\\en\\locale-detail-mqttSseInspector.json; web\\src\\i18n\\en\\locale-detail-notifications.json; web\\src\\i18n\\en\\locale-detail-onboarding.json; web\\src\\i18n\\en\\locale-detail-operationalMode.json; web\\src\\i18n\\en\\locale-detail-operations.json; web\\src\\i18n\\en\\locale-detail-originConcentration.json; web\\src\\i18n\\en\\locale-detail-pagination.json; web\\src\\i18n\\en\\locale-detail-paint.json; web\\src\\i18n\\en\\locale-detail-palette.json; web\\src\\i18n\\en\\locale-detail-polling.json; web\\src\\i18n\\en\\locale-detail-presentation.json; web\\src\\i18n\\en\\locale-detail-problemReport.json; web\\src\\i18n\\en\\locale-detail-productPreferences.json; web\\src\\i18n\\en\\locale-detail-pwa.json; web\\src\\i18n\\en\\locale-detail-rangeBuffer.json; web\\src\\i18n\\en\\locale-detail-rbac.json; web\\src\\i18n\\en\\locale-detail-recentPages.json; web\\src\\i18n\\en\\locale-detail-regen.json; web\\src\\i18n\\en\\locale-detail-replay.json; web\\src\\i18n\\en\\locale-detail-requiresAuth.json; web\\src\\i18n\\en\\locale-detail-rhythm.json; web\\src\\i18n\\en\\locale-detail-routeEfficiency.json; web\\src\\i18n\\en\\locale-detail-savedViews.json; web\\src\\i18n\\en\\locale-detail-search.json; web\\src\\i18n\\en\\locale-detail-seasonalEfficiency.json; web\\src\\i18n\\en\\locale-detail-segments.json; web\\src\\i18n\\en\\locale-detail-serviceMode.json; web\\src\\i18n\\en\\locale-detail-session.json; web\\src\\i18n\\en\\locale-detail-settings.json; web\\src\\i18n\\en\\locale-detail-shortcuts.json; web\\src\\i18n\\en\\locale-detail-signalConfig.json; web\\src\\i18n\\en\\locale-detail-signalQuery.json; web\\src\\i18n\\en\\locale-detail-sourceLayer.json; web\\src\\i18n\\en\\locale-detail-speedProfile.json; web\\src\\i18n\\en\\locale-detail-speedSweetSpot.json; web\\src\\i18n\\en\\locale-detail-stateMachineDebugger.json; web\\src\\i18n\\en\\locale-detail-statusBar.json; web\\src\\i18n\\en\\locale-detail-sudo.json; web\\src\\i18n\\en\\locale-detail-sweetSpot.json; web\\src\\i18n\\en\\locale-detail-systemStatus.json; web\\src\\i18n\\en\\locale-detail-table.json; web\\src\\i18n\\en\\locale-detail-tagInput.json; web\\src\\i18n\\en\\locale-detail-tesla.json; web\\src\\i18n\\en\\locale-detail-teslaOnly.json; web\\src\\i18n\\en\\locale-detail-theme.json; web\\src\\i18n\\en\\locale-detail-timeline.json; web\\src\\i18n\\en\\locale-detail-timeMachine.json; web\\src\\i18n\\en\\locale-detail-toast.json; web\\src\\i18n\\en\\locale-detail-tour.json; web\\src\\i18n\\en\\locale-detail-tripPlanner.json; web\\src\\i18n\\en\\locale-detail-vehicleHero.json; web\\src\\i18n\\en\\locale-detail-voiceMode.json; web\\src\\i18n\\en\\locale-detail-watch.json; web\\src\\i18n\\en\\locale-detail-watchFaceNL.json; web\\src\\i18n\\en\\locale-detail-whatIf.json; web\\src\\i18n\\en\\locale-diagnostics.json; web\\src\\i18n\\en\\locale-driving-arrival-reliability.json; web\\src\\i18n\\en\\locale-driving-cold-start.json; web\\src\\i18n\\en\\locale-driving-departure-forecast.json; web\\src\\i18n\\en\\locale-driving-destination-transitions.json; web\\src\\i18n\\en\\locale-driving-drive-compare.json; web\\src\\i18n\\en\\locale-driving-drive-dna.json; web\\src\\i18n\\en\\locale-driving-drive-score.json; web\\src\\i18n\\en\\locale-driving-drivetrain-health.json; web\\src\\i18n\\en\\locale-driving-driving-dynamics.json; web\\src\\i18n\\en\\locale-driving-driving-rhythm.json; web\\src\\i18n\\en\\locale-driving-efficiency-target.json; web\\src\\i18n\\en\\locale-driving-efficiency.json; web\\src\\i18n\\en\\locale-driving-explorer.json; web\\src\\i18n\\en\\locale-driving-fsdinsights.json; web\\src\\i18n\\en\\locale-driving-journey-fragmentation.json; web\\src\\i18n\\en\\locale-driving-range-buffer.json; web\\src\\i18n\\en\\locale-driving-regen-efficiency.json; web\\src\\i18n\\en\\locale-driving-route-efficiency.json; web\\src\\i18n\\en\\locale-driving-seasonal-efficiency.json; web\\src\\i18n\\en\\locale-driving-segments.json; web\\src\\i18n\\en\\locale-driving-speed-profile.json; web\\src\\i18n\\en\\locale-driving-speed-sweet-spot.json; web\\src\\i18n\\en\\locale-driving-trip-logbook.json; web\\src\\i18n\\en\\locale-driving-trip-planner.json; web\\src\\i18n\\en\\locale-driving-what-if.json; web\\src\\i18n\\en\\locale-driving.json; web\\src\\i18n\\en\\locale-explore.json; web\\src\\i18n\\en\\locale-exports.json; web\\src\\i18n\\en\\locale-fleet-ops.json; web\\src\\i18n\\en\\locale-home-energy.json; web\\src\\i18n\\en\\locale-intelligence-packs.json; web\\src\\i18n\\en\\locale-maps.json; web\\src\\i18n\\en\\locale-notifications.json; web\\src\\i18n\\en\\locale-ownership.json; web\\src\\i18n\\en\\locale-power-user.json; web\\src\\i18n\\en\\locale-resale-vault.json; web\\src\\i18n\\en\\locale-science.json; web\\src\\i18n\\en\\locale-service-intelligence.json; web\\src\\i18n\\en\\locale-settings.json; web\\src\\i18n\\en\\locale-sharing.json; web\\src\\i18n\\en\\locale-system.json; web\\src\\i18n\\en\\locale-telemetry.json; web\\src\\i18n\\en\\locale-trips.json; web\\src\\i18n\\en\\locale-unreferenced.json; web\\src\\i18n\\en\\locale-vehicle-systems.json; web\\src\\i18n\\en\\locale-vehicles.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\shell.json; web\\src\\i18n\\en\\usage-manifest.json|DEPENDENCIES=-\r\n593|STATUS=[x]|ITEM=audit-page-104|FILES=web\\src\\features\\driving\\pages\\ColdStartPage.tsx; docs\\frontend-audits\\audit-page-104.json|DEPENDENCIES=-\r\n1022|STATUS=[x]|ITEM=phase3-data-freshness|FILES=web\\src\\components\\data-display\\DataFreshness.tsx; web\\src\\components\\data-display\\__tests__\\DataFreshness.test.tsx|DEPENDENCIES=phase3-use-date-format,primitive-button,phase3-resource-and-geometry-addendum,phase3-resource-geometry-tokens\r\n1331|STATUS=[x]|ITEM=phase3-metric-bar|FILES=web\\src\\components\\data-display\\MetricBar.tsx; web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx|DEPENDENCIES=primitive-typography\r\n1370|STATUS=[x]|ITEM=phase3-page-container|FILES=web\\src\\components\\layout\\PageContainer.tsx; web\\src\\components\\layout\\__tests__\\PageContainer.test.tsx|DEPENDENCIES=phase3-breadcrumb-overrides-context,phase3-copy-link-button,phase3-data-freshness,phase3-data-source-notice,phase3-empty-state,phase3-error-display,phase3-operational-mode-badge,phase3-page-actions,phase3-page-error-boundary,primitive-button,primitive-glass-panel,primitive-typography\r\n1401|STATUS=[x]|ITEM=phase3-resource-and-geometry-addendum|FILES=docs\\frontend-design-contract.md|DEPENDENCIES=phase3-remaining-geometry-contract\r\n1402|STATUS=[x]|ITEM=phase3-resource-geometry-tokens|FILES=web\\src\\lib\\cn.ts; web\\src\\lib\\cn.test.ts; web\\src\\lib\\__tests__\\tokens.test.ts|DEPENDENCIES=phase3-resource-and-geometry-addendum,phase3-remaining-geometry-tokens,phase3-current-source-catalog-refresh,phase3-resource-transition-css-oracle\r\n1805|STATUS=[x]|ITEM=phase5-page-analytics-year-review|FILES=web\\src\\features\\analytics\\pages\\YearReviewPage.tsx; web\\src\\features\\analytics\\pages\\YearReviewPage.test.tsx|DEPENDENCIES=-\r\n1849|STATUS=[x]|ITEM=phase5-page-driving-cold-start|FILES=web\\src\\features\\driving\\pages\\ColdStartPage.tsx; web\\src\\features\\driving\\pages\\ColdStartPage.test.tsx|DEPENDENCIES=-\r\n1866|STATUS=[!]|ITEM=phase5-page-driving-route-efficiency|FILES=web\\src\\features\\driving\\pages\\RouteEfficiencyPage.tsx; web\\src\\features\\driving\\pages\\RouteEfficiencyPage.test.tsx|DEPENDENCIES=-\r\n2041|STATUS=[x]|ITEM=phase6-vehicle-access-role-palette|FILES=web\\src\\features\\vehicles\\pages\\VehicleAccessPage.tsx; web\\src\\features\\vehicles\\pages\\VehicleAccessPage.test.tsx; web\\src\\features\\vehicles\\components\\vehicle-access\\AccessOverviewPanel.tsx; web\\src\\features\\vehicles\\components\\vehicle-access\\AccessOverviewPanel.test.tsx|DEPENDENCIES=-\r\nRAW_QUEUE_MATCHING_LINES=14\r\nCOMMAND_EXIT=0",
+      "rawCounts": [
+        "RAW_QUEUE_MATCHING_LINES=14\r"
+      ],
+      "id": "C05",
+      "command": "exact existing queue owner lookup: Select-String -Pattern ColdStart|MetricBar|DataFreshness|NoVehicleSelected|previousEnd|coldStart|initial-paused; pipe row fields only"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C06 focused native grep with exact coordinates: Select-String -AllMatches for style assignment / hooks / evidence / mobile / dates\r\nFILE=web\\src\\features\\driving\\pages\\ColdStartPage.tsx|REGEX=useRangeState|start:|end:|limit:|costPerKwh|isLoading:|retained=|<ColdStart|<ColdWarm|<Monthly|<Parking|<Temperature|RAW_MATCHING_LINES=21\r\n14: import { useRangeState } from '@/hooks/useRangeState';\r\n40:   const { formatCurrency, costPerKwh } = useFormatting();\r\n43:   const { startInstant, endInstantExclusive } = useRangeState({\r\n50:     start: startInstant,\r\n51:     end: endInstantExclusive,\r\n52:     limit: DRIVE_WINDOW_LIMIT,\r\n60:     costPerKwh != null &&\r\n61:     Number.isFinite(costPerKwh) &&\r\n62:     costPerKwh > 0\r\n63:       ? (summary.totalPenaltyWh / 1_000) * costPerKwh\r\n79:     isLoading: sourceState.status === 'initial',\r\n97:         <ColdStartBrief\r\n105:               start: `${formatDateTime(startInstant)} ${tzAbbreviation(startInstant, timezone)}`,\r\n106:               end: `${formatDateTime(endInstantExclusive)} ${tzAbbreviation(endInstantExclusive, timezone)}`,\r\n109:           retained={sourceState.status === 'stale' || sourceState.refreshError != null}\r\n115:           <ColdWarmComparison\r\n121:           <ColdStartMethodology\r\n133:           <MonthlyColdStartChart\r\n138:           <ParkingGapDistribution\r\n149:           <TemperatureEfficiencyChart\r\n154:           <ColdStartOpportunities\r\nFILE=web\\src\\features\\driving\\lib\\coldStart.ts|REGEX=energyUsedWh >|distanceM >=|durationS|previousEndMs|precedingGapS =|warm.whPerKm|totalPenaltyWh =|sampleSufficient|toISOString|share:|RAW_MATCHING_LINES=23\r\n61:   share: number;\r\n89:   penaltyShare: number | null;\r\n93:   coldShare: number | null;\r\n102:   sampleSufficient: boolean;\r\n127:     drive.energyUsedWh > 0 &&\r\n129:     drive.distanceM >= 1_000\r\n147:     whPerKm: distanceM >= 1_000 ? round1(energyUsedWh / (distanceM / 1_000)) : null,\r\n167: function previousEndMs(previous: TimestampedDrive): number {\r\n170:   return startMs + (Number.isFinite(drive.durationS) ? drive.durationS * 1_000 : 0);\r\n177:     const month = new Date(observation.startTs).toISOString().slice(0, 7);\r\n198:       share: observations.length > 0 ? rows.length / observations.length : 0,\r\n253:     const precedingGapS = (current.startMs - previousEndMs(previous)) / 1_000;\r\n282:   const sampleSufficient =\r\n284:     warm.whPerKm != null &&\r\n289:   let penaltyShare: number | null = null;\r\n291:   if (sampleSufficient) {\r\n292:     penaltyWhPerKm = round1(cold.whPerKm! - warm.whPerKm!);\r\n293:     penaltyShare = warm.whPerKm! > 0 ? penaltyWhPerKm / warm.whPerKm! : null;\r\n294:     totalPenaltyWh = Math.round(Math.max(0, penaltyWhPerKm) * (cold.distanceM / 1_000));\r\n321:     coldShare: observations.length > 0 ? coldRows.length / observations.length : null,\r\n326:     sampleSufficient,\r\n333:       warm.whPerKm,\r\n334:       sampleSufficient && penaltyWhPerKm != null && penaltyWhPerKm > 0,\r\nFILE=web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx|REGEX=value=|maxEfficiency|bg-gradient|isolates|Warm-up overhead|RAW_MATCHING_LINES=10\r\n43:   const maxEfficiency = Math.max(\r\n79:         'h-full overflow-hidden bg-gradient-to-br from-cyan-500/[0.08] via-transparent to-emerald-500/[0.06] p-5 sm:p-6',\r\n92:           defaultValue=\"A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.\"\r\n123:                     reason: t('coldStart.comparison.help', 'A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.') }} />\r\n138:                   value={summary.cold.whPerKm ?? 0}\r\n139:                   max={maxEfficiency}\r\n147:                   value={summary.warm.whPerKm ?? 0}\r\n148:                   max={maxEfficiency}\r\n166:                           'Warm-up overhead added {{energy}} across this period — about {{cost}} at your electricity rate. Preconditioning while plugged in shifts that energy to the wall.',\r\n174:                           'Warm-up overhead added {{energy}} across this period. Preconditioning while plugged in shifts that energy to the wall.',\r\nFILE=web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx|REGEX=formatDate|locale:|grid-cols-3|text-right|RAW_MATCHING_LINES=5\r\n14: import { formatDate } from '@/lib/dateFormat';\r\n109:                       {formatDate(opportunity.startTs, {\r\n110:                         locale: unitPrefs.locale,\r\n126:                 <div className=\"grid grid-cols-3 gap-2 rounded-xl bg-[var(--surface-2)] p-3\">\r\n139:                   <div className=\"text-right\">\r\nFILE=web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx|REGEX=formatDate|Math.round|hide=|chartKey=|RAW_MATCHING_LINES=8\r\n11: import { formatDate } from '@/lib/dateFormat';\r\n34:         date: formatDate(point.startTs, { locale: unitPrefs.locale }),\r\n40:         temperature: Math.round(\r\n43:         consumption: Math.round(convertEfficiency(point.whPerKm) * 10) / 10,\r\n44:         distance: Math.round(\r\n86:         chartKey=\"cold-start-temperature\"\r\n182:                   hide={hiddenSeries?.isHidden(coldName) ?? false}\r\n189:                   hide={hiddenSeries?.isHidden(warmName) ?? false}\r\nFILE=web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx|REGEX=Math.round|strokeWidth|chartKey=|hide=|RAW_MATCHING_LINES=9\r\n34:             ? Math.round(convertEfficiency(month.cold.whPerKm) * 10) / 10\r\n38:             ? Math.round(convertEfficiency(month.warm.whPerKm) * 10) / 10\r\n70:         chartKey=\"cold-start-monthly\"\r\n161:                   hide={hiddenSeries?.isHidden('coldSamples') ?? false}\r\n170:                   hide={hiddenSeries?.isHidden('warmSamples') ?? false}\r\n178:                   strokeWidth={2.5}\r\n181:                   hide={hiddenSeries?.isHidden('cold') ?? false}\r\n189:                   strokeWidth={2.5}\r\n192:                   hide={hiddenSeries?.isHidden('warm') ?? false}\r\nFILE=web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx|REGEX=grid-cols-3|MetricValue|Penalty claim supported|RAW_MATCHING_LINES=6\r\n9:   MetricValue,\r\n58:             ? t('coldStart.method.ready', 'Penalty claim supported')\r\n75:             <div className=\"grid grid-cols-3 gap-2\">\r\n77:                 <MetricValue>{summary.cold.drives}/{MIN_GROUP_DRIVES}</MetricValue>\r\n81:                 <MetricValue>{summary.warm.drives}/{MIN_GROUP_DRIVES}</MetricValue>\r\n85:                 <MetricValue>{classified}</MetricValue>\r\nHOOK_RULES\r\nRAW_HOOK_MATCHING_LINES=19\r\n37:   if (start) params.set('start', start)\r\n38:   if (end) params.set('end', end)\r\n120:       if (vehicleId) params.set('vehicle_id', vehicleId);\r\n121:       if (opts.start) params.set('start', opts.start);\r\n122:       if (opts.end) params.set('end', opts.end);\r\n123:       if (boundedLimit != null) params.set('limit', String(boundedLimit));\r\n149:         `/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,\r\n227:       if (vehicleId) params.set('vehicle_id', vehicleId);\r\n228:       if (window?.start) params.set('start', window.start);\r\n229:       if (window?.end) params.set('end', window.end);\r\n284:       if (start) params.set('start', start);\r\n285:       if (end) params.set('end', end);\r\n298:       if (start) params.set('start', start);\r\n299:       if (end) params.set('end', end);\r\n312:       if (start) params.set('start', start);\r\n313:       if (end) params.set('end', end);\r\n341:     queryFn: ({ signal }) => request<DrivingCoachData>(`/analytics/driving-coach?vehicle_id=${vehicleId}&days=${days}`, { signal }),\r\n379:     queryFn: ({ signal }) => request<GeocodeResult[]>(`/geocode/search?q=${encodeURIComponent(query)}&limit=5`, { signal }),\r\n445:         `/drives/${encodeURIComponent(id)}/why-ended?window=${window}`,\r\nEXACT_INLINE_ASSIGNMENTS\r\nRAW_STYLE_ASSIGNMENT_LINES=0\r\nCOMMAND_EXIT=0",
+      "rawCounts": [
+        "FILE=web\\src\\features\\driving\\pages\\ColdStartPage.tsx|REGEX=useRangeState|start:|end:|limit:|costPerKwh|isLoading:|retained=|<ColdStart|<ColdWarm|<Monthly|<Parking|<Temperature|RAW_MATCHING_LINES=21\r",
+        "FILE=web\\src\\features\\driving\\lib\\coldStart.ts|REGEX=energyUsedWh >|distanceM >=|durationS|previousEndMs|precedingGapS =|warm.whPerKm|totalPenaltyWh =|sampleSufficient|toISOString|share:|RAW_MATCHING_LINES=23\r",
+        "FILE=web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx|REGEX=value=|maxEfficiency|bg-gradient|isolates|Warm-up overhead|RAW_MATCHING_LINES=10\r",
+        "FILE=web\\src\\features\\driving\\components\\cold-start\\ColdStartOpportunities.tsx|REGEX=formatDate|locale:|grid-cols-3|text-right|RAW_MATCHING_LINES=5\r",
+        "FILE=web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx|REGEX=formatDate|Math.round|hide=|chartKey=|RAW_MATCHING_LINES=8\r",
+        "FILE=web\\src\\features\\driving\\components\\cold-start\\MonthlyColdStartChart.tsx|REGEX=Math.round|strokeWidth|chartKey=|hide=|RAW_MATCHING_LINES=9\r",
+        "FILE=web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx|REGEX=grid-cols-3|MetricValue|Penalty claim supported|RAW_MATCHING_LINES=6\r",
+        "RAW_HOOK_MATCHING_LINES=19\r",
+        "RAW_STYLE_ASSIGNMENT_LINES=0\r"
+      ],
+      "id": "C06",
+      "command": "focused native grep with exact coordinates: Select-String -AllMatches for style assignment / hooks / evidence / mobile / dates"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C07 corrected case-sensitive hook grep (C06 omitted -CaseSensitive; its 19 candidate lines are false positives, not violations)\r\nRULE=double-prefix|REGEX=/api/v1/|RAW_MATCHING_LINES=0\r\nRULE=camelcase-param|REGEX=params\\.set\\(\\s*['\"][^'\"]*[A-Z][^'\"]*['\"]|[?&][a-z]+[A-Z][a-zA-Z]*=|RAW_MATCHING_LINES=0\r\nCOMMAND_EXIT=0",
+      "rawCounts": [
+        "RULE=double-prefix|REGEX=/api/v1/|RAW_MATCHING_LINES=0\r",
+        "RULE=camelcase-param|REGEX=params\\.set\\(\\s*['\"][^'\"]*[A-Z][^'\"]*['\"]|[?&][a-z]+[A-Z][a-zA-Z]*=|RAW_MATCHING_LINES=0\r"
+      ],
+      "id": "C07",
+      "command": "corrected case-sensitive hook grep (C06 omitted -CaseSensitive; its 19 candidate lines are false positives, not violations)"
+    },
+    {
+      "exitCode": 1,
+      "rawOutput": "C08 failed before key enumeration: Get-Content en.json -Raw | ConvertFrom-Json\r\nRAW_ERROR=Cannot convert the JSON string because it contains keys with different casing. Please use the -AsHashTable switch instead. The key that was attempted to be added to the existing key subFSMs was subFsms.\r\nCOMMAND_EXIT=1",
+      "rawCounts": [
+        "RAW_ERROR=Cannot convert the JSON string because it contains keys with different casing. Please use the -AsHashTable switch instead. The key that was attempted to be added to the existing key subFSMs was subFsms.\r"
+      ],
+      "id": "C08",
+      "command": "failed before key enumeration: Get-Content en.json -Raw | ConvertFrom-Json"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C09 corrected local JSON inspection: ConvertFrom-Json -AsHashtable; native literal t(key,fallback) regex; nested key traversal; no generator/guard/test\r\nRAW_T_CALLS=132\r\nUNIQUE_KEYS=109\r\nMISSING_CANONICAL=0\r\nMISSING_ROUTE_PROJECTION=0\r\nFALLBACK_DISAGREEMENTS=14\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:36|KEY=coldStart.title|FALLBACK=Cold Start Cost|CANONICAL=Cold start cost\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:73|KEY=coldStart.title|FALLBACK=Cold Start Cost|CANONICAL=Cold start cost\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:88|KEY=coldStart.title|FALLBACK=Cold Start Cost|CANONICAL=Cold start cost\r\nweb\\src\\features\\driving\\pages\\ColdStartPage.tsx:95|KEY=coldStart.title|FALLBACK=Cold Start Cost|CANONICAL=Cold start cost\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:21|KEY=coldStart.penalty|FALLBACK=Cold Penalty|CANONICAL=Cold penalty\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:22|KEY=coldStart.brief.penalty|FALLBACK=Observed cold-start consumption difference against warm starts.|CANONICAL=Cold minus warm consumption\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:30|KEY=coldStart.totalEnergy|FALLBACK=Extra Energy|CANONICAL=Extra energy\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\ColdStartBrief.tsx:36|KEY=coldStart.coldShare|FALLBACK=Cold Starts|CANONICAL=Cold starts\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:43|KEY=driving.brief.loading|FALLBACK=Loading evidence|CANONICAL=Loading source\r\nweb\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx:45|KEY=driving.brief.retained|FALLBACK=Retained evidence|CANONICAL=Retained source\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx:61|KEY=coldStart.penalty|FALLBACK=Cold Penalty|CANONICAL=Cold penalty\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx:68|KEY=coldStart.totalEnergy|FALLBACK=Extra Energy|CANONICAL=Extra energy\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdStartKpis.tsx:75|KEY=coldStart.coldShare|FALLBACK=Cold Starts|CANONICAL=Cold starts\r\nweb\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx:88|KEY=coldStart.duel|FALLBACK=Cold vs Warm Starts|CANONICAL=Cold vs warm starts\r\nHELP_KEY_PRESENT=True\r\nCOMMAND_EXIT=0\r\nELAPSED_MS=201",
+      "rawCounts": [
+        "RAW_T_CALLS=132\r",
+        "UNIQUE_KEYS=109\r",
+        "MISSING_CANONICAL=0\r",
+        "MISSING_ROUTE_PROJECTION=0\r",
+        "FALLBACK_DISAGREEMENTS=14\r",
+        "ELAPSED_MS=201\r"
+      ],
+      "id": "C09",
+      "command": "corrected local JSON inspection: ConvertFrom-Json -AsHashtable; native literal t(key,fallback) regex; nested key traversal; no generator/guard/test"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C10 exact line and necessary transport/converter locators: Select-String -CaseSensitive; Get-Content page lines 86-95\r\n86:   return (\r\n87:     <PageLayout\r\n88:       title={t('coldStart.title', 'Cold Start Cost')}\r\n89:       subtitle={t(\r\n90:         'coldStart.subtitle',\r\n91:         'What the first kilometres after a long park really cost',\r\n92:       )}\r\n93:       query={drivesQuery}\r\n94:     >\r\n95:       <StaleRefreshWarning state={sourceState} label={t('coldStart.title', 'Cold Start Cost')} />\r\nFILE=web\\src\\api\\client.ts\r\n75:   // Defensive strip: hooks must pass paths without the /api/v1 prefix.\r\n76:   // This keeps a stray `/api/v1/foo` from becoming `/api/v1/api/v1/foo`.\r\n93:   return `${getApiBase()}/api/v1${normalizePath(path)}`\r\n344:  * @param path - API endpoint path (without /api/v1 prefix)\r\n348: export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {\r\n361:   // defensively strips any stray `/api/v1` prefix the caller passed.\r\n364:   // also concatenates `/api/v1` directly) can double-prefix.\r\nFILE=web\\src\\lib\\unitConversion.ts\r\n26:  * formatTemperature(celsius, pref): string\r\n31:  * convertDistanceFromSI / convertSpeedFromSI / convertTempFromSI /\r\n32:  * convertPressureFromSI / convertEnergyFromSI / convertDurationFromSI /\r\n64: /** Temperature display unit (target of formatTemperature). */\r\n130: export function convertDistanceFromSI(\r\n147:  * Exact inverse of {@link convertDistanceFromSI}. Producers should already\r\n156: export function convertDistanceToSI(\r\n194: export function convertTempFromSI(\r\n241: export function convertEnergyFromSI(wh: number, to: EnergyUnitPref): number {\r\n377:   const value = convertDistanceFromSI(meters, pref.distance)\r\n402: export function formatTemperature(\r\n409:   const value = convertTempFromSI(celsius, pref.temperature)\r\n415: export function formatTemperatureDelta(\r\n422:   const value = convertTempFromSI(celsius, pref.temperature) - convertTempFromSI(0, pref.temperature)\r\n434:   const value = whPerM * convertDistanceToSI(1, pref.distance)\r\n466:   const value = convertEnergyFromSI(wh, pref.energy)\r\nFILE=web\\src\\hooks\\useHiddenSeries.ts\r\n9:  * chartKey=\"...\">` and `<ChartLegend />` for click-to-hide UX.\r\n20:  *   <ChartContainer chartKey=\"battery-degradation-trend\">\r\n36:   isHidden: (seriesKey: string) => boolean;\r\n37:   /** Clear every hidden flag (drops `?hidden_{chartKey}` from the URL). */\r\n45:  * sorted, comma-joined list under `?hidden_{chartKey}=…` so\r\n51:  * Empty `chartKey` is allowed but yields a no-op param; this lets call\r\n57: export function useHiddenSeries(chartKey: string): HiddenSeriesState {\r\n58:   const paramName = `${HIDDEN_PARAM_PREFIX}${chartKey}`;\r\nCOMMAND_EXIT=0",
+      "rawCounts": [],
+      "id": "C10",
+      "command": "exact line and necessary transport/converter locators: Select-String -CaseSensitive; Get-Content page lines 86-95"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C11 supplemental source pins and measured composition: Get-Item / Get-FileHash SHA256 / Get-Content line count / Select-String -AllMatches\r\nSUPPIN|web\\src\\features\\driving\\components\\operationalbrief-a-m\\DrivingSummaryBrief.tsx|2026-10-14T00:29:41.5354103Z|29B6C288C2DAE77B345B0985764480AB7CF99F828D42BEB4BA5DB63CCA422E93|53\r\nSUPPIN|web\\src\\features\\driving\\components\\operationalbrief-a-m\\NestedDrivingBrief.tsx|2026-10-14T00:29:41.5354103Z|682A5D14BB65BA04739960E8C9E08AD15A8C39D32B9D6E5941A7946C226891BA|63\r\nSUPPIN|web\\src\\api\\hooks\\useDriving.ts|2026-10-14T00:29:40.8549213Z|C3DFD3825D09BC1BA37281BFE4D48D5626DDBC27059F0A90EEF5F14FFFC27392|454\r\nSUPPIN|web\\src\\api\\dataState.ts|2026-10-13T06:09:17.7649888Z|21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761|434\r\nSUPPIN|web\\src\\api\\client.ts|2026-10-14T00:29:40.8468672Z|A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5|458\r\nSUPPIN|web\\src\\types\\driving.ts|2026-10-14T00:29:41.9942654Z|EC3C65DF87AFCC71B65AEA70BC3F83AE235150AD66C144243ABC603ECEB61161|411\r\nSUPPIN|web\\src\\hooks\\useDataState.ts|2026-10-13T06:09:18.5649346Z|785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B|65\r\nSUPPIN|web\\src\\hooks\\useRangeState.ts|2026-10-13T06:09:18.5715117Z|BF267C5A8B69D0FFF866BA9B9491B15F03E516FC8599424AF881BA08579F2BEA|694\r\nSUPPIN|web\\src\\hooks\\useSelectedVehicle.ts|2026-10-13T06:09:18.5715117Z|C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3|174\r\nSUPPIN|web\\src\\hooks\\useUnits.ts|2026-10-13T06:09:18.5715117Z|B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14|194\r\nSUPPIN|web\\src\\hooks\\useFormatting.ts|2026-10-14T00:29:41.8646135Z|76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29|106\r\nSUPPIN|web\\src\\hooks\\useNumberFormatting.ts|2026-10-14T00:29:41.8646135Z|E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7|47\r\nSUPPIN|web\\src\\hooks\\useOperationalMetrics.tsx|2026-10-14T00:29:41.8646135Z|B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554|24\r\nSUPPIN|web\\src\\hooks\\useDateFormat.ts|2026-10-13T06:09:18.5649346Z|97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542|148\r\nSUPPIN|web\\src\\hooks\\useSettings.ts|2026-10-14T00:29:41.8646135Z|F0DDDD38C53E59A7103F9EE3160263017654F77AC5001C7EB0D941816B9FDCA3|146\r\nSUPPIN|web\\src\\hooks\\useHiddenSeries.ts|2026-10-13T06:09:18.5679402Z|A7CFECEBBB60E53783E13DBFABCCA5CA685B06F72AB6684FE3B6F712409D876E|88\r\nSUPPIN|web\\src\\lib\\dateFormat.ts|2026-10-14T00:29:41.9809331Z|30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64|462\r\nSUPPIN|web\\src\\lib\\unitConversion.ts|2026-10-14T00:29:41.9890728Z|5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE|500\r\nSUPPIN|web\\src\\lib\\workspaceScope.ts|2026-10-14T00:29:41.9890728Z|AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7|168\r\nSUPPIN|web\\src\\lib\\metric-reference\\formatMetric.ts|2026-10-14T00:29:41.9809331Z|0337B9F06CD2E21BBD763E3B7DC1D0C6F13EF3017DF0B0CA84B36B2F3083FFE5|137\r\nSUPPIN|web\\src\\lib\\routeRegistry.ts|2026-10-14T00:29:41.9890728Z|2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97|289\r\nSUPPIN|web\\src\\lib\\routeLoaders.ts|2026-10-14T00:29:41.9860120Z|506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58|127\r\nSUPPIN|web\\src\\App.tsx|2026-10-14T00:29:40.8444677Z|10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C|919\r\nSUPPIN|web\\src\\components\\layout\\layout-reference\\PageLayout.tsx|2026-10-14T00:29:40.9682184Z|7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B|17\r\nSUPPIN|web\\src\\components\\layout\\PageContainer.tsx|2026-10-14T00:29:40.9542141Z|4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A|259\r\nSUPPIN|web\\src\\components\\feedback\\StaleRefreshWarning.tsx|2026-10-14T00:29:40.9392577Z|C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9|115\r\nSUPPIN|web\\src\\components\\data-display\\MetricBar.tsx|2026-10-14T00:29:40.9014093Z|A7681D29402E9C208E21C01F2D87D7BD5E4CEC18A59CC5C994511E6CF6E1F5FC|93\r\nSUPPIN|web\\src\\components\\data-display\\DataFreshness.tsx|2026-10-14T00:29:40.8945434Z|B178BC8E298ABB3F70A1157BCDEEE373094606B615664D03EE7EECB6C1CA4965|342\r\nSUPPIN|web\\src\\components\\charts\\ChartLegend.tsx|2026-10-14T00:29:40.8847524Z|E5F0B49F6F1159224D3B000CE2C57800DC13CE33C3053DC72EE1E35B2DA67095|193\r\nSUPPIN|web\\src\\components\\charts\\ChartContainer.tsx|2026-10-14T00:29:40.8764844Z|6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694|1006\r\nSUPPIN|web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx|2026-10-13T06:09:18.3540415Z|D936024C8298D84B499F47C4BEB7DAA8F145FEEB10A23D8FA97E95458737DC61|77\r\nSUPPIN|web\\src\\i18n\\en.json|2026-10-14T00:29:41.8787917Z|8D486E4996401AE48B7FBC3399C598885B38EA774B53917F0F4E90490715A893|38994\r\nSUPPIN|web\\src\\i18n\\en\\locale-driving-cold-start.json|2026-10-14T00:29:41.9275001Z|62B55967930552C9702337F7C688B2FB0AB7D3BE60B5748554CB354D7E036231|892\r\nPAGE_FILES=1\r\nPAGE_LINES=163\r\nMOUNTED_PRESENTATION_TSX_FILES=10\r\nMOUNTED_PRESENTATION_TSX_LINES=1258\r\nPAGE_PLUS_MOUNTED_TSX_LINES=1421\r\nREGEX=<GlassPanel\\b|RAW_OCCURRENCES=3|RAW_MATCHING_LINES=3\r\nREGEX=<ChartContainer\\b|RAW_OCCURRENCES=3|RAW_MATCHING_LINES=3\r\nREGEX=<MetricBar\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r\nREGEX=<HelpTooltip\\b|RAW_OCCURRENCES=1|RAW_MATCHING_LINES=1\r\nREGEX=metricId:|RAW_OCCURRENCES=7|RAW_MATCHING_LINES=7\r\nREGEX=<Line\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r\nREGEX=<Bar\\b|RAW_OCCURRENCES=3|RAW_MATCHING_LINES=3\r\nREGEX=<Scatter\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r\nCOMMAND_EXIT=0\r\nELAPSED_MS=498",
+      "rawCounts": [
+        "PAGE_LINES=163\r",
+        "REGEX=<GlassPanel\\b|RAW_OCCURRENCES=3|RAW_MATCHING_LINES=3\r",
+        "REGEX=<ChartContainer\\b|RAW_OCCURRENCES=3|RAW_MATCHING_LINES=3\r",
+        "REGEX=<MetricBar\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r",
+        "REGEX=<HelpTooltip\\b|RAW_OCCURRENCES=1|RAW_MATCHING_LINES=1\r",
+        "REGEX=metricId:|RAW_OCCURRENCES=7|RAW_MATCHING_LINES=7\r",
+        "REGEX=<Line\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r",
+        "REGEX=<Bar\\b|RAW_OCCURRENCES=3|RAW_MATCHING_LINES=3\r",
+        "REGEX=<Scatter\\b|RAW_OCCURRENCES=2|RAW_MATCHING_LINES=2\r",
+        "ELAPSED_MS=498\r"
+      ],
+      "id": "C11",
+      "command": "supplemental source pins and measured composition: Get-Item / Get-FileHash SHA256 / Get-Content line count / Select-String -AllMatches"
+    },
+    {
+      "exitCode": 1,
+      "rawOutput": "C12 oversized report-creation command could not start on Windows\r\nRAW_ERROR=The filename or extension is too long. (os error 206)\r\nCOMMAND_EXIT=1\r\nNo report write claimed from this failed launch. Using bounded native JSON assembly only in the authorized report.",
+      "rawCounts": [
+        "RAW_ERROR=The filename or extension is too long. (os error 206)\r"
+      ],
+      "id": "C12",
+      "command": "oversized report-creation command could not start on Windows"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C13 bounded native report assembly: ConvertTo-Json; exact47 source pins and queue rows retained\r\nCOMMAND_EXIT=0",
+      "rawCounts": [],
+      "id": "C13",
+      "command": "bounded native report assembly: ConvertTo-Json; exact47 source pins and queue rows retained"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C14 native JSON assembly:10 confirmed findings/22 exact source sites; no source writes\r\nCOMMAND_EXIT=0",
+      "rawCounts": [],
+      "id": "C14",
+      "command": "native JSON assembly:10 confirmed findings/22 exact source sites; no source writes"
+    },
+    {
+      "exitCode": 0,
+      "rawOutput": "C15 native JSON assembly:10 unpromoted candidates/7 deduplicated owner needs\r\nCOMMAND_EXIT=0",
+      "rawCounts": [],
+      "id": "C15",
+      "command": "native JSON assembly:10 unpromoted candidates/7 deduplicated owner needs"
+    }
+  ],
+  "notRun": {
+    "mutations": "NOTRUN",
+    "screenshots": "NOTRUN",
+    "realVehicleApiIdentityLocationDevice": "NOTRUN",
+    "testCounts": {
+      "passed": 0,
+      "executed": 0,
+      "discovered": null,
+      "skipped": null,
+      "failed": 0
+    },
+    "runtime": "NOTRUN",
+    "globalGates": "NOTRUN",
+    "lint": "NOTRUN",
+    "reason": "Explicit source-only/no browser grant; parent5173. No tests/lint/build/globalTSC/Git/servers/Docker/installs/subagents/customhelpers/extensions/heartbeats",
+    "native": "NOTRUN",
+    "build": "NOTRUN",
+    "typescript": "NOTRUN",
+    "browser": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "fullPageAcceptance": "NOTRUN",
+    "futureBrowser": "Only separately authorized existing Edge channel msedge on parent5173; no downloads"
+  },
+  "limits": [
+    "Source findings are conditional mechanisms, not observed real payloads. No fullpage/application/phase acceptance.",
+    "Whole-file hashes do not mean every shared file was fully audited; only necessary ranges inspected.",
+    "No fresh native/runtime/test/lint/build/TSC/catalog-generator/namespace guard or original-baseline equivalence.",
+    "Phases0-5 remain closed, Phase6 unfinished, Phase7NOTRUN. No source/tests/catalog/backend/config/queue/handoff writes.",
+    "Git/status prohibited; unrelated concurrent changes not attributed. Failed C08 JSON inspection and C12 Windows launch retained. C06 hook matcher invalid, corrected C07."
+  ],
+  "release": {
+    "releaseUtc": "2026-10-14T01:20:14.4639145Z",
+    "nativeRuntimeFreshTestsFullPage": "NOTRUN",
+    "reportLogClaims": "RELEASED after this final command; no continuing writes",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-driving-cold-start.json",
+      "web\\logs\\phase6-qa-driving-cold-start.log"
+    ],
+    "commands": "All synchronous/completed on tool return; no background work or service started",
+    "sourceWriteClaims": "NONE EVER HELD"
+  },
+  "summary": {
+    "countConvention": "10 confirmed conditional mechanisms,22 exact source callsites; candidates/supporting citations/regex tokens are not additional violations",
+    "priorityFixes": [
+      "Unknown/zero ARIA",
+      "Unsupported thermal attribution",
+      "Initial/fatal and retained labels",
+      "Zero cost/display preferences"
+    ],
+    "byRule": [
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 2.0,
+        "rule": "date-timezone-preference-bypass"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 1.0,
+        "rule": "decorative-panel-gradient"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 5.0,
+        "rule": "display-precision-pre-rounding"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 1.0,
+        "rule": "initial-fatal-evidence-mislabel"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 1.0,
+        "rule": "measured-zero-price-suppressed"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 1.0,
+        "rule": "physical-rtl-alignment"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 1.0,
+        "rule": "retained-evidence-as-returned"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 2.0,
+        "rule": "unknown-as-zero"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 3.0,
+        "rule": "unlocalized-evidence-counts"
+      },
+      {
+        "confirmedFindings": 1,
+        "sourceSites": 5.0,
+        "rule": "unsupported-thermal-attribution"
+      }
+    ],
+    "filesWithMostIssues": [
+      {
+        "findings": 4,
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ColdWarmComparison.tsx",
+        "sourceSites": 8
+      },
+      {
+        "findings": 2,
+        "file": "web\\src\\features\\driving\\components\\cold-start\\ColdStartMethodology.tsx",
+        "sourceSites": 4
+      },
+      {
+        "findings": 2,
+        "file": "web\\src\\features\\driving\\components\\cold-start\\TemperatureEfficiencyChart.tsx",
+        "sourceSites": 4
+      }
+    ]
+  },
+  "ownerSerialization": "Parent must queue narrow fixes and serialize overlapping files across N01/N02/N03,N02/N03/N04,N05/N06,N03/N07,N05/N07. Tests readonly; matching tests must be explicitly leased before repair. No hypothetical catalog/backend/helper/root expansion.",
+  "acceptableExceptions": [
+    "CSS-variable Tailwind classes/Recharts paint props are not static inline styles; dynamic palette props acceptable",
+    "PageLayout/NoVehicleSelected wrap PageContainer",
+    "All7 shells retained; body loading/error/empty conditionals not hidden sections",
+    "Four deep stat-reference imports are type-only, not vendor runtime imports",
+    "Negative penalty preserved; total estimated extra energy intentionally nonnegative",
+    "ColdStartKpis109 lines exported/type-referenced but unmounted, not an eighth section"
+  ],
+  "finalVerification": {
+    "drift": [],
+    "pinsChecked": 47,
+    "nativeJsonParse": "PASS",
+    "utc": "2026-10-14T01:20:14.4599461Z",
+    "exitCode": 0,
+    "driftCount": 0,
+    "command": "Get-FileHash SHA256 all47 pins; ConvertFrom-Json -AsHashtable final file; validate10 findings/22 sites/10 candidates/7 needs",
+    "pinsMatched": 47
+  }
+}
