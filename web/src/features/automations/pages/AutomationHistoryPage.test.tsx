@@ -11,10 +11,17 @@ const state = vi.hoisted(() => ({
   filters: vi.fn(),
   data: null as AutomationHistoryListResponse | null,
   isLoading: false,
+  isPending: false,
+  isFetching: false,
+  fetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
   isError: false,
   error: null as Error | null,
   refetch: vi.fn(),
   metrics: [] as readonly StatMetric[],
+  rulesData: [{ id: 7, name: 'Home arrival' }] as { id: number; name: string }[] | undefined,
+  rulesError: null as Error | null,
+  rulesFetchStatus: 'idle' as 'idle' | 'fetching' | 'paused',
+  rulesRefetch: vi.fn(),
 }));
 vi.mock('@/hooks/useOperationalMetrics', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
@@ -30,11 +37,16 @@ vi.mock('@/api/hooks/useAutomations', () => ({
     state.filters(filters);
     return {
       data: state.data, isLoading: state.isLoading, isError: state.isError,
+      isPending: state.isPending, isFetching: state.isFetching, fetchStatus: state.fetchStatus,
       error: state.error, refetch: state.refetch,
     };
   },
   useAutomationExecutionDetail: () => ({ data: null, isLoading: false, isError: false }),
-  useAutomations: () => ({ data: [{ id: 7, name: 'Home arrival' }] }),
+  useAutomations: () => ({
+    data: state.rulesData, error: state.rulesError, isError: state.rulesError !== null,
+    fetchStatus: state.rulesFetchStatus, isFetching: state.rulesFetchStatus === 'fetching',
+    refetch: state.rulesRefetch,
+  }),
 }));
 vi.mock('@/hooks/useRangeState', () => ({
   useRangeState: () => ({
@@ -71,9 +83,132 @@ describe('Automation History', () => {
   beforeEach(() => {
     state.data = response([]);
     state.isLoading = false;
+    state.isPending = false;
+    state.isFetching = false;
+    state.fetchStatus = 'idle';
     state.isError = false;
     state.error = null;
     state.filters.mockClear();
+    state.refetch.mockClear();
+    state.rulesData = [{ id: 7, name: 'Home arrival' }];
+    state.rulesError = null;
+    state.rulesFetchStatus = 'idle';
+    state.rulesRefetch.mockClear();
+  });
+
+  it('distinguishes active initial loading, paused and pending history from successful empty', () => {
+    state.data = null;
+    state.isPending = true;
+    state.isLoading = true;
+    state.isFetching = true;
+    state.fetchStatus = 'fetching';
+    const { rerender } = render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByLabelText('Loading executions')).toBeInTheDocument();
+    expect(screen.queryByText('No executions match this period and filters.')).not.toBeInTheDocument();
+    state.isLoading = false;
+    state.isFetching = false;
+    state.fetchStatus = 'paused';
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.queryByLabelText('Loading executions')).not.toBeInTheDocument();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByText('No executions match this period and filters.')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Retry.*Automation history/i }));
+    expect(state.refetch).toHaveBeenCalledOnce();
+    expect(state.rulesRefetch).not.toHaveBeenCalled();
+    state.fetchStatus = 'idle';
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByText('No requested source has returned usable data yet.')).toBeInTheDocument();
+    expect(screen.queryByText('No executions match this period and filters.')).not.toBeInTheDocument();
+    state.data = response([]);
+    state.isPending = false;
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByText('No executions match this period and filters.')).toBeInTheDocument();
+    expect(screen.queryByText('No requested source has returned usable data yet.')).not.toBeInTheDocument();
+    const brief = screen.getByTestId('automation-history-brief');
+    expect(brief.querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('0');
+  });
+
+  it('preserves history while rules load or pause without retained options and recover independently', () => {
+    state.data = response([row]);
+    state.rulesData = undefined;
+    state.rulesFetchStatus = 'fetching';
+    const { rerender } = render(<MemoryRouter initialEntries={['/automations/history?automation_id=7']}><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Rule #7' })).toBeInTheDocument();
+    state.rulesFetchStatus = 'paused';
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Retry.*Filter executions by rule/i }));
+    expect(state.rulesRefetch).toHaveBeenCalledOnce();
+    expect(state.refetch).not.toHaveBeenCalled();
+    state.rulesData = [{ id: 7, name: 'Home arrival' }];
+    state.rulesFetchStatus = 'idle';
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Home arrival' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Home arrival' })).toBeInTheDocument();
+  });
+
+  it('retains both sources through refresh failures and clears only the recovered source warning', () => {
+    state.data = response([row], 60);
+    state.isError = true;
+    state.error = new Error('history refresh failed');
+    state.rulesError = new Error('rules refresh failed');
+    const { rerender } = render(<MemoryRouter initialEntries={['/automations/history?automation_id=7&page=2']}><AutomationHistoryPage /></MemoryRouter>);
+    const warnings = screen.getAllByTestId('stale-refresh-warning');
+    expect(warnings).toHaveLength(2);
+    fireEvent.click(within(warnings[0]).getByRole('button', { name: 'Refresh' }));
+    expect(state.refetch).toHaveBeenCalledOnce();
+    expect(state.rulesRefetch).not.toHaveBeenCalled();
+    fireEvent.click(within(warnings[1]).getByRole('button', { name: 'Refresh' }));
+    expect(state.rulesRefetch).toHaveBeenCalledOnce();
+    state.isError = false;
+    state.error = null;
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(1);
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Filter executions by rule');
+    expect(screen.getByRole('button', { name: 'Home arrival' })).toBeInTheDocument();
+    expect(state.filters).toHaveBeenLastCalledWith(expect.objectContaining({ page: 2, automationId: 7 }));
+    state.rulesError = null;
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+  });
+
+  it.each(['paused', 'fetching'] as const)('keeps retained rows and rule options during a %s refresh', (fetchStatus) => {
+    state.data = response([row], 60);
+    state.fetchStatus = fetchStatus;
+    state.isFetching = fetchStatus === 'fetching';
+    state.rulesFetchStatus = fetchStatus;
+    const { rerender } = render(<MemoryRouter initialEntries={['/automations/history?automation_id=7&page=2']}><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByRole('table', { name: 'Automation history' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Home arrival' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading executions')).not.toBeInTheDocument();
+    expect(screen.queryAllByTestId('stale-refresh-warning')).toHaveLength(fetchStatus === 'paused' ? 2 : 0);
+    state.fetchStatus = 'idle';
+    state.isFetching = false;
+    state.rulesFetchStatus = 'idle';
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Home arrival' })).toBeInTheDocument();
+  });
+
+  it('keeps retained successful empty history and empty rules through a failed refresh', () => {
+    state.rulesData = [];
+    state.rulesError = new Error('rules refresh failed');
+    state.isError = true;
+    state.error = new Error('history refresh failed');
+    const { rerender } = render(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.getByText('No executions match this period and filters.')).toBeInTheDocument();
+    expect(screen.getAllByTestId('stale-refresh-warning')).toHaveLength(2);
+    expect(screen.getByRole('option', { name: 'All rules' })).toBeInTheDocument();
+    expect(screen.getByTestId('automation-history-brief')
+      .querySelector('[data-operational-metric="total"] [data-operational-value]')).toHaveTextContent('0');
+    state.isError = false;
+    state.error = null;
+    state.rulesError = null;
+    rerender(<MemoryRouter><AutomationHistoryPage /></MemoryRouter>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('No executions match this period and filters.')).toBeInTheDocument();
   });
 
   it('uses the shared header time range for server-side history, summary and trend', () => {

@@ -5,7 +5,7 @@ import { Activity, Plus } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { BUTTON_BASE, BUTTON_VARIANTS, GlassPanel, Icon, Pagination, Select, type SelectOption } from '@/components/ui';
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, DataStateNotice, EmptyState, QueryError, Skeleton, StaleRefreshWarning, resolveDataSourceStatus } from '@/components/feedback';
 import { useAutomations, useAutomationHistoryPage } from '@/api/hooks/useAutomations';
 import type { AutomationHistoryStatus } from '@/api/types';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -76,7 +76,17 @@ export default function AutomationHistoryPage() {
   const totalPages = Math.max(1, Math.ceil((data?.total ?? 0) / PAGE_SIZE));
   const effectivePage = Math.min(page, totalPages);
   const rows = data?.items ?? [];
-  const isInitialLoading = query.isLoading && !historyState.hasData;
+  const historySource = {
+    id: 'history',
+    label: t('automations.historyPage.title', 'Automation history'),
+    query: { ...query, data: query.data ?? undefined },
+  };
+  const rulesSource = {
+    id: 'rules',
+    label: t('automations.historyPage.filterRule', 'Filter executions by rule'),
+    query: automations,
+  };
+  const isInitialLoading = resolveDataSourceStatus(historySource) === 'loading';
   const initialError = historyState.fatalError;
 
   useEffect(() => {
@@ -141,12 +151,35 @@ export default function AutomationHistoryPage() {
           {rulesState.fatalError && (
             <QueryError error={rulesState.fatalError} onRetry={() => { void automations.refetch(); }} />
           )}
+          {!rulesState.hasData && !rulesState.fatalError && (
+            resolveDataSourceStatus(rulesSource) === 'loading' ? (
+              <Skeleton className="mb-4 h-12 w-full" aria-label={rulesSource.label} />
+            ) : rulesState.isRefreshBlocked ? (
+              <DataSourceNotice sources={[rulesSource]} />
+            ) : (
+              <DataStateNotice
+                state="unavailable"
+                title={rulesSource.label}
+                message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              />
+            )
+          )}
           {isInitialLoading ? (
             <div className="space-y-3" aria-label={t('automations.historyPage.loading', 'Loading executions')}>
               {[1, 2, 3, 4].map((key) => <Skeleton key={key} className="h-12 w-full" />)}
             </div>
           ) : initialError ? (
             <QueryError error={initialError} onRetry={() => { void query.refetch(); }} />
+          ) : !historyState.hasData ? (
+            historyState.isRefreshBlocked ? (
+              <DataSourceNotice sources={[historySource]} />
+            ) : (
+              <DataStateNotice
+                state="unavailable"
+                title={historySource.label}
+                message={t('dataSources.unavailableMessage', 'No requested source has returned usable data yet.')}
+              />
+            )
           ) : rows.length === 0 ? (
             <EmptyState
               icon={<Activity className="h-8 w-8" aria-hidden="true" />}
