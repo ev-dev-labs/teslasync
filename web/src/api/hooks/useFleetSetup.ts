@@ -45,6 +45,49 @@ export interface FleetTelemetrySubscribeInput {
   field_intervals?: Record<string, number>;
 }
 
+/**
+ * Tesla's System Behavior uses an elapsed interval plus a changed value, then
+ * batches in 500ms buckets (developer.tesla.com/docs/fleet-api/fleet-telemetry).
+ * Zero is not 0.5 seconds. Our subscribe handler accepts Go integer seconds,
+ * so fractional/negative cadences are unsupported.
+ */
+export function fleetTelemetrySubscribeBody(input: FleetTelemetrySubscribeInput): Record<string, unknown> {
+  const body: Record<string, unknown> = { vins: input.vins };
+  const hostname = input.hostname?.trim();
+  if (hostname) body.hostname = hostname;
+  if (input.port && input.port > 0) body.port = input.port;
+  const ca = input.ca?.trim();
+  if (ca) body.ca = ca;
+  if (input.fields?.length) body.fields = input.fields;
+
+  const validateInterval = (value: number, field: string) => {
+    if (!Number.isSafeInteger(value) || value < 0) {
+      throw new Error(`${field}: unsupported telemetry interval; expected a non-negative whole number of seconds`);
+    }
+  };
+  const intervals = { ...input.field_intervals };
+  for (const [field, interval] of Object.entries(intervals)) {
+    validateInterval(interval, field);
+  }
+  if (input.interval_seconds !== undefined) {
+    validateInterval(input.interval_seconds, 'interval_seconds');
+    if (input.interval_seconds === 0) {
+      // internal/api/devtools/handler.go defaults a master zero to 10, but
+      // forwards per-field zero verbatim. Preserve that exact protocol value.
+      if (!input.fields?.length) {
+        throw new Error('Zero telemetry interval requires explicit fields; the default-field subscription cannot preserve zero');
+      }
+      for (const field of input.fields) {
+        if (intervals[field] === undefined) intervals[field] = 0;
+      }
+    } else {
+      body.interval_seconds = input.interval_seconds;
+    }
+  }
+  if (Object.keys(intervals).length) body.field_intervals = intervals;
+  return body;
+}
+
 function asRecord(raw: unknown): Record<string, unknown> {
   return raw && typeof raw === 'object' && !Array.isArray(raw)
     ? (raw as Record<string, unknown>)
@@ -238,21 +281,7 @@ export function useSubscribeFleetTelemetry() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (input: FleetTelemetrySubscribeInput) => {
-      const body: Record<string, unknown> = {
-        vins: input.vins,
-      };
-      const hostname = input.hostname?.trim();
-      if (hostname) body.hostname = hostname;
-      if (input.port && input.port > 0) body.port = input.port;
-      const ca = input.ca?.trim();
-      if (ca) body.ca = ca;
-      if (input.fields && input.fields.length > 0) body.fields = input.fields;
-      if (input.interval_seconds && input.interval_seconds > 0) {
-        body.interval_seconds = input.interval_seconds;
-      }
-      if (input.field_intervals && Object.keys(input.field_intervals).length > 0) {
-        body.field_intervals = input.field_intervals;
-      }
+      const body = fleetTelemetrySubscribeBody(input);
       return request<Record<string, unknown>>('/dev-tools/fleet-telemetry-subscribe', {
         method: 'POST',
         requiresLiveMode: true,

@@ -120,7 +120,7 @@ export function FleetSetupSubscribePanel() {
       port: Number.isFinite(parsedPort) && parsedPort > 0 ? parsedPort : undefined,
       ca: ca.trim() || undefined,
       fields: selectedSignals.length > 0 ? selectedSignals.map((s) => s.name) : undefined,
-      interval_seconds: masterInterval > 0 ? masterInterval : undefined,
+      interval_seconds: masterInterval,
       field_intervals:
         fieldIntervals && Object.keys(fieldIntervals).length > 0 ? fieldIntervals : undefined,
     })
@@ -306,8 +306,13 @@ export function FleetSetupSubscribePanel() {
         >
         {
         teslaErrors.length > 0 ? (
-          <div className="space-y-2">
-            {teslaErrors.slice(0, 3).map((err, i) => (
+          <div
+            role="region"
+            aria-label={t('fleetSetup.subscribe.errorsLabel', 'Tesla telemetry errors')}
+            tabIndex={0}
+            className="max-h-80 space-y-2 overflow-y-auto"
+          >
+            {teslaErrors.map((err, i) => (
               <AlertBanner
                 key={`${err.code}-${err.timestamp}-${i}`}
                 variant="warning"

@@ -12,6 +12,8 @@ import { Icon } from './Icon'
 import { Caption, Text } from './Typography'
 
 const INTERVAL_OPTIONS = [
+  // Zero removes the field's interval delay; Tesla still batches changed
+  // values in 500ms buckets, not guaranteed periodic samples.
   { value: 0, label: '500ms', desc: 'Real-time' },
   { value: 1, label: '1s', desc: 'Fast' },
   { value: 5, label: '5s', desc: 'Medium' },
@@ -31,6 +33,13 @@ const DEFAULT_INTERVAL = 10
 // list never rebuilds identical arrays on every render.
 const MASTER_INTERVAL_OPTIONS = INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: `${o.label} (${o.desc})` }))
 const SIGNAL_INTERVAL_OPTIONS = INTERVAL_OPTIONS.map(o => ({ value: String(o.value), label: o.label }))
+
+function intervalOptions(interval: number, master = false) {
+  const options = master ? MASTER_INTERVAL_OPTIONS : SIGNAL_INTERVAL_OPTIONS
+  return options.some(option => option.value === String(interval))
+    ? options
+    : [...options, { value: String(interval), label: `${interval}s` }]
+}
 
 const PRESETS = [
   { name: '⚡ Real-time Driving', desc: 'Driving signals at 1s, battery at 10s, config at 24h',
@@ -114,13 +123,15 @@ const CATEGORY_ICONS: Record<string, typeof Zap> = {
 
 /**
  * Build the flat signal list from the category definitions, pre-selecting any
- * field present in `initialSelected`. Null-safe: missing `categories`/`fields`
+ * field present in `initialSelected` and retaining its saved cadence when supplied.
+ * Null-safe: missing `categories`/`fields`
  * collapse to an empty list rather than throwing on `.flatMap`/`.map`.
  */
 function seedSignals(
   categories: CategoryDef[] | undefined,
   initialSelected: string[] | undefined,
   interval: number,
+  initialIntervals: Readonly<Record<string, number>> | undefined,
 ): SignalConfig[] {
   const selected = initialSelected ?? []
   return (categories ?? []).flatMap(cat =>
@@ -128,7 +139,7 @@ function seedSignals(
       name: f,
       category: cat.category,
       selected: selected.includes(f),
-      interval,
+      interval: initialIntervals?.[f] ?? interval,
     })),
   )
 }
@@ -139,14 +150,16 @@ interface Props {
   categories: CategoryDef[]
   initialSelected: string[]
   initialInterval: number
+  /** Saved per-field cadences; omitted fields use `initialInterval`. */
+  initialIntervals?: Readonly<Record<string, number>>
   onSubmit: (signals: { name: string; interval: number }[]) => void
 }
 
-export default function SignalConfigModal({ open, onClose, categories, initialSelected, initialInterval, onSubmit }: Props) {
+export default function SignalConfigModal({ open, onClose, categories, initialSelected, initialInterval, initialIntervals, onSubmit }: Props) {
   const { t } = useTranslation()
   const seedInterval = initialInterval ?? DEFAULT_INTERVAL
 
-  const [signals, setSignals] = useState<SignalConfig[]>(() => seedSignals(categories, initialSelected, seedInterval))
+  const [signals, setSignals] = useState<SignalConfig[]>(() => seedSignals(categories, initialSelected, seedInterval, initialIntervals))
   const [search, setSearch] = useState('')
   const [masterInterval, setMasterInterval] = useState(seedInterval)
   const [expandedCats, setExpandedCats] = useState<Set<string>>(() => new Set((categories ?? []).map(c => c.category)))
@@ -157,7 +170,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
   // modal is already open must NOT wipe the user's in-progress edits.
   useEffect(() => {
     if (!open) return
-    setSignals(seedSignals(categories, initialSelected, seedInterval))
+    setSignals(seedSignals(categories, initialSelected, seedInterval, initialIntervals))
     setMasterInterval(seedInterval)
     setExpandedCats(new Set((categories ?? []).map(c => c.category)))
     setSearch('')
@@ -294,7 +307,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
             <Select value={String(masterInterval)} onChange={e => setMasterIntervalAll(Number(e.target.value))}
               aria-label={t('signalConfig.masterIntervalLabel', 'Master sampling interval for all signals')}
               size="sm"
-              options={MASTER_INTERVAL_OPTIONS}
+              options={intervalOptions(masterInterval, true)}
             />
           </div>
 
@@ -380,7 +393,7 @@ export default function SignalConfigModal({ open, onClose, categories, initialSe
                             aria-label={t('signalConfig.intervalForSignal', 'Sampling interval for {{signal}}', { signal: sig.name })}
                             size="sm"
                             className="min-w-20"
-                            options={SIGNAL_INTERVAL_OPTIONS}
+                            options={intervalOptions(sig.interval)}
                           />
                         </div>
                       )

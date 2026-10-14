@@ -17,6 +17,7 @@
  *   8. Submit payload shape + Cancel, and the disabled-when-empty guard.
  *   9. Regression: reopening re-seeds from the latest props and clears search.
  *  10. Null-safety: undefined `categories`/`initialSelected` never throw.
+ *  11. Saved per-field cadences survive reopen without resetting active edits.
  *
  * react-i18next is stubbed to echo each English fallback (with `{{var}}`
  * interpolation) so assertions read against stable copy without a provider.
@@ -52,6 +53,7 @@ vi.mock('react-i18next', async () => {
 })
 
 import SignalConfigModal from './SignalConfigModal'
+import { fleetTelemetrySubscribeBody } from '@/api/hooks/useFleetSetup'
 
 afterEach(() => cleanup())
 
@@ -84,6 +86,124 @@ function intervalSelect(signal: string): HTMLSelectElement {
 }
 
 describe('<SignalConfigModal>', () => {
+  it.each([0, 37, +5, 0.5, -1, NaN, Infinity])('retains a saved cadence of %s without silently substituting an offered option', (interval) => {
+    const { onSubmit } = renderModal({
+      initialSelected: ['VehicleSpeed'],
+      initialIntervals: { VehicleSpeed: interval },
+    })
+    expect(intervalSelect('VehicleSpeed')).toHaveValue(String(interval))
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe 1 Signals' }))
+    expect(onSubmit).toHaveBeenCalledWith([{ name: 'VehicleSpeed', interval }])
+  })
+
+  it('uses the default only for a missing master interval, not zero', () => {
+    const { props, rerender, onSubmit } = renderModal({
+      initialSelected: ['VehicleSpeed'],
+      initialInterval: undefined,
+    })
+    expect(intervalSelect('VehicleSpeed')).toHaveValue('10')
+    rerender(<SignalConfigModal {...props} open={false} />)
+    rerender(<SignalConfigModal {...props} initialInterval={0} open />)
+    expect(intervalSelect('VehicleSpeed')).toHaveValue('0')
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe 1 Signals' }))
+    expect(onSubmit).toHaveBeenCalledWith([{ name: 'VehicleSpeed', interval: 0 }])
+  })
+
+  it('seeds exact per-field cadences including zero and falls back only for omitted fields', () => {
+    const { onSubmit } = renderModal({
+      initialSelected: ['VehicleSpeed', 'Gear', 'ChargeState'],
+      initialInterval: 30,
+      initialIntervals: { VehicleSpeed: 0, ChargeState: 300 },
+    })
+
+    describe('Fleet Setup cadence serialization', () => {
+      const input = { vins: ['fixture'], fields: ['VehicleSpeed', 'Gear'] }
+
+      it('omits missing intervals without fabricating measured zero', () => {
+        expect(fleetTelemetrySubscribeBody(input)).toEqual(input)
+      })
+
+      it('preserves master zero through explicit field overrides and keeps mixed cadences', () => {
+        const overrides = { Gear: 30 }
+        expect(fleetTelemetrySubscribeBody({
+          ...input, interval_seconds: 0, field_intervals: overrides,
+        })).toEqual({ ...input, field_intervals: { VehicleSpeed: 0, Gear: 30 } })
+        expect(overrides).toEqual({ Gear: 30 })
+      })
+
+      it('preserves an explicit per-field zero with a positive master', () => {
+        expect(fleetTelemetrySubscribeBody({
+          ...input, interval_seconds: +37, field_intervals: { Gear: 0 },
+        })).toEqual({ ...input, interval_seconds: 37, field_intervals: { Gear: 0 } })
+      })
+
+      it.each([NaN, Infinity, -Infinity, -1, 0.5, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+        'reports unsupported/invalid cadence %s instead of changing or dropping it',
+        (interval) => {
+          expect(() => fleetTelemetrySubscribeBody({ ...input, interval_seconds: interval })).toThrow(/unsupported telemetry interval/)
+          expect(() => fleetTelemetrySubscribeBody({ ...input, field_intervals: { Gear: interval } })).toThrow(/unsupported telemetry interval/)
+        },
+      )
+
+      it('does not treat malformed JSON values as measured zero or missing input', () => {
+        for (const raw of ['null', '""', '"5"', 'false']) {
+          const interval: number = JSON.parse(raw)
+          expect(() => fleetTelemetrySubscribeBody({ ...input, interval_seconds: interval })).toThrow(/unsupported telemetry interval/)
+          expect(() => fleetTelemetrySubscribeBody({ ...input, field_intervals: { Gear: interval } })).toThrow(/unsupported telemetry interval/)
+        }
+      })
+
+      it('reports unsupported master zero when explicit fields are absent', () => {
+        expect(() => fleetTelemetrySubscribeBody({ vins: ['fixture'], interval_seconds: 0 }))
+          .toThrow(/requires explicit fields/)
+      })
+    })
+    expect(intervalSelect('VehicleSpeed')).toHaveValue('0')
+    expect(intervalSelect('Gear')).toHaveValue('30')
+    expect(intervalSelect('ChargeState')).toHaveValue('300')
+    expect(screen.getByRole('combobox', { name: 'Master sampling interval for all signals' })).toHaveValue('30')
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe 3 Signals' }))
+    expect(onSubmit).toHaveBeenCalledWith([
+      { name: 'VehicleSpeed', interval: 0 },
+      { name: 'Gear', interval: 30 },
+      { name: 'ChargeState', interval: 300 },
+    ])
+  })
+
+  it('restores saved mixed cadences on reopen and clears search without resetting edits on rerender', () => {
+    const { props, rerender, onSubmit } = renderModal({
+      initialSelected: ['VehicleSpeed', 'ChargeState'],
+      initialIntervals: { VehicleSpeed: 0, ChargeState: 300 },
+    })
+    fireEvent.change(intervalSelect('VehicleSpeed'), { target: { value: '5' } })
+    fireEvent.change(screen.getByRole('textbox', { name: 'Search signals' }), { target: { value: 'Charge' } })
+    const updatedProps = {
+      ...props,
+      initialInterval: 60,
+      initialIntervals: { VehicleSpeed: 1, ChargeState: 900 },
+    }
+    rerender(<SignalConfigModal {...updatedProps} />)
+    expect(screen.getByRole('textbox', { name: 'Search signals' })).toHaveValue('Charge')
+    expect(intervalSelect('ChargeState')).toHaveValue('300')
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe 2 Signals' }))
+    expect(onSubmit).toHaveBeenLastCalledWith([
+      { name: 'VehicleSpeed', interval: 5 },
+      { name: 'ChargeState', interval: 300 },
+    ])
+
+    rerender(<SignalConfigModal {...updatedProps} open={false} />)
+    rerender(<SignalConfigModal {...updatedProps} open />)
+    expect(screen.getByRole('textbox', { name: 'Search signals' })).toHaveValue('')
+    expect(intervalSelect('VehicleSpeed')).toHaveValue('1')
+    expect(intervalSelect('ChargeState')).toHaveValue('900')
+    expect(intervalSelect('Gear')).toHaveValue('60')
+    fireEvent.click(screen.getByRole('button', { name: 'Subscribe 2 Signals' }))
+    expect(onSubmit).toHaveBeenLastCalledWith([
+      { name: 'VehicleSpeed', interval: 1 },
+      { name: 'ChargeState', interval: 900 },
+    ])
+  })
+
   it.each<[string, number[], boolean[]]>([
     ['Real-time Driving', [1, 10, 86400, 10, 10], [true, true, true, true, true]],
     ['Balanced', [10, 10, 10, 10, 10], [true, true, true, true, true]],
