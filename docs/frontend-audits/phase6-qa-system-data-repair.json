@@ -1,0 +1,1759 @@
+{
+  "schemaVersion": 1,
+  "continuation": {
+    "request": "2026-10-14 native-only missing QA continuation; original source checks, findings, clocks and limitations preserved below as historical evidence.",
+    "browserLock": "EXPLICIT USER ASSIGNMENT lock4/4; this continuation owns only that lock.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-system-data-repair.json",
+      "web\\logs\\phase6-qa-system-data-repair.log"
+    ],
+    "sourceCatalogQueue": "READONLY",
+    "completedAuditReruns": 0,
+    "nativeOutcome": "PARTIAL_EXECUTED_SAFE_FIXTURE_LIMITED",
+    "originalOutcome": {
+      "status": "PARTIAL_SOURCE_DRIFT",
+      "applicationAcceptance": "PARTIAL_UNEXECUTED",
+      "native": "NOTRUN"
+    },
+    "historicalFields": "Original clock, release, nativeCandidates, tests, notRun, source findings and source-only summary below describe the preserved first attempt. This continuation does not renew that historical clock or reinterpret its NOTRUN entries as passes. Current native evidence and releases are recorded here.",
+    "clock": {
+      "requestUtc": "2026-10-14T04:58:31.127Z",
+      "returnByUtc": "2026-10-14T05:18:31.127Z",
+      "hardByUtc": "2026-10-14T05:23:31.127Z",
+      "renewed": false
+    },
+    "guards": "Before navigation: fresh isolated Edge context, service workers blocked, existing synthetic fixture resolver and returning-user seed, all non-GET requests aborted, unrecognized API reads aborted, external requests aborted; no fixture server or real API access.",
+    "nativeLimit": "Only existing fixtures; empty ledger/diagnostics cannot prove populated restore/manual/preview states. No write, scan, job, SQL, DB, replay, repair or bulk operation authorized.",
+    "commands": [
+      {
+        "shellId": "4114",
+        "command": "PowerShell here-string piped to node; installed Playwright chromium.launch({channel:'msedge',headless:true}); unchanged e2e mockApi.ts resolver and seed loaded in memory; shared http://127.0.0.1:5173/data-repair?vehicle_id=7&as_of=2026-08-26T16%3A00%3A00Z",
+        "exit": 0,
+        "startUtc": "2026-10-14T05:02:18.434Z",
+        "endUtc": "2026-10-14T05:02:30.363Z",
+        "outcome": "10 viewport observations, two native PNG captures, queue/empty ledger/empty diagnostics, eight keyboard steps, forced-colors/reduced-motion media activation, 200% root text geometry, light-mode root activation."
+      },
+      {
+        "shellId": "4122",
+        "command": "Same guarded native Edge setup; missing mobile drawer only; exact button name Review",
+        "exit": 1,
+        "endUtc": "2026-10-14T05:03:45.623Z",
+        "outcome": "HARNESS_LOCATOR_FAILURE: 15000ms timeout. Source accessible name is Review case 301. Not an application finding or a pass. Browser closed and lock released."
+      },
+      {
+        "shellId": "4126",
+        "command": "Same guarded native Edge setup; only corrected original missing drawer locator getByRole('button',{name:'Review case 301',exact:true}), read-only drawer, Tab, Escape",
+        "exit": 0,
+        "endUtc": "2026-10-14T05:04:17.193Z",
+        "outcome": "Existing synthetic case301 drawer rendered at390x844, native PNG retained; canonical doubled confidence text and absent visible Assignee label observed; Tab stayed in dialog, Escape closed it and restored Review focus."
+      }
+    ],
+    "nativeEvidence": {
+      "browser": "Installed native Microsoft Edge msedge channel",
+      "version": "155.0.4283.45",
+      "captures": [
+        {
+          "width": 390,
+          "surface": "queue",
+          "bytes": 53554,
+          "sha256": "0adcbb3c259ab6f0eb71d1a4eb9c96824870689af7cf1cda93d9a13556ce1e46"
+        },
+        {
+          "width": 1440,
+          "surface": "queue",
+          "bytes": 118243,
+          "sha256": "bd34950ebc873d1104739677e834138e3def326bf54b1bf58d0463b3c8c5d25b"
+        },
+        {
+          "width": 390,
+          "surface": "read-only drawer",
+          "bytes": 54910,
+          "sha256": "17d25a87cba738125fbcdc0017e1e2e811c4229832cb77f3cf5dad1724195c41"
+        }
+      ],
+      "captureStorage": "Base64 PNG records embedded in matching ignored web\\logs\\phase6-qa-system-data-repair.log; no third writable file. Captures obtained, not claimed as a complete human visual/contrast review.",
+      "viewportWidths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "viewportResult": "Actual innerWidth and document scrollWidth equalled each listed width; all three tab boxes were present. This is document horizontal-overflow evidence only, not every field/action reachability.",
+      "drawerGeometry": {
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "bottom": 844,
+        "width": 390,
+        "height": 844
+      },
+      "readOnly": "Page displayed historical/read-only notice and disabled Run integrity scan. Drawer Save assignment, Add note, Dismiss finding, Move to quarantine, Begin review and Resolve case were disabled.",
+      "keyboard": "Eight Tab observations on diagnostics; drawer Tab focus remained inside dialog on Close, Escape removed dialog and restored Review focus. Nested confirmations were not opened or accepted.",
+      "preferences": "Existing fixture English/en-US/UTC; forced-colors and reduced-motion matchMedia both true; 200% root font32px retained document width1440; light attempt produced root class light-mode.",
+      "catalogNative": [
+        "DR11: drawer rendered High confidence confidence.",
+        "DR12: queue rendered 1 cases on this page.",
+        "DR14: only Add review note appeared among drawer visible label elements; Assignee input remained without visible label."
+      ],
+      "network": {
+        "unknownApiReads": 0,
+        "externalRequests": 0,
+        "forwardedApiRequests": 0,
+        "blockedNonGetRequests": 12,
+        "blockedNonGetMeaning": "Automatic POST /api/v1/pinned attempts across three fresh contexts were aborted before transport. No user invoked a mutation; no business write reached a backend.",
+        "pageErrors": 0,
+        "sse": "Existing path classifier with local fulfilled empty event-stream response; mock SSE server was never started.",
+        "websockets": "Closed by context route before connection.",
+        "serviceWorkers": "Blocked."
+      }
+    },
+    "originalNativeCandidateDisposition": {
+      "NC01": "PARTIAL: ten queue widths plus390 drawer geometry; existing empty ledger/diagnostics visited. Populated ledger/manual/preview and alternate vehicle scopes unavailable in existing fixture.",
+      "NC02": "PARTIAL: Tab and drawer Escape/focus restoration executed; nested confirmation, announcements and numeric touch target/spacing measurements NOTRUN.",
+      "NC03": "PARTIAL: native dark captures, light root activation, forced-colors/reduced-motion activation and200% root text geometry. Numerical contrast, custom/OLED themes, performance and full visual oracle NOTRUN.",
+      "NC04": "PARTIAL: actual canonical English rendered and DR11/DR12 reproduced; saved locale/unit/currency/time/RTL/long-label matrix unavailable without changing acknowledged fixtures/preferences.",
+      "NC05": "PARTIAL: guarded as_of read-only mounted populated case and existing empty ledger/diagnostics. Loading/fatal/retained/paused/offline/concurrent/mutation and null/huge numerical cases NOTRUN; no new fake payloads or operational execution."
+    },
+    "currentEvidenceFreshness": {
+      "comparison": "Read-only SHA256 comparison against preserved original afterSha256, not rerun of completed source audit or tests.",
+      "originalPins": 70,
+      "sameAsOriginalAfter": 69,
+      "changedPins": 1,
+      "changedFile": "web/src/i18n/en.json",
+      "currentCatalogSha256": "DF6829C0588AA9C6EA9605FD2A6DB9F208DFB6C6E8D76BCA11B18F89D345EBA8",
+      "attribution": "External changes; no source/catalog writes by this worker.",
+      "catalogNarrowReconciliation": "Current confidence.high=High confidence, confidence.medium=Medium confidence, cases.confidenceBadge={{confidence}} confidence; cases.pageCount={{count}} cases on this page and original three singular leaves absent. Native DR11/DR12 corroborate current catalog mechanism."
+    },
+    "canonicalQueueDedup": {
+      "queue": "migration-queue.md",
+      "exactCurrentRow": "| [ ] | 6 | phase6-qa-system-data-repair | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-data-repair.json; web\\logs\\phase6-qa-system-data-repair.log | phase5-page-system-data-repair | 1 | reserved02:37:46.371Z; actor pending | - | DataRepairPage/direct supports; no SQL/DB/repair/bulk replay operations.; Strict-I2: no live writer; attempts preserved; delivered evidence retained for fast intake/verification, not a running slot. |",
+      "parsedTaskRows": 1891,
+      "queueWrites": 0,
+      "method": "Read-only exact original needKey and exclusive original affected-file matching, then repair/quarantine/preview-authority/confidence-tone/scope-placeholder/initial-paused item-name scan. Broad shared/catalog ownership and aggregate planning rows are not counted as implemented leaf fixes.",
+      "knownOverlap": "Completed phase4-repair-case-dismiss-scope-reset shares RepairCaseWorkspace but clears bulk-dismiss scope only; not DR01/DR02/DR08. Completed phase5-page-system-data-repair is root source-only acceptance, not child QA or these fixes. Completed phase3-use-data-state explicitly deferred original source-scope policy.",
+      "exactOriginalFixDuplicates": 0,
+      "missingFixCandidates": [
+        {"finding": "DR01", "needKey": "repair-placeholder-source-scope"},
+        {"finding": "DR02", "needKey": "repair-source-trust-propagation"},
+        {"finding": "DR03", "needKey": "repair-initial-paused-panels"},
+        {"finding": "DR04", "needKey": "repair-preview-authority-binding"},
+        {"finding": "DR05", "needKey": "repair-quarantine-restore-scope"},
+        {"finding": "DR06", "needKey": "repair-existing-confirmation-mode-gates"},
+        {"finding": "DR07", "needKey": "repair-manual-success-invalidation"},
+        {"finding": "DR08", "needKey": "repair-durable-scan-partial-outcome"},
+        {"finding": "DR09", "needKey": "repair-scoped-empty-claims"},
+        {"finding": "DR10", "needKey": "repair-impact-exact-value-presentation"},
+        {"finding": "DR11", "needKey": "repair-drawer-confidence-copy"},
+        {"finding": "DR12", "needKey": "repair-three-count-plural-leaves"},
+        {"finding": "DR13", "needKey": "repair-quarantine-mobile-details"},
+        {"finding": "DR14", "needKey": "repair-assignee-visible-label"},
+        {"finding": "DR15", "needKey": "repair-header-neutral-chrome"},
+        {"finding": "DR16", "needKey": "repair-case-confidence-tone-consistency"}
+      ],
+      "candidateMeaning": "Exactly the16 original actionable source mechanisms with unchanged affected source and no matching canonical fix objective found; precise files/evidence/fix remain in original confirmedFindings. Not invented new defects or authorized queue entries. Conditional CC01/CC02 excluded."
+    },
+    "externalLimitations": [
+      "Existing fixtures contain only synthetic vehicle7 and case301; quarantine/stale/suggestion collections are empty. No unauthorized fixture expansion or real/nonfixture data was read.",
+      "Full original native state/locale/contrast matrix remains unexecuted where existing safe fixtures do not support it; no whole-page/native/auth/backend acceptance claimed.",
+      "One exact-name drawer locator timeout was preserved as a harness failure, then only that unexecuted check was corrected. Initial installed-loader probes failed without installing, downloading or creating tooling.",
+      "No completed source audits/passes, tests, compiler, lint, build, official helper, SQL, DB, repair, replay, scan, bulk, job or write operations rerun.",
+      "No Git, queue edits, catalog/source edits, installs, downloads, Docker, new servers, helper files or nested agents."
+    ],
+    "release": {
+      "browser": "CLOSED after each native run, last2026-10-14T05:04:17.193Z",
+      "browserLock": "EXPLICIT lock4/4 RELEASED",
+      "nativeCommands": "4114 exit0;4122 exit1;4126 exit0; all completed",
+      "background": "NONE STARTED",
+      "shared5173": "Reused; not owned, stopped or modified",
+      "artifactClaim": "RELEASED AT FINAL HANDOFF",
+      "sourceCatalogQueueClaim": "NONE HELD"
+    }
+  },
+  "item": "phase6-qa-system-data-repair",
+  "attempt": 1,
+  "status": "PARTIAL_NATIVE_SAFE_FIXTURE_LIMITED",
+  "applicationAcceptance": "PARTIAL_UNEXECUTED",
+  "native": "PARTIAL_EXECUTED",
+  "clock": {
+    "reservationUtc": "2026-10-14T02:37:46.371Z",
+    "returnByUtc": "2026-10-14T02:57:46.371Z",
+    "hardByUtc": "2026-10-14T03:02:46.371Z",
+    "actualActorCreationUtc": null,
+    "earlierActualCreationPlus20Or25Wins": true,
+    "renewed": false,
+    "limit": "Actual actor creation unavailable; conservative reservation used, no renewal."
+  },
+  "authority": {
+    "queueFile": "migration-queue.md",
+    "queueLineAtRead": 211,
+    "exactRow": "| [~] | 6 | phase6-qa-system-data-repair | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-system-data-repair.json; web\\logs\\phase6-qa-system-data-repair.log | phase5-page-system-data-repair | 1 | reserved02:37:46.371Z; actor pending | - | DataRepairPage/direct supports; no SQL/DB/repair/bulk replay operations. |",
+    "writableFiles": [
+      "docs/frontend-audits/phase6-qa-system-data-repair.json",
+      "web/logs/phase6-qa-system-data-repair.log"
+    ],
+    "allSourcesTestsHooksRoutesCatalogQueue": "READONLY",
+    "prohibitedExecution": "No Git, agents, installs, helpers, tests/lint/build/compiler/server/browser/network/API/SQL/DB/repair/replay/business actions performed.",
+    "instructions": "No root/web/docs AGENTS.md listed. Applicable .github/copilot-instructions.md frontend/integrity sections, react-frontend.instructions.md, frontend-si-cutover.instructions.md, unit-conversion.instructions.md and docs/I18N_GUIDELINES.md read. Current design/SI contract supersedes older neon/dual-unit examples."
+  },
+  "documentsRead": [
+    {
+      "file": "docs/orchestrator-loop.md",
+      "review": "Fully read; worker restrictions applied, not parent Git/server/fleet rules."
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "review": "Full Get-Content retrieval retained; core1-654 and applicable879-1013/2481-2539 reviewed. Unrelated appendices are not separately certified as audited implementations."
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "review": "Relevant principles, architecture,15-26,30-37,43-45 read."
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "review": "Full retrieval retained; repair row237, P346/G179 row534, preservation1357-1359 reviewed."
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "review": "Full retrieval retained; current recovery and2186-2342 conventions/preserved acceptance reviewed."
+    }
+  ],
+  "alreadyMetDuplicateCheck": {
+    "objectiveAlreadyMet": false,
+    "rootSourceMigrationAlreadyMet": true,
+    "priorExactQaArtifactListed": false,
+    "historicalRows": [
+      {
+        "item": "audit-page-186",
+        "line": 988,
+        "status": "[x]",
+        "disposition": "Phase0 audit not Phase6 source QA."
+      },
+      {
+        "item": "phase5-page-system-data-repair",
+        "line": 2242,
+        "status": "[x]",
+        "disposition": "Accepted root page SOURCE ONLY/no change; receipt explicitly child workflow/QA not accepted. No remigration or rerun unchanged tests."
+      },
+      {
+        "item": "phase4-repair-case-dismiss-scope-reset",
+        "line": 2029,
+        "status": "[x]",
+        "disposition": "Current source clears dismiss targets/reason on vehicle/fleet switch. Already met; not reported as missing."
+      },
+      {
+        "item": "phase3-use-data-state",
+        "line": 1944,
+        "status": "[x]",
+        "disposition": "Accepted adapter; P346 source-scope policy explicitly deferred, not implemented/accepted."
+      }
+    ],
+    "queueEdits": 0
+  },
+  "scope": {
+    "route": "/data-repair",
+    "productionRegexScopeFiles": 36,
+    "directGraph": "DataRepairPage, all Repair*/repair* supports, StaleChargingWorklist/StaleDriveWorklist/StaleSessionRow, SystemSummaryBrief, useDataRepair/useRepairCaseStats and AIDataRepairSuggestions; readonly route/client/trust/shared-control/catalog traces.",
+    "backend": "router declarations read only; backend engineering rules11-14 not applicable to assigned frontend QA."
+  },
+  "preservation": [
+    {
+      "section": "Shared shell/workspace",
+      "file": "web/src/features/system/pages/DataRepairPage.tsx",
+      "anchor": "<PageLayout",
+      "observed": "PageLayout delegates to PageContainer. Local VehicleSelect is intentional because /data-repair disables header vehicle selection and has no header range. Repair boundary date is business input, not duplicate workspace range.",
+      "line": 26,
+      "exactLine": "<PageLayout"
+    },
+    {
+      "section": "Statistics/queue/filters/cursors/bulk review/dismiss",
+      "file": "web/src/features/system/components/RepairCaseWorkspace.tsx",
+      "anchor": "const casesQuery = useRepairCases(filters);",
+      "observed": "Four metric roles/unknown vs zero retained. Server filters, cursor paging and loaded-page selection preserved. Partial/skipped bulk retains selection. Completed dismiss scope reset retained.",
+      "line": 46,
+      "exactLine": "const casesQuery = useRepairCases(filters);"
+    },
+    {
+      "section": "Drawer finding/evidence/notes/assignment/transitions/actions",
+      "file": "web/src/features/system/components/RepairCaseDrawer.tsx",
+      "anchor": "<RepairCaseEvidencePanel repairCase={repairCase} />",
+      "observed": "Evidence/gap/related-session/status/confidence/full notes, ownership, begin/reopen/resolve/dismiss/quarantine/restore/apply remain. Already-open resolve/controlled dialogs explicitly canWrite-disabled; continuation tests inspect only.",
+      "line": 163,
+      "exactLine": "<RepairCaseEvidencePanel repairCase={repairCase} />"
+    },
+    {
+      "section": "Quarantine ledger/restore",
+      "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+      "anchor": "tableId=\"data-repair:quarantine\"",
+      "observed": "Status filter/cursors, retained refresh warning, explicit reason/restore confirmation and success-only target clear present. Scope/mobile/read-only gaps below.",
+      "line": 154,
+      "exactLine": "tableId=\"data-repair:quarantine\""
+    },
+    {
+      "section": "Lazy diagnostics/summary/limit disclosure/refresh",
+      "file": "web/src/features/system/pages/DataRepairPage.tsx",
+      "anchor": "const RepairDiagnosticsWorkspace = lazy",
+      "observed": "Tab-intent lazy mount with contextual fallback. Independent diagnosis/stale fatal and retained retry ownership; header refresh both. Four metrics and diagnosis truncated notice retained.",
+      "line": 13,
+      "exactLine": "const RepairDiagnosticsWorkspace = lazy(async () => {"
+    },
+    {
+      "section": "Drive/charging proposals and exact-change evidence",
+      "file": "web/src/features/system/components/RepairSuggestionCard.tsx",
+      "anchor": "<RepairEvidenceTimeline suggestion={suggestion} />",
+      "observed": "Both panel shells, causal timeline, missing evidence, stored/proposed boundary/duration/gap, risks, blocked reasons, preview/confirm, per-row pending/error/applied retained. No automatic/bulk boundary apply.",
+      "line": 129,
+      "exactLine": "<RepairEvidenceTimeline suggestion={suggestion} />"
+    },
+    {
+      "section": "Manual worklists and SI forms",
+      "file": "web/src/features/system/components/RepairFormActions.tsx",
+      "anchor": "const input = { ...closePreviewInput };",
+      "observed": "One manual form across both lists; all SI fields, useUnits display hints, finite filtering, RFC3339 explicit timezone boundary, save/close/quarantine/cancel preserved. Manual close snapshots previewed input; exclude that already-correct path from preview-drift finding. Parent collapses forms on lost canWrite.",
+      "line": 60,
+      "exactLine": "const input = { ...closePreviewInput };"
+    },
+    {
+      "section": "Opt-in AI proposal preferences/workspace identity",
+      "file": "web/src/components/ai/AIDataRepairSuggestions.tsx",
+      "anchor": "scopeKey: vehicleId ?? 'fleet',",
+      "observed": "Consent-off HOC omission is intentional, not hidden-null violation. Vehicle body and scopeKey preserve abort/clear ownership; deterministic baseline stays. No AI stream or action executed.",
+      "line": 116,
+      "exactLine": "scopeKey: vehicleId ?? 'fleet',"
+    },
+    {
+      "section": "Route/client/API safety/privacy",
+      "file": "web/src/api/client.ts",
+      "anchor": "assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)",
+      "observed": "App route829/registry96/lazy loader111 source-match /data-repair. Hook reads unprefixed snake_case with AbortSignal; writes require live/offline guards and server sudo route declarations. Singular drive/charging/cases/stats/scan/transition/notes/assignment/quarantine/restore/preview declarations matched router460-515. No backend/auth acceptance claimed.",
+      "line": 358,
+      "exactLine": "assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)"
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "DR01",
+      "rule": "previous-scope-actionable-data",
+      "severity": "high",
+      "title": "Previous-vehicle placeholders appear as current actionable evidence",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "placeholderData: keepPreviousData,",
+          "line": 612,
+          "exactLine": "placeholderData: keepPreviousData,"
+        },
+        {
+          "file": "web/src/api/hooks/useRepairCaseStats.ts",
+          "anchor": "placeholderData: keepPreviousData,",
+          "line": 29,
+          "exactLine": "placeholderData: keepPreviousData,"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseWorkspace.tsx",
+          "anchor": "const cases = casesQuery.data?.cases ?? [];",
+          "line": 52,
+          "exactLine": "const cases = casesQuery.data?.cases ?? [];"
+        },
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "const records = query.data?.quarantines ?? [];",
+          "line": 48,
+          "exactLine": "const records = query.data?.quarantines ?? [];"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "anchor": "const hasData = data !== undefined",
+          "line": 191,
+          "exactLine": "const hasData = data !== undefined"
+        }
+      ],
+      "mechanism": "Cases/quarantine/stats keep previous query-key payload. Consumers do not qualify placeholder scope or disable old-scope row actions; useDataState lacks placeholder/source-scope metadata. Effect-based filter reset does not remove subsequent previous-key placeholders.",
+      "impactLimit": "Source misattribution/eligibility mechanism, NOT executed wrong-vehicle repair or backend authorization bypass.",
+      "fix": "Existing policy/adapter owner qualifies source/current scope; consumers label old-scope retention and block old-scope writes while preserving same-scope retention/pagination.",
+      "unexecutedRepro": "Synthetic A loaded→B query delayed; inspect row/stat attribution and eligibility. NOTRUN.",
+      "needKey": "repair-placeholder-source-scope",
+      "queueDedup": "P346 deferred in [x] phase3-use-data-state; no exact implemented consumer fix found. Do not reopen completed adapter adoption."
+    },
+    {
+      "id": "DR02",
+      "rule": "source-trust-metadata-loss",
+      "severity": "medium",
+      "title": "Header/queue/ledger lose paused and last-success trust",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairCaseWorkspaceHeader.tsx",
+          "anchor": "const statisticsState = useDataState({",
+          "line": 34,
+          "exactLine": "const statisticsState = useDataState({"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseWorkspace.tsx",
+          "anchor": "statisticsError={statisticsState.fatalError ?? statisticsState.refreshError}",
+          "line": 132,
+          "exactLine": "statisticsError={statisticsState.fatalError ?? statisticsState.refreshError}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "{state.refreshError ? (",
+          "line": 143,
+          "exactLine": "{state.refreshError ? ("
+        }
+      ],
+      "mechanism": "Header reconstructs reduced data/error/loading/busy/refetch without fetchStatus/dataUpdatedAt. Queue reduced props and ledger error-only warning do not expose paused retention (refreshError null) or actual last success; header can say Monitoring.",
+      "fix": "Forward real DataState/isRefreshBlocked/updatedAt to existing independent warnings/retry; retain data.",
+      "unexecutedRepro": "Seed retained dataUpdatedAt and fetchStatus=paused/no error; inspect nonfatal paused/last-success. NOTRUN.",
+      "needKey": "repair-source-trust-propagation",
+      "queueDedup": "No exact header/queue/ledger trust followup found."
+    },
+    {
+      "id": "DR03",
+      "rule": "initial-paused-as-empty",
+      "severity": "high",
+      "title": "No-data paused reads can show Ready and success-empty",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairDiagnosticsWorkspace.tsx",
+          "anchor": "const isRefreshing = suggestionsQuery.isFetching || staleQuery.isFetching;",
+          "line": 52,
+          "exactLine": "const isRefreshing = suggestionsQuery.isFetching || staleQuery.isFetching;"
+        },
+        {
+          "file": "web/src/features/system/components/RepairDiagnosticsWorkspace.tsx",
+          "anchor": "isLoading={suggestionsQuery.isLoading && !suggestionsState.hasData}",
+          "line": 117,
+          "exactLine": "isLoading={suggestionsQuery.isLoading && !suggestionsState.hasData}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairSuggestionSection.tsx",
+          "anchor": ") : items.length === 0 ? (",
+          "line": 62,
+          "exactLine": ") : items.length === 0 ? ("
+        },
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": ") : query.isLoading && !hasData ? (",
+          "line": 135,
+          "exactLine": ") : query.isLoading && !hasData ? ("
+        }
+      ],
+      "mechanism": "Pending paused query with undefined payload, isLoading=false/isFetching=false/no error normalizes arrays empty. Badge selects Ready; worklists/queue/ledger can select empty before source answers. This is first-load state, distinct from retained metadata DR02.",
+      "fix": "Authoritative empty only after resolved current-scope source; no-data initial/paused retains every panel with explicit paused/unknown explanation.",
+      "unexecutedRepro": "Synthetic initial-paused/no-payload state for each independent source. NOTRUN.",
+      "needKey": "repair-initial-paused-panels",
+      "queueDedup": "Completed system query-trust fixture roots do not implement this source behavior; no exact fix found."
+    },
+    {
+      "id": "DR04",
+      "rule": "reviewed-preview-identity-drift",
+      "severity": "high",
+      "title": "Case/suggestion confirmation uses newer props than reviewed preview",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairCaseControlledActions.tsx",
+          "anchor": "const applyInput = buildApplyInput(repairCase);",
+          "line": 73,
+          "exactLine": "const applyInput = buildApplyInput(repairCase);"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseControlledActions.tsx",
+          "anchor": "preview.mutate(applyInput, { onSuccess: () => setAction('apply') });",
+          "line": 86,
+          "exactLine": "preview.mutate(applyInput, { onSuccess: () => setAction('apply') });"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseControlledActions.tsx",
+          "anchor": "mutation.mutate(applyInput, { onSuccess: closeDialog });",
+          "line": 92,
+          "exactLine": "mutation.mutate(applyInput, { onSuccess: closeDialog });"
+        },
+        {
+          "file": "web/src/features/system/components/RepairSuggestionCard.tsx",
+          "anchor": "onApply(suggestion);",
+          "line": 191,
+          "exactLine": "onApply(suggestion);"
+        }
+      ],
+      "mechanism": "Case input regenerated each render and suggestion confirmation reads latest prop; preview/open state is not pinned/reset to evidence revision. Same-ID cache refresh can change submitted boundary/pin while old preview remains. Manual close already snapshots input and is excluded.",
+      "fix": "Immutable reviewed input + original identity/scope/revision; reject obsolete review or confirm that exact payload, retain backend concurrency check.",
+      "unexecutedRepro": "Preview X, rerender same-id boundaryY while dialog open; never silently submitY. NOTRUN.",
+      "needKey": "repair-preview-authority-binding",
+      "queueDedup": "No exact case/suggestion binding fix found; existing manual snapshot is already met."
+    },
+    {
+      "id": "DR05",
+      "rule": "restore-target-scope-retention",
+      "severity": "high",
+      "title": "Quarantine restore target/reason survive vehicle switch",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "const [restoreTarget, setRestoreTarget] = useState<RepairQuarantine | null>(null);",
+          "line": 43,
+          "exactLine": "const [restoreTarget, setRestoreTarget] = useState<RepairQuarantine | null>(null);"
+        },
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "setFilters({ vehicle_id: vehicleId, limit: 50 });",
+          "line": 58,
+          "exactLine": "setFilters({ vehicle_id: vehicleId, limit: 50 });"
+        },
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "{ quarantine_id: restoreTarget.id, reason: restoreReason.trim() },",
+          "line": 197,
+          "exactLine": "{ quarantine_id: restoreTarget.id, reason: restoreReason.trim() },"
+        }
+      ],
+      "mechanism": "Vehicle effect resets filters/history, not restoreTarget/reason. Open dialog still submits old quarantine id under new selection.",
+      "fix": "Bind target to original vehicle/fleet scope; clear/invalidate on genuine change, preserve same-scope refresh draft.",
+      "unexecutedRepro": "Open A restore/note→B/fleet selection; old target not submit eligible. NOTRUN.",
+      "needKey": "repair-quarantine-restore-scope",
+      "queueDedup": "[x] phase4-repair-case-dismiss-scope-reset is bulk dismiss only, not duplicate ledger restore objective."
+    },
+    {
+      "id": "DR06",
+      "rule": "open-confirmation-write-eligibility",
+      "severity": "high",
+      "title": "Bulk/ledger/suggestion dialogs omit current read-only confirm gate",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "confirmDisabled={!restoreReason.trim()}",
+          "line": 209,
+          "exactLine": "confirmDisabled={!restoreReason.trim()}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairBulkDismissDialog.tsx",
+          "anchor": "confirmDisabled={!reason.trim()}",
+          "line": 36,
+          "exactLine": "confirmDisabled={!reason.trim()}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairSuggestionCard.tsx",
+          "anchor": "open={confirmOpen}",
+          "line": 181,
+          "exactLine": "open={confirmOpen}"
+        },
+        {
+          "file": "web/src/components/ui/ConfirmDialog.tsx",
+          "anchor": "confirmDisabled: disabledByCaller = false,",
+          "line": 81,
+          "exactLine": "confirmDisabled: disabledByCaller = false,"
+        },
+        {
+          "file": "web/src/api/client.ts",
+          "anchor": "assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)",
+          "line": 358,
+          "exactLine": "assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)"
+        }
+      ],
+      "mechanism": "Ledger/bulk reason-only confirm; suggestion no confirmDisabled. Existing open dialog stays enabled if canWrite changes. Real client live/offline guards remain; NOT unauthorized-write proof. Resolve/controlled dialogs explicitly gated and manual parent collapses forms: excluded already-met paths.",
+      "fix": "Forward current canWrite/reason; disable confirm/fields and guard handlers while preserving note/cancel.",
+      "unexecutedRepro": "Open each synthetic dialog live then rerender readonly/offline; no enabled confirm/mutation call. NOTRUN.",
+      "needKey": "repair-existing-confirmation-mode-gates",
+      "queueDedup": "No exact bulk/ledger/suggestion mode root found; drawer continuation tests cover different already-met paths."
+    },
+    {
+      "id": "DR07",
+      "rule": "repair-cache-invalidation-gap",
+      "severity": "medium",
+      "title": "Manual close/update omits diagnosis/case cache invalidation",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "export function useCloseCharging()",
+          "line": 374,
+          "exactLine": "export function useCloseCharging() {"
+        },
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "export function useCloseDrive()",
+          "line": 437,
+          "exactLine": "export function useCloseDrive() {"
+        },
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "export function useUpdateCharging()",
+          "line": 354,
+          "exactLine": "export function useUpdateCharging() {"
+        },
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "export function useUpdateDrive()",
+          "line": 417,
+          "exactLine": "export function useUpdateDrive() {"
+        }
+      ],
+      "mechanism": "Manual success invalidates stale inventory (+drive-derived paths for drive), not existing suggestions/cases/stats. Suggestions not polled; case/stat polling eventual rather than success-bound. Current snapshot can retain pre-correction eligibility until refresh.",
+      "fix": "Existing hooks invalidate affected repair families on success via existing broadcast helper, preserve SI/errors/manual refresh semantics.",
+      "unexecutedRepro": "Seed synthetic caches, resolve mock success, inspect exact invalidation keys. NOTRUN.",
+      "needKey": "repair-manual-success-invalidation",
+      "queueDedup": "No exact manual invalidation fix found; existing hook tests assert current stale invalidation only."
+    },
+    {
+      "id": "DR08",
+      "rule": "scan-truncation-outcome-loss",
+      "severity": "medium",
+      "title": "Durable scan truncated result discarded behind completion toast",
+      "evidence": [
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "request<{ discovered: number; refreshed: number; truncated: boolean }>(",
+          "line": 753,
+          "exactLine": "request<{ discovered: number; refreshed: number; truncated: boolean }>("
+        },
+        {
+          "file": "web/src/api/hooks/useDataRepair.ts",
+          "anchor": "success('toast.dataRepair.scan.success', 'Data integrity scan completed');",
+          "line": 764,
+          "exactLine": "success('toast.dataRepair.scan.success', 'Data integrity scan completed');"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseWorkspace.tsx",
+          "anchor": "onScan={() => scan.mutate({ vehicle_id: vehicleId })}",
+          "line": 136,
+          "exactLine": "onScan={() => scan.mutate({ vehicle_id: vehicleId })}"
+        }
+      ],
+      "mechanism": "Scan result carries discovered/refreshed/truncated but success ignores result and workspace has no result scope/limit. Diagnosis truncated notice is a separate already-present path.",
+      "fix": "Retain/display scoped scan counts and partial/limit result; no auto scan/repair in audit.",
+      "unexecutedRepro": "Scan mock truncated=true→explicit partial outcome, not only complete toast. NOTRUN.",
+      "needKey": "repair-durable-scan-partial-outcome",
+      "queueDedup": "No exact durable scan outcome fix found; do not duplicate diagnosis truncation notice."
+    },
+    {
+      "id": "DR09",
+      "rule": "empty-scope-overclaim",
+      "severity": "medium",
+      "title": "Empty limited inventories overstate complete integrity",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/StaleDriveWorklist.tsx",
+          "anchor": "title={t('dataRepair.drives.emptyTitle', 'All drives are complete')}",
+          "line": 73,
+          "exactLine": "title={t('dataRepair.drives.emptyTitle', 'All drives are complete')}"
+        },
+        {
+          "file": "web/src/features/system/components/StaleChargingWorklist.tsx",
+          "anchor": "title={t('dataRepair.charging.emptyTitle', 'All charging sessions are complete')}",
+          "line": 73,
+          "exactLine": "title={t('dataRepair.charging.emptyTitle', 'All charging sessions are complete')}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairSuggestionWorklists.tsx",
+          "anchor": "'Every drive in the scanned window agrees with the durable signal history.',",
+          "line": 105,
+          "exactLine": "'Every drive in the scanned window agrees with the durable signal history.',"
+        },
+        {
+          "file": "web/src/features/system/components/RepairSuggestionWorklists.tsx",
+          "anchor": "'Every charging session in the scanned window agrees with the durable signal history.',",
+          "line": 119,
+          "exactLine": "'Every charging session in the scanned window agrees with the durable signal history.',"
+        }
+      ],
+      "mechanism": "No stale sessions past cutoff does not establish all sessions complete; no detected contradictions, especially zero scanned/truncated response, is not affirmative agreement for every record. Worklists receive no scanned/limit qualifier.",
+      "fix": "Scope-limited no-stale/no-detected-findings copy with zero-scanned/partial explanation; preserve shells. Exact catalog leaves require serialized owner.",
+      "unexecutedRepro": "Synthetic empty stale with recent open outside cutoff; empty suggestions/scanned0/truncated. NOTRUN.",
+      "needKey": "repair-scoped-empty-claims",
+      "queueDedup": "No exact child empty-claim fix found; root source acceptance did not accept child QA."
+    },
+    {
+      "id": "DR10",
+      "rule": "preview-precision-preference-loss",
+      "severity": "medium",
+      "title": "Verified impact rounds differences away and bypasses preferences",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairImpactSummary.tsx",
+          "anchor": "new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value.float64);",
+          "line": 29,
+          "exactLine": "return new Intl.NumberFormat(undefined, { maximumFractionDigits: 2 }).format(value.float64);"
+        },
+        {
+          "file": "web/src/features/system/components/RepairImpactSummary.tsx",
+          "anchor": "if (value.int64 != null) return new Intl.NumberFormat().format(value.int64);",
+          "line": 27,
+          "exactLine": "if (value.int64 != null) return new Intl.NumberFormat().format(value.int64);"
+        },
+        {
+          "file": "web/src/features/system/components/RepairImpactSummary.tsx",
+          "anchor": "label: fieldLabel(change.field),",
+          "line": 55,
+          "exactLine": "label: fieldLabel(change.field),"
+        }
+      ],
+      "mechanism": "Generic browser locale/floatmax2 decimals without effective precision/unit context can hide exact1.001→1.004 difference. Hooks retain raw SI and manual hints correctly useUnits; this renderer is narrower loss.",
+      "fix": "Typed field presentation/preferences with exact raw SI before/after available, so conversion/rounding cannot hide reviewed change; technical field identifiers not blanket translated.",
+      "unexecutedRepro": "Synthetic sub.01 float change, SI/huge values and alternate precision/unit/locale. NOTRUN.",
+      "needKey": "repair-impact-exact-value-presentation",
+      "queueDedup": "No exact impact precision/preference root found. Humanized technical fields not counted as English-literal violations."
+    },
+    {
+      "id": "DR11",
+      "rule": "i18n-confidence-composition",
+      "severity": "low",
+      "title": "Canonical confidence text doubled in drawer",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairCaseDrawer.tsx",
+          "anchor": "{t('dataRepair.cases.confidenceBadge', '{{confidence}} confidence', {",
+          "line": 150,
+          "exactLine": "{t('dataRepair.cases.confidenceBadge', '{{confidence}} confidence', {"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "anchor": "\"confidenceBadge\": \"{{confidence}} confidence\"",
+          "line": 12708,
+          "exactLine": "\"confidenceBadge\": \"{{confidence}} confidence\","
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "anchor": "\"high\": \"High confidence\",",
+          "occurrence": 1,
+          "line": 12573,
+          "exactLine": "\"high\": \"High confidence\","
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "anchor": "\"medium\": \"Medium confidence\",",
+          "occurrence": 1,
+          "line": 12574,
+          "exactLine": "\"medium\": \"Medium confidence\","
+        }
+      ],
+      "mechanism": "Translated high/medium already include confidence; interpolating into '{{confidence}} confidence' gives High confidence confidence. Fallback-only t mocks conceal canonical composition.",
+      "fix": "Render existing complete confidence label once or request separately owned adjective keys; no catalog writes here.",
+      "unexecutedRepro": "Synthetic high/medium drawer with canonical catalog, not fallback mock. NOTRUN.",
+      "needKey": "repair-drawer-confidence-copy",
+      "queueDedup": "No exact drawer canonical composition fix found; not a global confidence catalog campaign."
+    },
+    {
+      "id": "DR12",
+      "rule": "i18n-count-pluralization",
+      "severity": "low",
+      "title": "Three count labels lack singular leaves",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairCaseQueue.tsx",
+          "anchor": "t('dataRepair.cases.pageCount', '{{count}} cases on this page', { count: cases.length })",
+          "line": 180,
+          "exactLine": "{t('dataRepair.cases.pageCount', '{{count}} cases on this page', { count: cases.length })}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "t('dataRepair.quarantine.pageCount', '{{count}} records on this page', { count: records.length })",
+          "line": 175,
+          "exactLine": "{t('dataRepair.quarantine.pageCount', '{{count}} records on this page', { count: records.length })}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairImpactSummary.tsx",
+          "anchor": "{t('dataRepair.preview.preserved', '{{count}} measured fields stay unchanged', {",
+          "line": 71,
+          "exactLine": "{t('dataRepair.preview.preserved', '{{count}} measured fields stay unchanged', {"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "anchor": "\"preserved\": \"{{count}} measured fields stay unchanged\"",
+          "line": 12842,
+          "exactLine": "\"preserved\": \"{{count}} measured fields stay unchanged\","
+        }
+      ],
+      "mechanism": "Canonical cases.pageCount/quarantine.pageCount/preview.preserved only plural base English, no _one/_other observed; count1 gives1 cases/records/measured fields. Literal key existence does not prove plurals.",
+      "fix": "Exactly these3 singular/plural leaves via serialized catalog owner/current source conventions.",
+      "unexecutedRepro": "Canonical0/1/2 labels. NOTRUN.",
+      "needKey": "repair-three-count-plural-leaves",
+      "queueDedup": "No exact3 repair leaves found; unrelated drive/provider plural fixes not duplicates. One deduplicated mechanism with3 key sites."
+    },
+    {
+      "id": "DR13",
+      "rule": "mobile-hidden-ledger-metadata",
+      "severity": "medium",
+      "title": "Mobile quarantine ledger hides metadata without detail path",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+          "anchor": "mobileColumns={['session', 'actions']}",
+          "line": 159,
+          "exactLine": "mobileColumns={['session', 'actions']}"
+        },
+        {
+          "file": "web/src/features/system/components/useRepairQuarantineColumns.tsx",
+          "anchor": "key: 'reason',",
+          "line": 58,
+          "exactLine": "key: 'reason',"
+        },
+        {
+          "file": "web/src/features/system/components/useRepairQuarantineColumns.tsx",
+          "anchor": "key: 'quarantined_at',",
+          "line": 63,
+          "exactLine": "key: 'quarantined_at',"
+        },
+        {
+          "file": "web/src/features/system/components/useRepairQuarantineColumns.tsx",
+          "anchor": "key: 'actor',",
+          "line": 68,
+          "exactLine": "key: 'actor',"
+        },
+        {
+          "file": "web/src/components/ui/DataTable.tsx",
+          "anchor": "mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''",
+          "line": 743,
+          "exactLine": "mobileSet && !mobileSet.has(key) ? 'hidden md:table-cell' : ''"
+        }
+      ],
+      "mechanism": "Explicit allow-list overrides visibleOnMobile; no mobilePresentation or expandable/renderExpanded ledger consumer. Reason/operator/quarantine-time hide belowmd with no record detail disclosure. Case queue has evidence drawer and is not blindly the same omission.",
+      "fix": "Existing mobile table/detail disclosure preserving every original field/action, no competing table/overlay.",
+      "unexecutedRepro": "Synthetic long ledger metadata320/375/390/430/narrow allocation; all reachable. Native NOTRUN.",
+      "needKey": "repair-quarantine-mobile-details",
+      "queueDedup": "No exact ledger mobile-detail adoption found; shared adapter existence is not consumer adoption."
+    },
+    {
+      "id": "DR14",
+      "rule": "missing-visible-field-label",
+      "severity": "low",
+      "title": "Assignee lacks visible field label",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairCaseCollaboration.tsx",
+          "anchor": "aria-label={t('dataRepair.cases.assignee', 'Assignee')}",
+          "line": 48,
+          "exactLine": "aria-label={t('dataRepair.cases.assignee', 'Assignee')}"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseCollaboration.tsx",
+          "anchor": "placeholder={t('dataRepair.cases.assigneePlaceholder', 'Operator name')}",
+          "line": 49,
+          "exactLine": "placeholder={t('dataRepair.cases.assigneePlaceholder', 'Operator name')}"
+        }
+      ],
+      "mechanism": "Input has accessible aria name/placeholder but no visible label prop; populated value hides placeholder. Ownership heading not field label. Not a missing accessible-name claim.",
+      "fix": "Existing Input localized visible Assignee label; retain value/id/mutation semantics.",
+      "unexecutedRepro": "Populated field/200% text. NOTRUN.",
+      "needKey": "repair-assignee-visible-label",
+      "queueDedup": "No exact collaboration label fix found."
+    },
+    {
+      "id": "DR15",
+      "rule": "decorative-neon-chrome",
+      "severity": "low",
+      "title": "Integrity header retains decorative cyan gradient/tile",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/RepairCaseWorkspaceHeader.tsx",
+          "anchor": "bg-gradient-to-r from-cyan-400/80 via-cyan-300/30 to-transparent",
+          "line": 46,
+          "exactLine": "className=\"absolute inset-x-0 top-0 h-px bg-gradient-to-r from-cyan-400/80 via-cyan-300/30 to-transparent\""
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseWorkspaceHeader.tsx",
+          "anchor": "border-cyan-400/20 bg-cyan-400/10 text-cyan-300 shadow-e1",
+          "line": 50,
+          "exactLine": "<div className=\"flex h-11 w-11 shrink-0 items-center justify-center rounded-shape-xl border border-cyan-400/20 bg-cyan-400/10 text-cyan-300 shadow-e1\">"
+        }
+      ],
+      "mechanism": "Non-status decorative top rule/Activity tile fixed saturated cyan. MDC010/012 rejects decorative gradients/neon. Tailwind CSS variable classes are not static-inline-style violations.",
+      "fix": "Neutral shared surface/border/text for decoration, keep real semantic status/action. Contrast measured separately.",
+      "unexecutedRepro": "Future dark/light/custom/forcedcolor capture; Native NOTRUN.",
+      "needKey": "repair-header-neutral-chrome",
+      "queueDedup": "No exact header neutralization followup found; accepted root did not change header."
+    },
+    {
+      "id": "DR16",
+      "rule": "confidence-as-health-semantics",
+      "severity": "low",
+      "title": "High confidence styled success in queue/danger in drawer",
+      "evidence": [
+        {
+          "file": "web/src/features/system/components/useRepairCaseColumns.tsx",
+          "anchor": "<Badge variant={item.confidence === 'high' ? 'success' : 'warning'}>",
+          "line": 77,
+          "exactLine": "<Badge variant={item.confidence === 'high' ? 'success' : 'warning'}>"
+        },
+        {
+          "file": "web/src/features/system/components/RepairCaseDrawer.tsx",
+          "anchor": "<Badge variant={repairCase.confidence === 'high' ? 'danger'",
+          "line": 149,
+          "exactLine": "<Badge variant={repairCase.confidence === 'high' ? 'danger' : repairCase.confidence === 'medium' ? 'warning' : 'neutral'}>"
+        },
+        {
+          "file": "web/src/features/system/components/repairPresentation.ts",
+          "anchor": "/** Badge variant for a confidence grade. Never `success` — nothing is proven. */",
+          "line": 100,
+          "exactLine": "/** Badge variant for a confidence grade. Never `success` — nothing is proven. */"
+        }
+      ],
+      "mechanism": "Evidence confidence not confirmed repair/healthy completion or intrinsically danger; opposed health semantics for same grade while current proposal mapper uses info/warning/neutral.",
+      "fix": "Reuse existing evidence-confidence semantics without global status/severity remap.",
+      "unexecutedRepro": "Same synthetic high confidence across queue/drawer/proposal; Native NOTRUN.",
+      "needKey": "repair-case-confidence-tone-consistency",
+      "queueDedup": "No exact case-tone fix found; distinct from DR11 copy."
+    }
+  ],
+  "conditionalCandidates": [
+    {
+      "id": "CC01",
+      "file": "web/src/api/dataState.ts",
+      "anchor": "const hasData = data !== undefined",
+      "title": "Nullable response envelope contract",
+      "condition": "Backend null envelope/arrays/counts despite non-null TS contract is unproven; no backend query performed.",
+      "risk": "null envelope counts as hasData while optional arrays normalize empty/KPI zero. Requires contract proof before confirmed backend defect.",
+      "repro": "Existing synthetic null/undefined response fixtures only; NOTRUN.",
+      "line": 191,
+      "exactLine": "const hasData = data !== undefined"
+    },
+    {
+      "id": "CC02",
+      "file": "web/src/features/system/components/DriveRepairForm.tsx",
+      "anchor": "return Number.isFinite(parsed) ? parsed : undefined;",
+      "title": "Finite numeric/domain/currency constraints",
+      "condition": "Negative/out-of-range measurements and cost currency acceptance depend on exact backend whitelist/validation; only finite filtering established.",
+      "risk": "Do not invent constraints or claim corrupt writes; signed-valid money preserved.",
+      "repro": "Read exact contracts/author source fixtures under separate authority; no API/SQL/DB/actions. NOTRUN.",
+      "line": 36,
+      "exactLine": "return Number.isFinite(parsed) ? parsed : undefined;"
+    }
+  ],
+  "nativeCandidates": [
+    {
+      "id": "NC01",
+      "status": "NOTRUN",
+      "topic": "Responsive/workspace",
+      "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560px; narrow allocated cards, every tab/filter/cursor/bulk/detail/repair action, vehicle→vehicle/fleet scopes, long ids/reasons and all ledger metadata. DR13 source omission is not measured overflow."
+    },
+    {
+      "id": "NC02",
+      "status": "NOTRUN",
+      "topic": "Keyboard/focus/a11y/targets",
+      "matrix": "Tab/ShiftTab/Enter/Escape, nested drawer→confirm focus/restore, announcements, labels, contained scroll, footer/safe area. size=sm uses36px defaults at queue/ledger/details; actual target/spacing/native WCAG measurement NOTRUN."
+    },
+    {
+      "id": "NC03",
+      "status": "NOTRUN",
+      "topic": "Theme/contrast/forced-colors/motion",
+      "matrix": "Dark/light/custom/OLED,4.5:1 text/3:1 focus, density/200% font, forced colors, reduced motion/low bandwidth. No screenshot/axe/luminance/performance claim."
+    },
+    {
+      "id": "NC04",
+      "status": "NOTRUN",
+      "topic": "Real catalog/locale/time/preferences",
+      "matrix": "Canonical catalog, RTL/long labels, saved number/unit/currency/timezone/12-24h. Most dates use browser-default formatDateTime and elapsed h/d text; mounted effective preference acceptance not established. Technical identifiers are not automatically translatable English."
+    },
+    {
+      "id": "NC05",
+      "status": "NOTRUN",
+      "topic": "Sources/auth/read-only",
+      "matrix": "Independent loading/empty/fatal/retained-refresh/paused/offline/unknown, blocked/partial/skipped/concurrent states; zero/huge/null/negative-valid data. Future synthetic fixtures only; no real scan/save/apply/close/quarantine/restore/assignment/comment/replay authorized now."
+    }
+  ],
+  "tests": {
+    "execution": "NOTRUN",
+    "runnerDiscovery": null,
+    "executed": null,
+    "passed": null,
+    "failed": null,
+    "skipped": null,
+    "physicalFilesInspected": 15,
+    "directStaticHeaders": 127,
+    "parameterizedDefinitions": 3,
+    "literalParameterizedRows": 11,
+    "sourceAuthoredCaseCount": 138,
+    "countMeaning": "Static127 direct it headers plus3 inspected literal each tables4+4+3 rows; not discovered/executed/passed cases.",
+    "files": [
+      {
+        "file": "web/src/features/system/components/ChargingRepairForm.test.tsx",
+        "direct": 11
+      },
+      {
+        "file": "web/src/features/system/components/DriveRepairForm.test.tsx",
+        "direct": 9
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseDrawer.continuation.test.tsx",
+        "direct": 4
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseQueue.test.tsx",
+        "direct": 1
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseStats.test.tsx",
+        "direct": 2
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseWorkspace.test.tsx",
+        "direct": 12
+      },
+      {
+        "file": "web/src/features/system/components/RepairEvidenceTimeline.test.tsx",
+        "direct": 2
+      },
+      {
+        "file": "web/src/features/system/components/repairPresentation.test.ts",
+        "direct": 7
+      },
+      {
+        "file": "web/src/features/system/components/RepairSuggestionCard.test.tsx",
+        "direct": 12
+      },
+      {
+        "file": "web/src/features/system/components/StaleSessionRow.test.tsx",
+        "direct": 8,
+        "eachRows": 11
+      },
+      {
+        "file": "web/src/features/system/pages/DataRepairPage.test.tsx",
+        "direct": 11
+      },
+      {
+        "file": "web/src/api/hooks/useDataRepair.test.tsx",
+        "direct": 26
+      },
+      {
+        "file": "web/src/components/ai/AIDataRepairSuggestions.test.tsx",
+        "direct": 15
+      },
+      {
+        "file": "web/src/features/system/__tests__/TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx",
+        "direct": 4
+      },
+      {
+        "file": "web/src/features/system/__tests__/TestDataRepairSuggestionsAIOnWiredCallsRoute.test.tsx",
+        "direct": 3
+      }
+    ],
+    "inspection": "All listed test names inspected. Full relevant bodies: drawer continuation4; workspace preview/apply and3 dismiss scope resets/retention; charging manual preview snapshot; page lazy/loading/fatal/sections; hook bulk partial/skipped/stale invalidation; suggestion mocked preview/fallback i18n; stale row each tables. Other bodies not all reread. No tests changed/run, and mocks/historical passes do not prove real catalog/native QA."
+  },
+  "engineeringRuleSearches": {
+    "scopeFiles": 36,
+    "static-inline-style": 0,
+    "raw-html": {
+      "firstInsensitive": 1,
+      "correctedSensitive": 0,
+      "exception": "Capital Button comment false positive."
+    },
+    "direct-library-import": 0,
+    "old-api-import": 0,
+    "double-prefix": 0,
+    "camelcase-param": {
+      "firstInsensitive": 18,
+      "correctedSensitive": 0,
+      "exception": "Default PowerShell case-insensitivity falsely matched snake_case; corrected raw counts retained."
+    },
+    "hidden-section": 0,
+    "hardcoded-string": {
+      "simpleRawJsxMatches": 0,
+      "limit": "Regex only, not all literal/English absence. Plural/composition defects below; technical identifier exception applies."
+    },
+    "missing-page-container": {
+      "wrapperCandidates": 1,
+      "result": "PageLayout→PageContainer accepted."
+    },
+    "fetch-useeffect": {
+      "candidateEffects": 5,
+      "result": "UI/scope draft synchronization only, not data-loading effects."
+    },
+    "backendRules11To14": "NOT_APPLICABLE",
+    "staticLiteralCatalogKeys": 276,
+    "missingLiteralKeys": 0,
+    "dynamicCatalogCompleteness": "NOT_ESTABLISHED",
+    "officialChecks": "NOTRUN"
+  },
+  "queueDedup": {
+    "authority": "migration-queue.md",
+    "queueWrites": 0,
+    "strategy": "Exact source files and repair-case/data-repair/P346/placeholder/trust/plural need mechanisms searched; aggregate original-plan dependency lists not leaf fixes.16 proposed needs are not new claims/tasks. Parent rereads/serializes overlapping owners."
+  },
+  "limits": [
+    "rg unavailable: actual shell2907 exit1 retained; PowerShell fallback, no install.",
+    "Oversized artifact write shell3279 exit1 OS206 retained; bounded artifact writes instead.",
+    "Full oversized host raw captures retained. Some early untruncated auxiliary heading/file-list streams are not independently reconstructable; explicitly logged, no complete transcript claim.",
+    "Guessed optional paths printed MISSING_PATH; actual .tsx/nested files later pinned. No hidden compiler/test failure.",
+    "Source-only report is not source implementation, test pass, native/visual/auth/backend or whole-page acceptance.",
+    "Final70-pin check:69 unchanged, canonical web/src/i18n/en.json drifted while held READONLY. Change attribution unknown; do not claim catalog unchanged. Catalog-dependent key/composition/plural conclusions refer to inspected snapshots; parent must reconcile current canonical catalog. Source/test pins unchanged. No renewal or acceptance waiver."
+  ],
+  "notRun": [
+    "tests",
+    "lint",
+    "build",
+    "npx tsc --noEmit",
+    "official audit helpers",
+    "compiler",
+    "server",
+    "browser/native",
+    "network",
+    "API",
+    "SQL",
+    "DB",
+    "repair",
+    "bulk repair",
+    "replay",
+    "business actions",
+    "Git"
+  ],
+  "release": {
+    "artifactWriteClaim": "RELEASED_ON_COMPLETION_OF_THIS_COMMAND",
+    "commandClaim": "RELEASED_ON_COMPLETION_OF_THIS_COMMAND;NO_BACKGROUND_WORK_STARTED",
+    "sourceTestCatalogRouteQueueWriteClaim": "NONE_HELD",
+    "atUtc": "2026-10-14T02:57:39.4856897Z"
+  },
+  "readOnlyPins": {
+    "algorithm": "SHA256",
+    "files": [
+      {
+        "afterSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+        "unchanged": true,
+        "file": "internal/api/router.go",
+        "beforeBytes": 260353,
+        "afterBytes": 260353,
+        "beforeSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C"
+      },
+      {
+        "afterSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+        "unchanged": true,
+        "file": "web/src/api/client.ts",
+        "beforeBytes": 17825,
+        "afterBytes": 17825,
+        "beforeSha256": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5"
+      },
+      {
+        "afterSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+        "unchanged": true,
+        "file": "web/src/api/dataState.ts",
+        "beforeBytes": 15482,
+        "afterBytes": 15482,
+        "beforeSha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+      },
+      {
+        "afterSha256": "B24AD79AFBFE6016FBEA9B124B3B4664FCA06E523114EC05C8C35C2D8EC244CF",
+        "unchanged": true,
+        "file": "web/src/api/hooks/useDataRepair.test.tsx",
+        "beforeBytes": 25832,
+        "afterBytes": 25832,
+        "beforeSha256": "B24AD79AFBFE6016FBEA9B124B3B4664FCA06E523114EC05C8C35C2D8EC244CF"
+      },
+      {
+        "afterSha256": "2E959BE6C98D368E9DF3F4E68B3AE30F9522A113D07D48599957504BBB7677E6",
+        "unchanged": true,
+        "file": "web/src/api/hooks/useDataRepair.ts",
+        "beforeBytes": 28163,
+        "afterBytes": 28163,
+        "beforeSha256": "2E959BE6C98D368E9DF3F4E68B3AE30F9522A113D07D48599957504BBB7677E6"
+      },
+      {
+        "afterSha256": "C4DE3A1FCB524CA1C570F6B03704AA50FAFEAEF1F5029811C3C33F718B4C6E7B",
+        "unchanged": true,
+        "file": "web/src/api/hooks/useRepairCaseStats.ts",
+        "beforeBytes": 1010,
+        "afterBytes": 1010,
+        "beforeSha256": "C4DE3A1FCB524CA1C570F6B03704AA50FAFEAEF1F5029811C3C33F718B4C6E7B"
+      },
+      {
+        "afterSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C",
+        "unchanged": true,
+        "file": "web/src/App.tsx",
+        "beforeBytes": 68125,
+        "afterBytes": 68125,
+        "beforeSha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"
+      },
+      {
+        "afterSha256": "0AB168F4027052186CDCA0E375D38F493E5093D60D15A512709C63A9C41F55A7",
+        "unchanged": true,
+        "file": "web/src/components/ai/AIDataRepairSuggestions.test.tsx",
+        "beforeBytes": 20249,
+        "afterBytes": 20249,
+        "beforeSha256": "0AB168F4027052186CDCA0E375D38F493E5093D60D15A512709C63A9C41F55A7"
+      },
+      {
+        "afterSha256": "BF86876F15D2AD704E18E485A9D480B296320C307B8F1270B589A1800DDE6F03",
+        "unchanged": true,
+        "file": "web/src/components/ai/AIDataRepairSuggestions.tsx",
+        "beforeBytes": 6578,
+        "afterBytes": 6578,
+        "beforeSha256": "BF86876F15D2AD704E18E485A9D480B296320C307B8F1270B589A1800DDE6F03"
+      },
+      {
+        "afterSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+        "unchanged": true,
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "beforeBytes": 658,
+        "afterBytes": 658,
+        "beforeSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+      },
+      {
+        "afterSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "unchanged": true,
+        "file": "web/src/components/ui/Button.tsx",
+        "beforeBytes": 5174,
+        "afterBytes": 5174,
+        "beforeSha256": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C"
+      },
+      {
+        "afterSha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6",
+        "unchanged": true,
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "beforeBytes": 8134,
+        "afterBytes": 8134,
+        "beforeSha256": "36655275CB1AC502E35DA2EDC4930CFE4D734ADD15E8B7CF24490C915C9DADB6"
+      },
+      {
+        "afterSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+        "unchanged": true,
+        "file": "web/src/components/ui/DataTable.tsx",
+        "beforeBytes": 77157,
+        "afterBytes": 77157,
+        "beforeSha256": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282"
+      },
+      {
+        "afterSha256": "6185E3BECC3DB04C7C7F668281248252B7A62C68A98451580C6607F9947343D1",
+        "unchanged": true,
+        "file": "web/src/features/system/__tests__/TestDataRepairSuggestionsAIOffManualRunbookWorks.test.tsx",
+        "beforeBytes": 9807,
+        "afterBytes": 9807,
+        "beforeSha256": "6185E3BECC3DB04C7C7F668281248252B7A62C68A98451580C6607F9947343D1"
+      },
+      {
+        "afterSha256": "6898354EC179EA964D7E95DE5E1B493D86DC77B259C6FC3F0E9C433176549162",
+        "unchanged": true,
+        "file": "web/src/features/system/__tests__/TestDataRepairSuggestionsAIOnWiredCallsRoute.test.tsx",
+        "beforeBytes": 9201,
+        "afterBytes": 9201,
+        "beforeSha256": "6898354EC179EA964D7E95DE5E1B493D86DC77B259C6FC3F0E9C433176549162"
+      },
+      {
+        "afterSha256": "7EA3D21E88FA04F90A6407DF55BC8F949C0A88C85B29C561F1C18F55AE858780",
+        "unchanged": true,
+        "file": "web/src/features/system/components/ChargingRepairForm.test.tsx",
+        "beforeBytes": 13908,
+        "afterBytes": 13908,
+        "beforeSha256": "7EA3D21E88FA04F90A6407DF55BC8F949C0A88C85B29C561F1C18F55AE858780"
+      },
+      {
+        "afterSha256": "E8E5035F8BB3018261B5A856DBE443CEF0CF94F43E68ACC13AFD8AAAC77C6DD2",
+        "unchanged": true,
+        "file": "web/src/features/system/components/ChargingRepairForm.tsx",
+        "beforeBytes": 6146,
+        "afterBytes": 6146,
+        "beforeSha256": "E8E5035F8BB3018261B5A856DBE443CEF0CF94F43E68ACC13AFD8AAAC77C6DD2"
+      },
+      {
+        "afterSha256": "C64A83B750C3DDBE466AB0790972353E9B228FFEB6ED705D9163B491A6E46CF4",
+        "unchanged": true,
+        "file": "web/src/features/system/components/DriveRepairForm.test.tsx",
+        "beforeBytes": 13372,
+        "afterBytes": 13372,
+        "beforeSha256": "C64A83B750C3DDBE466AB0790972353E9B228FFEB6ED705D9163B491A6E46CF4"
+      },
+      {
+        "afterSha256": "AFCA19D040CDF5CCAE967F984B0A949C5C2F4B419DAFDCF4E6B44012401FCF59",
+        "unchanged": true,
+        "file": "web/src/features/system/components/DriveRepairForm.tsx",
+        "beforeBytes": 6767,
+        "afterBytes": 6767,
+        "beforeSha256": "AFCA19D040CDF5CCAE967F984B0A949C5C2F4B419DAFDCF4E6B44012401FCF59"
+      },
+      {
+        "afterSha256": "161AA955CB0E2AB4BE36351242EA88041026174968ECBD5E59AE9F4BF1958891",
+        "unchanged": true,
+        "file": "web/src/features/system/components/operationalbrief-all/SystemSummaryBrief.tsx",
+        "beforeBytes": 2399,
+        "afterBytes": 2399,
+        "beforeSha256": "161AA955CB0E2AB4BE36351242EA88041026174968ECBD5E59AE9F4BF1958891"
+      },
+      {
+        "afterSha256": "1328A19DD75E13B4086FC1E128099EAF246638DAA463E0CBF81BC9CCA6891B20",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairBulkDismissDialog.tsx",
+        "beforeBytes": 1517,
+        "afterBytes": 1517,
+        "beforeSha256": "1328A19DD75E13B4086FC1E128099EAF246638DAA463E0CBF81BC9CCA6891B20"
+      },
+      {
+        "afterSha256": "E2932F1D60906461A974E27C6CEDB1DECB806034CC16074CAC2475F3A0C7BF6E",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseActionPanel.tsx",
+        "beforeBytes": 3422,
+        "afterBytes": 3422,
+        "beforeSha256": "E2932F1D60906461A974E27C6CEDB1DECB806034CC16074CAC2475F3A0C7BF6E"
+      },
+      {
+        "afterSha256": "84F52296928DB4411E259AA5346FC4DCB149BC67C00A0169FFFE322BC4A5B568",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseCollaboration.tsx",
+        "beforeBytes": 4231,
+        "afterBytes": 4231,
+        "beforeSha256": "84F52296928DB4411E259AA5346FC4DCB149BC67C00A0169FFFE322BC4A5B568"
+      },
+      {
+        "afterSha256": "6D20D4A48A24F591A5FDCEF1B5DD273AA8459F12AB76DB8EEE66519E74BDAD51",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseControlledActions.tsx",
+        "beforeBytes": 7038,
+        "afterBytes": 7038,
+        "beforeSha256": "6D20D4A48A24F591A5FDCEF1B5DD273AA8459F12AB76DB8EEE66519E74BDAD51"
+      },
+      {
+        "afterSha256": "466982B2F182D33BCE3C038E41FD3F2976CA03D57C136722520ED722E0A34B64",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseDrawer.continuation.test.tsx",
+        "beforeBytes": 7105,
+        "afterBytes": 7105,
+        "beforeSha256": "466982B2F182D33BCE3C038E41FD3F2976CA03D57C136722520ED722E0A34B64"
+      },
+      {
+        "afterSha256": "AA5B20D8BD32EFDB3ABF4EF4C7FC633F7B424EAA5D65EAD503C1A1434155401F",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseDrawer.tsx",
+        "beforeBytes": 7871,
+        "afterBytes": 7871,
+        "beforeSha256": "AA5B20D8BD32EFDB3ABF4EF4C7FC633F7B424EAA5D65EAD503C1A1434155401F"
+      },
+      {
+        "afterSha256": "98EBEED50CB5E5778FB691D987B44E42D1E378FE44CDF6700686B8CF465FBA32",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseEvidencePanel.tsx",
+        "beforeBytes": 4949,
+        "afterBytes": 4949,
+        "beforeSha256": "98EBEED50CB5E5778FB691D987B44E42D1E378FE44CDF6700686B8CF465FBA32"
+      },
+      {
+        "afterSha256": "138ABDB9978CDE25DAE3AB734E9A8926FFD4F071EB230B557064C533E65BFD16",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseFiltersBar.tsx",
+        "beforeBytes": 4217,
+        "afterBytes": 4217,
+        "beforeSha256": "138ABDB9978CDE25DAE3AB734E9A8926FFD4F071EB230B557064C533E65BFD16"
+      },
+      {
+        "afterSha256": "6196A4F08C9F112B65EEF0FE54F76B1F103DB17BE0BAEE139E679DF85272ABA2",
+        "unchanged": true,
+        "file": "web/src/features/system/components/repairCasePresentation.ts",
+        "beforeBytes": 5381,
+        "afterBytes": 5381,
+        "beforeSha256": "6196A4F08C9F112B65EEF0FE54F76B1F103DB17BE0BAEE139E679DF85272ABA2"
+      },
+      {
+        "afterSha256": "67681A747B0503C70AAD0EDB3068ED2AEA33E12E32F7075B78544216D830B6A5",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseQueue.test.tsx",
+        "beforeBytes": 2226,
+        "afterBytes": 2226,
+        "beforeSha256": "67681A747B0503C70AAD0EDB3068ED2AEA33E12E32F7075B78544216D830B6A5"
+      },
+      {
+        "afterSha256": "7E5B77FC06DB802CBCF4DD4E56C0569D465715BDAB9ADCC616CAFE9917006F7B",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseQueue.tsx",
+        "beforeBytes": 6615,
+        "afterBytes": 6615,
+        "beforeSha256": "7E5B77FC06DB802CBCF4DD4E56C0569D465715BDAB9ADCC616CAFE9917006F7B"
+      },
+      {
+        "afterSha256": "AFC9450339BA16ADDA0ACC6F5FB8D85F6279F4CCCA4FF0726F66AA5B001DBC5C",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseStats.test.tsx",
+        "beforeBytes": 1532,
+        "afterBytes": 1532,
+        "beforeSha256": "AFC9450339BA16ADDA0ACC6F5FB8D85F6279F4CCCA4FF0726F66AA5B001DBC5C"
+      },
+      {
+        "afterSha256": "848D7F36AAF9D1E7BED3C17843485FBE70997E523DFF13A2EB46BB3DE7B86A6D",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseStats.tsx",
+        "beforeBytes": 1988,
+        "afterBytes": 1988,
+        "beforeSha256": "848D7F36AAF9D1E7BED3C17843485FBE70997E523DFF13A2EB46BB3DE7B86A6D"
+      },
+      {
+        "afterSha256": "A60B920BDE57C44D2912808C0EC5DCE159696CB5269FA99126550EA7629A649A",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseWorkspace.test.tsx",
+        "beforeBytes": 23159,
+        "afterBytes": 23159,
+        "beforeSha256": "A60B920BDE57C44D2912808C0EC5DCE159696CB5269FA99126550EA7629A649A"
+      },
+      {
+        "afterSha256": "8B7443A709FEDDD4FBC7A13855D9CD9F2403A51704BD5EA71F921A7939D0BFAF",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseWorkspace.tsx",
+        "beforeBytes": 6964,
+        "afterBytes": 6964,
+        "beforeSha256": "8B7443A709FEDDD4FBC7A13855D9CD9F2403A51704BD5EA71F921A7939D0BFAF"
+      },
+      {
+        "afterSha256": "86D78EE2AA6293F51B361976864533BC4E08C8C2A08B49A1474751AD56E7D243",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairCaseWorkspaceHeader.tsx",
+        "beforeBytes": 4816,
+        "afterBytes": 4816,
+        "beforeSha256": "86D78EE2AA6293F51B361976864533BC4E08C8C2A08B49A1474751AD56E7D243"
+      },
+      {
+        "afterSha256": "30A398931DD9B18A0A6562247BA3FE984318E5BCF223A1F2A299A235EB08E5E9",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairChangeDetails.tsx",
+        "beforeBytes": 2206,
+        "afterBytes": 2206,
+        "beforeSha256": "30A398931DD9B18A0A6562247BA3FE984318E5BCF223A1F2A299A235EB08E5E9"
+      },
+      {
+        "afterSha256": "C3C88016B4D753297A866E076E728B6C9B873D77B536C3F563AFF2D38EB2CB5F",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairDiagnosisOverview.tsx",
+        "beforeBytes": 3125,
+        "afterBytes": 3125,
+        "beforeSha256": "C3C88016B4D753297A866E076E728B6C9B873D77B536C3F563AFF2D38EB2CB5F"
+      },
+      {
+        "afterSha256": "F6ECBE9E225F0C83B57CCCD4EE852BAE4422D49018375D1CAFE9228C7B1FDFC1",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairDiagnosticsWorkspace.tsx",
+        "beforeBytes": 6081,
+        "afterBytes": 6081,
+        "beforeSha256": "F6ECBE9E225F0C83B57CCCD4EE852BAE4422D49018375D1CAFE9228C7B1FDFC1"
+      },
+      {
+        "afterSha256": "4B5DA6EFFB660E88C611DB237F65F0123F028B6CF589E958AD95FA3153C981E6",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairEvidenceTimeline.test.tsx",
+        "beforeBytes": 2988,
+        "afterBytes": 2988,
+        "beforeSha256": "4B5DA6EFFB660E88C611DB237F65F0123F028B6CF589E958AD95FA3153C981E6"
+      },
+      {
+        "afterSha256": "021C29B332DEA9F980C60844DB264779A36D214C7A44299BA219F3B16BDA9B55",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairEvidenceTimeline.tsx",
+        "beforeBytes": 3183,
+        "afterBytes": 3183,
+        "beforeSha256": "021C29B332DEA9F980C60844DB264779A36D214C7A44299BA219F3B16BDA9B55"
+      },
+      {
+        "afterSha256": "506642DDD44AF11C9D34471690D655E2D1605B3AEE25A21BB04D6C8D058E02A1",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairFormActions.tsx",
+        "beforeBytes": 7149,
+        "afterBytes": 7149,
+        "beforeSha256": "506642DDD44AF11C9D34471690D655E2D1605B3AEE25A21BB04D6C8D058E02A1"
+      },
+      {
+        "afterSha256": "85D529B77CD44A999DE8663FC0B99F6CBFB9EA987F83D0F47E69B850EBE5F4FE",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairImpactSummary.tsx",
+        "beforeBytes": 3621,
+        "afterBytes": 3621,
+        "beforeSha256": "85D529B77CD44A999DE8663FC0B99F6CBFB9EA987F83D0F47E69B850EBE5F4FE"
+      },
+      {
+        "afterSha256": "2066CC720DAE116B2493E9F8D9942E6B8EEDBCEA7BD8544944253D0354620CB7",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairManualWorklists.tsx",
+        "beforeBytes": 2081,
+        "afterBytes": 2081,
+        "beforeSha256": "2066CC720DAE116B2493E9F8D9942E6B8EEDBCEA7BD8544944253D0354620CB7"
+      },
+      {
+        "afterSha256": "1CEDC88005E9FAC55F9BF845ABD3A68BEC2ACD27FE42FAAA8186AB86CF1CC450",
+        "unchanged": true,
+        "file": "web/src/features/system/components/repairPresentation.test.ts",
+        "beforeBytes": 3883,
+        "afterBytes": 3883,
+        "beforeSha256": "1CEDC88005E9FAC55F9BF845ABD3A68BEC2ACD27FE42FAAA8186AB86CF1CC450"
+      },
+      {
+        "afterSha256": "EF9791A4A856B6C5E1B54F75A1F448168FE9D50755CE4C683CFAE75CCECC8F86",
+        "unchanged": true,
+        "file": "web/src/features/system/components/repairPresentation.ts",
+        "beforeBytes": 6257,
+        "afterBytes": 6257,
+        "beforeSha256": "EF9791A4A856B6C5E1B54F75A1F448168FE9D50755CE4C683CFAE75CCECC8F86"
+      },
+      {
+        "afterSha256": "F864650DD22661ACBE186D5D86EB275346068521DFFF30E15B4EEA118587ACAA",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+        "beforeBytes": 8327,
+        "afterBytes": 8327,
+        "beforeSha256": "F864650DD22661ACBE186D5D86EB275346068521DFFF30E15B4EEA118587ACAA"
+      },
+      {
+        "afterSha256": "16F3359AAE8B3F2933EF18483A23A30386612726E752B28BE3AB07862BA90593",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairRefreshWarning.tsx",
+        "beforeBytes": 663,
+        "afterBytes": 663,
+        "beforeSha256": "16F3359AAE8B3F2933EF18483A23A30386612726E752B28BE3AB07862BA90593"
+      },
+      {
+        "afterSha256": "7504313564A0C36A9A1826DC4D4634E32AF398F7F7260A7AE89073847833D67A",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairSuggestionCard.test.tsx",
+        "beforeBytes": 10523,
+        "afterBytes": 10523,
+        "beforeSha256": "7504313564A0C36A9A1826DC4D4634E32AF398F7F7260A7AE89073847833D67A"
+      },
+      {
+        "afterSha256": "F82FDBEE27F60FBD6CB1858AFB3242DB707F6B76548CA027D8347C03DEE071B8",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairSuggestionCard.tsx",
+        "beforeBytes": 7153,
+        "afterBytes": 7153,
+        "beforeSha256": "F82FDBEE27F60FBD6CB1858AFB3242DB707F6B76548CA027D8347C03DEE071B8"
+      },
+      {
+        "afterSha256": "2B09E59DD9E99AC468E6C8E5CA0F4DB4B119ED6C28528F2823B985E04787CDC3",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairSuggestionSection.tsx",
+        "beforeBytes": 2522,
+        "afterBytes": 2522,
+        "beforeSha256": "2B09E59DD9E99AC468E6C8E5CA0F4DB4B119ED6C28528F2823B985E04787CDC3"
+      },
+      {
+        "afterSha256": "DCD80D27C8A894E5043541BA6263E86A3C856E85190EE7CBF98958F8B184BBCE",
+        "unchanged": true,
+        "file": "web/src/features/system/components/RepairSuggestionWorklists.tsx",
+        "beforeBytes": 3853,
+        "afterBytes": 3853,
+        "beforeSha256": "DCD80D27C8A894E5043541BA6263E86A3C856E85190EE7CBF98958F8B184BBCE"
+      },
+      {
+        "afterSha256": "FE872D1CC412A8660E2288E8CE9E8CC48990D73BF9F2E565F29BBB5D3AE04851",
+        "unchanged": true,
+        "file": "web/src/features/system/components/StaleChargingWorklist.tsx",
+        "beforeBytes": 3649,
+        "afterBytes": 3649,
+        "beforeSha256": "FE872D1CC412A8660E2288E8CE9E8CC48990D73BF9F2E565F29BBB5D3AE04851"
+      },
+      {
+        "afterSha256": "8AEEAAA45FAE80CB79E399F148F67C742B2CA8ED67A964490A783A7247BF39ED",
+        "unchanged": true,
+        "file": "web/src/features/system/components/StaleDriveWorklist.tsx",
+        "beforeBytes": 3481,
+        "afterBytes": 3481,
+        "beforeSha256": "8AEEAAA45FAE80CB79E399F148F67C742B2CA8ED67A964490A783A7247BF39ED"
+      },
+      {
+        "afterSha256": "183D1CC7BABC26D19CD35E6F37292593C13B50DB43156FBA7EB0D7533217304F",
+        "unchanged": true,
+        "file": "web/src/features/system/components/StaleSessionRow.test.tsx",
+        "beforeBytes": 10163,
+        "afterBytes": 10163,
+        "beforeSha256": "183D1CC7BABC26D19CD35E6F37292593C13B50DB43156FBA7EB0D7533217304F"
+      },
+      {
+        "afterSha256": "0DED4AFE0163AF9A8798A94ACC08D8886D1DE6D6AFA812606A9D3C3F46AE0CEC",
+        "unchanged": true,
+        "file": "web/src/features/system/components/StaleSessionRow.tsx",
+        "beforeBytes": 4410,
+        "afterBytes": 4410,
+        "beforeSha256": "0DED4AFE0163AF9A8798A94ACC08D8886D1DE6D6AFA812606A9D3C3F46AE0CEC"
+      },
+      {
+        "afterSha256": "87BB55E19590515BCE2E50479E3875EB9EBA0A22BF6D4E350FBF90E42F0FA655",
+        "unchanged": true,
+        "file": "web/src/features/system/components/useRepairCaseColumns.tsx",
+        "beforeBytes": 4133,
+        "afterBytes": 4133,
+        "beforeSha256": "87BB55E19590515BCE2E50479E3875EB9EBA0A22BF6D4E350FBF90E42F0FA655"
+      },
+      {
+        "afterSha256": "09717F427A2D9EA1F1D4262A3310DA9873A18A1BDA52BEB8835335B19C0A46FC",
+        "unchanged": true,
+        "file": "web/src/features/system/components/useRepairQuarantineColumns.tsx",
+        "beforeBytes": 3333,
+        "afterBytes": 3333,
+        "beforeSha256": "09717F427A2D9EA1F1D4262A3310DA9873A18A1BDA52BEB8835335B19C0A46FC"
+      },
+      {
+        "afterSha256": "AC25A7D67DFE775879BEC6B455B1AA20AFB6D849EE572A64D9E9FBE8C772F746",
+        "unchanged": true,
+        "file": "web/src/features/system/pages/DataRepairPage.test.tsx",
+        "beforeBytes": 20010,
+        "afterBytes": 20010,
+        "beforeSha256": "AC25A7D67DFE775879BEC6B455B1AA20AFB6D849EE572A64D9E9FBE8C772F746"
+      },
+      {
+        "afterSha256": "4FF64F349344B73BEF08AF3620DC74AAEE944EFF75D6A189C88841343C464708",
+        "unchanged": true,
+        "file": "web/src/features/system/pages/DataRepairPage.tsx",
+        "beforeBytes": 2232,
+        "afterBytes": 2232,
+        "beforeSha256": "4FF64F349344B73BEF08AF3620DC74AAEE944EFF75D6A189C88841343C464708"
+      },
+      {
+        "afterSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0",
+        "unchanged": true,
+        "file": "web/src/hooks/useAiStream.ts",
+        "beforeBytes": 23120,
+        "afterBytes": 23120,
+        "beforeSha256": "ACF5503728B53701C63785EDC45D987E3A86A70F03F22C429C485F3672143DE0"
+      },
+      {
+        "afterSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+        "unchanged": true,
+        "file": "web/src/hooks/useDataState.ts",
+        "beforeBytes": 2035,
+        "afterBytes": 2035,
+        "beforeSha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+      },
+      {
+        "afterSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C",
+        "unchanged": true,
+        "file": "web/src/hooks/useOperationalMode.tsx",
+        "beforeBytes": 3188,
+        "afterBytes": 3188,
+        "beforeSha256": "D1C366956189EB4B6EB6AF1A8F3A4F5FF3BBC1B4F7E1AA07849138FEF08B277C"
+      },
+      {
+        "afterSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+        "unchanged": true,
+        "file": "web/src/hooks/useSelectedVehicle.ts",
+        "beforeBytes": 6593,
+        "afterBytes": 6593,
+        "beforeSha256": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3"
+      },
+      {
+        "afterSha256": "DC87A2C46DD3F82D84746B042D0C42D41E8A6D5B64487E543485F4AAAEA35886",
+        "unchanged": false,
+        "file": "web/src/i18n/en.json",
+        "beforeBytes": 1843667,
+        "afterBytes": 1846735,
+        "beforeSha256": "183B51D7250C841AFF21F0C1AA70170CBD437F3487B7F6647389C5020AC38C07"
+      },
+      {
+        "afterSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+        "unchanged": true,
+        "file": "web/src/lib/dateFormat.ts",
+        "beforeBytes": 18863,
+        "afterBytes": 18863,
+        "beforeSha256": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64"
+      },
+      {
+        "afterSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58",
+        "unchanged": true,
+        "file": "web/src/lib/routeLoaders.ts",
+        "beforeBytes": 11392,
+        "afterBytes": 11392,
+        "beforeSha256": "506F38FA71F84362044F3D99923E8347B31E4329D63D0365C81B29E90A614C58"
+      },
+      {
+        "afterSha256": "85DAB02020DA219BBB2AA6C21F3C39B434F847B9EC9F306B195C074BA7357128",
+        "unchanged": true,
+        "file": "web/src/lib/routeMeta.ts",
+        "beforeBytes": 7980,
+        "afterBytes": 7980,
+        "beforeSha256": "85DAB02020DA219BBB2AA6C21F3C39B434F847B9EC9F306B195C074BA7357128"
+      },
+      {
+        "afterSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97",
+        "unchanged": true,
+        "file": "web/src/lib/routeRegistry.ts",
+        "beforeBytes": 31836,
+        "afterBytes": 31836,
+        "beforeSha256": "2F59A162F3DC2180031DF87AED196830767FD7720388FA1E6F0C211E550C0A97"
+      },
+      {
+        "afterSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+        "unchanged": true,
+        "file": "web/src/lib/workspaceScope.ts",
+        "beforeBytes": 4411,
+        "afterBytes": 4411,
+        "beforeSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+      }
+    ],
+    "afterCapturedUtc": "2026-10-14T02:57:15.5664841Z",
+    "count": 70,
+    "drift": 1,
+    "limitation": "Source/test/routes/catalog/dependencies pinned, not a Git/whole-working-tree cleanliness claim; original47 from shell3007 plus additional23 dependencies. No source edits authored."
+  },
+  "summary": {
+    "findingsByRule": {
+      "i18n-confidence-composition": 1,
+      "restore-target-scope-retention": 1,
+      "confidence-as-health-semantics": 1,
+      "initial-paused-as-empty": 1,
+      "repair-cache-invalidation-gap": 1,
+      "i18n-count-pluralization": 1,
+      "open-confirmation-write-eligibility": 1,
+      "decorative-neon-chrome": 1,
+      "mobile-hidden-ledger-metadata": 1,
+      "scan-truncation-outcome-loss": 1,
+      "previous-scope-actionable-data": 1,
+      "source-trust-metadata-loss": 1,
+      "reviewed-preview-identity-drift": 1,
+      "missing-visible-field-label": 1,
+      "empty-scope-overclaim": 1,
+      "preview-precision-preference-loss": 1
+    },
+    "priorityFixes": [
+      "DR01/DR03 scope and paused-first-load",
+      "DR04 reviewed-preview binding",
+      "DR05 restore scope",
+      "DR06 confirmation mode gates",
+      "DR02 retained paused/freshness",
+      "DR13 mobile ledger detail"
+    ],
+    "nativeCandidateCount": 5,
+    "exactNeedCount": 16,
+    "wholePageAcceptance": "NOT_ACCEPTED; report DONE distinct from implementation/tests/native acceptance.",
+    "countConvention": "One confirmed finding per deduplicated mechanism/needKey, not affected-site or grep-match count. Candidates excluded.",
+    "confirmedFindingCount": 16,
+    "conditionalCandidateCount": 2,
+    "mostPrimaryFileIssues": [
+      {
+        "file": "web/src/api/hooks/useDataRepair.ts",
+        "findingCount": 3
+      },
+      {
+        "file": "web/src/features/system/components/RepairQuarantinePanel.tsx",
+        "findingCount": 3
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseWorkspaceHeader.tsx",
+        "findingCount": 2
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseCollaboration.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseControlledActions.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseDrawer.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/RepairCaseQueue.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/RepairDiagnosticsWorkspace.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/RepairImpactSummary.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/StaleDriveWorklist.tsx",
+        "findingCount": 1
+      },
+      {
+        "file": "web/src/features/system/components/useRepairCaseColumns.tsx",
+        "findingCount": 1
+      }
+    ]
+  },
+  "artifactChecks": {
+    "native": "NOTRUN",
+    "validationMeaning": "Document/line/hash validation only, not tests/lint/typecheck/build.",
+    "jsonParse": "PASS",
+    "pinDrift": 1,
+    "tests": "NOTRUN",
+    "findingCount": 16,
+    "sourcePinCount": 70,
+    "staticTestHeaderSum": 127,
+    "staticAuthoredCaseCount": 138,
+    "citationMissingOrMismatch": 0,
+    "citationCount": 69,
+    "distinctNeedKeys": 16
+  },
+  "generatedAtUtc": "2026-10-14T02:57:16.9016889Z"
+}
