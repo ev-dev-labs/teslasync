@@ -1,6 +1,6 @@
 import { useTranslation } from 'react-i18next';
 import type { DataState } from '@/api/dataState';
-import { ErrorDisplay, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, ErrorDisplay, StaleRefreshWarning } from '@/components/feedback';
 import { Button } from '@/components/ui';
 
 /** Source-local recovery never replaces retained measurements or neighboring sources. */
@@ -16,6 +16,15 @@ export function SourceRecovery({ state, label }: { state: DataState<unknown>; la
           resourceName={label}
           message={t('vampireDrain.modernization.sourceFailure', '{{source}} could not be loaded. Please try again.', { source: label })}
         />
+      ) : !state.hasData && state.isRefreshBlocked ? (
+        <AlertBanner
+          variant="info"
+          role="status"
+          aria-live="polite"
+          title={t('energyFlow.state.pausedTitle', 'Source paused')}
+        >
+          {t('energyFlow.state.initialPaused', 'This source is paused. No measurements have been received yet.')}
+        </AlertBanner>
       ) : (
         <StaleRefreshWarning state={state} label={label} hideRetry />
       )}
