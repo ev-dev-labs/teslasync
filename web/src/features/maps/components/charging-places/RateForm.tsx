@@ -7,7 +7,10 @@ import { LayoutCard } from '@/components/layout';
 import { CurrencyInput } from '@/components/forms';
 import { AlertBanner, QueryError } from '@/components/feedback';
 import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { currencyCodeFromSymbol, microToValue } from '@/lib/currencyFormat';
+import { formatTime } from '@/lib/dateFormat';
+import { addCivilDays, civilDateInTimeZone, localMidnightToInstant } from '@/lib/dateRange';
 import { useCreateGeofenceRate } from '@/api/hooks/useLocations';
 import { currencyPerKwhToRatePerWh } from './helpers';
 import type { GeofenceRate, GeofenceRateCreateRequest } from '@/api/types';
@@ -39,33 +42,49 @@ const CURRENCY_OPTIONS: SelectOption[] = [
   { value: 'MXN', label: 'MXN (Mex$)' },
 ];
 
-/**
- * Convert a `datetime-local` input value (`YYYY-MM-DDTHH:mm`, local time)
- * to an ISO-8601 UTC string. Returns `null` for empty/unparseable input so
- * a malformed value never throws mid-render — mirrors
- * `AuditLogPage.tsx`'s `toIsoOrUndefined`.
- */
-function localToIso(local: string): string | null {
-  if (!local) return null;
-  const ms = Date.parse(local);
-  return Number.isNaN(ms) ? null : new Date(ms).toISOString();
+function instantAsLocalInput(instant: Date, timezone: string): string {
+  return `${civilDateInTimeZone(instant, timezone)}T${formatTime(instant, { locale: 'en-GB', tz: timezone })}`;
 }
 
-/** `YYYY-MM-DDTHH:mm` for the current instant, seeding the effective-from field. */
-function nowAsLocalInput(): string {
-  const d = new Date();
-  d.setSeconds(0, 0);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+function localToIso(local: string, timezone: string): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(local)) return null;
+  const wallTime = new Date(`${local}:00Z`);
+  if (!Number.isFinite(wallTime.getTime()) || wallTime.toISOString().slice(0, 16) !== local) return null;
+  try {
+    const day = local.slice(0, 10);
+    const start = localMidnightToInstant(day, timezone);
+    const end = localMidnightToInstant(addCivilDays(day, 1), timezone);
+    // UTC here is only a calendar-arithmetic anchor, not the business zone.
+    // Test both day-boundary offsets: gaps are invalid; folds use the earlier
+    // occurrence, matching the former datetime-local parser's disambiguation.
+    const candidates = [start, end].map((anchor) => {
+      const offset = new Date(`${instantAsLocalInput(anchor, timezone)}:00Z`).getTime() - anchor.getTime();
+      return new Date(wallTime.getTime() - offset);
+    }).filter((candidate) => instantAsLocalInput(candidate, timezone) === local);
+    candidates.sort((a, b) => a.getTime() - b.getTime());
+    return candidates[0]?.toISOString() ?? null;
+  } catch {
+    return null;
+  }
 }
 
-function dayBeforeSessionAsLocalInput(startedAt: string): string {
+function nowAsLocalInput(timezone: string): string {
+  try {
+    return instantAsLocalInput(new Date(), timezone);
+  } catch {
+    return '';
+  }
+}
+
+function dayBeforeSessionAsLocalInput(startedAt: string, timezone: string): string {
   const date = new Date(startedAt);
-  if (Number.isNaN(date.getTime())) return nowAsLocalInput();
-  date.setHours(0, 0, 0, 0);
-  date.setDate(date.getDate() - 1);
-  const pad = (value: number) => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T00:00`;
+  if (Number.isNaN(date.getTime())) return nowAsLocalInput(timezone);
+  try {
+    const priorDay = addCivilDays(civilDateInTimeZone(date, timezone), -1);
+    return instantAsLocalInput(localMidnightToInstant(priorDay, timezone), timezone);
+  } catch {
+    return '';
+  }
 }
 
 /**
@@ -80,11 +99,12 @@ function dayBeforeSessionAsLocalInput(startedAt: string): string {
 export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormProps) {
   const { t } = useTranslation();
   const { locale, settings } = useSettings();
+  const { tz } = useDateFormat();
   const defaultCurrency = currentRate?.currency ?? currencyCodeFromSymbol(settings.currency_symbol);
 
   const [currency, setCurrency] = useState(defaultCurrency);
   const [rateMicro, setRateMicro] = useState<number | null>(null);
-  const [effectiveFrom, setEffectiveFrom] = useState(() => !currentRate && firstSessionAt ? dayBeforeSessionAsLocalInput(firstSessionAt) : nowAsLocalInput());
+  const [effectiveFrom, setEffectiveFrom] = useState(() => !currentRate && firstSessionAt ? dayBeforeSessionAsLocalInput(firstSessionAt, tz) : nowAsLocalInput(tz));
   const [effectiveTo, setEffectiveTo] = useState('');
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -109,12 +129,12 @@ export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormPr
       setFormError(t('chargingPlaces.rateForm.errors.rate', 'Enter a non-negative rate.'));
       return;
     }
-    const fromIso = localToIso(effectiveFrom);
+    const fromIso = localToIso(effectiveFrom, tz);
     if (!fromIso) {
       setFormError(t('chargingPlaces.rateForm.errors.effectiveFrom', 'Enter a valid effective-from date/time.'));
       return;
     }
-    const toIso = effectiveTo ? localToIso(effectiveTo) : null;
+    const toIso = effectiveTo ? localToIso(effectiveTo, tz) : null;
     if (effectiveTo && !toIso) {
       setFormError(t('chargingPlaces.rateForm.errors.effectiveTo', 'Effective-to date/time is invalid.'));
       return;
@@ -172,13 +192,14 @@ export function RateForm({ geofenceId, currentRate, firstSessionAt }: RateFormPr
           label={t('chargingPlaces.rateForm.effectiveFrom', 'Effective from')}
           value={effectiveFrom}
           onChange={(e) => setEffectiveFrom(e.target.value)}
+          hint={tz}
         />
         <Input
           type="datetime-local"
           label={t('chargingPlaces.rateForm.effectiveTo', 'Effective to (optional)')}
           value={effectiveTo}
           onChange={(e) => setEffectiveTo(e.target.value)}
-          hint={t('chargingPlaces.rateForm.effectiveToHint', 'Leave blank for an open-ended rate.')}
+          hint={`${t('chargingPlaces.rateForm.effectiveToHint', 'Leave blank for an open-ended rate.')} · ${tz}`}
         />
       </div>
 
