@@ -3,10 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router-dom';
 
 import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
-import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
 import { DataProvenanceBadge } from '@/components/data-display';
 import { Grid, PageLayout } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
+import { Button, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
@@ -128,6 +129,7 @@ export default function FSDInsightsPage() {
         'Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.',
       )}
       query={insightsQuery}
+      busy={insightsQuery.fetchStatus === 'fetching'}
       copyLink
       contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
@@ -139,6 +141,22 @@ export default function FSDInsightsPage() {
         </div>
       }
     >
+      {insightsState.status === 'initial' && insightsState.isRefreshBlocked && vehicleId != null ? (
+        <AlertBanner
+          variant="info"
+          role="status"
+          aria-live="polite"
+          data-refresh-blocked
+          title={t('dataSources.status.paused', 'Refresh paused')}
+        >
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('fsd.kpi.noPeriod', 'No period loaded yet')}
+          </Text>
+          <Button variant="ghost" size="sm" onClick={onRetry}>
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </AlertBanner>
+      ) : null}
       <StaleRefreshWarning state={insightsState} label={t('fsd.title', 'FSD Insights')} />
 
       <FadeIn>

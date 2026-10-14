@@ -70,12 +70,16 @@ vi.mock('@/lib/errorReporter', () => ({
   reportFrontendError: vi.fn(),
 }));
 
-vi.mock('@/components/feedback', async () => ({
+vi.mock('@/components/feedback', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/feedback')>(),
   SectionErrorBoundary: (await import('@/components/feedback/SectionErrorBoundary')).SectionErrorBoundary,
-  StaleRefreshWarning: (props: { state: { status: string; hasData: boolean } }) => {
+  StaleRefreshWarning: (props: import('@/components/feedback').StaleRefreshWarningProps) => {
     staleWarningMock(props.state);
     if (!props.state.hasData || props.state.status === 'ok') return null;
-    return <div data-testid="stale-warning">{props.state.status}</div>;
+    return <div data-testid="stale-warning">
+      {props.state.status}
+      <ActualStaleRefreshWarning {...props} />
+    </div>;
   },
 }));
 
@@ -84,14 +88,16 @@ vi.mock('@/components/layout', () => ({
     title,
     subtitle,
     contextActions,
+    busy,
     children,
   }: {
     title: string;
     subtitle: string;
     contextActions: ReactNode;
+    busy?: boolean;
     children: ReactNode;
   }) => (
-    <main>
+    <main aria-busy={busy}>
       <h1>{title}</h1>
       <p>{subtitle}</p>
       {contextActions}
@@ -147,6 +153,7 @@ vi.mock('../components/operationalbrief-a-m/FsdEvidenceBrief', async () => ({
 }));
 
 import FSDInsightsPage from './FSDInsightsPage';
+import { StaleRefreshWarning as ActualStaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning';
 
 const SECTION_IDS = [
   'fsd-kpis',
@@ -170,8 +177,8 @@ function HeaderRangeProbe() {
   return <button type="button" onClick={() => setPreset('90d')}>Change header range</button>;
 }
 
-function renderPage(initialEntry = '/fsd') {
-  return render(
+function PageHarness({ initialEntry = '/fsd' }: { initialEntry?: string }) {
+  return (
     <MemoryRouter initialEntries={[initialEntry]}>
       <LocationProbe />
       <HeaderRangeProbe />
@@ -180,6 +187,10 @@ function renderPage(initialEntry = '/fsd') {
       </Routes>
     </MemoryRouter>,
   );
+}
+
+function renderPage(initialEntry = '/fsd') {
+  return render(<PageHarness initialEntry={initialEntry} />);
 }
 
 function query(overrides: Record<string, unknown> = {}) {
@@ -361,12 +372,14 @@ describe('FSDInsightsPage', () => {
   });
 
   it('shows the skeleton only on the initial load', () => {
-    useFsdInsightsMock.mockReturnValue(query({ isPending: true }));
+    useFsdInsightsMock.mockReturnValue(query({ isPending: true, isFetching: true, fetchStatus: 'fetching' }));
     renderPage();
 
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('loading');
     }
+    expect(screen.getByRole('main')).toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
   });
 
   it('keeps every panel mounted when the period reported no measurable distance', () => {
@@ -457,7 +470,8 @@ describe('FSDInsightsPage', () => {
   });
 
   it('leaves initial paused evidence unknown rather than measured zero or historical', () => {
-    useFsdInsightsMock.mockReturnValue(query({ fetchStatus: 'paused' }));
+    const refetch = vi.fn();
+    useFsdInsightsMock.mockReturnValue(query({ fetchStatus: 'paused', refetch }));
     renderPage();
 
     for (const id of SECTION_IDS) {
@@ -474,6 +488,52 @@ describe('FSDInsightsPage', () => {
     });
     expect(screen.getByLabelText('Unknown source')).toHaveAttribute('data-data-status', 'initial');
     expect(screen.queryByLabelText('Historical')).not.toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.getByRole('main')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.queryByText(/offline|Service unavailable/i)).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([null, 0])('recovers a paused first request to successful distance=%s', (distance) => {
+    useFsdInsightsMock.mockReturnValue(query({ fetchStatus: 'paused' }));
+    const view = renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+
+    useFsdInsightsMock.mockReturnValue(loaded({ data: { totals: { fsd_distance_m: distance } } }));
+    view.rerender(<PageHarness />);
+
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('stale-warning')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'ok');
+    for (const id of SECTION_IDS) {
+      expect(screen.getByTestId(id)).toHaveTextContent(distance === null ? 'empty' : 'ready:0');
+    }
+  });
+
+  it.each(['failed', 'paused'])('retries the actual source after a %s retained refresh and clears the warning on recovery', (status) => {
+    const refetch = vi.fn();
+    useFsdInsightsMock.mockReturnValue(loaded(status === 'failed'
+      ? { isError: true, error: new Error('refresh failed'), refetch }
+      : { fetchStatus: 'paused', refetch }));
+    const view = renderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+
+    useFsdInsightsMock.mockReturnValue(loaded({ isFetching: true, fetchStatus: 'fetching', refetch }));
+    view.rerender(<PageHarness />);
+    expect(screen.getByRole('main')).toHaveAttribute('aria-busy', 'true');
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready:16093.44');
+
+    useFsdInsightsMock.mockReturnValue(loaded({ dataUpdatedAt: 1_772_000_060_000, refetch }));
+    view.rerender(<PageHarness />);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Historical')).toHaveAttribute('data-data-status', 'ok');
+    expect(staleWarningMock.mock.calls.at(-1)?.[0]).toMatchObject({
+      refreshError: null, fatalError: null, updatedAt: 1_772_000_060_000,
+    });
+    for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toHaveTextContent('ready:16093.44');
   });
 
   it.each(SECTION_IDS)('isolates a render failure and retries only the affected %s section', (failedSection) => {
