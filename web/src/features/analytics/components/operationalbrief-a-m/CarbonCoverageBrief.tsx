@@ -7,7 +7,7 @@ import { CarbonBriefBand } from './CarbonBriefBand';
 export function CarbonCoverageBrief({ analysis, states, display }: CarbonSectionProps) {
   const { t } = useTranslation();
   const source = analysis.curve.source;
-  // Query data can exist without a curve array; its fallback counts are not measurements.
+  // Without a curve array, fallback counts and missing hours are not measurements.
   const resolved = states.intensity.hasData && source.payloadPresent;
   const values = [
     ['carbon.coverage.returned', 'Rows returned', source.returnedRows, 'carbon.coverage.expected', '24 expected clock-hours'],
@@ -21,15 +21,17 @@ export function CarbonCoverageBrief({ analysis, states, display }: CarbonSection
     label: t(key, label), context: t(contextKey, context),
     display: { formatter: value => ({ value: display.formatNumber(value), unit: '' }) },
   }));
-  const coverage = source.coverageComplete
-    ? t('carbon.coverage.complete', 'Coverage is complete: exactly one valid row exists for every backend/model clock-hour.')
-    : source.missingHours.length > 0
-      ? t('carbon.coverage.missing', 'Missing backend/model clock-hours: {{hours}}.', { hours: source.missingHours.map(display.formatHour).join(', ') })
-      : t('carbon.coverage.incomplete', 'Coverage is incomplete because invalid or duplicate rows were returned.');
+  const coverage = !resolved
+    ? t('common.unknown', 'Unknown')
+    : source.coverageComplete
+      ? t('carbon.coverage.complete', 'Coverage is complete: exactly one valid row exists for every backend/model clock-hour.')
+      : source.missingHours.length > 0
+        ? t('carbon.coverage.missing', 'Missing backend/model clock-hours: {{hours}}.', { hours: source.missingHours.map(display.formatHour).join(', ') })
+        : t('carbon.coverage.incomplete', 'Coverage is incomplete because invalid or duplicate rows were returned.');
   return <CarbonBriefBand testId="carbon-curve-coverage" metrics={metrics} state={states.intensity}
     title={t('carbon.coverage.title', 'Curve source accounting and completeness')}
     description={t('carbon.source.intensityScope', 'Built-in, admin-editable static 24-hour model')}
     scope={<span>{t('carbon.source.intensityScope', 'Built-in, admin-editable static 24-hour model')}</span>}>
-    <AlertBanner className="mt-4" variant={source.coverageComplete ? 'success' : 'warning'}>{coverage}</AlertBanner>
+    <AlertBanner className="mt-4" variant={!resolved ? 'info' : source.coverageComplete ? 'success' : 'warning'}>{coverage}</AlertBanner>
   </CarbonBriefBand>;
 }

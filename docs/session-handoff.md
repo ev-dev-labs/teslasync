@@ -2,6 +2,47 @@
 
 ## Current phase
 
+### User-directed drain and remaining-work export, 2026-10-14T12:29Z
+
+The latest user instruction supersedes the refill loop: stop launching new
+agents, let the32 already-running tasks finish, intake and individually
+commit/push their attributable work, create root `work-items.json` containing
+all remaining work, commit/push it, then stop. No new launch is permitted.
+The actual12:29:56.036Z census found32running/362historicalidle/overtime0.
+Their exact IDs/scopes and immutable lifecycle-derived clocks are persisted
+in session `files\tick-resume-dispatch.json`. Host closure remains unavailable;
+retained idle agents are not running workers.
+
+Prior returned cohorts are now intaken:20 pushes08:36--08:38 (19 completed
+source/report deliveries and one numeric-caller WIP),13 unexecuted-proof
+receipts12:15--12:16 retained/reset pending without charging external
+catalog failures, and19 released source deliveries12:20--12:22 individually
+pushed through4c35733948. The earlier original InboxBody work is preserved
+in the coupled type-root commita6f062cb0f; its separate drawer delta belongs
+ac20375167. Source receipt completion is not runtime/native/application
+approval. Numeric-caller runtime acceptance remains incomplete.
+
+The189 remainder is an exact list of QA report filenames, not189 established
+bugs. Nine existing tasks are each disposing exactly21 reports without new
+source audits. Their evidenced missing fixes and remaining acceptance needs
+will be merged with the canonical pending/blocked/eligible-retry queue into
+the requested standalone JSON task array; do not invent findings to match189.
+The accepted next12 map already supplied18 actual source corrections,
+one exact canonical-copy scope and an audit workspace-route registration.
+These20 tasks plus the nine dispositions and three existing external-proof
+retries comprise the32 current workers, not32 completed corrections.
+
+Failed rescue rows with attempts-column1 explicitly say their one authorized
+rescue was spent1/1; this is not a remaining automatic retry. Preserve their
+failure notes and authorization barriers in the export rather than reset
+budgets or discard unresolved verification. Preserve completed Phases0-5;
+Phase6 is unfinished and Phase7 NOTRUN. Docker3119 remains pinned5590146.
+Inherited `.gitignore`, `tools\run-workers.ps1` and package changes are
+unattributed to these workers and must not be silently committed as theirs.
+The retained CarbonCoverageBrief pair has an exact finished source owner and
+matching no-change final receipt; its attributable disk delta still needs
+persistence, without rerunning the historical18/18 and changed8/8 passes.
+
 ### Bounded tick refill, actual census 2026-10-14T07:41:49.090Z
 
 Continue the same branch and Phase6; Phase7 NOTRUN. The bounded intake

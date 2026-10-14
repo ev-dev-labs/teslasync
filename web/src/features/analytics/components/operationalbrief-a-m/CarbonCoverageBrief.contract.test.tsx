@@ -104,7 +104,8 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     expect(display.formatNumber).not.toHaveBeenCalled();
     expect(within(view.band).getByText('Returned evidence')).toBeInTheDocument();
     expect(view.band.querySelector('[data-operational-brief]')).not.toHaveAttribute('aria-busy');
-    expect(within(view.band).getByText(/Missing backend\/model clock-hours: 00:00, 01:00/)).toBeInTheDocument();
+    expect(within(view.band).getByText('Unknown')).toBeInTheDocument();
+    expect(within(view.band).queryByText(/Missing backend\/model clock-hours:/)).not.toBeInTheDocument();
     expectUnchanged(view);
   });
 
@@ -218,6 +219,36 @@ describe('CarbonCoverageBrief rendered accounting contract', () => {
     const dialog = screen.getByRole('dialog');
     labels.forEach(label => expect(within(dialog).getByText(label)).toBeInTheDocument());
     expect(within(dialog).getByText('6,000')).toBeInTheDocument();
+    expectUnchanged(view);
+  });
+
+  it.each([
+    { caseId: 'returned malformed evidence', overrides: {}, status: 'Returned evidence' },
+    { caseId: 'retained refresh failure', overrides: { isError: true, isSuccess: false,
+      error: new Error('synthetic retained malformed source') }, status: 'Retained evidence' },
+    { caseId: 'retained paused refresh', overrides: { fetchStatus: 'paused' as const },
+      status: 'Retained evidence' },
+  ])('withholds missing-hour claims and preserves the expected denominator for $caseId', ({ overrides, status }) => {
+    const formatting = { ...display, formatHour: vi.fn(display.formatHour) };
+    const view = show({ curve: null }, overrides, true, formatting);
+    expectCounts(view.band, unknownCounts);
+    expect(within(view.band).getByText('Unknown')).toBeInTheDocument();
+    expect(within(view.band).getByText('24 expected clock-hours')).toBeInTheDocument();
+    expect(within(view.band).getByText(status)).toBeInTheDocument();
+    expect(within(view.band).queryByText(/Missing backend\/model clock-hours:/)).not.toBeInTheDocument();
+    expect(within(view.band).queryByText(/^Coverage is complete:/)).not.toBeInTheDocument();
+    expect(within(view.band).queryByText(/^Coverage is incomplete/)).not.toBeInTheDocument();
+    expect(formatting.formatHour).not.toHaveBeenCalled();
+    expect(display.formatNumber).not.toHaveBeenCalled();
+    if (view.state.refreshError || view.state.refreshPaused) {
+      fireEvent.click(within(view.band).getByRole('button', { name: 'Retry' }));
+      expect(view.onRetry).toHaveBeenCalledTimes(1);
+    }
+    fireEvent.click(within(view.band).getByRole('button', { name: 'Review details' }));
+    const dialog = screen.getByRole('dialog');
+    labels.forEach(label => expect(within(dialog).getByText(label)).toBeInTheDocument());
+    expect(within(dialog).getByText('24 expected clock-hours')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('—')).toHaveLength(5);
     expectUnchanged(view);
   });
 });
