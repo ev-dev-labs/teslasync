@@ -31,6 +31,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -194,7 +195,7 @@ function install(opts: InstallOptions = {}) {
   })
 }
 
-function renderPage(path = '/timeline') {
+function renderPage(path = '/timeline?from=2025-03-01&to=2025-03-02') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
@@ -223,6 +224,93 @@ beforeEach(() => {
 })
 
 describe('TimelinePage', () => {
+  it('preserves bounded mobile durations, complete quick-view fields, and keyboard inspection', async () => {
+    const bounds = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, 375, 44))
+    try {
+      const user = userEvent.setup()
+      renderPage()
+      const inspect = await screen.findByRole('button', { name: 'Inspect transition asleep to driving' })
+      const mobile = inspect.closest('[data-mobile-table]')!
+      expect(mobile).not.toBeNull()
+      expect(within(mobile).getByText('1h')).toBeInTheDocument()
+      expect(inspect).toHaveClass('min-h-11')
+      inspect.focus()
+      await user.keyboard('{Enter}')
+      const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
+      expect(within(drawer).getByText('1h')).toBeInTheDocument()
+      expect(within(drawer).getByText('shift_state')).toBeInTheDocument()
+      expect(within(drawer).getByText('D')).toBeInTheDocument()
+      await user.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog', { name: 'asleep → driving' })).toBeNull())
+
+      fireEvent.click(within(mobile).getAllByRole('button', { name: 'Quick view' })[0])
+      const quickView = screen.getByRole('dialog')
+      for (const field of ['Time', 'From state', 'To state', 'Duration', 'Trigger', 'Trigger value']) {
+        expect(within(quickView).getByText(field, { exact: true })).toBeInTheDocument()
+      }
+      expect(within(quickView).getByText('1h')).toBeInTheDocument()
+      expect(within(quickView).getByText('D')).toBeInTheDocument()
+    } finally {
+      bounds.mockRestore()
+    }
+  })
+
+  it('leaves the last historical duration unknown in the table and preview', async () => {
+    renderPage()
+    const inspect = await screen.findByRole('button', { name: 'Inspect transition charging to online' })
+    const row = inspect.closest('tr')!
+    expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('—')
+    fireEvent.click(inspect)
+    const drawer = screen.getByRole('dialog', { name: 'charging → online' })
+    expect(within(drawer).getByText('Duration').closest('dt')!.parentElement).toHaveTextContent('—')
+    expect(within(drawer).getByText('Trigger value')).toBeInTheDocument()
+  })
+
+  it('clips successor evidence to both requested bounds and preserves minute rounding', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve(summaryFor(1))
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({
+        transitions: [
+          { ...transitions[0], ts: '2025-02-28T23:00:00Z' },
+          { ...transitions[1], ts: '2025-03-01T00:59:59Z' },
+          { ...transitions[2], ts: '2025-03-02T01:00:00Z' },
+        ],
+      })
+      return Promise.resolve({})
+    })
+    renderPage('/timeline?from=2025-03-01&to=2025-03-01')
+    const firstInspect = await screen.findByRole('button', { name: 'Inspect transition asleep to driving' })
+    expect(within(firstInspect.closest('tr')!).getAllByRole('cell')[3]).toHaveTextContent('1h')
+    const secondInspect = screen.getByRole('button', { name: 'Inspect transition driving to charging' })
+    expect(within(secondInspect.closest('tr')!).getAllByRole('cell')[3]).toHaveTextContent('23h')
+    fireEvent.click(secondInspect)
+    expect(within(screen.getByRole('dialog', { name: 'driving → charging' })).getByText('23h')).toBeInTheDocument()
+  })
+
+  it('does not infer duration for invalid, simultaneous, or out-of-window intervals', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/vehicles') return Promise.resolve([makeVehicle()])
+      if (path.startsWith('/vehicle-states/summary')) return Promise.resolve(summaryFor(1))
+      if (path.startsWith('/vehicle-states/timeline')) return Promise.resolve({
+        transitions: [
+          { ...transitions[0], ts: '2025-02-28T10:00:00Z' },
+          { ...transitions[1], ts: '2025-02-28T11:00:00Z' },
+          { ...transitions[2], ts: '2025-02-28T11:00:00Z' },
+          { ...transitions[0], ts: 'invalid' },
+        ],
+      })
+      return Promise.resolve({})
+    })
+    renderPage()
+    const table = await screen.findByRole('table', { name: 'State transitions' })
+    await within(table).findAllByText('shift_state')
+    for (const row of within(table).getAllByRole('row').slice(1)) {
+      expect(within(row).getAllByRole('cell')[3]).toHaveTextContent('—')
+    }
+  })
+
   it('reviews original dwell rounding and source bounds in the real evidence drawer', async () => {
     renderPage()
     await screen.findByText('10', {}, { timeout: 8000 })

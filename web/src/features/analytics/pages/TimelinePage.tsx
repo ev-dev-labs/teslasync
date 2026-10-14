@@ -49,11 +49,8 @@ import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 /** The API hook returns point-in-time FSM transitions, not state durations.
  * Dwell-time metrics continue to use the independent summary endpoint. */
 
-/** Indexed transition row for the table. Adds the timestamp of the
- *  *next* transition so the table can compute "duration spent in
- *  to_state" without extra hooks. The newest row has no successor —
- *  its duration is computed from `now` so the user sees how long the
- *  vehicle has been in the current state. */
+/** The next returned transition bounds historical interval evidence.
+ * A row without a successor does not establish current-state duration. */
 interface TransitionRow extends TransitionRecord {
   index: number;
   next_ts: string | null;
@@ -105,10 +102,21 @@ function formatDurationFromSeconds(seconds: number): string {
   return formatHoursFromSeconds(seconds);
 }
 
-function transitionDuration(row: TransitionRow): string {
-  const start = new Date(row.ts).getTime();
-  const end = row.next_ts ? new Date(row.next_ts).getTime() : Date.now();
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return '—';
+function transitionDuration(
+  row: TransitionRow,
+  startInstant: string,
+  endInstantExclusive: string,
+): string {
+  if (!row.next_ts) return '—';
+  const recordedStart = new Date(row.ts).getTime();
+  const recordedEnd = new Date(row.next_ts).getTime();
+  const windowStart = new Date(startInstant).getTime();
+  const windowEnd = new Date(endInstantExclusive).getTime();
+  if (![recordedStart, recordedEnd, windowStart, windowEnd].every(Number.isFinite)
+    || windowEnd <= windowStart || recordedEnd <= recordedStart) return '—';
+  const start = Math.max(recordedStart, windowStart);
+  const end = Math.min(recordedEnd, windowEnd);
+  if (end <= start) return '—';
   return formatDurationFromSeconds((end - start) / 1000);
 }
 
@@ -347,7 +355,7 @@ export default function TimelinePage() {
         header: t('timeline.duration', 'Duration'),
         sortable: false,
         render: (row) => {
-          const duration = transitionDuration(row);
+          const duration = transitionDuration(row, startInstant, endInstantExclusive);
           if (duration === '—') return <Caption>—</Caption>;
           return (
             <Text variant="body" className="tabular-nums">
@@ -389,7 +397,7 @@ export default function TimelinePage() {
         ),
       },
     ],
-    [t, timezone, locale],
+    [t, timezone, locale, startInstant, endInstantExclusive],
   );
 
   /* ─── Refresh action ─── */
@@ -635,7 +643,7 @@ export default function TimelinePage() {
                 if (key === 'ts') return formatDateTime(row.ts, { tz: timezone, locale });
                 if (key === 'from_state') return row.from_state ?? '—';
                 if (key === 'to_state') return row.to_state;
-                if (key === 'duration') return transitionDuration(row);
+                if (key === 'duration') return transitionDuration(row, startInstant, endInstantExclusive);
                 if (key === 'trigger_field') return row.trigger_field ?? '—';
                 return null;
               },
@@ -703,7 +711,7 @@ export default function TimelinePage() {
                 {
                   key: 'duration',
                   label: t('timeline.duration', 'Duration'),
-                  value: transitionDuration(previewTransition),
+                  value: transitionDuration(previewTransition, startInstant, endInstantExclusive),
                 },
                 {
                   key: 'trigger-field',
