@@ -1,8 +1,33 @@
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { KVList } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { useRangeState } from '@/hooks/useRangeState';
+
+export function useDrivetrainStatisticsCopy() {
+  const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
+  const { startInstant, endInstantExclusive, timezone } = useRangeState({
+    persistKey: 'drivetrain-health.range',
+  });
+  const bound = (instant: string | undefined) => {
+    const formatted = formatDateTime(instant, { tz: timezone });
+    return formatted === '—' ? formatted : `${formatted} [${instant}]`;
+  };
+  return {
+    scope: t(
+      'drivetrain.modernization.selectedStatisticsBounds',
+      'Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}',
+      { start: bound(startInstant), end: bound(endInstantExclusive), timezone },
+    ),
+    provenance: t(
+      'drivetrain.modernization.completedStatisticsPopulation',
+      'Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.',
+    ),
+  };
+}
 
 /**
  * Source-backed explanation only. This panel does not calculate or diagnose
@@ -12,6 +37,7 @@ import { useUnits } from '@/hooks/useUnits';
 export function MethodologyPanel() {
   const { t } = useTranslation();
   const { formatTemperature } = useUnits();
+  const statisticsCopy = useDrivetrainStatisticsCopy();
   const projections = [
     {
       label: t('drivetrain.frontMotor', 'Front Motor'),
@@ -94,10 +120,12 @@ export function MethodologyPanel() {
       </Text>
       <Text as="p" variant="bodySm">
         {t(
-          'drivetrain.modernization.historyScope',
-          'Motor history uses the existing 200-snapshot request in source order. The date range filters returned drives, not motor history or vehicle drive statistics.',
+          'drivetrain.modernization.separateHistoryPolicies',
+          'Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics.',
         )}
       </Text>
+      <Text as="p" variant="bodySm">{statisticsCopy.provenance}</Text>
+      <Text as="p" variant="bodySm">{statisticsCopy.scope}</Text>
       <Text as="p" variant="bodySm">
         {t(
           'drivetrain.modernization.averageCoverage',
