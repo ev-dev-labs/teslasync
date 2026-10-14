@@ -1,5 +1,5 @@
-import { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
 import {
@@ -21,6 +21,8 @@ import { PageLayout } from '@/components/layout'
 import {
   Badge,
   Button,
+  BUTTON_BASE,
+  BUTTON_VARIANTS,
   GlassPanel,
   Input,
   PanelTitle,
@@ -29,11 +31,12 @@ import {
 } from '@/components/ui'
 import { TimeStamp } from '@/components/data-display'
 import { SystemSummaryBrief } from '../components/operationalbrief-all/SystemSummaryBrief'
-import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
+import { AlertBanner, EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { AINLSearch } from '@/components/ai'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDataState } from '@/hooks/useDataState'
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer'
 import { useUrlString, useUrlArray } from '@/hooks/useUrlState'
 import { useGlobalSearch, SEARCH_MIN_QUERY_LENGTH } from '@/api/hooks/useSearch'
 import type { SearchHit, SearchHitType } from '@/api/types'
@@ -69,7 +72,6 @@ const RESULT_ACCENT = neonColorMap.neutral
  */
 export default function SearchPage() {
   const { t } = useTranslation()
-  const navigate = useNavigate()
   const [query, setQuery] = useUrlString('q', '')
   const [activeTypes, setActiveTypes] = useUrlArray('types')
 
@@ -80,7 +82,7 @@ export default function SearchPage() {
 
   // Preserve the original requested types ordering across the URL round-trip.
   const typesFilter = useMemo<SearchHitType[]>(() => {
-    return activeTypes.filter((x): x is SearchHitType =>
+    return [...new Set(activeTypes)].filter((x): x is SearchHitType =>
       (ALL_TYPES as string[]).includes(x),
     )
   }, [activeTypes])
@@ -93,6 +95,14 @@ export default function SearchPage() {
   const { data, isFetching, refetch } = searchQuery
   const state = useDataState(searchQuery)
   const error = state.fatalError
+  const responseScope = useRef<{ query: string; types: SearchHitType[] } | null>(null)
+
+  // Placeholder rows belong to the last resolved request, not the new chips.
+  useEffect(() => {
+    if (data && searchQuery.isSuccess && !searchQuery.isPlaceholderData) {
+      responseScope.current = { query: data.query, types: typesFilter }
+    }
+  }, [data, searchQuery.isSuccess, searchQuery.isPlaceholderData, typesFilter])
 
   const hits = data?.hits ?? []
 
@@ -120,10 +130,34 @@ export default function SearchPage() {
 
   const isIdle = trimmed.length === 0
   const isActiveSearch = !isIdle && !tooShort && !error
-  // An empty response is still retained data; refreshing it must not erase
-  // measured zeroes. Pending also covers an initial request paused offline.
-  const initialLoading = searchQuery.isPending && !state.hasData
+  // An empty response is still retained data; refreshing it keeps measured zeroes.
+  const coldPaused = !state.hasData && state.isRefreshBlocked
+  const initialLoading = searchQuery.isPending && !state.hasData && !coldPaused
   const hasResults = groupedHits.length > 0
+  const displayedQuery = data?.query ?? trimmed
+  const displayedTypes = searchQuery.isPlaceholderData
+    ? responseScope.current?.query === displayedQuery ? responseScope.current.types : null
+    : typesFilter
+  const typeScopeLabel = (types: SearchHitType[] | null) => types == null
+    ? t('common.unknown', 'Unknown')
+    : types.length > 0
+      ? types.map(type => searchSectionLabel(type, t)).join(', ')
+      : t('search.kpi.allTypes', 'All types shown')
+  const resultScope = t('search.brief.resultScope', 'for “{{query}}” · result types: {{types}}', {
+    query: displayedQuery, types: typeScopeLabel(displayedTypes),
+  })
+  const settled = searchQuery.isSuccess && !searchQuery.isPlaceholderData && !isFetching
+
+  useLoadAnnouncement({
+    label: t('search.brief.announcementScope', 'search results for “{{query}}” · types: {{types}}', {
+      query: displayedQuery, types: typeScopeLabel(displayedTypes),
+    }),
+    isLoading: searchQuery.isPending || isFetching || searchQuery.isPlaceholderData,
+    isError: Boolean(error || state.refreshError),
+    count: settled && state.hasData ? hits.length : undefined,
+    enabled: !isIdle && !tooShort && !state.isRefreshBlocked
+      && (settled && state.hasData || Boolean(error || state.refreshError)),
+  })
 
   function toggleType(type: SearchHitType) {
     if (typesFilter.includes(type)) {
@@ -145,6 +179,7 @@ export default function SearchPage() {
         'Find vehicles, drives, charging, alerts and more across your fleet',
       )}
       query={isActiveSearch ? searchQuery : undefined}
+      announce={false}
       busy={!isIdle && !tooShort && isFetching}
       secondaryActions={
         isActiveSearch ? (
@@ -179,6 +214,7 @@ export default function SearchPage() {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t('search.placeholder', 'Search vehicles, drives, charging…')}
+            label={t('search.input.label', 'Search query')}
             icon={<SearchIcon className="h-4 w-4" aria-hidden="true" />}
             aria-label={t('search.input.label', 'Search query')}
             autoFocus
@@ -219,6 +255,18 @@ export default function SearchPage() {
               </Button>
             )}
           </div>
+          {!isIdle && !tooShort && (
+            <Text variant="caption" className="mt-3 break-words">
+              {t('search.brief.requestedScope', 'Requested: “{{query}}” · types: {{types}}', {
+                query: trimmed, types: typeScopeLabel(typesFilter),
+              })}
+            </Text>
+          )}
+          {!isIdle && !tooShort && isFetching && (
+            <Text variant="caption" className="mt-2">
+              {t('freshness.updating', 'Updating…')}
+            </Text>
+          )}
         </GlassPanel>
       </FadeIn>
 
@@ -227,9 +275,10 @@ export default function SearchPage() {
         <FadeIn delay={0.1}>
           <SystemSummaryBrief
             title={t('search.kpis', 'Search summary')}
-            description={t('search.brief.description', 'Result counts and category coverage for the current query and selected type filters.')}
-            scope={t('search.kpi.forQuery', 'for “{{query}}”', { query: data?.query ?? trimmed })}
+            description={t('search.brief.responseDescription', 'Result counts and category coverage for the displayed search response.')}
+            scope={resultScope}
             available={state.hasData} loading={initialLoading} retained={state.hasData && (state.status === 'stale' || searchQuery.isPlaceholderData)}
+            statusLabel={coldPaused ? t('search.paused.title', 'Search request paused') : undefined}
             metrics={[
               { metricId: 'count', occurrenceId: 'results', rawValue: state.hasData ? hits.length : null, label: t('search.kpi.totalResults', 'Total results'),
                 context: t('search.brief.scope', 'Returned search hits, not an unbounded server total.') },
@@ -242,7 +291,8 @@ export default function SearchPage() {
               key: 'top-match', label: t('search.kpi.topMatch', 'Top match'),
               value: topGroup ? searchSectionLabel(topGroup.type, t) : '—',
               valueState: topGroup ? 'value' : 'missing',
-              detail: topGroup ? t('search.kpi.topCount', '{{n}} results', { n: topGroup.hits.length }) : t('search.kpi.noMatches', 'No matches'),
+              detail: topGroup ? t('search.kpi.topCount', '{{n}} results', { n: topGroup.hits.length })
+                : state.hasData ? t('search.kpi.noMatches', 'No matches') : t('common.unknown', 'Unknown'),
             }]}
           />
         </FadeIn>
@@ -276,6 +326,15 @@ export default function SearchPage() {
           <GlassPanel className="p-6">
             <QueryError error={error} onRetry={() => refetch()} />
           </GlassPanel>
+        ) : coldPaused ? (
+          <GlassPanel className="p-4 sm:p-5">
+            <AlertBanner variant="info" role="status" title={t('search.paused.title', 'Search request paused')}>
+              {t('search.paused.message', 'The search request is paused. No response has been received, so result counts are unknown. Retry when the request can resume.')}
+            </AlertBanner>
+            <Button type="button" variant="secondary" wrapLabel className="mt-3 min-h-11" onClick={() => refetch()}>
+              {t('error.retry', 'Retry')}
+            </Button>
+          </GlassPanel>
         ) : initialLoading ? (
           <GlassPanel className="p-4 sm:p-5">
             <Skeleton className="h-4 w-1/3" />
@@ -291,7 +350,7 @@ export default function SearchPage() {
               icon={<SearchIcon className="h-8 w-8" aria-hidden="true" />}
               title={t('search.noResults.title', 'No results')}
               message={t('search.noResults.message', {
-                query: trimmed,
+                query: displayedQuery,
                 defaultValue: 'No matches for "{{query}}". Try fewer characters or open the command palette.',
               })}
             />
@@ -325,16 +384,15 @@ export default function SearchPage() {
                     <ul className="divide-y divide-[var(--glass-border)]">
                       {group.hits.map((hit) => (
                         <li key={`${hit.type}-${hit.id}`}>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={() => navigate(hit.url)}
+                          <Link
+                            to={hit.url}
                             aria-label={t('search.result.open', 'Open {{title}}', {
                               title: hit.title,
                             })}
-                            wrapLabel
                             className={cn(
-                              'w-full flex-wrap justify-start gap-3 rounded-lg px-2 py-3 text-start',
+                              BUTTON_BASE,
+                              BUTTON_VARIANTS.ghost,
+                              'min-h-11 w-full flex-wrap justify-start gap-3 rounded-lg px-2 py-3 text-start whitespace-normal',
                               typography.weight.regular,
                             )}
                           >
@@ -361,7 +419,7 @@ export default function SearchPage() {
                               className="h-4 w-4 shrink-0 text-[var(--text-muted)]"
                               aria-hidden="true"
                             />
-                          </Button>
+                          </Link>
                         </li>
                       ))}
                     </ul>
