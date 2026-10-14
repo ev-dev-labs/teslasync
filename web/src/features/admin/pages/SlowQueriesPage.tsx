@@ -91,7 +91,7 @@ export default function SlowQueriesPage() {
       {/* 2 — Ranking chart + cache efficiency ---------------------------- */}
       <FadeIn delay={0.1}>
         <SlowQueryAnalysis chartRows={chartRows} cacheLeaders={cacheLeaders}
-          metricLabel={activeMetricLabel} loading={isLoading}
+          metricLabel={activeMetricLabel} loading={isLoading} subsystemMissing={subsystemMissing}
           error={showError ? queryState.fatalError : null} onRetry={retry}
           formatMetric={formatMetric} axisFormat={axisFormat} />
       </FadeIn>

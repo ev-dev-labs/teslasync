@@ -1,10 +1,10 @@
 import { useMemo } from 'react';
 import { Timer } from 'lucide-react';
 import { LayoutCard } from '@/components/layout';
-import { DataTable, type Column } from '@/components/ui';
+import { DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { Code } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, SectionErrorBoundary, Skeleton, QueryError } from '@/components/feedback';
+import { DataStateNotice, EmptyState, SectionErrorBoundary, Skeleton, QueryError } from '@/components/feedback';
 import type { SlowQueryRow } from '@/types/admin-operator-confidence';
 import type { useSlowQueriesPage } from '../../../hooks/useSlowQueriesPage';
 import { cacheHitRatioLabel } from './helpers';
@@ -75,6 +75,24 @@ export function SlowQueriesDetails({ controller }: Props) {
     ],
     [t, fmtNumber, fmtInt, displayPrecision, displayLocale],
   );
+  const mobilePresentation = useMemo<MobileDataTablePresentation<SlowQueryRow>>(
+    () => ({
+      roles: { fingerprint: 'title', mean_time_ms: 'primary', calls: 'meta' },
+      displayValue: (r, key) => {
+        switch (key) {
+          case 'fingerprint': return r.fingerprint || '—';
+          case 'calls': return fmtInt(r.calls);
+          case 'mean_time_ms': return fmtNumber(r.mean_time_ms);
+          case 'max_time_ms': return fmtNumber(r.max_time_ms);
+          case 'total_time_ms': return fmtNumber(r.total_time_ms);
+          case 'rows_returned': return fmtInt(r.rows_returned);
+          case 'cache': return cacheHitRatioLabel(r);
+          default: return null;
+        }
+      },
+    }),
+    [fmtInt, fmtNumber, displayPrecision, displayLocale],
+  );
 
   return (
 <FadeIn delay={0.2}>
@@ -85,7 +103,9 @@ export function SlowQueriesDetails({ controller }: Props) {
                 <Skeleton height={280} />
               ) : showError ? (
                 <QueryError error={queryState.fatalError} onRetry={retry} />
-              ) : rows.length === 0 && !subsystemMissing ? (
+              ) : subsystemMissing ? (
+                <DataStateNotice state="unsupported" />
+              ) : rows.length === 0 ? (
                 // no-action: pg_stat_statements is populated by Postgres itself; users cannot seed rows from the UI
                 <EmptyState
                   icon={<Timer className="h-8 w-8" />}
@@ -100,6 +120,7 @@ export function SlowQueriesDetails({ controller }: Props) {
                   tableId="admin:slow-queries"
                   columns={columns}
                   mobileColumns={['fingerprint', 'mean_time_ms', 'calls']}
+                  mobilePresentation={mobilePresentation}
                   data={rows}
                   enableValueFilters
                   keyExtractor={(r) => r.query_id}

@@ -3,7 +3,7 @@ import { HardDrive } from 'lucide-react';
 import { ChartCard, LayoutCard } from '@/components/layout';
 import { Text, Code } from '@/components/ui';
 import { MetricBar } from '@/components/data-display';
-import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import { DataStateNotice, EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import {
   ChartTooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, CHART_COLORS,
 } from '@/components/charts';
@@ -16,6 +16,7 @@ interface SlowQueryAnalysisProps {
   cacheLeaders: Array<{ row: SlowQueryRow; ratio: number }>;
   metricLabel: string;
   loading: boolean;
+  subsystemMissing?: boolean;
   error: unknown;
   onRetry: () => void;
   formatMetric: (value: number) => string;
@@ -23,7 +24,7 @@ interface SlowQueryAnalysisProps {
 }
 
 export function SlowQueryAnalysis({
-  chartRows, cacheLeaders, metricLabel, loading, error, onRetry, formatMetric, axisFormat,
+  chartRows, cacheLeaders, metricLabel, loading, subsystemMissing = false, error, onRetry, formatMetric, axisFormat,
 }: SlowQueryAnalysisProps) {
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
@@ -32,6 +33,11 @@ export function SlowQueryAnalysis({
     <section aria-label={t('admin.slowQueries.analysis', 'Query analysis')}
       className="grid min-w-0 grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
       <div className="min-w-0 xl:col-span-2">
+        {!loading && !error && subsystemMissing ? (
+          <LayoutCard title={chartTitle}>
+            <DataStateNotice state="unsupported" />
+          </LayoutCard>
+        ) : (
         <ChartCard title={chartTitle} size="compact" fluid
           ariaLabel={t('admin.slowQueries.chartAria', 'Horizontal bar chart ranking the top queries by {{metric}}', { metric: metricLabel })}
           loading={loading} error={error ?? undefined} onRetry={onRetry}
@@ -54,10 +60,13 @@ export function SlowQueryAnalysis({
             </BarChart>
           </ResponsiveContainer>
         </ChartCard>
+        )}
       </div>
       <LayoutCard title={t('admin.slowQueries.cacheTitle', 'Cache efficiency')}
         actions={<HardDrive className="h-4 w-4 text-cyan-300" aria-hidden />}>
-        {loading ? <Skeleton height={260} /> : error ? <QueryError error={error} onRetry={onRetry} /> : cacheLeaders.length === 0 ? (
+        {loading ? <Skeleton height={260} /> : error ? <QueryError error={error} onRetry={onRetry} /> : subsystemMissing ? (
+          <DataStateNotice state="unsupported" />
+        ) : cacheLeaders.length === 0 ? (
           // no-action: queries without shared-buffer activity have no cache ratio; the UI cannot create Postgres buffer statistics.
           <EmptyState icon={<HardDrive className="h-8 w-8" aria-hidden />}
             message={t('admin.slowQueries.noCache', 'No shared-buffer statistics available for these queries.')} />
