@@ -4,8 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { LayoutCard } from '@/components/layout/layout-reference';
 import { Badge, DataTable, Text, type Column } from '@/components/ui';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { formatDateTime } from '@/lib/dateFormat';
 import type { ValidSleepDrainEvent } from '../../lib/sleepEfficiencyAnalysis';
 import { eventRecencyLabel } from '../sleep-efficiency/labels';
 import { SleepEfficiencySectionBody } from '../sleep-efficiency/SleepEfficiencySectionBody';
@@ -15,6 +15,7 @@ type Props = SleepEfficiencySectionProps & Pick<SleepEfficiencyFormatters, 'form
 
 export function DrainEventDirectory({ analysis, state, formatTemperature }: Props) {
   const { t } = useTranslation();
+  const { formatDateTime, tz } = useDateFormat();
   const { fmtNumber } = useNumberFormatting();
   const rows = useMemo(() => [...analysis.events.directory], [analysis.events.directory]);
   const duration = (event: ValidSleepDrainEvent) =>
@@ -91,7 +92,13 @@ export function DrainEventDirectory({ analysis, state, formatTemperature }: Prop
         <Text as="p" variant="caption">
           {t('sleep.eventDirectory.subtitle', 'Events are validated, deduplicated, future-checked against the frozen clock, and sorted newest first.')}
         </Text>
-        <SleepEfficiencySectionBody state={state} skeletonHeight={280}>
+        <Text as="p" variant="caption">
+          {t('app.tzDisplayDefault', 'Time zone display')}: {tz}
+        </Text>
+        <SleepEfficiencySectionBody
+          state={{ ...state, isResolved: state.isResolved && analysis.source.hasResponse }}
+          skeletonHeight={280}
+        >
           {rows.length > 0 ? (
             <DataTable<ValidSleepDrainEvent>
               variant="embedded"
