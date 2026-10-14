@@ -30,6 +30,11 @@ vi.hoisted(() => {
 
 const { unitsMock } = vi.hoisted(() => ({ unitsMock: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: () => unitsMock() }));
+const { paletteMock, isHiddenMock } = vi.hoisted(() => ({
+  paletteMock: vi.fn(),
+  isHiddenMock: vi.fn(),
+}));
+vi.mock('@/hooks/useChartPalette', () => ({ useChartPalette: () => paletteMock() }));
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -54,25 +59,29 @@ vi.mock('react-i18next', async () => {
 
 // The chart frame is exercised elsewhere; here we only care about the rows and
 // the gating decision, so capture what the container is handed.
-const { chartPropsMock, linePropsMock } = vi.hoisted(() => ({
+const { chartPropsMock, barPropsMock, linePropsMock } = vi.hoisted(() => ({
   chartPropsMock: vi.fn(),
+  barPropsMock: vi.fn(),
   linePropsMock: vi.fn(),
 }));
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
-  type ChildArgs = { hiddenSeries: null };
+  type ChildArgs = { hiddenSeries: { isHidden: typeof isHiddenMock } };
   return {
     ChartContainer: (props: Record<string, unknown> & { children: (a: ChildArgs) => ReactNode }) => {
       chartPropsMock(props);
       return React.createElement(
         'section',
         { 'data-testid': 'chart-container' },
-        props.children({ hiddenSeries: null }),
+        props.children({ hiddenSeries: { isHidden: isHiddenMock } }),
       );
     },
     ResponsiveContainer: ({ children }: { children: ReactNode }) => <div>{children}</div>,
     ComposedChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-    Bar: () => <div data-testid="bar-series" />,
+    Bar: (props: Record<string, unknown>) => {
+      barPropsMock(props);
+      return <div data-testid="bar-series" />;
+    },
     Line: (props: Record<string, unknown>) => {
       linePropsMock(props);
       return <div data-testid="line-series" />;
@@ -82,7 +91,6 @@ vi.mock('@/components/charts', async () => {
     Tooltip: () => null,
     ChartLegend: () => null,
     ChartTooltip: () => null,
-    CHART_COLORS: ['#0ff', '#f0f', '#ff0'],
     axisTick: {},
     chartGrid: null,
   };
@@ -108,6 +116,8 @@ function lastRows(): FsdDistanceRow[] {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  paletteMock.mockReturnValue(['var(--series-primary)', 'var(--series-secondary)']);
+  isHiddenMock.mockReturnValue(false);
   unitsMock.mockReturnValue({
     unitPrefs: {
       distance: 'km',
@@ -130,6 +140,53 @@ beforeEach(() => {
 });
 
 describe('FsdDistanceTrend', () => {
+  it('reacts to palette changes without changing dots, series order, or visibility preferences', () => {
+    isHiddenMock.mockImplementation((key: string) => key === 'driving');
+    const insights = fsdInsights();
+    const sectionState = state();
+    const { rerender } = renderTrend(
+      <FsdDistanceTrend insights={insights} state={sectionState} />,
+    );
+    const rows = lastRows();
+
+    const expectSeries = (palette: readonly string[]) => {
+      expect(chartPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
+        chartKey: 'fsd-distance-trend',
+        exportFilename: 'fsd-distance-trend',
+        exportable: true,
+        data: rows,
+        exportData: rows,
+      });
+      expect(barPropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
+        dataKey: 'fsd',
+        fill: palette[0],
+        hide: false,
+      });
+      expect(linePropsMock.mock.calls.at(-1)?.[0]).toMatchObject({
+        dataKey: 'driving',
+        stroke: palette[1],
+        dot: { r: 2.75, fill: palette[1], stroke: 'var(--panel-bg)', strokeWidth: 1.5 },
+        activeDot: { r: 5, strokeWidth: 0 },
+        connectNulls: false,
+        hide: true,
+      });
+      expect(screen.getAllByTestId(/^(bar|line)-series$/).map((node) => node.dataset.testid))
+        .toEqual(['bar-series', 'line-series']);
+      expect(isHiddenMock.mock.calls.slice(-2).map(([key]) => key)).toEqual(['fsd', 'driving']);
+    };
+
+    expectSeries(['var(--series-primary)', 'var(--series-secondary)']);
+    const nextPalette = ['var(--alternate-primary)', 'var(--alternate-secondary)'];
+    paletteMock.mockReturnValue(nextPalette);
+    rerender(
+      <MemoryRouter>
+        <FsdDistanceTrend insights={insights} state={sectionState} />
+      </MemoryRouter>,
+    );
+    expectSeries(nextPalette);
+    expect(lastRows()).toBe(rows);
+  });
+
   it('converts measured metres to the display unit and keeps unmeasured days null', () => {
     renderTrend(<FsdDistanceTrend insights={fsdInsights()} state={state()} />);
 

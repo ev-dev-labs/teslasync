@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 
 import {
   Bar,
-  CHART_COLORS,
   ChartContainer,
   ChartLegend,
   ChartTooltip,
@@ -18,6 +17,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState, QueryError } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDayKey } from '@/lib/dateFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -29,7 +29,6 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 const DRIVING_DOT = {
   r: 2.75,
-  fill: CHART_COLORS[1],
   stroke: 'var(--panel-bg)',
   strokeWidth: 1.5,
 } as const;
@@ -74,6 +73,8 @@ export function FsdDistanceTrend({ insights, state }: FsdDistanceTrendProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const palette = useChartPalette();
+  const drivingDot = useMemo(() => ({ ...DRIVING_DOT, fill: palette[1] }), [palette]);
   const unitLabel = unitPrefs.distance;
   const days = useMemo(() => insights?.daily ?? [], [insights]);
   const fsdName = t('fsd.trend.fsdSeries', 'Supervised self-driving');
@@ -175,7 +176,7 @@ export function FsdDistanceTrend({ insights, state }: FsdDistanceTrendProps) {
                 <Bar
                   dataKey="fsd"
                   name={fsdName}
-                  fill={CHART_COLORS[0]}
+                  fill={palette[0]}
                   fillOpacity={0.55}
                   radius={[4, 4, 0, 0]}
                   hide={hiddenSeries?.isHidden('fsd') ?? false}
@@ -184,9 +185,9 @@ export function FsdDistanceTrend({ insights, state }: FsdDistanceTrendProps) {
                   type="monotone"
                   dataKey="driving"
                   name={drivingName}
-                  stroke={CHART_COLORS[1]}
+                  stroke={palette[1]}
                   strokeWidth={2.5}
-                  dot={DRIVING_DOT}
+                  dot={drivingDot}
                   activeDot={DRIVING_ACTIVE_DOT}
                   connectNulls={false}
                   hide={hiddenSeries?.isHidden('driving') ?? false}
