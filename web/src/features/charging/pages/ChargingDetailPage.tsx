@@ -44,7 +44,7 @@ import {
   ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
   ChartLegend, EmbeddedChart,
 } from '@/components/charts';
-import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
+import { distanceAddedM } from '../components/charging-curve/helpers';
 import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
 import { ChargeLedgerCompactPanel } from '../components/ChargeLedgerCompactPanel';
 import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
@@ -314,12 +314,21 @@ export default function ChargingDetailPage() {
 
   /* ─── derived scalars (session is now guaranteed) ─── */
 
-  const durationMin = durationMinutes(session.started_at, session.ended_at);
+  const intervalSeconds = session.ended_at
+    ? (Date.parse(session.ended_at) - Date.parse(session.started_at)) / 1000
+    : Number.NaN;
+  const durationSeconds = Number.isFinite(intervalSeconds) && intervalSeconds >= 0
+    ? intervalSeconds : null;
+  const durationMin = durationSeconds != null ? Math.round(durationSeconds / 60) : Number.NaN;
   const addedDistanceM = distanceAddedM(session);
   const billedEnergyWh = session.billed_energy_wh ?? null;
   const vehicleEnergyWh = session.total_energy_added_wh ?? 0;
   const displayEnergyWh = billedEnergyWh != null && billedEnergyWh > 0 ? billedEnergyWh : vehicleEnergyWh;
-  const avgRate = durationMin > 0 ? (displayEnergyWh / 1000 / durationMin) * 60 : null;
+  const rateEnergyWh = billedEnergyWh != null && billedEnergyWh > 0
+    ? billedEnergyWh : session.total_energy_added_wh;
+  const avgRate = durationSeconds != null && durationSeconds > 0 &&
+    rateEnergyWh != null && Number.isFinite(rateEnergyWh)
+    ? (rateEnergyWh / 1000) / (durationSeconds / 3600) : null;
   const billedCost = session.billed_cost_decimal ?? null;
   const displayCost = billedCost ?? session.cost_decimal ?? null;
   const perKwhRate =
@@ -390,10 +399,8 @@ export default function ChargingDetailPage() {
     {
       key: 'duration',
       color: palette[2],
-      value: session.ended_at && Number.isFinite(Date.parse(session.started_at)) &&
-        Number.isFinite(Date.parse(session.ended_at)) &&
-        Date.parse(session.ended_at) >= Date.parse(session.started_at) ? durationMin : null,
-      max: Math.max(durationMin || 1, 120),
+      value: durationSeconds != null ? durationMin : null,
+      max: Math.max(durationSeconds != null ? durationMin : 1, 120),
       label: t('charging.detail.duration', 'Duration'),
       unit: 'min',
     },

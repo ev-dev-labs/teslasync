@@ -28,7 +28,7 @@
  *     band and synthesized charge curve stay intact.
  *   - live-state branches: the advanced panel shows loading skeletons while the
  *     latest query is pending and its own empty state when there is no live row.
- *   - ongoing session (no ended_at): duration collapses to 0, the Ended slot
+ *   - ongoing session (no ended_at): duration remains unknown, the Ended slot
  *     renders the em-dash placeholder, an absent vehicle falls back to "ID N",
  *     and a placeless session shows the location empty state.
  *   - long sessions: small telemetry renders a full screen-reader table per
@@ -785,7 +785,7 @@ describe('ChargingDetailPage — live-state branches', () => {
 });
 
 describe('ChargingDetailPage — ongoing session', () => {
-  it('collapses duration, blanks the Ended slot, and falls back for vehicle + location', () => {
+  it('preserves unknown duration, blanks the Ended slot, and falls back for vehicle + location', () => {
     mockSession.mockReturnValue(
       makeQuery({ data: makeSession({ ended_at: null, start_place: null }) }),
     );
@@ -793,14 +793,93 @@ describe('ChargingDetailPage — ongoing session', () => {
     mockLive.mockReturnValue(makeQuery({ data: null }));
     renderPage();
 
-    // No ended_at → duration is 0 and the Ended slot is the em-dash.
-    expect(cardValue(kpiRegion(), 'Duration')).toBe('0.00 min');
+    // No ended_at leaves duration unknown rather than reporting measured zero.
+    expect(cardValue(kpiRegion(), 'Duration')).toBe('—');
     const endedValue = screen.getByText('Ended').closest('p')?.nextElementSibling?.textContent ?? '';
     expect(endedValue).toBe('—');
     // Absent vehicle → "ID <vehicle_id>" fallback.
     expect(kvValue('Vehicle')).toBe('ID 7');
     // Placeless session → location empty state.
     expect(screen.getByText('No location recorded for this session.')).toBeInTheDocument();
+  });
+});
+
+describe('ChargingDetailPage — unrounded charging-rate denominator', () => {
+  it.each([
+    { seconds: 20, energy: 100, duration: '0.00 min', rate: '18.00 kWh/h' },
+    { seconds: 20.5, energy: 102.5, duration: '0.00 min', rate: '18.00 kWh/h' },
+    { seconds: 90, energy: 150, duration: '2.00 min', rate: '6.00 kWh/h' },
+    { seconds: 20, energy: 0, duration: '0.00 min', rate: '0.00 kWh/h' },
+    { seconds: 20, energy: -100, duration: '0.00 min', rate: '-18.00 kWh/h' },
+  ])('uses $seconds seconds and source energy $energy without rounding the rate inputs', ({
+    seconds, energy, duration, rate,
+  }) => {
+    const session = makeSession({
+      ended_at: new Date(Date.parse('2024-03-10T08:00:00Z') + seconds * 1000).toISOString(),
+      total_energy_added_wh: energy,
+    });
+    mockSession.mockReturnValue(makeQuery({ data: session }));
+    renderPage();
+
+    expect(cardValue(kpiRegion(), 'Duration')).toBe(duration);
+    expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe(rate);
+    expect(session.total_energy_added_wh).toBe(energy);
+    expect(gauge('Energy Added')).toHaveAttribute('data-value', String(energy / 1000));
+  });
+
+  it.each([
+    { name: 'missing end', fields: { ended_at: null } },
+    { name: 'missing start', fields: { started_at: '' } },
+    { name: 'invalid start', fields: { started_at: 'invalid' } },
+    { name: 'invalid end', fields: { ended_at: 'invalid' } },
+    { name: 'reversed interval', fields: { ended_at: '2024-03-10T07:59:59Z' } },
+  ])('keeps duration and rate unknown for $name', ({ fields }) => {
+    mockSession.mockReturnValue(makeQuery({ data: makeSession(fields) }));
+    renderPage();
+
+    expect(cardValue(kpiRegion(), 'Duration')).toBe('—');
+    expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('—');
+    expect(gauge('Duration')).toHaveAttribute('data-value', 'null');
+    expect(cardValue(kpiRegion(), 'Energy')).toBe('50.00 kWh');
+  });
+
+  it('preserves measured zero duration without dividing by zero', () => {
+    mockSession.mockReturnValue(makeQuery({
+      data: makeSession({ ended_at: '2024-03-10T08:00:00Z' }),
+    }));
+    renderPage();
+
+    expect(cardValue(kpiRegion(), 'Duration')).toBe('0.00 min');
+    expect(gauge('Duration')).toHaveAttribute('data-value', '0');
+    expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('—');
+  });
+
+  it.each([undefined, null, NaN, Infinity, -Infinity])(
+    'does not turn missing or invalid source energy %s into a measured zero rate',
+    energy => {
+      const session = makeSession();
+      Object.assign(session, { total_energy_added_wh: energy });
+      mockSession.mockReturnValue(makeQuery({ data: session }));
+      renderPage();
+
+      expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('—');
+      expect(cardValue(kpiRegion(), 'Duration')).toBe('60.00 min');
+      expect(session.total_energy_added_wh).toBe(energy);
+    },
+  );
+
+  it('retains invoice-energy precedence without modifying vehicle energy for a short session', () => {
+    const session = makeSession({
+      ended_at: '2024-03-10T08:00:20Z',
+      total_energy_added_wh: 100,
+      billed_energy_wh: 125.5,
+    });
+    mockSession.mockReturnValue(makeQuery({ data: session }));
+    renderPage();
+
+    expect(cardValue(kpiRegion(), 'kWh/h Avg')).toBe('22.59 kWh/h');
+    expect(session.total_energy_added_wh).toBe(100);
+    expect(session.billed_energy_wh).toBe(125.5);
   });
 });
 
