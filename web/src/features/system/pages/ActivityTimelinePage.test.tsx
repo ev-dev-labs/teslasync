@@ -23,11 +23,12 @@
  * internals.
  */
 
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ActivityItem } from '@/types/activity';
 import { Button } from '@/components/ui';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 
 const h = vi.hoisted(() => ({
   vehicleId: 7 as number | null,
@@ -38,6 +39,12 @@ const h = vi.hoisted(() => ({
   asOf: null as string | null,
   downloadCsv: vi.fn(),
   downloadJson: vi.fn(),
+  range: {
+    start: '2026-01-01',
+    end: '2026-01-31',
+    startInstant: '2026-01-01T00:00:00.000Z',
+    endInstantExclusive: '2026-02-01T00:00:00.000Z',
+  },
 }));
 
 vi.mock('@/lib/csvExport', () => ({
@@ -80,10 +87,7 @@ vi.mock('@/hooks/useUnits', () => ({
 
 vi.mock('@/hooks/useRangeState', () => ({
   useRangeState: () => ({
-    start: '2026-01-01',
-    end: '2026-01-31',
-    startInstant: '2026-01-01T00:00:00.000Z',
-    endInstantExclusive: '2026-02-01T00:00:00.000Z',
+    ...h.range,
     setRange: h.setRange,
   }),
 }));
@@ -179,7 +183,116 @@ beforeEach(() => {
   h.asOf = null;
   h.downloadCsv.mockReset();
   h.downloadJson.mockReset();
+  h.range = {
+    start: '2026-01-01',
+    end: '2026-01-31',
+    startInstant: '2026-01-01T00:00:00.000Z',
+    endInstantExclusive: '2026-02-01T00:00:00.000Z',
+  };
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   h.useActivityMock.mockReturnValue(mockQueryResult());
+});
+
+afterEach(() => {
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
+});
+
+describe('ActivityTimelinePage preferences', () => {
+  it('reactively localizes page ordinals without changing numeric query scope or precision', () => {
+    h.useActivityMock.mockImplementation(({ offset }: { offset: number }) =>
+      mockQueryResult({
+        data: { items: [makeItem(), makeItem({ id: 'drives:2', source_id: 2 })], total: 12345, limit: 50, offset, generated_at: '' },
+      }),
+    );
+    renderPage();
+    for (let page = 0; page < 20; page++) {
+      fireEvent.click(screen.getByRole('button', { name: /^older$/i }));
+    }
+    expect(screen.getByText('Showing 1,001–1,002 of 12,345 events in the selected range')).toBeInTheDocument();
+
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(4);
+    });
+    expect(screen.getByText('Showing 1.001–1.002 of 12.345 events in the selected range')).toBeInTheDocument();
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      vehicle_id: 7,
+      start: '2026-01-01T00:00:00.000Z',
+      end: '2026-02-01T00:00:00.000Z',
+      offset: 1000,
+      limit: 50,
+    }));
+    expect(h.refetch).not.toHaveBeenCalled();
+  });
+
+  it('localizes legitimate zero ordinals while keeping empty export disabled', () => {
+    setGlobalLocale('ar-EG');
+    renderPage();
+    expect(screen.getByText('Showing ٠–٠ of ٠ events in the selected range')).toBeInTheDocument();
+    expect(screen.getByTestId('activity-export-trigger')).toBeDisabled();
+    expect(screen.getByRole('group', { name: 'Filter by activity kind' })).toBeInTheDocument();
+  });
+
+  it.each([
+    {
+      label: 'shifted historical',
+      asOf: '2025-12-15T12:00:00.000Z',
+      start: '2025-11-14T12:00:00.000Z',
+      end: '2025-12-15T12:00:00.000Z',
+    },
+    {
+      label: 'capped historical',
+      asOf: '2026-01-15T12:00:00.000Z',
+      start: '2026-01-01T00:00:00.000Z',
+      end: '2026-01-15T12:00:00.000Z',
+    },
+  ])('identifies the $label export by the effective queried instants', ({ asOf, start, end }) => {
+    h.asOf = asOf;
+    const item = makeItem();
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 75, limit: 50, offset: 0, generated_at: '' },
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /^older$/i }));
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({ start, end, offset: 50 }));
+    const name = `activity-${start.replace(/:/g, '-')}-${end.replace(/:/g, '-')}-page-2`;
+    fireEvent.click(screen.getByTestId('activity-export-csv'));
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadCsv).toHaveBeenCalledWith(name, [item], [
+      ...['occurred_at', 'kind', 'vehicle_id', 'title', 'summary', 'severity', 'status', 'source_table', 'source_id', 'duration_s', 'energy_added_wh', 'path']
+        .map(key => expect.objectContaining({ key })),
+    ]);
+    expect(h.downloadJson).toHaveBeenCalledWith(name, [item]);
+    expect(name).not.toContain(':');
+    expect(screen.getByText(/exports include only the loaded page/i)).toBeInTheDocument();
+    expect(screen.getByText(/dated service records will join this timeline/i)).toBeInTheDocument();
+  });
+
+  it('keeps elapsed windows with identical calendar labels distinct in export names', () => {
+    const item = makeItem();
+    h.useActivityMock.mockReturnValue(mockQueryResult({
+      data: { items: [item], total: 1, limit: 50, offset: 0, generated_at: '' },
+    }));
+    h.range.startInstant = '2026-01-15T12:34:00.000Z';
+    h.range.endInstantExclusive = '2026-01-16T12:34:00.000Z';
+    const view = renderPage();
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenLastCalledWith(
+      'activity-2026-01-15T12-34-00.000Z-2026-01-16T12-34-00.000Z-page-1', [item],
+    );
+    h.range.startInstant = '2026-01-15T12:35:00.000Z';
+    h.range.endInstantExclusive = '2026-01-16T12:35:00.000Z';
+    view.rerender(<MemoryRouter><ActivityTimelinePage /></MemoryRouter>);
+    fireEvent.click(screen.getByTestId('activity-export-json'));
+    expect(h.downloadJson).toHaveBeenLastCalledWith(
+      'activity-2026-01-15T12-35-00.000Z-2026-01-16T12-35-00.000Z-page-1', [item],
+    );
+    expect(h.useActivityMock).toHaveBeenLastCalledWith(expect.objectContaining({
+      start: h.range.startInstant, end: h.range.endInstantExclusive,
+    }));
+  });
 });
 
 describe('ActivityTimelinePage', () => {
@@ -315,7 +428,7 @@ describe('ActivityTimelinePage', () => {
     renderPage();
     fireEvent.click(screen.getByTestId('activity-export-csv'));
     expect(h.downloadCsv).toHaveBeenCalledWith(
-      'activity-2026-01-01-2026-01-31-page-1',
+      'activity-2026-01-01T00-00-00.000Z-2026-02-01T00-00-00.000Z-page-1',
       [item],
       expect.arrayContaining([expect.objectContaining({ key: 'energy_added_wh' })]),
     );
@@ -347,7 +460,7 @@ describe('ActivityTimelinePage', () => {
     expect(screen.getByRole('button', { name: /older/i })).toBeEnabled();
     fireEvent.click(screen.getByTestId('activity-export-csv'));
     expect(h.downloadCsv).toHaveBeenCalledWith(
-      'activity-2026-01-01-2026-01-31-page-1',
+      'activity-2026-01-01T00-00-00.000Z-2026-02-01T00-00-00.000Z-page-1',
       [item],
       expect.arrayContaining([
         expect.objectContaining({ key: 'duration_s' }),
@@ -356,7 +469,7 @@ describe('ActivityTimelinePage', () => {
     );
     fireEvent.click(screen.getByTestId('activity-export-json'));
     expect(h.downloadJson).toHaveBeenCalledWith(
-      'activity-2026-01-01-2026-01-31-page-1',
+      'activity-2026-01-01T00-00-00.000Z-2026-02-01T00-00-00.000Z-page-1',
       [item],
     );
   });
@@ -407,7 +520,7 @@ describe('ActivityTimelinePage', () => {
     expect(screen.getByRole('button', { name: /older/i })).toBeEnabled();
     fireEvent.click(screen.getByTestId('activity-export-json'));
     expect(h.downloadJson).toHaveBeenCalledWith(
-      'activity-2026-01-01-2026-01-31-page-1', [item],
+      'activity-2026-01-01T00-00-00.000Z-2026-02-01T00-00-00.000Z-page-1', [item],
     );
 
     h.useActivityMock.mockReturnValue(mockQueryResult({

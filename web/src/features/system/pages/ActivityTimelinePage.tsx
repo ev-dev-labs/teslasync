@@ -12,6 +12,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useActivity } from '@/api/hooks/useActivity';
@@ -71,12 +72,13 @@ export function resolveActivityWindow(
  */
 export default function ActivityTimelinePage() {
   const { t } = useTranslation();
+  const { fmtInt } = useNumberFormatting();
   usePageTitle(t('activity.timeline.title', 'Activity timeline'));
 
   const { vehicleId, vehicles } = useSelectedVehicle();
   const operationalMode = useOperationalMode();
   const tz = useTimezone('vehicle');
-  const { start, end, startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'activity.timeline.range',
   });
   const [kinds, setKinds] = useState<ActivityKind[]>([]);
@@ -119,7 +121,7 @@ export default function ActivityTimelinePage() {
 
   const hasOlder = offset + items.length < total;
   const hasNewer = offset > 0;
-  const exportName = `activity-${start}-${end}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
+  const exportName = `activity-${activityWindow.start.replace(/:/g, '-')}-${activityWindow.end.replace(/:/g, '-')}-page-${Math.floor(offset / PAGE_LIMIT) + 1}`;
 
   return (
     <PageLayout
@@ -185,9 +187,9 @@ export default function ActivityTimelinePage() {
         {!isLoading && !isError && (
           <Text as="p" variant="caption">
             {t('activity.timeline.pagePosition', 'Showing {{start}}–{{end}} of {{total}} events in the selected range', {
-              start: items.length ? offset + 1 : 0,
-              end: items.length ? offset + items.length : 0,
-              total,
+              start: fmtInt(items.length ? offset + 1 : 0),
+              end: fmtInt(items.length ? offset + items.length : 0),
+              total: fmtInt(total),
             })}
           </Text>
         )}
