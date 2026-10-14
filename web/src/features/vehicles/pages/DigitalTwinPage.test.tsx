@@ -16,13 +16,13 @@
  *   3. ERROR   — each panel surfaces QueryError and the Retry action is wired
  *      to the query's refetch (failure + user-interaction path via userEvent).
  *   4. EMPTY   — each panel shows its own EmptyState (never a blank panel) and
- *      the KPIs degrade to an em dash; the badge falls back to "offline".
+ *      the KPIs and unreported status degrade to an em dash.
  *   5. GUARD   — an empty fleet renders the "no vehicles" EmptyState instead of
  *      the data scaffolding.
  *   6. SPINNER — while the vehicles list is loading the page shows the shell
  *      spinner and none of the data sections.
  *   7. BADGE   — the single-source status resolves charging > driving >
- *      state-endpoint > any-live-stream > offline.
+ *      validated state-endpoint > explicit live flag > unknown.
  *   8. HELPERS — statusNeon status→accent mapping (+ fallback) and capitalize
  *      (+ empty-string em-dash fallback).
  *
@@ -46,10 +46,12 @@ type Veh = { id: number; display_name: string; vin: string; exterior_color: stri
 interface QueryStub<T> {
   data: T | null | undefined;
   isLoading: boolean;
+  isSuccess: boolean;
   isError: boolean;
   error: unknown;
   isFetching: boolean;
   isStale: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: ReturnType<typeof vi.fn>;
 }
@@ -59,6 +61,7 @@ const h = vi.hoisted(() => ({
   vehicle: null as Veh | null,
   vehicles: [] as Veh[],
   vehiclesLoading: false,
+  fleet: undefined as QueryStub<Veh[]> | undefined,
    
   security: undefined as any,
    
@@ -138,7 +141,13 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
   return {
     ...actual,
-    useVehicles: () => ({ data: h.vehicles, isLoading: h.vehiclesLoading }),
+    useVehicles: () => h.fleet ?? makeQuery({
+      data: h.vehiclesLoading ? undefined : h.vehicles,
+      isLoading: h.vehiclesLoading,
+      isFetching: h.vehiclesLoading,
+      fetchStatus: h.vehiclesLoading ? 'fetching' : 'idle',
+      isSuccess: !h.vehiclesLoading,
+    }),
     useVehicleState: () => h.state,
     useSecurityLatest: () => h.security,
     useChargingTelemetryLatest: () => h.charging,
@@ -167,10 +176,12 @@ function makeQuery<T>(overrides: Partial<QueryStub<T>> = {}): QueryStub<T> {
   return {
     data: undefined,
     isLoading: false,
+    isSuccess: false,
     isError: false,
     error: null,
     isFetching: false,
     isStale: false,
+    fetchStatus: 'idle',
     dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
     ...overrides,
@@ -229,7 +240,7 @@ function makeCharging(o: Partial<ChargingTelemetry> = {}): ChargingTelemetry {
 }
 
  
-function makeState(stateOverrides: Record<string, any> = {}, live = true) {
+function makeState(stateOverrides: Record<string, unknown> = {}, live = true) {
   return {
     state: {
       vehicle_id: 7,
@@ -257,16 +268,19 @@ function makeState(stateOverrides: Record<string, any> = {}, live = true) {
       ...stateOverrides,
     },
     live,
+    freshness: 'fresh' as const,
+    observedAt: Date.now(),
+    verifiedFields: ['state', 'speed', 'is_charging'] as const,
   };
 }
 
-function renderPage() {
+function renderPage(entry = '/digital-twin') {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter initialEntries={['/digital-twin']}>
+      <MemoryRouter initialEntries={[entry]}>
         <DigitalTwinPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -275,7 +289,7 @@ function renderPage() {
 
 /** Assert the KV row identified by its (unique) label contains `value`. */
 function expectKv(label: string, value: string) {
-  const dt = screen.getByText(label);
+  const dt = screen.getByText(label, { selector: 'dt' });
   expect(dt.parentElement).toHaveTextContent(value);
 }
 
@@ -291,6 +305,7 @@ beforeEach(() => {
   h.vehicle = { id: 7, display_name: 'Model 3', vin: 'VIN7', exterior_color: 'PearlWhite' };
   h.vehicles = [h.vehicle];
   h.vehiclesLoading = false;
+  h.fleet = undefined;
   h.security = makeQuery({ data: makeSecurity() });
   h.state = makeQuery({ data: makeState() });
   h.charging = makeQuery({ data: makeCharging() });
@@ -301,6 +316,78 @@ afterEach(() => {
 });
 
 describe('DigitalTwinPage', () => {
+  it('qualifies historical vehicle state separately from populated latest-only security and charging', () => {
+    h.state = makeQuery({ data: { ...makeState(), live: false } });
+    renderPage('/digital-twin?as_of=2024-06-02T12%3A00%3A00Z');
+
+    const observations = screen.getByTestId('twin-source-observations');
+    const sources = within(observations).getAllByText(/^(Security & status|Reconstructed signal state|Charging):/);
+    expect(sources).toHaveLength(3);
+    expect(sources[0]).toHaveTextContent('Latest');
+    expect(sources[0]).not.toHaveTextContent('Viewing data as of');
+    expect(sources[1]).toHaveTextContent('Viewing data as of 2024-06-02T12:00:00Z');
+    expect(sources[1]).not.toHaveTextContent('Latest');
+    expect(sources[2]).toHaveTextContent('Latest');
+    expect(sources[2]).not.toHaveTextContent('Viewing data as of');
+    expect(screen.queryByText('Live status')).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expect(screen.queryByText('Real-time vehicle physical state')).not.toBeInTheDocument();
+    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Reconstructed signal state: Viewing data as of');
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /pick a date|date range|view settings/i })).not.toBeInTheDocument();
+    expectKpi('of 6 openings', '2');
+    expectKpi('of 4 windows', '1');
+    expectKv('Driver front', 'Open');
+    expectKv('Driver seat', 'Occupied');
+    expectKv('Headlights', 'On');
+    expectKv('Charging', 'Yes');
+  });
+
+  it('keeps latest-only details populated when the historical state request fails', () => {
+    h.state = makeQuery({ isError: true, error: new Error('history unavailable'), dataUpdatedAt: 0 });
+    renderPage('/digital-twin?as_of=2024-06-02T12%3A00%3A00Z');
+
+    const observations = screen.getByTestId('twin-source-observations');
+    expect(observations).toHaveTextContent('Reconstructed signal state: Source request failed');
+    expect(observations).toHaveTextContent('Viewing data as of 2024-06-02T12:00:00Z');
+    expect(observations).toHaveTextContent('Security & status: Unverified · Latest');
+    expect(observations).toHaveTextContent('Charging: Unverified · Latest');
+    expectKv('Driver front', 'Open');
+    expectKv('Charging', 'Yes');
+    expectKv('Driving', '—');
+    expect(screen.queryByText('No door data available')).not.toBeInTheDocument();
+  });
+
+  it('does not treat the age of a historical observation as a stale live stream', () => {
+    h.state = makeQuery({ data: {
+      ...makeState(), live: false, observedAt: Date.parse('2024-06-02T11:59:00Z'),
+      freshness: 'stale',
+    } });
+    renderPage('/digital-twin?as_of=2024-06-02T12%3A00%3A00Z');
+
+    const observations = screen.getByTestId('twin-source-observations');
+    expect(observations).toHaveTextContent('Reconstructed signal state: Source snapshots available');
+    expect(observations).toHaveTextContent('Signal timestamp: MOCK_TIME');
+    expect(observations).not.toHaveTextContent('Last real observation');
+    expect(observations).not.toHaveTextContent('Stale');
+    expectKv('Driver front', 'Open');
+  });
+
+  it.each([
+    '/digital-twin?as_of=invalid',
+    '/digital-twin?from=2024-06-01&to=2024-06-03',
+  ])('preserves the populated latest view without a valid as-of instant: %s', (entry) => {
+    renderPage(entry);
+
+    expect(screen.getByText('Live overview')).toBeInTheDocument();
+    expect(screen.getAllByText('charging')).toHaveLength(2);
+    expect(screen.getByTestId('twin-source-observations')).not.toHaveTextContent('Viewing data as of');
+    expectKpi('of 6 openings', '2');
+    expectKv('Driver front', 'Open');
+    expect(screen.queryByRole('slider')).not.toBeInTheDocument();
+  });
+
   it('renders the full dashboard, KPIs, badge/chips and every component panel when live data is ready', () => {
     renderPage();
 
@@ -398,7 +485,7 @@ describe('DigitalTwinPage', () => {
     expect(h.security.refetch).toHaveBeenCalledTimes(1);
   });
 
-  it('renders a per-section EmptyState (never a blank panel) and an offline badge when no live data has arrived', () => {
+  it('renders a per-section EmptyState and unknown status when no live data has arrived', () => {
     h.security = makeQuery({ data: null });
     h.state = makeQuery({ data: null });
     h.charging = makeQuery({ data: null });
@@ -409,12 +496,15 @@ describe('DigitalTwinPage', () => {
     expect(screen.getByText('No window data available')).toBeInTheDocument();
     expect(screen.getByText('No live status available')).toBeInTheDocument();
     expect(screen.getByText('No lights data available')).toBeInTheDocument();
+    expect(within(screen.getByTestId('digital-twin-summary')).getByText('No source snapshots')).toBeInTheDocument();
 
     // KPIs degrade to an em dash rather than crashing.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
-    // Single-source status falls back to offline. Only the Live Status badge
-    // shows (the Security panel footer badge is hidden in its empty branch).
-    expect(screen.getAllByText('offline').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('offline')).not.toBeInTheDocument();
+    expect(screen.queryByText('Parked')).not.toBeInTheDocument();
+    expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ occurrenceId: 'twin-status', rawValue: null }),
+    ]));
   });
 
   it('renders the "no vehicles" empty state instead of the data scaffolding for an empty fleet', () => {
@@ -450,6 +540,100 @@ describe('DigitalTwinPage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('shows fleet failure and retries the fleet request instead of claiming an empty fleet', () => {
+    h.vehicle = null;
+    h.fleet = makeQuery({ isError: true, error: new Error('fleet failed'), dataUpdatedAt: 0 });
+
+    renderPage();
+
+    expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^Retry$/i }));
+    expect(h.fleet.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/No vehicles found/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
+  });
+
+  it('shows paused fleet recovery without an endless loading skeleton or an empty fleet', () => {
+    h.vehicle = null;
+    h.fleet = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+
+    renderPage();
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Fleet' }));
+    expect(h.fleet.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByTestId('page-load-skeleton')).not.toBeInTheDocument();
+    expect(screen.queryByText(/No vehicles found/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
+  });
+
+  it('does not mistake an unresolved idle fleet for a successful empty response', () => {
+    h.vehicle = null;
+    h.fleet = makeQuery({ dataUpdatedAt: 0 });
+
+    renderPage();
+
+    expect(screen.getByText('Unavailable')).toBeInTheDocument();
+    expect(screen.queryByText(/No vehicles found/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Live overview')).not.toBeInTheDocument();
+  });
+
+  it('preserves the selected twin during fleet refresh failure and removes the warning on recovery', () => {
+    const fleet = makeQuery({ data: h.vehicles, isSuccess: true });
+    h.fleet = fleet;
+    const { rerender } = renderPage();
+    const rerenderPage = () => rerender(
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={['/digital-twin']}>
+          <DigitalTwinPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    h.fleet = { ...fleet, isSuccess: false, isError: true, error: new Error('refresh failed') };
+    rerenderPage();
+
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveTextContent('Fleet may be out of date');
+    expect(screen.getByText('Live overview')).toBeInTheDocument();
+    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Model 3');
+    expectKv('Driver front', 'Open');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(fleet.refetch).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/No vehicles found/)).not.toBeInTheDocument();
+
+    h.fleet = { ...fleet, isFetching: true, fetchStatus: 'fetching' };
+    rerenderPage();
+    expect(screen.queryByTestId('page-load-skeleton')).not.toBeInTheDocument();
+    expect(screen.getByText('Live overview')).toBeInTheDocument();
+
+    h.fleet = { ...fleet, fetchStatus: 'paused' };
+    rerenderPage();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Model 3');
+    expect(screen.queryByTestId('page-load-skeleton')).not.toBeInTheDocument();
+
+    h.fleet = { ...fleet, dataUpdatedAt: Date.now() };
+    rerenderPage();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByTestId('digital-twin-summary')).toHaveTextContent('Model 3');
+    expectKv('Driver front', 'Open');
+  });
+
+  it('renders measured zero openings and windows rather than treating them as empty', () => {
+    h.security = makeQuery({ data: makeSecurity({
+      door_state: '{"DriverFront":false,"PassengerFront":false,"DriverRear":false,"PassengerRear":false,"TrunkFront":false,"TrunkRear":false}',
+      fd_window: 'Closed',
+    }) });
+
+    renderPage();
+
+    expectKpi('of 6 openings', '0');
+    expectKpi('of 4 windows', '0');
+    expectKv('Driver front', 'Closed');
+    expect(screen.queryByText(/No vehicles found/)).not.toBeInTheDocument();
+  });
+
   it('resolves the badge to "driving" from the state endpoint when moving and not charging', () => {
     h.security = makeQuery({ data: null });
     h.charging = makeQuery({ data: null });
@@ -463,7 +647,7 @@ describe('DigitalTwinPage', () => {
     expectKpi('of 6 openings', '—'); // no security data → openings unknown
   });
 
-  it('falls back to "online" when the state endpoint is empty but another live stream is flowing', () => {
+  it('does not infer "online" or inactive activity from a security snapshot', () => {
     h.state = makeQuery({ data: null });
     h.charging = makeQuery({ data: null });
     // Security present but nothing that implies charging/driving.
@@ -473,7 +657,115 @@ describe('DigitalTwinPage', () => {
 
     renderPage();
 
-    expect(screen.getAllByText('online').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText('online')).not.toBeInTheDocument();
+    expect(screen.queryByText('Parked')).not.toBeInTheDocument();
+    expectKv('Driving', '—');
+    expectKv('Charging', '—');
+  });
+
+  it.each([undefined, null, '', 'unknown', 42, false, {}, []])(
+    'keeps untrusted state %j unknown without promoting snapshot availability',
+    (state) => {
+      h.state = makeQuery({ data: { state: { state }, live: false } });
+      h.charging = makeQuery({ data: null });
+      renderPage();
+      expectKv('Driving', '—');
+      expectKv('Charging', '—');
+      expect(screen.queryByText('online')).not.toBeInTheDocument();
+      expect(screen.queryByText('offline')).not.toBeInTheDocument();
+      expect(screen.queryByText('Parked')).not.toBeInTheDocument();
+    },
+  );
+
+  it.each([undefined, null, NaN, Infinity, -Infinity, '0', '0.5', {}])(
+    'does not coerce invalid or missing activity input %j into a measurement',
+    (value) => {
+      h.state = makeQuery({ data: { state: { speed: value, charger_power: value, is_charging: value }, live: false } });
+      h.charging = makeQuery({ data: { charging_state: value, charger_power_w: value } });
+      renderPage();
+      expectKv('Driving', '—');
+      expectKv('Charging', '—');
+      expect(screen.queryByText('Parked')).not.toBeInTheDocument();
+      expect(operationalMetricsSpy).toHaveBeenCalledWith(expect.arrayContaining([
+        expect.objectContaining({ occurrenceId: 'twin-status', rawValue: null }),
+      ]));
+    },
+  );
+
+  it('rejects boolean measurements while retaining an explicit false charging flag', () => {
+    h.state = makeQuery({
+      data: { state: { speed: false, charger_power: false, is_charging: false }, live: false },
+    });
+    h.charging = makeQuery({ data: { charging_state: false, charger_power_w: false } });
+    renderPage();
+    expectKv('Driving', '—');
+    expectKv('Charging', 'No');
+    expect(screen.queryByText('Parked')).not.toBeInTheDocument();
+  });
+
+  it('distinguishes explicit false and measured zero from absent activity', () => {
+    h.state = makeQuery({ data: { state: { speed: 0, is_charging: false }, live: false } });
+    h.charging = makeQuery({ data: null });
+    renderPage();
+    expectKv('Driving', 'No');
+    expectKv('Charging', 'No');
+    expect(screen.getByText('Parked')).toBeInTheDocument();
+    expect(screen.queryByText('offline')).not.toBeInTheDocument();
+  });
+
+  it.each([-12, -0.25, 0.25, 12])('recognizes finite signed speed %s as driving', (speed) => {
+    h.state = makeQuery({ data: { state: { speed, is_charging: false }, live: false } });
+    h.charging = makeQuery({ data: null });
+    renderPage();
+    expectKv('Driving', 'Yes');
+    expectKv('Charging', 'No');
+    expect(screen.queryByText('driving')).not.toBeInTheDocument();
+  });
+
+  it.each([-12, -0.25, 0, 0.25, 12])('uses finite SI telemetry power %s without rounding or coercion', (power) => {
+    h.state = makeQuery({ data: null });
+    h.charging = makeQuery({ data: { charger_power_w: power } });
+    renderPage();
+    expectKv('Charging', power > 0 ? 'Yes' : 'No');
+    expectKv('Driving', '—');
+    expect(screen.queryByText('Parked')).not.toBeInTheDocument();
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+  });
+
+  it.each(['offline', 'asleep', 'online', 'parked', 'driving', 'charging'])(
+    'preserves confirmed status %s',
+    (state) => {
+      h.state = makeQuery({ data: { ...makeState(), state: { state } } });
+      h.charging = makeQuery({ data: null });
+      renderPage();
+      expect(screen.getAllByText(state).length).toBeGreaterThanOrEqual(2);
+    },
+  );
+
+  it('does not treat an explicit live boolean as verified online evidence', () => {
+    h.state = makeQuery({ data: { state: null, live: true } });
+    h.charging = makeQuery({ data: null });
+    renderPage();
+    expect(screen.queryByText('online')).not.toBeInTheDocument();
+    expectKv('Driving', '—');
+    expectKv('Charging', '—');
+  });
+
+  it.each(['true', 1, {}, null])('rejects untrusted live flag %j', (live) => {
+    h.state = makeQuery({ data: { state: null, live } });
+    h.charging = makeQuery({ data: null });
+    renderPage();
+    expect(screen.queryByText('online')).not.toBeInTheDocument();
+    expectKv('Driving', '—');
+    expectKv('Charging', '—');
+  });
+
+  it.each([-0.5, 0, 0.5])('uses state charger power %s as a nullable activity measurement', (power) => {
+    h.state = makeQuery({ data: { state: { charger_power: power }, live: false } });
+    h.charging = makeQuery({ data: null });
+    renderPage();
+    expectKv('Charging', power > 0 ? 'Yes' : 'No');
+    expectKv('Driving', '—');
   });
 
   it('retains all component details and the interactive twin during a security refresh failure', () => {
@@ -562,6 +854,70 @@ describe('DigitalTwinPage', () => {
     expect(within(drawer).getByText('Retained source snapshots')).toBeInTheDocument();
     expect(within(drawer).getByText('of 6 openings')).toBeInTheDocument();
     expect(within(drawer).getByText(/retained values remain visible after a refresh failure/)).toBeInTheDocument();
+  });
+
+  it('distinguishes paused first requests from active loading and successful empty responses', () => {
+    h.security = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    h.state = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    h.charging = makeQuery({ isLoading: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    renderPage();
+    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading Doors & openings' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Source request failed')).not.toBeInTheDocument();
+    expect(screen.queryByText('offline')).not.toBeInTheDocument();
+    expect(screen.queryByText('No source snapshots')).not.toBeInTheDocument();
+  });
+
+  it('qualifies missing observation evidence despite a recent successful fetch', () => {
+    h.state = makeQuery({ data: { ...makeState(), observedAt: null, freshness: 'unknown', verifiedFields: [] } });
+    renderPage();
+    expect(within(screen.getByTestId('digital-twin-summary')).getByText('Unverified')).toBeInTheDocument();
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expect(screen.getByText(/No verified observation time for this vehicle/)).toBeInTheDocument();
+    expectKv('Charging', 'Yes');
+    expectKv('Driver front', 'Open');
+  });
+
+  it('preserves verified zero and false activity without promoting conflicting charging snapshots', () => {
+    h.state = makeQuery({ data: makeState({ state: 'parked', speed: 0, is_charging: false, charger_power: 0 }) });
+    renderPage();
+    expect(screen.getAllByText('parked')).toHaveLength(2);
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expectKv('Driving', 'No');
+    expectKpi('of 6 openings', '2');
+  });
+
+  it('uses the observation age rather than the fetch time and rejects expired operational status', () => {
+    h.state = makeQuery({ data: { ...makeState(), observedAt: Date.now() - 600_000 } });
+    renderPage();
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent('Last real observation 10m ago');
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent('Stale');
+    expectKv('Charging', 'Yes');
+  });
+
+  it('retains state values through failure and paused refresh, then restores verified status independently', () => {
+    const data = makeState();
+    h.state = makeQuery({ data, isError: true, error: new Error('refresh failed') });
+    const view = renderPage();
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expectKv('Charging', 'Yes');
+    expectKv('Driver front', 'Open');
+    const warning = screen.getByText('Live status may be out of date').closest('[data-testid="stale-refresh-warning"]');
+    if (!(warning instanceof HTMLElement)) throw new Error('Missing state refresh warning');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(h.state.refetch).toHaveBeenCalledTimes(1);
+    expect(h.security.refetch).not.toHaveBeenCalled();
+    h.state = makeQuery({ data, fetchStatus: 'paused' });
+    view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DigitalTwinPage /></MemoryRouter></QueryClientProvider>);
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    expectKv('Charging', 'Yes');
+    expect(screen.getByTestId('twin-source-observations')).toHaveTextContent('Refresh paused');
+    h.state = makeQuery({ data });
+    view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DigitalTwinPage /></MemoryRouter></QueryClientProvider>);
+    expect(screen.getAllByText('charging')).toHaveLength(2);
+    expect(screen.queryByText('Live status may be out of date')).not.toBeInTheDocument();
+    expectKv('Driver front', 'Open');
   });
 });
 

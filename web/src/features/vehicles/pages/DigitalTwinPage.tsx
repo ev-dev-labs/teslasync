@@ -7,14 +7,16 @@ import {
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useAsOfDate } from '@/hooks/useAsOfDate';
 import {
   useVehicles, useVehicleState, useSecurityLatest, useChargingTelemetryLatest,
+  deriveTrustedVehicleStatus, resolveVehicleStateFreshness,
 } from '@/api/hooks/useVehicles';
 import { PageLayout, Section } from '@/components/layout';
 import { Badge, GlassPanel, Icon, PanelTitle, Text } from '@/components/ui';
 import { OperationalBrief, StatusBadge } from '@/components/data-display';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
-import { EmptyState, StaleRefreshWarning } from '@/components/feedback';
+import { DataSourceNotice, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { useDataState } from '@/hooks/useDataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { FadeIn } from '@/components/motion';
@@ -22,9 +24,11 @@ import { VehicleTwin, VehiclePaintPicker } from '@/components/vehicles';
 
 import { buildTwinState } from '@/lib/vehicleState';
 import type { WindowState, TurnSignalState } from '@/lib/vehicleState';
-import { deriveVehicleStatus } from '@/api/types';
+import { VEHICLE_STATUSES } from '@/api/types';
 import type { VehicleStatus } from '@/api/types';
+import { asBoolean, asFiniteNumber, asNonEmptyString } from '@/lib/typeGuards';
 import { typography, type NeonColor } from '@/lib/tokens';
+import { formatObservationAge } from '@/lib/observationAge';
 import { TwinDetailPanel } from '../components/TwinDetailPanel';
 
 const REFRESH_INTERVAL = 5_000;
@@ -51,42 +55,103 @@ export function capitalize(value: string): string {
   return value ? value.charAt(0).toUpperCase() + value.slice(1) : '—';
 }
 
+function trustedStatus(value: unknown): VehicleStatus | null {
+  const status = asNonEmptyString(value)?.trim().toLowerCase();
+  return VEHICLE_STATUSES.find((candidate) => candidate === status) ?? null;
+}
+
+function activityFrom(...signals: (boolean | null)[]): boolean | null {
+  return signals.includes(true) ? true : signals.includes(false) ? false : null;
+}
+
 export default function DigitalTwinPage() {
   const { t } = useTranslation();
   const { formatTime } = useDateFormat();
+  const { asOf } = useAsOfDate();
+  const historical = asOf !== null;
   usePageTitle(t('digitalTwin.title', 'Digital twin'));
 
   const { vehicle } = useSelectedVehicle();
-  const { isLoading: vehiclesLoading } = useVehicles();
+  const vehiclesQ = useVehicles();
+  const vehiclesState = useDataState(vehiclesQ);
+  const vehiclesLoading = !vehicle && !vehiclesState.hasData
+    && !vehiclesState.fatalError && !vehiclesState.isRefreshBlocked && vehiclesQ.isFetching;
+  const fleetEmpty = vehiclesQ.isSuccess && vehiclesQ.data?.length === 0;
   const vehicleId = vehicle?.id ?? 0;
 
   const securityQ = useSecurityLatest(vehicleId, REFRESH_INTERVAL);
   const stateQ = useVehicleState(vehicleId, { refetchInterval: REFRESH_INTERVAL });
   const chargingQ = useChargingTelemetryLatest(vehicleId, REFRESH_INTERVAL);
   const securityState = useDataState(securityQ, { provenance: 'live' });
-  const stateState = useDataState(stateQ, { provenance: 'live' });
+  const stateState = useDataState(stateQ, { provenance: historical ? 'historical' : 'live' });
   const chargingState = useDataState(chargingQ, { provenance: 'live' });
 
   const securityData = securityQ.data ?? null;
   const chargingData = chargingQ.data ?? null;
   const vehicleState = stateQ.data?.state ?? null;
-
-  const twinState = useMemo(
-    () => buildTwinState(securityData, vehicleState, chargingData),
-    [securityData, vehicleState, chargingData],
+  const reportedStatus = trustedStatus(vehicleState?.state);
+  const speed = asFiniteNumber(vehicleState?.speed);
+  const chargerPower = asFiniteNumber(vehicleState?.charger_power);
+  const telemetryPower = asFiniteNumber(chargingData?.charger_power_w);
+  const chargingStatus = asNonEmptyString(chargingData?.charging_state)?.trim().toLowerCase();
+  const hasActivityStatus = reportedStatus === 'charging' || reportedStatus === 'driving' || reportedStatus === 'parked';
+  const isCharging = activityFrom(
+    asBoolean(vehicleState?.is_charging),
+    chargerPower === null ? null : chargerPower > 0,
+    telemetryPower === null ? null : telemetryPower > 0,
+    chargingStatus === 'charging' || chargingStatus === 'starting' ? true
+      : ['complete', 'stopped', 'disconnected', 'nopower'].includes(chargingStatus ?? '') ? false : null,
+    hasActivityStatus ? reportedStatus === 'charging' : null,
+  );
+  const isDriving = activityFrom(
+    speed === null ? null : speed !== 0,
+    hasActivityStatus ? reportedStatus === 'driving' : null,
   );
 
-  // Single source-of-truth status for the badge. Prefers live activity
-  // (charging/driving) and falls back to the state endpoint, then to any
-  // flowing stream so an un-hydrated state endpoint doesn't read "offline".
-  const badgeStatus = useMemo<VehicleStatus>(() => {
-    if (twinState.isCharging) return 'charging';
-    if (twinState.isDriving) return 'driving';
-    const fromState = deriveVehicleStatus(vehicleState);
-    if (fromState !== 'offline') return fromState;
-    if (stateQ.data?.live || securityData || chargingData) return 'online';
-    return 'offline';
-  }, [twinState.isCharging, twinState.isDriving, vehicleState, stateQ.data?.live, securityData, chargingData]);
+  const twinState = useMemo(
+    () => ({
+      ...buildTwinState(securityData, vehicleState ? {
+        ...vehicleState,
+        state: reportedStatus,
+        speed,
+        is_charging: asBoolean(vehicleState.is_charging),
+        charger_power: chargerPower,
+      } : null, chargingData ? {
+        ...chargingData,
+        charging_state: chargingStatus ?? null,
+      } : null),
+      isCharging: isCharging === true,
+      isDriving: isDriving === true,
+    }),
+    [securityData, vehicleState, chargingData, reportedStatus, speed, chargerPower, chargingStatus, isCharging, isDriving],
+  );
+
+  const badgeStatus = !historical && stateState.status === 'ok'
+    ? deriveTrustedVehicleStatus(vehicleState, stateQ.data)
+    : null;
+  const streamFreshness = resolveVehicleStateFreshness(
+    stateQ.data?.freshness, stateQ.data?.observedAt ?? null,
+  );
+  const observationAge = formatObservationAge(stateQ.data?.observedAt, t);
+  const stateTitle = historical
+    ? t('timeMachine.signalState', 'Reconstructed signal state')
+    : t('digitalTwin.liveStatusTitle', 'Live status');
+  const latestLabel = t('timeMachine.latest', 'Latest');
+  const stateScope = historical
+    ? t('timeMachine.banner.title', 'Viewing data as of {{when}}', { when: asOf })
+    : latestLabel;
+  const sourceObservation = [
+    { label: t('digitalTwin.securityTitle', 'Security & status'), state: securityState,
+      scope: latestLabel, hasReading: securityData !== null, loading: securityQ.isLoading && securityQ.isFetching, timestamp: securityData?.ts },
+    { label: stateTitle, state: stateState,
+      scope: stateScope, hasReading: vehicleState !== null, loading: stateQ.isLoading && stateQ.isFetching, timestamp: null },
+    { label: t('common.charging', 'Charging'), state: chargingState,
+      scope: latestLabel, hasReading: chargingData !== null, loading: chargingQ.isLoading && chargingQ.isFetching, timestamp: chargingData?.ts },
+  ];
+  const temporalScope = sourceObservation.map((source) => `${source.label}: ${source.scope}`).join(' · ');
+  const sourceDescription = historical
+    ? t('digitalTwin.brief.provenance', 'Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure.')
+    : t('digitalTwin.brief.description', 'Latest polled security, vehicle-state and charging signals. Source snapshots may differ in time; unknown component states remain unknown.');
 
   // ── Display helpers (i18n-aware, null-safe) ──────────────────────────
   const openClosed = (v: boolean | null) =>
@@ -129,7 +194,7 @@ export default function DigitalTwinPage() {
   const windowsOpenCount = windowStates.filter((w) => w === 'open' || w === 'partial').length;
   const windowsKnown = windowStates.some((w) => w !== null);
 
-  const statusText = t(`digitalTwin.statusLabel.${badgeStatus}`, capitalize(badgeStatus));
+  const statusText = badgeStatus === null ? null : t(`digitalTwin.statusLabel.${badgeStatus}`, capitalize(badgeStatus));
   const lockValue = twinState.locked === null
     ? '—'
     : twinState.locked ? t('common.locked', 'Locked') : t('common.unlocked', 'Unlocked');
@@ -157,7 +222,8 @@ export default function DigitalTwinPage() {
     ? { variant: 'info', label: t('common.charging', 'Charging') }
     : twinState.isDriving
       ? { variant: 'success', label: t('common.driving', 'Driving') }
-      : { variant: 'neutral', label: t('common.parked', 'Parked') };
+      : { variant: 'neutral', label: isCharging === false && isDriving === false
+        ? t('common.parked', 'Parked') : '—' };
 
   // ── Detail-panel row models ──────────────────────────────────────────
   const doorItems = [
@@ -178,8 +244,8 @@ export default function DigitalTwinPage() {
 
   const securityItems = [
     { label: t('digitalTwin.locked', 'Locked'), value: twinState.locked === null ? '—' : twinState.locked ? t('common.yes', 'Yes') : t('common.no', 'No') },
-    { label: t('digitalTwin.driving', 'Driving'), value: twinState.isDriving ? t('common.yes', 'Yes') : t('common.no', 'No') },
-    { label: t('digitalTwin.charging', 'Charging'), value: twinState.isCharging ? t('common.yes', 'Yes') : t('common.no', 'No') },
+    { label: t('digitalTwin.driving', 'Driving'), value: isDriving === null ? '—' : isDriving ? t('common.yes', 'Yes') : t('common.no', 'No') },
+    { label: t('digitalTwin.charging', 'Charging'), value: isCharging === null ? '—' : isCharging ? t('common.yes', 'Yes') : t('common.no', 'No') },
     { label: t('digitalTwin.sentryMode', 'Sentry mode'), value: twinState.sentryMode === null ? '—' : twinState.sentryMode ? t('common.active', 'Active') : t('common.inactive', 'Inactive') },
     { label: t('digitalTwin.chargePort', 'Charge port'), value: twinState.isCharging ? t('digitalTwin.charging', 'Charging') : twinState.chargePortOpen === null ? '—' : twinState.chargePortOpen ? t('common.open', 'Open') : t('common.closed', 'Closed') },
     { label: t('digitalTwin.driverSeat', 'Driver seat'), value: twinState.driverSeatOccupied === null ? '—' : twinState.driverSeatOccupied ? t('digitalTwin.occupied', 'Occupied') : t('digitalTwin.empty', 'Empty') },
@@ -194,7 +260,9 @@ export default function DigitalTwinPage() {
   // The Security panel merges three streams — treat it as ready when any of
   // them has arrived, loading only while all are still pending.
   const anyLiveData = Boolean(securityData || vehicleState || chargingData);
-  const combinedLoading = !anyLiveData && (securityQ.isLoading || stateQ.isLoading || chargingQ.isLoading);
+  const combinedLoading = !anyLiveData && [securityQ, stateQ, chargingQ].some(
+    (query) => query.isLoading && query.isFetching && query.fetchStatus !== 'paused',
+  );
   const combinedError = anyLiveData ? undefined : (securityState.fatalError ?? stateState.fatalError ?? chargingState.fatalError);
   const refetchAll = () => {
     void securityQ.refetch();
@@ -208,7 +276,7 @@ export default function DigitalTwinPage() {
   const summaryMetrics: readonly StatMetric[] = [
     { metricId: 'text', occurrenceId: 'twin-status', label: t('digitalTwin.kpiStatus', 'Status'),
       rawValue: statusText,
-      description: t('digitalTwin.brief.statusBasis', 'Charging and driving take priority, then vehicle state and available streams; offline is the fallback when no source reports activity.') },
+      description: sourceDescription },
     { metricId: 'text', occurrenceId: 'twin-lock', label: t('digitalTwin.kpiLock', 'Lock'),
       rawValue: twinState.locked === null ? null : lockValue,
       description: t('digitalTwin.brief.lockBasis', 'Latest reported lock state; an unknown state is not unlocked.') },
@@ -231,9 +299,11 @@ export default function DigitalTwinPage() {
   const sourceStates = [securityState, stateState, chargingState];
   const summaryStatus = combinedLoading ? 'loading'
     : sourceStates.some((source) => source.status === 'stale') ? 'stale'
+    : sourceStates.some((source) => source.isRefreshBlocked) ? 'paused'
     : !anyLiveData && combinedError ? 'failed'
     : !anyLiveData ? 'unavailable'
     : !securityData || !vehicleState || !chargingData ? 'partial'
+    : badgeStatus === null ? 'unverified'
     : 'ready';
   const summaryStatusLabels = {
     loading: t('digitalTwin.brief.status.loading', 'Loading source snapshots'),
@@ -242,16 +312,23 @@ export default function DigitalTwinPage() {
     unavailable: t('digitalTwin.brief.status.unavailable', 'No source snapshots'),
     partial: t('digitalTwin.brief.status.partial', 'Mixed source availability'),
     ready: t('digitalTwin.brief.status.ready', 'Source snapshots available'),
+    paused: t('dataSources.status.paused', 'Refresh paused'),
+    unverified: t('dashboard.fleetPosture.category.unverified', 'Unverified'),
   };
 
   return (
     <PageLayout
       title={t('digitalTwin.title', 'Digital twin')}
-      subtitle={t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
+      subtitle={historical ? temporalScope : t('digitalTwin.subtitle', 'Real-time vehicle physical state')}
       loading={vehiclesLoading}
       query={freshnessQueries}
     >
-      {!vehicle && !vehiclesLoading ? (
+      <StaleRefreshWarning state={vehiclesState} label={t('nav.vehicles', 'Fleet')} />
+      {!vehicle && vehiclesState.fatalError ? (
+        <GlassPanel className="p-8">
+          <QueryError error={vehiclesState.fatalError} onRetry={vehiclesState.retry ?? undefined} />
+        </GlassPanel>
+      ) : !vehicle && fleetEmpty ? (
         <GlassPanel className="p-8">
           {/* no-action: transient empty state — no vehicle in the fleet yet. */}
           <EmptyState
@@ -259,10 +336,18 @@ export default function DigitalTwinPage() {
             message={t('digitalTwin.noVehicles', 'No vehicles found. Add a vehicle to see its digital twin.')}
           />
         </GlassPanel>
+      ) : !vehicle ? (
+        <GlassPanel className="p-8">
+          {vehiclesState.isRefreshBlocked ? (
+            <DataSourceNotice sources={[{ id: 'vehicles', label: t('nav.vehicles', 'Fleet'), query: vehiclesQ }]} />
+          ) : (
+            <Text variant="bodySm">{t('common.unavailable', 'Unavailable')}</Text>
+          )}
+        </GlassPanel>
       ) : (
         <div className="space-y-6">
           <StaleRefreshWarning state={securityState} label={t('digitalTwin.securityTitle', 'Security & status')} />
-          <StaleRefreshWarning state={stateState} label={t('digitalTwin.liveStatusTitle', 'Live status')} />
+          <StaleRefreshWarning state={stateState} label={stateTitle} />
           <StaleRefreshWarning state={chargingState} label={t('common.charging', 'Charging')} />
           {/* 1 — KPI band: full-width responsive metric grid */}
           <FadeIn>
@@ -274,13 +359,14 @@ export default function DigitalTwinPage() {
                 testId="digital-twin-summary"
                 eyebrow={t('digitalTwin.brief.eyebrow', 'Vehicle physical state')}
                 title={t('digitalTwin.brief.title', 'Physical-state summary')}
-                description={t('digitalTwin.brief.description', 'Latest polled security, vehicle-state and charging signals. Source snapshots may differ in time; unknown component states remain unknown.')}
+                description={sourceDescription}
                 statusLabel={summaryStatusLabels[summaryStatus]}
                 statusTone={summaryStatus === 'stale' || summaryStatus === 'partial' || summaryStatus === 'failed' ? 'warning' : 'neutral'}
                 loading={combinedLoading}
                 metrics={operationalMetrics}
-                scope={<Text as="span" variant="caption">{vehicle?.display_name ?? '—'} · {t('digitalTwin.snapshot', 'Latest vehicle signals')}</Text>}
+                scope={<Text as="span" variant="caption">{vehicle?.display_name ?? '—'} · {historical ? temporalScope : t('digitalTwin.snapshot', 'Latest vehicle signals')}</Text>}
                 freshness={<Text as="span" variant="caption">
+                  {historical ? <>{t('digitalTwin.securityTitle', 'Security & status')} · {latestLabel} · </> : null}
                   {typeof twinState.lastUpdated === 'string'
                     ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(twinState.lastUpdated) })
                     : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')}
@@ -288,7 +374,7 @@ export default function DigitalTwinPage() {
                 provenance={[
                   t('digitalTwin.brief.provenance', 'Security, vehicle-state and charging snapshots; retained values remain visible after a refresh failure.'),
                   vehicle?.display_name ?? '—',
-                  t('digitalTwin.snapshot', 'Latest vehicle signals'),
+                  historical ? temporalScope : t('digitalTwin.snapshot', 'Latest vehicle signals'),
                   typeof twinState.lastUpdated === 'string'
                     ? twinState.lastUpdated
                     : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown'),
@@ -299,7 +385,7 @@ export default function DigitalTwinPage() {
 
           {/* 2 — Hero: interactive twin + live status */}
           <FadeIn delay={0.1}>
-            <Section id="twin-live-heading" title={t('digitalTwin.sectionLive', 'Live overview')}>
+            <Section id="twin-live-heading" title={historical ? t('digitalTwin.overview', 'Overview') : t('digitalTwin.sectionLive', 'Live overview')}>
               <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
                 <GlassPanel className="flex flex-col items-center justify-center p-6 sm:p-8 xl:col-span-2">
                   <VehicleTwin
@@ -313,6 +399,7 @@ export default function DigitalTwinPage() {
                   />
                   {twinState.lastUpdated ? (
                     <Text as="p" variant="caption" className="mt-4 text-center">
+                      {historical ? <>{t('digitalTwin.securityTitle', 'Security & status')} · {latestLabel} · </> : null}
                       {t('digitalTwin.lastUpdated', 'Last updated')}: {formatTime(twinState.lastUpdated)}
                     </Text>
                   ) : null}
@@ -321,10 +408,47 @@ export default function DigitalTwinPage() {
                 <GlassPanel className="flex flex-col p-4 sm:p-5">
                   <PanelTitle className="mb-3 flex items-center gap-2">
                     <Icon icon={Activity} className={typography.color.secondary} aria-hidden />
-                    <span>{t('digitalTwin.liveStatusTitle', 'Live status')}</span>
+                    <span>{historical ? t('digitalTwin.brief.title', 'Physical-state summary') : stateTitle}</span>
                   </PanelTitle>
                   <div className="space-y-4">
                     <StatusBadge status={badgeStatus} />
+                    <div className="space-y-2" data-testid="twin-source-observations">
+                      {sourceObservation.map((source, index) => (
+                        <Text as="p" variant="caption" key={source.label}>
+                          {source.label}: {source.state.isRefreshBlocked
+                            ? t('dataSources.status.paused', 'Refresh paused')
+                            : source.state.status === 'stale'
+                              ? t('digitalTwin.brief.status.stale', 'Retained source snapshots')
+                              : source.state.fatalError
+                                ? t('digitalTwin.brief.status.failed', 'Source request failed')
+                              : !source.hasReading
+                                ? source.loading
+                                  ? t('digitalTwin.brief.status.loading', 'Loading source snapshots')
+                                  : t('digitalTwin.brief.status.unavailable', 'No source snapshots')
+                              : index === 1 && (historical || badgeStatus !== null)
+                                ? t('digitalTwin.brief.status.ready', 'Source snapshots available')
+                                : t('dashboard.fleetPosture.category.unverified', 'Unverified')}
+                          {' · '}
+                          {source.scope}
+                          {' · '}
+                          {index === 1
+                            ? historical
+                              ? typeof stateQ.data?.observedAt === 'number' && Number.isFinite(stateQ.data.observedAt)
+                                ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(stateQ.data.observedAt) })
+                                : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')
+                              : observationAge === null
+                              ? t('dashboard.fleetPosture.scope.noObservation', 'No verified observation time for this vehicle')
+                              : t('dashboard.fleetPosture.scope.observed', 'Last real observation {{age}}', { age: observationAge })
+                            : typeof source.timestamp === 'string' && Number.isFinite(Date.parse(source.timestamp))
+                              ? t('digitalTwin.brief.timestamp', 'Signal timestamp: {{time}}', { time: formatTime(source.timestamp) })
+                              : t('digitalTwin.brief.timestampUnknown', 'Signal timestamp unknown')}
+                          {index === 1 && !historical && streamFreshness === 'stale' ? <> · {t('freshness.stale', 'Stale')}</> : null}
+                        </Text>
+                      ))}
+                      <Text as="p" variant="caption">
+                        {t('vehicleHero.observationLimitation', 'Telemetry stream observation does not verify individual reading timestamps or completeness.')}
+                      </Text>
+                    </div>
                     <div className="flex flex-wrap gap-2">
                       <Badge variant={lockChip.variant}>{lockChip.label}</Badge>
                       <Badge variant={sentryChip.variant}>{sentryChip.label}</Badge>
@@ -352,7 +476,7 @@ export default function DigitalTwinPage() {
                   title={t('digitalTwin.doorsTitle', 'Doors & openings')}
                   icon={<Icon icon={DoorOpen} className={typography.color.secondary} aria-hidden />}
                   items={doorItems}
-                  isLoading={securityQ.isLoading}
+                  isLoading={!securityData && securityQ.isLoading && securityQ.isFetching && !securityState.isRefreshBlocked}
                   error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
@@ -363,7 +487,7 @@ export default function DigitalTwinPage() {
                   title={t('digitalTwin.windowsTitle', 'Windows')}
                   icon={<Icon icon={AppWindow} className={typography.color.secondary} aria-hidden />}
                   items={windowItems}
-                  isLoading={securityQ.isLoading}
+                  isLoading={!securityData && securityQ.isLoading && securityQ.isFetching && !securityState.isRefreshBlocked}
                   error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
@@ -386,7 +510,7 @@ export default function DigitalTwinPage() {
                   title={t('digitalTwin.lightsTitle', 'Lights & signals')}
                   icon={<Icon icon={Lightbulb} className={typography.color.secondary} aria-hidden />}
                   items={lightItems}
-                  isLoading={securityQ.isLoading}
+                  isLoading={!securityData && securityQ.isLoading && securityQ.isFetching && !securityState.isRefreshBlocked}
                   error={securityState.fatalError}
                   isEmpty={!securityData}
                   emptyIcon={<Icon icon={Info} size="xl" aria-hidden />}
