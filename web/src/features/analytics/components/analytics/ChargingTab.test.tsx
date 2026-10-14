@@ -108,7 +108,7 @@ import type { FleetAnalyticsQuery } from './constants';
 const SUMMARY_REGION = 'Charging summary metrics';
 const CHARTS_REGION = 'Charging';
 const PANEL_TITLES = [
-  'Charger types',
+  'Charging sessions by charger type',
   'Start battery distribution',
   'Hourly charging pattern',
 ] as const;
@@ -228,6 +228,14 @@ describe('ChargingTab — loading', () => {
 });
 
 describe('ChargingTab — loaded', () => {
+  it('identifies the charger-type chart as a session breakdown while preserving actual total cost', () => {
+    const { container } = renderTab(makeQuery({ data: makeFleet() }));
+    expect(screen.getByRole('heading', { name: 'Charging sessions by charger type' })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /cost by charger type/i })).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-chart-state="ready"]')).toHaveLength(3);
+    expect(within(screen.getByRole('region', { name: SUMMARY_REGION })).getByText('$87.50')).toBeInTheDocument();
+  });
+
   it('renders the formatted top-level and stat KPIs inside the labelled summary region', () => {
     renderTab(makeQuery({ data: makeFleet() }));
 

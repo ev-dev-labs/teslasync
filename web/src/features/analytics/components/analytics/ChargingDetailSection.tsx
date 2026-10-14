@@ -23,7 +23,7 @@ import { FleetSectionBrief } from '../operationalbrief-a-m/FleetSectionBrief';
 const BAR_RADIUS: [number, number, number, number] = [3, 3, 0, 0];
 
 /**
- * Charging deep-dive panels (Charger Brands, Cost by Type, Cost Analysis,
+ * Charging deep-dive panels (Charger Brands, Session Share by Type, Cost Analysis,
  * Monthly Trend). Rendered as bare grid items so they flow into the Charging
  * tab's bento; the Monthly Trend spans a full-width hero band.
  */
@@ -94,15 +94,15 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         </div>
       </AnalyticsPanel>
 
-      {/* Cost by Charger Type */}
+      {/* Session Share by Charger Type */}
       <AnalyticsPanel
-        title={t('analytics.charging.costByType', 'Cost by charger type')}
+        title={t('analytics.charging.chargerTypesAria', 'Charging sessions by charger type')}
         icon={<Plug className="h-4 w-4" />}
         loading={isLoading}
         error={err}
         onRetry={refetch}
         isEmpty={chargerTypes.length === 0}
-        emptyMessage={t('analytics.charging.noCostByType', 'No charger type data')}
+        emptyMessage={t('analytics.charging.noTypes', 'No charger type data')}
       >
         <div className="space-y-3">
           {chargerTypes.map((ct, i) => {

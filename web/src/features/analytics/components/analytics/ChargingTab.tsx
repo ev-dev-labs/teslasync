@@ -71,7 +71,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
       >
         {/* Charger Types Donut */}
         <AnalyticsChartPanel
-          title={t('analytics.charging.chargerTypes', 'Charger types')}
+          title={t('analytics.charging.chargerTypesAria', 'Charging sessions by charger type')}
           icon={<PieChartIcon className="h-4 w-4" />}
           loading={isLoading}
           error={err}
@@ -171,7 +171,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
           )}
         </AnalyticsChartPanel>
 
-        {/* Charger Brands · Cost by Type · Cost Analysis · Monthly Trend (band) */}
+        {/* Charger Brands · Session Share by Type · Cost Analysis · Monthly Trend (band) */}
         <ChargingDetailSection query={query} />
       </section>
     </FadeIn>

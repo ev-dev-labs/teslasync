@@ -6,7 +6,7 @@
  *
  *   1. Charger Brands — a leaderboard whose bar widths are `count / maxCount`
  *      (the top brand is always 100%). Rank + locale-formatted session count.
- *   2. Cost by Charger Type — per-type share bars (`count / typeTotal`) plus a
+ *   2. Session Share by Charger Type — per-type share bars (`count / typeTotal`) plus a
  *      locale-formatted count and rounded percentage.
  *   3. Cost Analysis — four MetricCards (min / avg / median / max) run through
  *      `useFormatting().formatCurrency`.
@@ -25,7 +25,7 @@
  * `useNavigate`.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -170,12 +170,34 @@ function renderSection(query: FleetAnalyticsQuery) {
 
 const PANEL_TITLES = [
   'Charger brands',
-  'Cost by charger type',
+  'Charging sessions by charger type',
   'Returned charging cost distribution',
   'Monthly charging trend',
 ];
 
 describe('ChargingDetailSection — populated', () => {
+  it('labels count-based shares as sessions and does not invent charger-type prices', () => {
+    renderSection(makeQuery({ data: {
+      ...FULL,
+      charging_analytics: {
+        ...CA,
+        charger_types: [{ type: 'Home', count: 3 }, { type: 'Supercharger', count: 1 }],
+      },
+    } }));
+
+    const heading = screen.getByRole('heading', { name: 'Charging sessions by charger type' });
+    const panel = heading.closest('[data-card]');
+    expect(panel).not.toBeNull();
+    if (!panel) throw new Error('Missing charger-type session share panel');
+    expect(within(panel).getByText('3 (75%)')).toBeInTheDocument();
+    expect(within(panel).getByText('1 (25%)')).toBeInTheDocument();
+    expect(Array.from(panel.querySelectorAll<HTMLElement>('[style]'), el => el.style.width))
+      .toEqual(['75%', '25%']);
+    expect(within(panel).queryByText(/cost|\$/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Cost by charger type' })).not.toBeInTheDocument();
+    expect(screen.getByText('$12.40')).toBeInTheDocument();
+  });
+
   it('mounts all four panel headings as level-3 headings', () => {
     renderSection(makeQuery({ data: FULL }));
     for (const name of PANEL_TITLES) {
