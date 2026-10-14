@@ -1,5 +1,5 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { formatMetric, type MetricPreferences } from '@/lib/metric-reference';
 import type { TeslaUserProfile } from '@/api/hooks/useUser';
@@ -7,12 +7,24 @@ import { formatDate, formatDateTime, formatRelative } from '@/lib/dateFormat';
 import { TeslaAccountStatStrip } from './TeslaAccountStatStrip';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { locale: datePreferences.locale, tz_display_default: 'user',
+      timezone_user: datePreferences.tz },
+    locale: datePreferences.locale,
+  }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => datePreferences.tz,
+}));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({
   t: (_key: string, fallback: string, vars?: Record<string, unknown>) =>
     fallback.replace(/{{(\w+)}}/g, (_, key: string) => String(vars?.[key] ?? `{{${key}}}`)),
 }) }));
 vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: 'C',
+  useUnits: () => ({ unitPrefs: { distance: 'km', speed: 'km/h', temperature: '°C',
     pressure: 'kPa', energy: 'kWh', duration: 's', power: 'kW', locale: 'de-DE', precision: 4 },
   }),
 }));
@@ -21,12 +33,13 @@ vi.mock('@/hooks/useOperationalMetrics', async importOriginal => {
   const actual = await importOriginal<typeof import('@/hooks/useOperationalMetrics')>();
   return { ...actual, useOperationalMetrics: vi.fn(actual.useOperationalMetrics) };
 });
-const preferences: MetricPreferences = { units: { distance: 'km', speed: 'km/h', temperature: 'C',
+const preferences: MetricPreferences = { units: { distance: 'km', speed: 'km/h', temperature: '°C',
   pressure: 'kPa', energy: 'kWh', duration: 's', power: 'kW', locale: 'de-DE', precision: 4 },
   currency: { kind: 'symbol', value: '€' } };
 const PROFILE: TeslaUserProfile = Object.freeze({ id: 123456, email: 'fixture@example.test',
   full_name: 'Fixture Driver', profile_image_url: null, fetched_at: '2026-10-03T01:00:00Z',
   created_at: '2020-05-04T01:00:00Z', updated_at: '2026-10-02T01:00:00Z' });
+beforeEach(() => { datePreferences.locale = 'en-US'; datePreferences.tz = 'UTC'; });
 afterEach(() => { cleanup(); vi.useRealTimers(); });
 function setup(overrides: Partial<Parameters<typeof TeslaAccountStatStrip>[0]> = {}) {
   return render(<TeslaAccountStatStrip profile={PROFILE} fetchedAt={PROFILE.fetched_at}
@@ -48,6 +61,66 @@ describe('Tesla account canonical summary source preservation', () => {
     expect(details).toHaveTextContent('Fleet API identity');
     expect(details).toHaveTextContent(formatDateTime(PROFILE.created_at));
     expect(details).toHaveTextContent(formatDateTime(PROFILE.updated_at));
+  });
+
+  describe('Tesla account summary sync evidence and preference adoption', () => {
+    it.each([null, '', 'not-a-date'])('does not classify an existing profile with timestamp %s as synced or never synced', (fetchedAt) => {
+      const { container } = setup({ fetchedAt });
+      expect(screen.getByTestId('tesla-account-summary')).toHaveTextContent('Unknown');
+      expect(container.querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+      expect(container.querySelector('[data-operational-metric="account-id"]')).toHaveTextContent('#123456');
+      expect(container).toHaveTextContent('freshness is unknown');
+      expect(container).not.toHaveTextContent('Never synced');
+      expect(container).not.toHaveTextContent('Source fetched at');
+    });
+
+    it('keeps an unresolved source unknown even when a stale timestamp prop exists', () => {
+      const { container } = setup({ profile: null, hasData: false });
+      expect(container).toHaveTextContent('Source values unknown');
+      expect(container).toHaveTextContent('freshness is unknown');
+      expect(container.querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+      expect(container).not.toHaveTextContent('Source fetched at');
+      expect(container).not.toHaveTextContent('Never synced');
+    });
+
+    it('reserves never-synced for a resolved null profile and null timestamp, not invalid empty-envelope time', () => {
+      const { container, rerender } = setup({ profile: null, fetchedAt: null });
+      expect(container).toHaveTextContent('Never synced');
+      rerender(<TeslaAccountStatStrip profile={null} fetchedAt="invalid" hasData
+        loading={false} error={null} retained={false} onRetry={vi.fn()} />);
+      expect(container).not.toHaveTextContent('Never synced');
+      expect(container).toHaveTextContent('Unknown');
+      expect(container.querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+    });
+
+    it('keeps retained trust separate from missing sync evidence and retains all independent identity/date tiles', () => {
+      const { container } = setup({ fetchedAt: '', retained: true });
+      expect(container).toHaveTextContent('Retained source data');
+      expect(container).toHaveTextContent('Showing retained measurements');
+      expect(container).toHaveTextContent('freshness is unknown');
+      expect([...container.querySelectorAll('[data-operational-metric]')].map(tile => tile.getAttribute('data-value-state')))
+        .toEqual(['missing', 'value', 'value', 'value']);
+      expect(container).not.toHaveTextContent('Never synced');
+    });
+
+    it('uses the existing date hook for locale/timezone preferences in every value, context and review detail', () => {
+      datePreferences.locale = 'de-DE';
+      datePreferences.tz = 'Pacific/Honolulu';
+      const { container } = setup();
+      const tiles = [...container.querySelectorAll('[data-operational-metric]')];
+      expect(tiles[0]).toHaveTextContent(formatDateTime(PROFILE.fetched_at, datePreferences));
+      expect(tiles[2]).toHaveTextContent(formatDate(PROFILE.created_at, datePreferences));
+      expect(tiles[2]).toHaveTextContent(formatRelative(PROFILE.created_at, datePreferences));
+      expect(tiles[2]).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+      expect(tiles[3]).toHaveTextContent(formatDate(PROFILE.updated_at, datePreferences));
+      expect(tiles[3]).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+      expect(container).toHaveTextContent(`Source fetched at ${formatDateTime(PROFILE.fetched_at, datePreferences)}`);
+      fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+      const details = screen.getByRole('dialog', { name: 'Account summary details' });
+      expect(details).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+      expect(details).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+      expect(PROFILE.id).toBe(123456);
+    });
   });
 
   it('preserves exact source identifier, relative and absolute dates without browser-time freshness', () => {

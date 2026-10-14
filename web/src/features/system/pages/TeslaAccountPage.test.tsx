@@ -63,6 +63,21 @@ const { profileMock, refreshMock } = vi.hoisted(() => ({
   profileMock: vi.fn(),
   refreshMock: vi.fn(),
 }));
+const datePreferences = vi.hoisted(() => ({ locale: 'en-US', tz: 'UTC' }));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { unit_of_length: 'km', unit_of_temp: 'C', unit_of_pressure: 'bar',
+      currency_symbol: '$', decimal_precision: 2, locale: datePreferences.locale,
+      tz_display_default: 'user', timezone_user: datePreferences.tz },
+    locale: datePreferences.locale, decimals: 2, isMiles: false,
+    isFahrenheit: false, isPSI: false, density: 'comfortable',
+  }),
+}));
+vi.mock('@/lib/timezone', async importOriginal => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => datePreferences.tz,
+}));
 
 // Drive the two data hooks deterministically; keep every other export
 // (userKeys, TeslaUserProfile type, sibling hooks) real so nothing else in
@@ -133,6 +148,8 @@ interface FakeQuery {
   isFetching: boolean;
   isStale: boolean;
   isError: boolean;
+  isPending: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: ReturnType<typeof vi.fn>;
 }
@@ -145,6 +162,8 @@ function makeQuery(overrides: Partial<FakeQuery> = {}): FakeQuery {
     isFetching: false,
     isStale: false,
     isError: false,
+    isPending: false,
+    fetchStatus: 'idle',
     dataUpdatedAt: Date.now(),
     refetch: vi.fn().mockResolvedValue(undefined),
     ...overrides,
@@ -220,6 +239,8 @@ beforeEach(() => {
   profileMock.mockReset();
   refreshMock.mockReset();
   mockUsePageTitle.mockReset();
+  datePreferences.locale = 'en-US';
+  datePreferences.tz = 'UTC';
 });
 
 afterEach(() => {
@@ -520,6 +541,110 @@ describe('TeslaAccountPage — restrained adoption', () => {
     }
     expect(within(panel('Sync')).queryByText('Not synced yet')).not.toBeInTheDocument();
     expect(within(panel('Sync')).getByText('Last synced')).toBeInTheDocument();
+  });
+
+  describe('TeslaAccountPage — source trust, saved dates and owned targets', () => {
+    it.each(['idle', 'paused'] as const)('keeps an unanswered %s read unresolved with GET recovery, not an empty profile', (fetchStatus) => {
+      const query = makeQuery({ isPending: true, fetchStatus, dataUpdatedAt: 0 });
+      const mutation = makeMutation();
+      setup(query, mutation);
+      const message = fetchStatus === 'paused'
+        ? 'Profile loading is paused. No account snapshot has been received yet.'
+        : 'Account snapshot availability has not resolved yet.';
+      for (const heading of ['Profile', 'Account details', 'Activity']) {
+        expect(within(panel(heading)).getByRole('status')).toHaveTextContent(message);
+        fireEvent.click(within(panel(heading)).getByRole('button', { name: 'Retry' }));
+      }
+      expect(query.refetch).toHaveBeenCalledTimes(3);
+      expect(mutation.mutate).not.toHaveBeenCalled();
+      expect(refreshButtons()).toHaveLength(2);
+      expect(screen.queryByText('No profile synced yet')).not.toBeInTheDocument();
+      expect(screen.queryByText('Never synced')).not.toBeInTheDocument();
+      expect(screen.queryByText('No account activity to show yet.')).not.toBeInTheDocument();
+      expect(within(panel('Sync')).getByText('Unknown')).toBeInTheDocument();
+      expect(kpiBand()).toHaveTextContent('Source values unknown');
+      expect(kpiBand().querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+      expect(screen.queryByText(/offline/i)).not.toBeInTheDocument();
+    });
+
+    it.each([null, '', 'not-a-date'])('keeps a populated profile with fetch timestamp %s unknown across all sync presentations', (fetched_at) => {
+      const profile = { ...PROFILE, fetched_at: fetched_at as unknown as string };
+      setup(makeQuery({ data: envelope(profile, null) }));
+      const hero = within(panel('Profile'));
+      expect(hero.getByText('Unknown').querySelector('span')).toHaveClass('bg-[var(--text-secondary)]');
+      expect(hero.getByText(PROFILE.email)).toBeInTheDocument();
+      expect(within(panel('Sync')).getByText('Unknown')).toBeInTheDocument();
+      expect(kpiBand()).toHaveTextContent('Unknown');
+      expect(kpiBand()).toHaveTextContent('freshness is unknown');
+      expect(kpiBand().querySelector('[data-operational-metric="sync-status"]')).toHaveAttribute('data-value-state', 'missing');
+      expect(screen.queryByText('Never synced')).not.toBeInTheDocument();
+      expect(screen.queryByText('Synced')).not.toBeInTheDocument();
+      expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+      expect(refreshButtons()).toHaveLength(2);
+    });
+
+    it('keeps timestamp precedence: invalid profile time is not replaced by a valid envelope time', () => {
+      setup(makeQuery({ data: envelope({ ...PROFILE, fetched_at: '' }, FETCHED_AT) }));
+      expect(within(panel('Profile')).getByText('Unknown')).toBeInTheDocument();
+      expect(within(panel('Sync')).getByText('Unknown')).toBeInTheDocument();
+      expect(kpiBand()).not.toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT)}`);
+    });
+
+    it('uses a valid envelope timestamp when the profile timestamp is absent, without altering the details source', () => {
+      setup(makeQuery({ data: envelope({ ...PROFILE, fetched_at: null as unknown as string }, FETCHED_AT) }));
+      expect(within(panel('Profile')).getByText('Synced')).toBeInTheDocument();
+      expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
+      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      expect(within(panel('Account details')).getByText('—')).toBeInTheDocument();
+      expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+    });
+
+    it('retains an independently readable profile through paused recovery without claiming offline or fresh token validity', () => {
+      const query = makeQuery({ data: envelope(PROFILE), fetchStatus: 'paused' });
+      const mutation = makeMutation();
+      setup(query, mutation);
+      expect(screen.getByTestId('stale-refresh-warning')).toHaveAttribute('data-refresh-blocked', 'true');
+      expect(within(panel('Profile')).getByText(PROFILE.full_name)).toBeInTheDocument();
+      expect(within(panel('Account details')).getByText(PROFILE.email)).toBeInTheDocument();
+      expect(within(panel('Activity')).getAllByRole('listitem')).toHaveLength(3);
+      expect(kpiBand()).toHaveTextContent('Retained source data');
+      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
+      expect(query.refetch).toHaveBeenCalledOnce();
+      expect(mutation.mutate).not.toHaveBeenCalled();
+      expect(screen.queryByText(/offline|token valid|permission granted/i)).not.toBeInTheDocument();
+    });
+
+    it('applies saved locale and timezone to all source dates, relative long-age context and activity bounds', () => {
+      datePreferences.locale = 'de-DE';
+      datePreferences.tz = 'Pacific/Honolulu';
+      setup(makeQuery({ data: envelope(PROFILE) }));
+      expect(within(panel('Sync')).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
+      expect(within(panel('Account details')).getByText(formatDateTime(FETCHED_AT, datePreferences))).toBeInTheDocument();
+      const rows = within(panel('Activity')).getAllByRole('listitem');
+      expect(rows[0]).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+      expect(rows[1]).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+      expect(rows[2]).toHaveTextContent(formatDateTime(FETCHED_AT, datePreferences));
+      expect(panel('Activity')).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+      expect(kpiBand()).toHaveTextContent(formatDate(PROFILE.created_at, datePreferences));
+      expect(kpiBand()).toHaveTextContent(formatRelative(PROFILE.created_at, datePreferences));
+      expect(kpiBand()).toHaveTextContent(formatDateTime(PROFILE.created_at, datePreferences));
+      expect(kpiBand()).toHaveTextContent(formatDateTime(PROFILE.updated_at, datePreferences));
+      expect(kpiBand()).toHaveTextContent(`Source fetched at ${formatDateTime(FETCHED_AT, datePreferences)}`);
+      expect(PROFILE.fetched_at).toBe(FETCHED_AT);
+      expect(PROFILE.id).toBe(42);
+    });
+
+    it('adopts mobile44 minimums only for header and empty-profile Refresh and restores their desktop minimums', () => {
+      setup(makeQuery({ data: envelope(null, null) }));
+      const buttons = refreshButtons();
+      expect(buttons).toHaveLength(3);
+      for (const button of [buttons[0], within(panel('Profile')).getByRole('button', { name: 'Refresh from Tesla' })]) {
+        expect(button).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-10', 'md:min-w-0', 'whitespace-normal');
+      }
+      expect(within(panel('Sync')).getByRole('button', { name: 'Refresh from Tesla' })).toHaveClass('w-full', 'min-h-11');
+      expect(within(panel('Sync')).getByRole('button', { name: 'Refresh from Tesla' })).not.toHaveClass('md:min-h-10');
+    });
   });
 
   it('distinguishes an unavailable initial source from a successfully empty profile', () => {

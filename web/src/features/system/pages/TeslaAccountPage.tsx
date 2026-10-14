@@ -12,25 +12,32 @@ import { FadeIn } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useTeslaUserProfile, useRefreshTeslaProfile } from '@/api/hooks/useUser';
-import { formatDateTime, formatRelative } from '@/lib/dateFormat';
-import { TeslaAccountStatStrip } from '../components/statstrip-tesla-account/TeslaAccountStatStrip';
+import { getTeslaAccountSyncStatus, TeslaAccountStatStrip } from '../components/statstrip-tesla-account/TeslaAccountStatStrip';
 
 export default function TeslaAccountPage() {
   const { t } = useTranslation();
+  const { formatDateTime, formatRelative } = useDateFormat();
   usePageTitle(t('teslaAccount.title', 'Tesla account'));
 
   const profileQuery = useTeslaUserProfile();
   const { data, isLoading: queryLoading, refetch } = profileQuery;
   const profileState = useDataState(profileQuery);
-  const isLoading = queryLoading && !profileState.hasData;
+  const isLoading = profileState.status === 'initial' && !profileState.isRefreshBlocked
+    && (queryLoading || profileQuery.isFetching);
   const error = profileState.fatalError;
   const isError = !!error;
+  const isUnresolved = profileState.status === 'initial';
   const refreshMutation = useRefreshTeslaProfile();
 
   const profile = data?.profile ?? null;
   const hasProfile = profile != null;
   const fetchedAt = profile?.fetched_at ?? data?.fetched_at ?? null;
+  const syncStatus = getTeslaAccountSyncStatus(profile, fetchedAt, profileState.hasData);
+  const syncLabel = syncStatus === 'synced' ? t('teslaAccount.synced', 'Synced')
+    : syncStatus === 'never-synced' ? t('teslaAccount.never', 'Never synced')
+      : t('common.unknown', 'Unknown');
   const activityTimes = [profile?.created_at, profile?.updated_at, fetchedAt].flatMap((iso) => {
     const instant = iso ? Date.parse(iso) : NaN;
     return Number.isFinite(instant) ? [instant] : [];
@@ -49,11 +56,24 @@ export default function TeslaAccountPage() {
 
   const resourceName = t('teslaAccount.resource', 'Tesla profile');
   const retry = () => { void refetch(); };
+  const unresolvedContent = (
+    <div className="space-y-3">
+      <Text as="p" variant="bodySm" color="secondary" role="status">
+        {profileState.isRefreshBlocked
+          ? t('teslaAccount.source.paused', 'Profile loading is paused. No account snapshot has been received yet.')
+          : t('teslaAccount.source.pending', 'Account snapshot availability has not resolved yet.')}
+      </Text>
+      <Button onClick={retry} variant="secondary" wrapLabel className="min-h-11 md:min-h-10">
+        {t('common.retry', 'Retry')}
+      </Button>
+    </div>
+  );
 
   const actions = (
     <Button
       onClick={refresh}
       wrapLabel
+      className="min-h-11 min-w-11 md:min-h-10 md:min-w-0"
       loading={refreshMutation.isPending}
       icon={<Icon icon={RefreshCw} />}
       aria-label={t('teslaAccount.refresh', 'Refresh from Tesla')}
@@ -96,6 +116,8 @@ export default function TeslaAccountPage() {
               </div>
             ) : isError ? (
               <QueryError error={error} onRetry={retry} resourceName={resourceName} />
+            ) : isUnresolved ? (
+              unresolvedContent
             ) : hasProfile ? (
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
                 <Avatar
@@ -120,10 +142,8 @@ export default function TeslaAccountPage() {
                       <Icon icon={Hash} size="xs" />
                       {accountId}
                     </Badge>
-                    <StatusPill color={fetchedAt ? 'bg-[var(--semantic-success)]' : 'bg-[var(--text-secondary)]'}>
-                      {fetchedAt
-                        ? t('teslaAccount.synced', 'Synced')
-                        : t('teslaAccount.never', 'Never synced')}
+                    <StatusPill color={syncStatus === 'synced' ? 'bg-[var(--semantic-success)]' : 'bg-[var(--text-secondary)]'}>
+                      {syncLabel}
                     </StatusPill>
                   </div>
                 </div>
@@ -136,7 +156,8 @@ export default function TeslaAccountPage() {
                 message={t('teslaAccount.noProfile', 'No profile data yet. Click "Refresh from Tesla" to sync your account.')}
                 />
                 <div className="flex justify-center">
-                  <Button onClick={refresh} loading={refreshMutation.isPending} wrapLabel>
+                  <Button onClick={refresh} loading={refreshMutation.isPending} wrapLabel
+                    className="min-h-11 min-w-11 md:min-h-10 md:min-w-0">
                     {t('teslaAccount.refresh', 'Refresh from Tesla')}
                   </Button>
                 </div>
@@ -158,14 +179,14 @@ export default function TeslaAccountPage() {
                 <div className="mt-1 flex items-center gap-2">
                   <Icon icon={Clock} className="text-[var(--text-muted)]" />
                   <Text as="span" variant="body">
-                    {fetchedAt ? formatRelative(fetchedAt)
+                    {syncStatus === 'synced' ? formatRelative(fetchedAt)
                       : isError ? t('common.unavailable', 'Unavailable')
-                      : !profileState.hasData || hasProfile ? t('common.unknown', 'Unknown')
-                      : t('teslaAccount.neverSyncedShort', 'Not synced yet')}
+                      : syncStatus === 'never-synced' ? t('teslaAccount.neverSyncedShort', 'Not synced yet')
+                      : t('common.unknown', 'Unknown')}
                   </Text>
                 </div>
                 )}
-                {fetchedAt && <Caption className="mt-1 block">{formatDateTime(fetchedAt)}</Caption>}
+                {syncStatus === 'synced' && <Caption className="mt-1 block">{formatDateTime(fetchedAt)}</Caption>}
               </div>
               <Button
                 variant="primary"
@@ -197,6 +218,8 @@ export default function TeslaAccountPage() {
               <Skeleton height={180} />
             ) : isError ? (
               <QueryError error={error} onRetry={retry} resourceName={resourceName} />
+            ) : isUnresolved ? (
+              unresolvedContent
             ) : hasProfile ? (
               <KVList
                 layout="responsive"
@@ -233,6 +256,8 @@ export default function TeslaAccountPage() {
               <Skeleton height={180} />
             ) : isError ? (
               <QueryError error={error} onRetry={retry} resourceName={resourceName} />
+            ) : isUnresolved ? (
+              unresolvedContent
             ) : hasProfile ? (
               <Timeline
                 label={t('teslaAccount.activity.title', 'Activity')}

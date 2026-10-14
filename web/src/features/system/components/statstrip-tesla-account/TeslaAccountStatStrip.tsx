@@ -4,7 +4,13 @@ import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { QueryError } from '@/components/feedback';
 import { Text } from '@/components/ui';
 import type { TeslaUserProfile } from '@/api/hooks/useUser';
-import { formatDate, formatDateTime, formatRelative } from '@/lib/dateFormat';
+import { useDateFormat } from '@/hooks/useDateFormat';
+
+export function getTeslaAccountSyncStatus(profile: TeslaUserProfile | null, fetchedAt: string | null, hasData: boolean) {
+  if (!hasData) return 'unknown';
+  if (fetchedAt != null && Number.isFinite(Date.parse(fetchedAt))) return 'synced';
+  return profile == null && fetchedAt == null ? 'never-synced' : 'unknown';
+}
 
 interface Props {
   profile: TeslaUserProfile | null;
@@ -18,14 +24,18 @@ interface Props {
 
 export function TeslaAccountStatStrip({ profile, fetchedAt, hasData, loading, error, retained, onRetry }: Props) {
   const { t } = useTranslation();
-  const hasFetchTimestamp = fetchedAt != null && Number.isFinite(Date.parse(fetchedAt));
+  const { formatDate, formatDateTime, formatRelative } = useDateFormat();
+  const syncStatus = getTeslaAccountSyncStatus(profile, fetchedAt, hasData);
+  const syncLabel = syncStatus === 'synced' ? t('teslaAccount.synced', 'Synced')
+    : syncStatus === 'never-synced' ? t('teslaAccount.never', 'Never synced')
+      : t('common.unknown', 'Unknown');
   const metrics: StatMetric[] = [
     { metricId: 'status', occurrenceId: 'sync-status',
-      rawValue: !hasData ? null : fetchedAt ? t('teslaAccount.synced', 'Synced') : t('teslaAccount.never', 'Never synced'),
+      rawValue: syncStatus === 'unknown' ? null : syncLabel,
       label: t('teslaAccount.kpi.sync', 'Sync status'),
-      context: fetchedAt ? <><Text as="span" variant="caption">{formatRelative(fetchedAt)}</Text>
+      context: syncStatus === 'synced' ? <><Text as="span" variant="caption">{formatRelative(fetchedAt)}</Text>
         {' · '}<Text as="span" variant="caption">{formatDateTime(fetchedAt)}</Text></>
-        : hasData ? t('teslaAccount.neverSyncedShort', 'Not synced yet') : '—',
+        : syncStatus === 'never-synced' ? t('teslaAccount.neverSyncedShort', 'Not synced yet') : syncLabel,
       description: t('teslaAccount.statstrip.syncDescription', 'Sync status comes from the source fetched-at timestamp, not the browser query update time.') },
     { metricId: 'identifier', occurrenceId: 'account-id', rawValue: profile?.id,
       display: { identifierPrefix: '#' }, label: t('teslaAccount.kpi.accountId', 'Account ID'),
@@ -53,10 +63,10 @@ export function TeslaAccountStatStrip({ profile, fetchedAt, hasData, loading, er
         : error ? t('operationalSummary.unavailable', 'Source unavailable')
           : loading ? t('operationalSummary.loading', 'Loading sources')
             : !hasData ? t('operationalSummary.unknown', 'Source values unknown')
-              : fetchedAt ? t('teslaAccount.synced', 'Synced') : t('teslaAccount.never', 'Never synced')}
+              : syncLabel}
       statusTone={retained || error ? 'warning' : 'neutral'}
       scope={t('teslaAccount.statstrip.period', 'Fleet API profile snapshot')}
-      freshness={<>{hasFetchTimestamp && fetchedAt
+      freshness={<>{syncStatus === 'synced'
         ? t('teslaAccount.statstrip.fetchedSnapshot', 'Source fetched at {{date}}', { date: formatDateTime(fetchedAt) })
         : t('teslaAccount.statstrip.unknownSnapshot', 'No source fetch timestamp recorded; freshness is unknown')}
         {retained && <> · {t('developerReference.stats.state.retained', 'Showing retained measurements')}</>}</>}
