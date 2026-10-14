@@ -7,6 +7,7 @@ import { CommandSelectDialog } from '../CommandSelectDialog';
 export interface ActiveCommandDialog {
   kind: 'input' | 'select' | 'confirm';
   definition: CommandDef;
+  vehicleId?: number;
 }
 
 interface CommandDialogsProps {
@@ -27,7 +28,7 @@ export function CommandDialogs({
   const handleInputSubmit = useCallback((values: Record<string, string>) => {
     const definition = active?.definition;
     const config = definition?.inputConfig;
-    if (!definition || !config) return;
+    if (loading || active?.vehicleId != null && active.vehicleId !== vehicle.id || !definition || !config) return;
 
     const params = config.buildParams
       ? config.buildParams(values)
@@ -40,27 +41,27 @@ export function CommandDialogs({
 
     onExecute(definition.command, params);
     onClose();
-  }, [active, onClose, onExecute]);
+  }, [active, loading, onClose, onExecute, vehicle.id]);
 
   const handleSelect = useCallback((value: string) => {
     const definition = active?.definition;
     const config = definition?.selectConfig;
-    if (!definition || !config) return;
+    if (loading || active?.vehicleId != null && active.vehicleId !== vehicle.id || !definition || !config) return;
 
     onExecute(definition.command, {
       ...definition.params,
       [config.paramName]: value,
     });
     onClose();
-  }, [active, onClose, onExecute]);
+  }, [active, loading, onClose, onExecute, vehicle.id]);
 
   const handleConfirm = useCallback(() => {
-    if (!active) return;
+    if (loading || !active || active.vehicleId != null && active.vehicleId !== vehicle.id) return;
     onExecute(active.definition.command, active.definition.params);
     onClose();
-  }, [active, onClose, onExecute]);
+  }, [active, loading, onClose, onExecute, vehicle.id]);
 
-  if (!active) return null;
+  if (!active || active.vehicleId != null && active.vehicleId !== vehicle.id) return null;
 
   if (active.kind === 'input') {
     return (

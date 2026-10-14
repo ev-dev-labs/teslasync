@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Stack } from '@/components/layout';
 import { useCommandLatest } from '@/api/hooks/useCommands';
@@ -8,6 +8,7 @@ import {
 } from '@/api/hooks/useVehicleCommand';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useDataState } from '@/hooks/useDataState';
 import { isTeslaAuthExpiredError } from '@/lib/resilience';
 import type { Vehicle } from '../commands';
 import { CommandCenterHero } from './command-center/CommandCenterHero';
@@ -45,15 +46,28 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
 
   const [pendingCommand, setPendingCommand] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<CommandExecutionFeedback | null>(null);
+  const inFlight = useRef(false);
+  const scope = useRef({ vehicleId: vehicle.id, revision: 0 });
+  const mounted = useRef(true);
+  if (scope.current.vehicleId !== vehicle.id) {
+    scope.current = { vehicleId: vehicle.id, revision: scope.current.revision + 1 };
+  }
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  useEffect(() => { setFeedback(null); }, [vehicle.id]);
 
   const state = stateQuery.data?.state ?? null;
   const latestCommands = latestQuery.data ?? [];
+  const latestState = useDataState(latestQuery);
   const pendingLabel = pendingCommand
     ? getCommandLabel(pendingCommand, t)
     : null;
 
   const executeCommand = useCallback(
     (command: string, params?: Record<string, unknown>) => {
+      if (inFlight.current) return;
       if (!operationalMode.canWrite) {
         setFeedback({
           command,
@@ -75,10 +89,14 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
 
       setFeedback(null);
       setPendingCommand(command);
+      inFlight.current = true;
+      const revision = scope.current.revision;
+      const isCurrent = () => mounted.current && scope.current.revision === revision;
       sendCommand(
         { vehicleId: vehicle.id, command, params },
         {
           onSuccess: (result: CommandResult | undefined) => {
+            if (!isCurrent()) return;
             if (result?.success) {
               setFeedback({
                 command,
@@ -108,6 +126,7 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
             });
           },
           onError: (error: Error) => {
+            if (!isCurrent()) return;
             if (isTeslaAuthExpiredError(error)) return;
             setFeedback({
               command,
@@ -119,7 +138,10 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
               ),
             });
           },
-          onSettled: () => setPendingCommand(null),
+          onSettled: () => {
+            inFlight.current = false;
+            if (mounted.current) setPendingCommand(null);
+          },
         },
       );
     },
@@ -150,7 +172,9 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
       <CommandWorkspace
         vehicle={vehicle}
         state={state}
+        stateTrust={stateQuery.data}
         latestCommands={latestCommands}
+        latestState={latestState}
         loading={commandPending}
         disabled={!operationalMode.canWrite}
         disabledReason={operationalMode.writeBlockReason ?? undefined}

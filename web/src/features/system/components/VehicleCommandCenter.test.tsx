@@ -15,7 +15,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
-import type { CommandLogEntry } from '@/api/hooks/useCommands';
+import { commandKeys, type CommandLogEntry } from '@/api/hooks/useCommands';
 import type { Vehicle, VehicleState } from '../commands';
 import {
   CATEGORY_META,
@@ -100,6 +100,7 @@ type RequestCall = [string, RequestInit?];
 let stateResponse: unknown;
 let stateError: Error | null;
 let latestEntries: CommandLogEntry[];
+let latestError: Error | null;
 let commandResponse: () => Promise<unknown>;
 
 function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
@@ -136,7 +137,7 @@ function installRequestRouter() {
       return stateError ? Promise.reject(stateError) : Promise.resolve(stateResponse);
     }
     if (url === `/vehicles/${VEHICLE_ID}/commands/latest`) {
-      return Promise.resolve(latestEntries);
+      return latestError ? Promise.reject(latestError) : Promise.resolve(latestEntries);
     }
     if (
       url === `/vehicles/${VEHICLE_ID}/command` &&
@@ -155,7 +156,7 @@ function renderCenter(vehicle: Vehicle = makeVehicle()) {
       mutations: { retry: false },
     },
   });
-  return render(
+  const rendered = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={['/commands']}>
         <ToastProvider>
@@ -164,6 +165,7 @@ function renderCenter(vehicle: Vehicle = makeVehicle()) {
       </MemoryRouter>
     </QueryClientProvider>,
   );
+  return { ...rendered, queryClient };
 }
 
 function searchFor(value: string) {
@@ -179,7 +181,8 @@ function postCalls(): RequestCall[] {
 }
 
 function lastPostBody(): Record<string, unknown> {
-  const call = postCalls().at(-1);
+  const calls = postCalls();
+  const call = calls[calls.length - 1];
   return JSON.parse(String(call?.[1]?.body ?? '{}')) as Record<string, unknown>;
 }
 
@@ -191,6 +194,7 @@ beforeEach(() => {
   stateResponse = { state: makeState(), live: true };
   stateError = null;
   latestEntries = [];
+  latestError = null;
   commandResponse = () => Promise.resolve({ success: true, result: 'success' });
   installRequestRouter();
 });
@@ -335,6 +339,114 @@ describe('VehicleCommandCenter — command execution', () => {
     expect(
       screen.getByText('Vehicle commands are read-only'),
     ).toBeInTheDocument();
+  });
+
+  describe('VehicleCommandCenter — physical truth and request lifecycle', () => {
+    it('keeps guest physical truth unknown before and after accepted intent and preserves explicit OFF', async () => {
+      let resolve: ((value: unknown) => void) | undefined;
+      commandResponse = () => new Promise(done => { resolve = done; });
+      renderCenter();
+      searchFor('guest_mode_on');
+      fireEvent.click(screen.getByRole('button', { name: 'ON' }));
+      await waitFor(() => expect(postCalls()).toHaveLength(1));
+      expect(lastPostBody()).toEqual({ command: 'guest_mode_on' });
+      expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
+      expect(screen.getByRole('button', { name: 'OFF' })).toBeDisabled();
+      await act(async () => { resolve?.({ success: true }); });
+      await screen.findByText('Guest mode request sent to My Tesla.');
+      expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
+      commandResponse = () => Promise.resolve({ success: true });
+      fireEvent.click(screen.getByRole('button', { name: 'OFF' }));
+      await waitFor(() => expect(postCalls()).toHaveLength(2));
+      expect(lastPostBody()).toEqual({ command: 'guest_mode_off' });
+    });
+
+    it.each(['soft', 'hard', 'empty'])('does not invent guest OFF or ON after %s failure', async (kind) => {
+      commandResponse = () => kind === 'hard'
+        ? Promise.reject(new Error('request rejected'))
+        : Promise.resolve(kind === 'soft' ? { success: false, error: 'not accepted' } : undefined);
+      renderCenter();
+      searchFor('guest_mode_on');
+      fireEvent.click(screen.getByRole('button', { name: 'ON' }));
+      expect(await screen.findByTestId('command-result-feedback')).not.toHaveTextContent('request sent');
+      expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
+      expect(screen.getByRole('button', { name: 'Guest mode' })).not.toHaveAttribute('aria-pressed');
+      expect(screen.getByRole('button', { name: 'OFF' })).not.toBeDisabled();
+    });
+
+    it('reaches valet OFF after actual PIN acceptance without retaining or resending the PIN', async () => {
+      renderCenter();
+      searchFor('set_valet_mode');
+      fireEvent.click(screen.getByRole('button', { name: 'ON' }));
+      const dialog = screen.getByRole('dialog');
+      const pin = within(dialog).getByDisplayValue('');
+      expect(pin).toHaveAttribute('type', 'password');
+      fireEvent.change(pin, { target: { value: '9182' } });
+      fireEvent.click(within(dialog).getByRole('button', { name: 'Send' }));
+      await waitFor(() => expect(postCalls()).toHaveLength(1));
+      expect(lastPostBody()).toEqual({ command: 'set_valet_mode', params: { on: 'true', password: '9182' } });
+      await screen.findByText('Valet mode request sent to My Tesla.');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(screen.getByTestId('vehicle-command-center')).not.toHaveTextContent('9182');
+      expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('State unknown');
+      fireEvent.click(screen.getByRole('button', { name: 'OFF' }));
+      await waitFor(() => expect(postCalls()).toHaveLength(2));
+      expect(lastPostBody()).toEqual({ command: 'valet_off' });
+    });
+
+    it('cancels PIN intent without sending and rechecks readiness before explicit OFF', () => {
+      renderCenter();
+      searchFor('set_valet_mode');
+      fireEvent.click(screen.getByRole('button', { name: 'ON' }));
+      fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel' }));
+      expect(postCalls()).toHaveLength(0);
+      operationalModeState.canWrite = false;
+      searchFor('guest_mode_on');
+      fireEvent.click(screen.getByRole('button', { name: 'OFF' }));
+      expect(postCalls()).toHaveLength(0);
+    });
+
+    it('propagates exact current field trust without converting a missing boolean to OFF', async () => {
+      stateResponse = {
+        state: makeState({ is_locked: true }),
+        observed_at: new Date().toISOString(),
+        freshness: 'fresh',
+        verified_fields: ['is_locked'],
+        live: true,
+      };
+      renderCenter();
+      searchFor('lock');
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Lock' })).toHaveAttribute('aria-pressed', 'true'));
+      searchFor('climate_on');
+      expect(screen.getByRole('button', { name: 'Climate' })).not.toHaveAttribute('aria-pressed');
+      expect(screen.getByTestId('command-toggle-reading')).toHaveTextContent('Last known: OFF');
+    });
+
+    it('exposes initial latest-command failure and targeted retry without hiding action controls', async () => {
+      latestError = new Error('latest source unavailable');
+      renderCenter();
+      const source = await screen.findByTestId('command-outcome-source');
+      await within(source).findByText("Can't reach server");
+      expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
+      latestError = null;
+      fireEvent.click(within(source).getByRole('button', { name: /retry/i }));
+      expect(await within(source).findByText('No commands sent yet')).toBeInTheDocument();
+      expect(postCalls()).toHaveLength(0);
+    });
+
+    it('retains latest outcomes with refresh warning and age rather than erasing them', async () => {
+      latestEntries = [{ id: 1, command: 'lock', status: 'success', created_at: '2026-10-14T05:00:00Z' } as CommandLogEntry];
+      const { queryClient } = renderCenter();
+      await screen.findByTestId('command-outcome-source');
+      await waitFor(() => expect(screen.getAllByText(/^✓/).length).toBeGreaterThan(0));
+      latestError = new Error('latest refresh failed');
+      await act(async () => { await queryClient.refetchQueries({ queryKey: commandKeys.latest(VEHICLE_ID) }); });
+      const source = screen.getByTestId('command-outcome-source');
+      expect(await within(source).findByTestId('stale-refresh-warning')).toBeInTheDocument();
+      expect(screen.getAllByText(/^✓/).length).toBeGreaterThan(0);
+      expect(within(source).getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+      expect(postCalls()).toHaveLength(0);
+    });
   });
 
   it('preserves wake-up as a reachable command on the supported endpoint', async () => {
