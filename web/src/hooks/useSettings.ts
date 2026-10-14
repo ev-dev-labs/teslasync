@@ -81,7 +81,7 @@ function sanitizePrecision(v: number | null | undefined): number {
 export function useSettings() {
   const query = useQuery({
     queryKey: ['settings'],
-    queryFn: getSettings,
+    queryFn: ({ signal }) => getSettings(signal),
     staleTime: 5 * 60 * 1000,
     refetchOnMount: 'always',
     retry: 1,
