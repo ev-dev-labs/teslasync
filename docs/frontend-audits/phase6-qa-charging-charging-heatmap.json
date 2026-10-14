@@ -2,28 +2,22 @@
   "schema_version": 1,
   "item": "phase6-qa-charging-charging-heatmap",
   "status": "DONE",
-  "acceptance": "SOURCE-ONLY READ-ONLY QA complete, not repaired or application/native acceptance",
-  "requested_start_utc": "2026-10-13T23:16:20.806Z",
-  "actual_start_utc": "2026-10-13T23:16:33.1178926Z",
+  "acceptance": "SOURCE-ONLY report complete, findings unrepaired; NOT application/native/release acceptance",
+  "requested_start_utc": "2026-10-14T00:48:01.088Z",
+  "actual_start_utc": "2026-10-14T00:48:15.0783171Z",
   "creation_utc": "2026-10-13T23:35:24.1346318Z",
-  "release_utc": "2026-10-13T23:37:31.8409383Z",
+  "release_utc": "2026-10-14T01:07:37.383633Z",
   "only_writable": [
     "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charging-heatmap.json",
     "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-heatmap.log"
   ],
   "authority_read": [
-    "docs/orchestrator-loop.md:1-284 sole playbook",
-    "migration-queue.md:339 current row;1773 accepted receipt;302,371 existing gradient root",
-    "docs/frontend-design-contract.md:49-72,419-547 and relevant scope grep",
-    "docs/frontend-mission.md:19-92 principles",
-    "docs/session-handoff.md scoped source-only context grep, not parent health",
-    "docs/frontend-audits/audit-page-083.json historical preservation/architecture evidence",
-    ".github/instructions/react-frontend.instructions.md",
-    ".github/instructions/frontend-si-cutover.instructions.md",
-    ".github/instructions/unit-conversion.instructions.md"
+    "Full orchestrator and fullfrontend design contract",
+    "Latest handoff5-46, mission43-45 at1416-1517 and applicable instructions",
+    "Exact queueEvidence/history; Phase0 receipt read for dedup, not remigration"
   ],
   "accepted_receipt": {
-    "authority": "migration-queue.md:1773",
+    "authority": "migration-queue.md:1833",
     "historical_capture_exit": 2,
     "historical_test_exit": 1,
     "historical_lint_exit": 0,
@@ -42,8 +36,6 @@
   },
   "scope": {
     "audited_files": 7,
-    "commit_equivalence": "Current disk hashes pinned; Git/accepted blob comparison NOTRUN. Queue accepted commit is receipt authority, not independently verified byte equivalence.",
-    "supporting_files": 24,
     "pins": [
       {
         "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
@@ -86,158 +78,41 @@
         "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
         "lines": 73,
         "role": "audited-source"
-      },
+      }
+    ],
+    "supportingDrift": [
       {
         "file": "docs/orchestrator-loop.md",
-        "sha256": "61f7a74733404c084c4cb609301e8f860b2c464a6c58104e9493eff5ff0361c6",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
+        "priorHash": "61f7a74733404c084c4cb609301e8f860b2c464a6c58104e9493eff5ff0361c6",
+        "currentHash": "f7a71d595e8eca12553f68b0709caca8aadb011c50961d516d163d45cdcdf767"
       },
       {
         "file": "migration-queue.md",
-        "sha256": "e9c99f97d686b011ad2107552ee6b181ae20448af0ae435f206e5ec03302e1f9",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "docs/frontend-design-contract.md",
-        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "docs/frontend-audits/audit-page-083.json",
-        "sha256": "9a31f332cf5ee233571102eadd0f6c22baa6dc408e5410fb8547146777a0759d",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/hooks/useRangeState.ts",
-        "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/lib/workspaceScope.ts",
-        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/api/hooks/useCharging.ts",
-        "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/api/types.ts",
-        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/hooks/useDataState.ts",
-        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/api/dataState.ts",
-        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/hooks/useUnits.ts",
-        "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/hooks/useNumberFormatting.ts",
-        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/hooks/useOperationalMetrics.tsx",
-        "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
+        "priorHash": "e9c99f97d686b011ad2107552ee6b181ae20448af0ae435f206e5ec03302e1f9",
+        "currentHash": "64add164f9e8de3b1f761f78eebda85467ddd94d22139e24d79377aa0bef9f88"
       },
       {
         "file": "web/src/lib/constants.ts",
-        "sha256": "b474ccf858a25c206f6b6673a89ad6d2756db6c591d9e5336dd5a6d203107e74",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/lib/dateFormat.ts",
-        "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/features/charging/pages/ChargingHeatmapPage.test.tsx",
-        "sha256": "5019e7f536beb4a6392061e48ad5476c55a28ffebcf4d1243a23eb5d2698bf66",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/features/charging/pages/__tests__/ChargingHeatmapPage.test.tsx",
-        "sha256": "fdd91238ed2f90ab7c3c2b272b54ead1ea8a383b69871f11ca0a2e6ef45e4fda",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/features/charging/components/charging-heatmap/heatmapData.test.ts",
-        "sha256": "fb18e431635760b48eba9c85e341de87e6c597da45bce4d4a6867c1843108d1e",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.test.tsx",
-        "sha256": "9be384d3db2be985dc20e411428d77b4e39ffd66efc9e0898fed06806e7be7b2",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapModernization.test.tsx",
-        "sha256": "e4752126e3f1f99e79c414e0056c78f181d11b9ebec9b0bb2af488703f97766d",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
+        "priorHash": "b474ccf858a25c206f6b6673a89ad6d2756db6c591d9e5336dd5a6d203107e74",
+        "currentHash": "76641391606b3616c45c2f0c1ea9bda0b130f4e190d6218e771ae1aeb64501e3"
       },
       {
         "file": "web/src/i18n/en.json",
-        "sha256": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
+        "priorHash": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c",
+        "currentHash": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893"
       },
       {
         "file": ".gitignore",
-        "sha256": "2b5bd47eff6c416aeca19086e45cd76906d96b0498f5babe33d2feefeb6eae96",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/components/data-display/MetricBar.tsx",
-        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
-      },
-      {
-        "file": "web/src/lib/tokens.ts",
-        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
-        "lines": null,
-        "role": "supporting-readonly-evidence"
+        "priorHash": "2b5bd47eff6c416aeca19086e45cd76906d96b0498f5babe33d2feefeb6eae96",
+        "currentHash": "5e0056d6747e60450d4b2134baba2152ceec59c79e89aae06d3712cc441f3a7e"
       }
     ],
     "release_pin_check": {
-      "total": 31,
-      "unchanged": 31,
-      "external_drift": [],
+      "total": 7,
+      "unchanged": 7,
       "audited_heatmap_drift": 0
-    }
+    },
+    "commit_equivalence": "Git NOTRUN, queue accepted commit receipt only"
   },
   "findings": [
     {
@@ -261,6 +136,16 @@
         "kind": "carried-existing-observation",
         "reference": "docs/frontend-audits/audit-page-083.json architectureIssues[0]",
         "existing_queued_root": null
+      },
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "owner": "integration",
+      "detail": "Page forwards start/end calendar labels instead of available startInstant/endInstantExclusive. This drops exact rolling cutoffs and timezone-exclusive boundary precision. Header ownership is present and overrides page default/persistKey; those backup options are not a defect.",
+      "applicationRepro": "NOTRUN",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 46,
+        "source": "const { start, end } = useRangeState({"
       }
     },
     {
@@ -277,13 +162,23 @@
       "mechanism": "Grid initializes energy to 0 and adds missing Wh as 0 without recording observation coverage. Hover formats this total for any occupied cell. All-missing slots appear measured zero; partial slots lack partial context. Page table/export separately counts finite energy and distinguishes these states, so presentations contradict.",
       "source_repro": "One valid-start session with total_energy_added_wh=null yields count=1,totalEnergyWh=0. Hover formats 0 Wh (default 0.00 kWh), while table energy_wh is null with No recorded measurements. One measured zero plus one null yields an unqualified zero hover but a partial table status.",
       "repro_execution": "SOURCE_TRACE_ONLY; authored null-energy fixture at ChargingHeatmapPage.test.tsx:127-139 was not executed",
-      "impact_limit": "Known zero must remain zero; recorded-only summary/table behavior must be retained.",
+      "impact_limit": "Known zero must remain zero; recorded-only summary/table behavior must be retained. API type energy is number at types.ts:173. Null energy is a defensive/authored presentation case; real null-producing backend response NOT established.",
       "fix": "Carry energy observation counts/coverage in the existing model or pass existing slot coverage to tooltip; show unavailable/partial evidence instead of fabricated zero. Preserve 168 cells, accessible table, export, SI and sign.",
       "dedup": {
-        "new_root": true,
-        "kind": "new-confirmed-local-root",
-        "reference": null,
+        "new_root": false,
+        "kind": "carried-existing-observation",
+        "reference": "audit-page-083.json states.findings[0]",
         "existing_queued_root": null
+      },
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "owner": "page",
+      "detail": "Grid initializes energy to 0 and adds missing Wh as 0 without recording observation coverage. Hover formats this total for any occupied cell. All-missing slots appear measured zero; partial slots lack partial context. Page table/export separately counts finite energy and distinguishes these states, so presentations contradict.",
+      "applicationRepro": "NOTRUN",
+      "evidence": {
+        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+        "line": 68,
+        "source": "{cell.count} {sessionsWord} · {formatEnergy(cell.totalEnergyWh ?? 0)}"
       }
     },
     {
@@ -302,13 +197,23 @@
       "mechanism": "English DAYS reaches grid, axes, insights and table/export without localization. Favorite fallback appends English s to abbreviated weekdays. formatHourLabel forces HH:00 independent of locale hour cycle. Raw grid count/hour interpolation bypasses existing number formatting; t() around the outer sentence does not format operands.",
       "source_repro": "Under a non-English display locale DAYS remains Sun..Sat. In en-US locale bucket13 remains 13:00 instead of locale time. Favorite English fallback yields e.g. Mons at 13:00. Grid counts are raw decimal strings while table uses fmtInt.",
       "repro_execution": "SOURCE_TRACE_ONLY; preference/language change not exercised",
-      "impact_limit": "47 literal translation keys present, 0 missing. This is operand/formatting bypass, not missing catalog keys. No separate explicit hour-cycle preference source was established.",
+      "impact_limit": "Current57 literal t keys in seven primary files exist; no runtime locale/preference toggle or explicit hour-cycle preference established.",
       "fix": "Reuse existing locale date/time/number formatting and translate a complete weekday/time phrase. Preserve numeric Sunday-first/hour bucket identities independently of translated labels.",
       "dedup": {
         "new_root": false,
         "kind": "carried-existing-observation",
         "reference": "docs/frontend-audits/audit-page-083.json architectureIssues[2]",
         "existing_queued_root": null
+      },
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "owner": "page",
+      "detail": "English DAYS reaches grid, axes, insights and table/export without localization. Favorite fallback appends English s to abbreviated weekdays. formatHourLabel forces HH:00 independent of locale hour cycle. Raw grid count/hour interpolation bypasses existing number formatting; t() around the outer sentence does not format operands.",
+      "applicationRepro": "NOTRUN",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 65,
+        "source": "const dayOfWeekData = useMemo(() => aggregateByDayOfWeek(model, DAYS), [model]);"
       }
     },
     {
@@ -331,8 +236,138 @@
         "scope_limit": "Existing queued writable scope does not cover heatmap callsites; do not expand its claims",
         "kind": "existing-shared-mechanism-additional-callsites",
         "new_root": false,
-        "reference": "phase6-qa-admin-disk-forecast.json; migration-queue.md:302,371",
+        "reference": "migration-queue.md:330 mechanism only, scope excludes heatmap",
         "existing_queued_root": "phase6-fix-disk-forecast-contracts"
+      },
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "owner": "page",
+      "detail": "Four insight MetricBars pass chartTokens.series light-dark() functions without fill=solid. Default gradient appends 99 to the full CSS color function, constructing an invalid color token.",
+      "applicationRepro": "NOTRUN",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 309,
+        "source": "color={chartTokens.series[5]}"
+      }
+    },
+    {
+      "id": "CHH005",
+      "rule": "noncanonical-density-palette",
+      "file": "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+      "line": 68,
+      "severity": "medium",
+      "mechanism": "heatColor and HEAT_LEGEND hardcode electric cyan (0,240,255), green/amber/red RGBA instead of restrained existing chart/theme roles. Source literals and Grid consumers confirmed; composed contrast/appearance NOT measured. This is NOT a dynamic-inline-style violation.",
+      "detail": "heatColor and HEAT_LEGEND hardcode electric cyan (0,240,255), green/amber/red RGBA instead of restrained existing chart/theme roles. Source literals and Grid consumers confirmed; composed contrast/appearance NOT measured. This is NOT a dynamic-inline-style violation.",
+      "fix": "Adopt one restrained existing-owner density scale. Preserve zero treatment, five stops, 0.25/0.5/0.75 thresholds, count/max and saved palette IDs; no new palette engine.",
+      "owner": "page/shared-coordination",
+      "related": [
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts:67-82",
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx:58,83-90",
+        "web/src/lib/tokens.ts:399"
+      ],
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "applicationRepro": "NOTRUN",
+      "repro_execution": "SOURCE_CONTROL_FLOW_ONLY",
+      "dedup": {
+        "new_root": false,
+        "reference": "audit-page-083.json visualIssues[0]; inventory G091",
+        "existing_queued_root": null
+      },
+      "evidence": {
+        "file": "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+        "line": 68,
+        "source": "if (count === 0 || max === 0) return 'rgba(0, 240, 255, 0.04)';"
+      }
+    },
+    {
+      "id": "CHH006",
+      "rule": "feature-category-import",
+      "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx",
+      "line": 3,
+      "severity": "low",
+      "mechanism": "Feature imports StatMetric from stat-reference; data-display category barrel already exports it at line5. Type-only boundary violation, NOT runtime/compiler/bundle failure.",
+      "detail": "Feature imports StatMetric from stat-reference; data-display category barrel already exports it at line5. Type-only boundary violation, NOT runtime/compiler/bundle failure.",
+      "fix": "Use existing type export from @/components/data-display; no shared barrel/API/catalog edit.",
+      "owner": "page",
+      "related": [
+        "web/src/components/data-display/index.ts:5"
+      ],
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "applicationRepro": "NOTRUN",
+      "repro_execution": "SOURCE_CONTROL_FLOW_ONLY",
+      "dedup": {
+        "new_root": false,
+        "reference": "audit-page-083.json architectureIssues[5]",
+        "existing_queued_root": null
+      },
+      "evidence": {
+        "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx",
+        "line": 3,
+        "source": "import { type StatMetric } from '@/components/data-display/stat-reference';"
+      }
+    },
+    {
+      "id": "CHH007",
+      "rule": "unsupported-export-action",
+      "file": "web/src/components/charts/ChartExportMenu.tsx",
+      "line": 244,
+      "severity": "medium",
+      "mechanism": "Weekly div/CSS heatmap enables a generic menu always offering Save as SVG. Toolbar icons are excluded; no eligible SVG exists. exportSVG returns without download, a silent no-op. The menu does NOT toast download success; no fake success finding asserted. Recharts breakdowns have SVG.",
+      "detail": "Weekly div/CSS heatmap enables a generic menu always offering Save as SVG. Toolbar icons are excluded; no eligible SVG exists. exportSVG returns without download, a silent no-op. The menu does NOT toast download success; no fake success finding asserted. Recharts breakdowns have SVG.",
+      "fix": "Separately lease existing export owners for truthful supported formats/outcomes. Preserve CSV raw SI, PNG/copy, fullscreen and real SVG bar exports; no invented SVG snapshot.",
+      "owner": "shared-export-integration",
+      "related": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:212-225",
+        "web/src/components/charts/ChartContainer.tsx:639,721-729",
+        "web/src/hooks/useChartExport.ts:120-125,173-195",
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx:29-93"
+      ],
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "applicationRepro": "NOTRUN",
+      "repro_execution": "SOURCE_CONTROL_FLOW_ONLY",
+      "dedup": {
+        "new_root": true,
+        "reference": "Closed phase3 export/container receipts are context, not a repair lease",
+        "existing_queued_root": null
+      },
+      "evidence": {
+        "file": "web/src/components/charts/ChartExportMenu.tsx",
+        "line": 244,
+        "source": "<Text variant=\"bodySm\">{t('chart.export.svg', 'Save as SVG')}</Text>"
+      }
+    },
+    {
+      "id": "CHH008",
+      "rule": "manual-refresh-unresolved-scope",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 148,
+      "severity": "medium",
+      "mechanism": "Refresh and no-data summary retry can run with vehicleId=null. enabled:false guards automatic execution, not manual refetch. Installed QueryObserver refetch calls fetch directly; erased non-null assertion passes null and String(vehicleId) constructs vehicle_id=null. No request executed or backend error/auth result claimed.",
+      "detail": "Refresh and no-data summary retry can run with vehicleId=null. enabled:false guards automatic execution, not manual refetch. Installed QueryObserver refetch calls fetch directly; erased non-null assertion passes null and String(vehicleId) constructs vehicle_id=null. No request executed or backend error/auth result claimed.",
+      "fix": "Guard current selected vehicle at page/action and typed queryFn boundaries; retain independent fleet recovery and resolved-vehicle/retained-history refresh.",
+      "owner": "page/hook-integration",
+      "related": [
+        "web/src/api/hooks/useCharging.ts:40,129-132",
+        "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx:87-88",
+        "web/src/api/dataState.ts:200-202",
+        "web/node_modules/@tanstack/query-core/src/queryObserver.ts:371-377,448-476"
+      ],
+      "confidence": "high-source",
+      "classification": "confirmed-source-finding",
+      "applicationRepro": "NOTRUN",
+      "repro_execution": "SOURCE_CONTROL_FLOW_ONLY",
+      "dedup": {
+        "new_root": true,
+        "reference": null,
+        "existing_queued_root": null
+      },
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 148,
+        "source": "onClick={() => refetch()}"
       }
     }
   ],
@@ -350,7 +385,10 @@
       "why_unpromoted": "Historical audit explicitly preserves browser-local business buckets pending timezone decision. Settings/vehicle zone ownership contract not established; do not silently switch to UTC or claim current bins are incorrect.",
       "source_example": "2026-10-12T00:30:00Z corresponds to Sunday17 in America/Los_Angeles and Monday00 in UTC; reasoning only, not an executed timezone test.",
       "dedup": "audit-page-083.json architectureIssues[1]",
-      "needed": "Integration/product timezone decision plus offset/DST tests and disclosure acceptance; NOTRUN"
+      "needed": "Integration/product timezone decision plus offset/DST tests and disclosure acceptance; NOTRUN",
+      "rule": "integration-or-native-acceptance-unknown",
+      "confidence": "source-established/acceptance-unknown",
+      "classification": "candidate-not-promoted"
     },
     {
       "id": "CHHC02",
@@ -364,7 +402,10 @@
       "mechanism": "cost_decimal summed and formatted via existing user currency symbol, not grouped by per-session cost_currency.",
       "why_unpromoted": "Mixed currency/source normalization not established. No billing error or exchange conversion invented. Zero/negative recorded costs are not clamped by page.",
       "dedup": "audit-page-083.json architectureIssues[4]",
-      "needed": "Source currency normalization contract and safe mixed-currency fixtures; NOTRUN"
+      "needed": "Source currency normalization contract and safe mixed-currency fixtures; NOTRUN",
+      "rule": "integration-or-native-acceptance-unknown",
+      "confidence": "source-established/acceptance-unknown",
+      "classification": "candidate-not-promoted"
     },
     {
       "id": "CHHC03",
@@ -377,7 +418,10 @@
       "mechanism": "Summary counts non-null energy/cost while table counts finite energy; individual summed operands not finite-validated. Invalid timestamps skipped by bins but included in returned-session KPI. Duration denominator uses finite strictly positive completed intervals, excludes zero-length records by declared definition.",
       "why_unpromoted": "Invalid timestamp/nonfinite/meaningful-zero-duration wire validity not established; JSON cannot natively represent NaN/Infinity. Conditional input-contract issue is not merged with confirmed missing-energy tooltip defect.",
       "dedup": "No matching current Phase6 root found; not promoted",
-      "needed": "Wire/input validity contract and scoped cases, not guessed backend changes"
+      "needed": "Wire/input validity contract and scoped cases, not guessed backend changes",
+      "rule": "integration-or-native-acceptance-unknown",
+      "confidence": "source-established/acceptance-unknown",
+      "classification": "candidate-not-promoted"
     },
     {
       "id": "CHHC04",
@@ -388,222 +432,1540 @@
         "web/src/features/charging/components/charging-heatmap/heatmapData.ts:67-82",
         "web/src/features/charging/pages/ChargingHeatmapPage.tsx:229-262"
       ],
-      "mechanism": "Noninteractive role=img grid has pointer detail/fixed 640px inner width. Popover placement/saturated hardcoded RGBA palette need real contrast, viewport and forced-colors review; separate keyboard table provides all168 slots.",
+      "mechanism": "Pointer detail, 640px inner grid, tooltip placement, fixed chart heights and actual contrast/forced-colors/zoom/touch need mounted acceptance. Source palette is separately confirmed CHH005; all168 slots have complete alternative table.",
       "why_unpromoted": "Source table, headers, focus and complete alternative exist. No browser/native/contrast/touch/screen-reader checks run; no actual clipping/inaccessible-detail/contrast failure asserted.",
       "dedup": "audit-page-083.json visualIssues/accessibility; no new palette repair root",
-      "needed": "Later actual browser/native acceptance within existing constraints; NOTRUN"
+      "needed": "Later actual browser/native acceptance within existing constraints; NOTRUN",
+      "rule": "integration-or-native-acceptance-unknown",
+      "confidence": "source-established/acceptance-unknown",
+      "classification": "candidate-not-promoted"
+    },
+    {
+      "id": "CHHC05",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 216,
+      "rule": "portable-export-scope-provenance",
+      "mechanism": "CSV rows omit vehicle/bounds/timezone/limit/complete-history qualification; breakdown figures also omit loadedScope ariaDescription. Normal page disclosure remains.",
+      "why_unpromoted": "Portable export/fullscreen context contract unknown; no download/fullscreen executed. No actual loss or false completeness assertion.",
+      "needed": "Existing export metadata decision and later authorized acceptance; no new queue row.",
+      "confidence": "source-established/acceptance-unknown",
+      "classification": "candidate-not-promoted"
     }
   ],
-  "checks": [
-    {
-      "name": "calendar/timezone",
-      "result": "SOURCE_REVIEWED: Sunday-first7x24 START-time density, browser-local bins, invalid timestamps skipped, first-crossing max/tie behavior preserved. Correct intended zone remains CHHC01."
+  "checks": {
+    "rawReceipts": "Shell517 raw check output, all matching source lines printed; report-only validation shell below",
+    "rawCandidateCounts": {
+      "static-inline-style": 5,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string": 17,
+      "page-wrapper": 1,
+      "fetch-useeffect": 0
     },
-    {
-      "name": "denominators/absent/zero",
-      "result": "FAIL_SOURCE CHH002. Summary distinguishes unknown energy/cost via observation counts, annotates partial; duration average divides only by durationCount. Successful empty result count0 is authoritative but unmeasured energy/cost/duration remain missing. Table/export includes168 slots and raw recorded_energy_count."
-    },
-    {
-      "name": "SI/sign/preferences",
-      "result": "SOURCE_REVIEWED_WITH_FINDINGS: raw Wh in hooks/grid/export; raw seconds from timestamps; existing useUnits/useOperationalMetrics own display conversion, locale/precision/currency. No abs/sign flip/negative-cost clamp by page. Formatting/color CHH003/004; currency identity CHHC02."
-    },
-    {
-      "name": "header actual scope/bounds",
-      "result": "FAIL_SOURCE CHH001. Registered workspaceScope:31/App:902; shared vehicle hook; no local duplicate picker; header overrides backup default/persistKey. Query key includes vehicle,bounds,limit,offset; signal forwarded. Read-only router registration ListByVehicle router.go:3546 confirmed; handler semantics not exercised."
-    },
-    {
-      "name": "bounds/provenance/trust",
-      "result": "SOURCE_REVIEWED: single limit2000 offset0 response; no pagination or lifetime claim. Page70/171 and summary89-95 disclose returned sessions; weekly ariaDescription/disclosure carry limitation. Historical fatal-vs-retained-refresh-vs-paused source handling; no fake live trust. Actual server clamping/ordering/completeness and export/fullscreen scope acceptance unknown."
-    },
-    {
-      "name": "sections/actions",
-      "result": "SOURCE_REVIEWED:465 lines vs historical369 (126.02%, >=70%); no original Git blob reconstructed. Three sections/four cards/four KPIs/four MetricBars/favorite block/three EmbeddedCharts. Every shell renders with own loading/error/empty state. Refresh, retries, inherited controls, pointer detail, keyboard table, export/fullscreen preserved in source; actions not executed."
-    },
-    {
-      "name": "i18n",
-      "result": "FAIL_SOURCE CHH003;47 literal t() keys present,0 missing. Catalog READONLY, presence only; parser case-key failure corrected with -AsHashtable. No runtime/helper/projection/guard success claimed."
-    },
-    {
-      "name": "source-a11y",
-      "result": "SOURCE_REVIEWED_NOT_NATIVE_ACCEPTED: localized section names/IDs;44px named refresh; contained table region, tabIndex0, column/row headers, visible focus class; complete168-slot touch/keyboard alternative. No positive tabindex/data-gated section shell observed. Native questions CHHC04."
-    },
-    {
-      "name": "static-inline-style",
-      "raw_matches": 5,
-      "result": "No matching violation in scanned scope: computed heatColor and mapped legend c inline styles are allowed dynamic exceptions; remaining hits Tailwind var() classes."
-    },
-    {
-      "name": "raw-html",
-      "raw_matches": 0,
-      "result": "Case-sensitive grep0. Initial case-insensitive scan2 matched shared Button/Table, false positives corrected."
-    },
-    {
-      "name": "direct-library-import",
-      "raw_matches": 0,
-      "result": "GREP_ZERO in audited source scope"
-    },
-    {
-      "name": "old-api-import",
-      "raw_matches": 0,
-      "result": "GREP_ZERO in audited source scope"
-    },
-    {
-      "name": "double-prefix",
-      "raw_matches": 0,
-      "result": "GREP_ZERO; consumed hook source /charging not /api/v1/charging"
-    },
-    {
-      "name": "camelcase-param",
-      "raw_matches": 0,
-      "result": "GREP_ZERO; consumed URLSearchParams vehicle_id/limit/offset/start/end"
-    },
-    {
-      "name": "hidden-section",
-      "raw_matches": 0,
-      "result": "GREP_ZERO; all3 shells render, no all-page data gate"
-    },
-    {
-      "name": "missing-page-container",
-      "raw_matches": 1,
-      "result": "Accepted existing PageLayout wrapper at158; not missing legacy PageContainer violation"
-    },
-    {
-      "name": "fetch-useeffect",
-      "raw_matches": 0,
-      "result": "GREP_ZERO in audited direct sources; typed TanStack Query hook. Shared range effects synchronize URL/preferences/clock, not page data loading."
-    },
-    {
-      "name": "TypeScript/tests/native",
-      "result": "NOTRUN per explicit assignment; no TypeScript/lint/build/suite/native/browser/API pass claimed"
-    }
-  ],
+    "classification": "Static scan5 includes3 classes and2 dynamic style exceptions; no static var style violation. PageLayout delegates PageContainer. Seventeen locale candidates, dedup CHH003. Backend rules not applicable to requested frontend implementation, no backend cleanliness claim."
+  },
   "deduplication": {
-    "new_repair_items_created": 0,
-    "carried_phase0_observations": 2,
-    "existing_shared_mechanism_additional_callsites": 1,
-    "confirmed_total": 4,
-    "explanation": "CHH001/003 revalidate audit-page-083 observations. CHH004 additional caller of existing gradient mechanism; existing queued writable scope does not authorize heatmap changes. Only CHH002 new confirmed local root.",
-    "queue_changed": false,
-    "new_confirmed_local_roots": 1,
-    "existing_matching_phase6_heatmap_reports": 0
+    "confirmed": 8,
+    "phase0Roots": 5,
+    "additionalExistingGradientCallsiteRoot": 1,
+    "newIntegrationObservations": 2,
+    "newQueueItems": 0,
+    "correction": "CHH002 exists in audit-page-083 states.findings[0]; CHH005/006 Phase0 visual/architecture carried, not new roots."
   },
   "summary": {
-    "confirmed_findings": 4,
-    "files_with_most_issues": [
-      {
-        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
-        "primary_findings": 3
-      },
-      {
-        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
-        "primary_findings": 1
-      }
-    ],
-    "unpromoted_candidates": 4,
-    "priority_fixes": [
-      "CHH002 unknown/partial hover vs valid zero",
-      "CHH001 integration-confirmed exact instant plumbing",
-      "CHH003 shared locale operand formatting",
-      "CHH004 coordinate existing gradient mechanism owner"
-    ],
-    "counts_by_rule": {
+    "confirmed": 8,
+    "candidates": 5,
+    "needs": 7,
+    "byRule": {
+      "workspace-instant-bounds": 1,
       "measurement-missing-vs-zero": 1,
       "hardcoded-string": 1,
-      "workspace-instant-bounds": 1,
-      "chart-color-contract": 1
+      "chart-color-contract": 1,
+      "noncanonical-density-palette": 1,
+      "feature-category-import": 1,
+      "unsupported-export-action": 1,
+      "manual-refresh-unresolved-scope": 1
     },
-    "count_semantics": "Four deduplicated confirmed root findings, not individual repeated callsites or raw grep matches; four separately unpromoted candidates."
+    "byFile": {
+      "web/src/features/charging/pages/ChargingHeatmapPage.tsx": 4,
+      "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx": 1,
+      "web/src/features/charging/components/charging-heatmap/heatmapData.ts": 1,
+      "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx": 1,
+      "web/src/components/charts/ChartExportMenu.tsx": 1
+    },
+    "priority": [
+      "N01 observation",
+      "N02 bounds",
+      "N07 manual scope",
+      "N03 locale/category",
+      "N04 solid bars",
+      "N06 export truth",
+      "N05 palette"
+    ],
+    "counting": "Deduplicated source mechanisms, not raw grep occurrences."
   },
   "execution": {
-    "raw_outputs_location": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-heatmap.log",
-    "read_failure": "web/src/hooks/useTimezone.ts path does not exist; no app issue inferred",
-    "global_tsc": "NOTRUN",
-    "auditwrapper": "NOTRUN",
-    "builtin_checks_only": true,
-    "json_reparse_exit": 0,
-    "raw_scan_outputs": [
-      "CHECK static-inline-style raw_matches=5",
-      "CHECK raw-html raw_matches=2",
-      "CHECK direct-library-import raw_matches=0",
-      "CHECK old-api-import raw_matches=0",
-      "CHECK double-prefix raw_matches=0",
-      "CHECK camelcase-param raw_matches=0",
-      "CHECK hidden-section raw_matches=0",
-      "CHECK hardcoded-string raw_matches=17",
-      "CHECK missing-page-container raw_matches=1",
-      "CHECK fetch-useeffect raw_matches=0",
-      "CHECK raw-html_case_sensitive raw_matches=0"
-    ],
     "typescript": "NOTRUN",
-    "fullsuite": "NOTRUN",
-    "api": "NOTRUN",
+    "lint": "NOTRUN",
+    "build": "NOTRUN",
     "tests": {
       "status": "NOTRUN",
-      "failed": 0,
-      "discovered": null,
-      "skipped": 0,
       "executed": 0,
-      "passed": 0
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0
     },
-    "git": "NOTRUN",
-    "servers_helpers_extensions_nestedagents_parenthealth": "NOTRUN",
-    "actual_commands": [
-      "C01 Get-FileHash SHA256; Select-String rule patterns; Get-Content count",
-      "C02 Select-String -CaseSensitive raw tags; source scope grep; queue IDs; historical audit ConvertFrom-Json",
-      "C03 source/catalog inspection, ConvertFrom-Json exit1 on case-distinct keys",
-      "C04 narrower source/route/history grep; failure recorded",
-      "C05 ConvertFrom-Json -AsHashtable and regex literal t() key lookup:47,missing0",
-      "C06 Get-FileHash support/test files; Select-String denominators/trust;line ratio",
-      "C07 Select-String light-dark()/MetricBar template/existing queued root",
-      "C08 object/report creation failed on PowerShell false token before writes",
-      "C09 corrected builtin object/ConvertTo-Json/Set-Content report and ConvertFrom-Json reparse"
-    ],
     "native": "NOTRUN",
-    "command_exits": {
-      "C09": 0,
-      "C06": 0,
-      "C04": 0,
-      "C01": 0,
-      "C03": 1,
-      "C05": 0,
-      "C08": 1,
-      "C02": 0,
-      "C07": 0,
-      "C10": 1,
-      "C11": 1,
-      "C12": 0,
-      "C13": 0
-    },
-    "preliminary_shell_exits": {
-      "6253": 0,
-      "6271": 0,
-      "6266": 0,
-      "6262": 0,
-      "6252": 0,
-      "6284": 0,
-      "6247": 0,
-      "6256": 0
-    },
     "browser": "NOTRUN",
-    "source_pin_recheck_exit": 0,
-    "raw_final_reparse_log": "C13_FINAL_JSON_REPARSE_EXIT recorded after actual final reparse",
-    "release_assertion_failures": {
-      "C10": "Automatic DateTime versus string assertion",
-      "C11": "UTC versus local wall-time equality assertion; JSON/counts valid in actual C12"
-    }
+    "API": "NOTRUN",
+    "Git": "NOTRUN",
+    "server": "NOTRUN",
+    "Docker": "NOTRUN",
+    "installs": "NOTRUN",
+    "subagents": "NOTRUN",
+    "heartbeat": "NOTRUN",
+    "fullsuite": "NOTRUN",
+    "catalogGuards": "NOTRUN",
+    "historicalLogPresent": false,
+    "currentLog": "NOT_CREATED",
+    "sourceCheckShells": [
+      "264",
+      "265",
+      "285",
+      "317",
+      "517"
+    ],
+    "failures": [
+      {
+        "shell": 422,
+        "exit": 1,
+        "reason": "OS206 oversized command not executed"
+      },
+      {
+        "shell": 517,
+        "exit": 1,
+        "reason": "Return-deadline assertion before writes; actual raw source checks succeeded; return target missed"
+      }
+    ],
+    "unicodeReadFailure": "Exit1 before corrected utf8 read",
+    "applicationAcceptance": "NOTRUN"
   },
   "limits": [
-    "Only requested report/log written; application/tests/catalog/backend/shared/queue READONLY",
-    "No API/browser/native/globalTSC/fullsuite/auditwrapper/Git/server/helper/extension/nested-agent/parent-health action",
-    "Target5min/max20creation/HARD25 from actual start; shells30s initial wait, all finished under180s",
-    "Tests/native NOTRUN; historical catalog startup/capture resource failure/final unvalidated correction retained",
-    "Original369-line count from historical audit, not original Git reconstruction",
-    "Source accessibility is not focus/viewport/touch/screen-reader/contrast/OS acceptance",
-    "Server bounds/clamping/ordering/authorization/currency semantics unknown; no backend or completeness invention",
-    "C03 parser and C08 creation failures honest raw receipts, not application failures or hidden successes",
-    "C10 release assertion failed after successful parse due to automatic DateTime coercion; failure preserved, corrected final equality check executed",
-    "C11 UTC/local timestamp assertion failure preserved; actual C12 valid JSON/counts; final C13 normalizes UTC before equality"
+    "SOURCE-ONLY: findings unrepaired, no application/native/release acceptance; mission43-45 gates not waived.",
+    "All application/API/browser/native/tests/tsc/lint/build/fullsuite/Git/server/Docker/installs/subagents/heartbeat NOTRUN.",
+    "Historical claimed log absent; old receipt preserved, not reauthenticated. Historical369 lines not Git reconstructed. Seven primary hashes match; supporting drift not worker attribution.",
+    "Actual API null energy not established (type number); source defensive contradiction confirmed. Backend bound/filter/pagination/currency/authorization semantics not inspected beyond route registration.",
+    "Source a11y/responsive/export wiring is not runtime acceptance. Contrast/focus/keyboard/touch/forced-colors/RTL/zoom/clipping/screenshots/download/fullscreen NOTRUN.",
+    "Bounded rendered seams, not full application/transitive graph; dynamic styles/semantic Table/PageLayout are acceptable exceptions. No catalog guard or user settings timezone acceptance.",
+    "Tool failures honest: initial Unicode print exit1 corrected utf8; guessed metric paths absent corrected actual .tsx/glossary; shell422 OS206 before execution/writes; shell517 deadline assertion exit1 before write; split shell458 report partial success.",
+    "Return deadline missed at01:05:28; no renewal. Finalize/release under original hard01:10:28, no scope expansion or application execution.",
+    "All7 needs require parent narrow Phase6 ownership; no matching heatmap repair claim, DiskForecast mechanism alone not scope permission; no closed phase replay."
   ],
   "claims_release": "ALL CLAIMS RELEASED / NO POST-RETURN WRITES",
-  "elapsed_seconds_at_release": 1258.714
+  "elapsed_seconds_at_release": 1162.305316,
+  "priorReceipt": {
+    "status": "DONE",
+    "acceptance": "SOURCE-ONLY READ-ONLY QA complete, not repaired or application/native acceptance",
+    "requested_start_utc": "2026-10-13T23:16:20.806Z",
+    "actual_start_utc": "2026-10-13T23:16:33.1178926Z",
+    "creation_utc": "2026-10-13T23:35:24.1346318Z",
+    "release_utc": "2026-10-13T23:37:31.8409383Z",
+    "authority_read": [
+      "docs/orchestrator-loop.md:1-284 sole playbook",
+      "migration-queue.md:339 current row;1773 accepted receipt;302,371 existing gradient root",
+      "docs/frontend-design-contract.md:49-72,419-547 and relevant scope grep",
+      "docs/frontend-mission.md:19-92 principles",
+      "docs/session-handoff.md scoped source-only context grep, not parent health",
+      "docs/frontend-audits/audit-page-083.json historical preservation/architecture evidence",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "scope": {
+      "audited_files": 7,
+      "commit_equivalence": "Current disk hashes pinned; Git/accepted blob comparison NOTRUN. Queue accepted commit is receipt authority, not independently verified byte equivalence.",
+      "supporting_files": 24,
+      "pins": [
+        {
+          "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+          "sha256": "0e72aa6173acc637a0f8787c3047ca570a8d99ab0480dc3cef2ff69a1a5dc7ac",
+          "lines": 465,
+          "role": "audited-source"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+          "sha256": "9c0789451bf89d8649a642b17d07454248424a50cbaca1503472cbaaea7efb81",
+          "lines": 188,
+          "role": "audited-source"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+          "sha256": "49e6e615af14f3a4c7f95db3c781b7c3ff54b184b70536c81b31800611638e58",
+          "lines": 95,
+          "role": "audited-source"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap/index.ts",
+          "sha256": "7bca909bbf20448d8bd52a4c436a34c7cfc06635a7a63c5c1adf0867fec68d55",
+          "lines": 15,
+          "role": "audited-source"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx",
+          "sha256": "3f5eba358c8d69417a91771b6fe9440db5f5b4f7714842997dc55b140990159e",
+          "lines": 98,
+          "role": "audited-source"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap-modernization/index.ts",
+          "sha256": "595c90b01f6364d6d60606c8d5195f9de8560cd740897e86c770ed448b1057eb",
+          "lines": 1,
+          "role": "audited-source"
+        },
+        {
+          "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+          "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+          "lines": 73,
+          "role": "audited-source"
+        },
+        {
+          "file": "docs/orchestrator-loop.md",
+          "sha256": "61f7a74733404c084c4cb609301e8f860b2c464a6c58104e9493eff5ff0361c6",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "migration-queue.md",
+          "sha256": "e9c99f97d686b011ad2107552ee6b181ae20448af0ae435f206e5ec03302e1f9",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "docs/frontend-design-contract.md",
+          "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "docs/frontend-audits/audit-page-083.json",
+          "sha256": "9a31f332cf5ee233571102eadd0f6c22baa6dc408e5410fb8547146777a0759d",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/hooks/useRangeState.ts",
+          "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/lib/workspaceScope.ts",
+          "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/api/hooks/useCharging.ts",
+          "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/api/types.ts",
+          "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/hooks/useDataState.ts",
+          "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/api/dataState.ts",
+          "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/hooks/useUnits.ts",
+          "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/hooks/useOperationalMetrics.tsx",
+          "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/lib/constants.ts",
+          "sha256": "b474ccf858a25c206f6b6673a89ad6d2756db6c591d9e5336dd5a6d203107e74",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/lib/dateFormat.ts",
+          "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/features/charging/pages/ChargingHeatmapPage.test.tsx",
+          "sha256": "5019e7f536beb4a6392061e48ad5476c55a28ffebcf4d1243a23eb5d2698bf66",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/features/charging/pages/__tests__/ChargingHeatmapPage.test.tsx",
+          "sha256": "fdd91238ed2f90ab7c3c2b272b54ead1ea8a383b69871f11ca0a2e6ef45e4fda",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap/heatmapData.test.ts",
+          "sha256": "fb18e431635760b48eba9c85e341de87e6c597da45bce4d4a6867c1843108d1e",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.test.tsx",
+          "sha256": "9be384d3db2be985dc20e411428d77b4e39ffd66efc9e0898fed06806e7be7b2",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapModernization.test.tsx",
+          "sha256": "e4752126e3f1f99e79c414e0056c78f181d11b9ebec9b0bb2af488703f97766d",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/i18n/en.json",
+          "sha256": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": ".gitignore",
+          "sha256": "2b5bd47eff6c416aeca19086e45cd76906d96b0498f5babe33d2feefeb6eae96",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/components/data-display/MetricBar.tsx",
+          "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        },
+        {
+          "file": "web/src/lib/tokens.ts",
+          "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+          "lines": null,
+          "role": "supporting-readonly-evidence"
+        }
+      ],
+      "release_pin_check": {
+        "total": 31,
+        "unchanged": 31,
+        "external_drift": [],
+        "audited_heatmap_drift": 0
+      }
+    },
+    "findings": [
+      {
+        "id": "CHH001",
+        "rule": "workspace-instant-bounds",
+        "severity": "high",
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 46,
+        "related": [
+          "web/src/features/charging/pages/ChargingHeatmapPage.tsx:51",
+          "web/src/hooks/useRangeState.ts:656-669",
+          "web/src/api/hooks/useCharging.ts:40-43,122-133"
+        ],
+        "mechanism": "Page forwards start/end calendar labels instead of available startInstant/endInstantExclusive. This drops exact rolling cutoffs and timezone-exclusive boundary precision. Header ownership is present and overrides page default/persistKey; those backup options are not a defect.",
+        "source_repro": "Choose 24h at 15:30 UTC: useRangeState computes now-minus-24h/now instants, but page query sends YYYY-MM-DD labels. Labels cannot communicate the 15:30 cutoff regardless of server date interpretation.",
+        "repro_execution": "SOURCE_TRACE_ONLY; no mounted test/API/browser",
+        "impact_limit": "Precision loss is confirmed; actual returned-row error, server inclusivity, DST filtering and limit clamping are unknown.",
+        "fix": "Integration owner verifies charging bound semantics and forwards both existing instant bounds through typed hook. Preserve header ownership, query keys, signal, Sunday-first business buckets and raw SI; do not client-filter only the response.",
+        "dedup": {
+          "new_root": false,
+          "kind": "carried-existing-observation",
+          "reference": "docs/frontend-audits/audit-page-083.json architectureIssues[0]",
+          "existing_queued_root": null
+        }
+      },
+      {
+        "id": "CHH002",
+        "rule": "measurement-missing-vs-zero",
+        "severity": "high",
+        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+        "line": 68,
+        "related": [
+          "web/src/features/charging/components/charging-heatmap/heatmapData.ts:31-33,51",
+          "web/src/features/charging/pages/ChargingHeatmapPage.tsx:78-93,260",
+          "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx:45-48"
+        ],
+        "mechanism": "Grid initializes energy to 0 and adds missing Wh as 0 without recording observation coverage. Hover formats this total for any occupied cell. All-missing slots appear measured zero; partial slots lack partial context. Page table/export separately counts finite energy and distinguishes these states, so presentations contradict.",
+        "source_repro": "One valid-start session with total_energy_added_wh=null yields count=1,totalEnergyWh=0. Hover formats 0 Wh (default 0.00 kWh), while table energy_wh is null with No recorded measurements. One measured zero plus one null yields an unqualified zero hover but a partial table status.",
+        "repro_execution": "SOURCE_TRACE_ONLY; authored null-energy fixture at ChargingHeatmapPage.test.tsx:127-139 was not executed",
+        "impact_limit": "Known zero must remain zero; recorded-only summary/table behavior must be retained.",
+        "fix": "Carry energy observation counts/coverage in the existing model or pass existing slot coverage to tooltip; show unavailable/partial evidence instead of fabricated zero. Preserve 168 cells, accessible table, export, SI and sign.",
+        "dedup": {
+          "new_root": true,
+          "kind": "new-confirmed-local-root",
+          "reference": null,
+          "existing_queued_root": null
+        }
+      },
+      {
+        "id": "CHH003",
+        "rule": "hardcoded-string",
+        "severity": "medium",
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 65,
+        "related": [
+          "web/src/features/charging/pages/ChargingHeatmapPage.tsx:83-84,291-293,310,317",
+          "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx:39-40,45,56,65,68",
+          "web/src/features/charging/components/charging-heatmap/heatmapData.ts:186-187",
+          "web/src/lib/constants.ts:90",
+          "web/src/lib/dateFormat.ts:99-116"
+        ],
+        "mechanism": "English DAYS reaches grid, axes, insights and table/export without localization. Favorite fallback appends English s to abbreviated weekdays. formatHourLabel forces HH:00 independent of locale hour cycle. Raw grid count/hour interpolation bypasses existing number formatting; t() around the outer sentence does not format operands.",
+        "source_repro": "Under a non-English display locale DAYS remains Sun..Sat. In en-US locale bucket13 remains 13:00 instead of locale time. Favorite English fallback yields e.g. Mons at 13:00. Grid counts are raw decimal strings while table uses fmtInt.",
+        "repro_execution": "SOURCE_TRACE_ONLY; preference/language change not exercised",
+        "impact_limit": "47 literal translation keys present, 0 missing. This is operand/formatting bypass, not missing catalog keys. No separate explicit hour-cycle preference source was established.",
+        "fix": "Reuse existing locale date/time/number formatting and translate a complete weekday/time phrase. Preserve numeric Sunday-first/hour bucket identities independently of translated labels.",
+        "dedup": {
+          "new_root": false,
+          "kind": "carried-existing-observation",
+          "reference": "docs/frontend-audits/audit-page-083.json architectureIssues[2]",
+          "existing_queued_root": null
+        }
+      },
+      {
+        "id": "CHH004",
+        "rule": "chart-color-contract",
+        "severity": "medium",
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "line": 309,
+        "related": [
+          "web/src/features/charging/pages/ChargingHeatmapPage.tsx:316,323,330",
+          "web/src/components/data-display/MetricBar.tsx:45,87",
+          "web/src/lib/tokens.ts:399"
+        ],
+        "mechanism": "Four insight MetricBars pass chartTokens.series light-dark() functions without fill=solid. Default gradient appends 99 to the full CSS color function, constructing an invalid color token.",
+        "source_repro": "series[5] becomes linear-gradient(90deg, light-dark(#3f6268, #91bbc0)99, light-dark(#3f6268, #91bbc0)). A suffix after the color function is not a valid color. All four insight bars use this construction.",
+        "repro_execution": "SOURCE_STRING_TRACE_ONLY; no browser/CSS parser",
+        "impact_limit": "Malformed CSS construction confirmed; actual paint/forced-colors behavior not claimed. Numeric labels and accessible progress values remain.",
+        "fix": "Use existing MetricBar fill=solid caller contract for function-valued colors, coordinated with existing root owner; no competing shared rewrite.",
+        "dedup": {
+          "scope_limit": "Existing queued writable scope does not cover heatmap callsites; do not expand its claims",
+          "kind": "existing-shared-mechanism-additional-callsites",
+          "new_root": false,
+          "reference": "phase6-qa-admin-disk-forecast.json; migration-queue.md:302,371",
+          "existing_queued_root": "phase6-fix-disk-forecast-contracts"
+        }
+      }
+    ],
+    "summary": {
+      "confirmed_findings": 4,
+      "files_with_most_issues": [
+        {
+          "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+          "primary_findings": 3
+        },
+        {
+          "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+          "primary_findings": 1
+        }
+      ],
+      "unpromoted_candidates": 4,
+      "priority_fixes": [
+        "CHH002 unknown/partial hover vs valid zero",
+        "CHH001 integration-confirmed exact instant plumbing",
+        "CHH003 shared locale operand formatting",
+        "CHH004 coordinate existing gradient mechanism owner"
+      ],
+      "counts_by_rule": {
+        "measurement-missing-vs-zero": 1,
+        "hardcoded-string": 1,
+        "workspace-instant-bounds": 1,
+        "chart-color-contract": 1
+      },
+      "count_semantics": "Four deduplicated confirmed root findings, not individual repeated callsites or raw grep matches; four separately unpromoted candidates."
+    },
+    "deduplication": {
+      "new_repair_items_created": 0,
+      "carried_phase0_observations": 2,
+      "existing_shared_mechanism_additional_callsites": 1,
+      "confirmed_total": 4,
+      "explanation": "CHH001/003 revalidate audit-page-083 observations. CHH004 additional caller of existing gradient mechanism; existing queued writable scope does not authorize heatmap changes. Only CHH002 new confirmed local root.",
+      "queue_changed": false,
+      "new_confirmed_local_roots": 1,
+      "existing_matching_phase6_heatmap_reports": 0
+    },
+    "execution": {
+      "raw_outputs_location": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-heatmap.log",
+      "read_failure": "web/src/hooks/useTimezone.ts path does not exist; no app issue inferred",
+      "global_tsc": "NOTRUN",
+      "auditwrapper": "NOTRUN",
+      "builtin_checks_only": true,
+      "json_reparse_exit": 0,
+      "raw_scan_outputs": [
+        "CHECK static-inline-style raw_matches=5",
+        "CHECK raw-html raw_matches=2",
+        "CHECK direct-library-import raw_matches=0",
+        "CHECK old-api-import raw_matches=0",
+        "CHECK double-prefix raw_matches=0",
+        "CHECK camelcase-param raw_matches=0",
+        "CHECK hidden-section raw_matches=0",
+        "CHECK hardcoded-string raw_matches=17",
+        "CHECK missing-page-container raw_matches=1",
+        "CHECK fetch-useeffect raw_matches=0",
+        "CHECK raw-html_case_sensitive raw_matches=0"
+      ],
+      "typescript": "NOTRUN",
+      "fullsuite": "NOTRUN",
+      "api": "NOTRUN",
+      "tests": {
+        "status": "NOTRUN",
+        "failed": 0,
+        "discovered": null,
+        "skipped": 0,
+        "executed": 0,
+        "passed": 0
+      },
+      "git": "NOTRUN",
+      "servers_helpers_extensions_nestedagents_parenthealth": "NOTRUN",
+      "actual_commands": [
+        "C01 Get-FileHash SHA256; Select-String rule patterns; Get-Content count",
+        "C02 Select-String -CaseSensitive raw tags; source scope grep; queue IDs; historical audit ConvertFrom-Json",
+        "C03 source/catalog inspection, ConvertFrom-Json exit1 on case-distinct keys",
+        "C04 narrower source/route/history grep; failure recorded",
+        "C05 ConvertFrom-Json -AsHashtable and regex literal t() key lookup:47,missing0",
+        "C06 Get-FileHash support/test files; Select-String denominators/trust;line ratio",
+        "C07 Select-String light-dark()/MetricBar template/existing queued root",
+        "C08 object/report creation failed on PowerShell false token before writes",
+        "C09 corrected builtin object/ConvertTo-Json/Set-Content report and ConvertFrom-Json reparse"
+      ],
+      "native": "NOTRUN",
+      "command_exits": {
+        "C09": 0,
+        "C06": 0,
+        "C04": 0,
+        "C01": 0,
+        "C03": 1,
+        "C05": 0,
+        "C08": 1,
+        "C02": 0,
+        "C07": 0,
+        "C10": 1,
+        "C11": 1,
+        "C12": 0,
+        "C13": 0
+      },
+      "preliminary_shell_exits": {
+        "6253": 0,
+        "6271": 0,
+        "6266": 0,
+        "6262": 0,
+        "6252": 0,
+        "6284": 0,
+        "6247": 0,
+        "6256": 0
+      },
+      "browser": "NOTRUN",
+      "source_pin_recheck_exit": 0,
+      "raw_final_reparse_log": "C13_FINAL_JSON_REPARSE_EXIT recorded after actual final reparse",
+      "release_assertion_failures": {
+        "C10": "Automatic DateTime versus string assertion",
+        "C11": "UTC versus local wall-time equality assertion; JSON/counts valid in actual C12"
+      }
+    },
+    "limits": [
+      "Only requested report/log written; application/tests/catalog/backend/shared/queue READONLY",
+      "No API/browser/native/globalTSC/fullsuite/auditwrapper/Git/server/helper/extension/nested-agent/parent-health action",
+      "Target5min/max20creation/HARD25 from actual start; shells30s initial wait, all finished under180s",
+      "Tests/native NOTRUN; historical catalog startup/capture resource failure/final unvalidated correction retained",
+      "Original369-line count from historical audit, not original Git reconstruction",
+      "Source accessibility is not focus/viewport/touch/screen-reader/contrast/OS acceptance",
+      "Server bounds/clamping/ordering/authorization/currency semantics unknown; no backend or completeness invention",
+      "C03 parser and C08 creation failures honest raw receipts, not application failures or hidden successes",
+      "C10 release assertion failed after successful parse due to automatic DateTime coercion; failure preserved, corrected final equality check executed",
+      "C11 UTC/local timestamp assertion failure preserved; actual C12 valid JSON/counts; final C13 normalizes UTC before equality"
+    ],
+    "claims_release": "ALL CLAIMS RELEASED / NO POST-RETURN WRITES",
+    "elapsed_seconds_at_release": 1258.714,
+    "artifactSha256": "dd137198da5fdb7d9d907d6293511c2171654b12066fcdb649becd71c0c779b1",
+    "historicalLogPresentOnThisMachine": false
+  },
+  "page": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+  "routes": [
+    "/charging-heatmap"
+  ],
+  "firstInspection": {
+    "priorStatus": "DONE",
+    "noChangeNeeded": false,
+    "reason": "Missing structured page/routes/sections/actions/filesRead/confidence/needs/evidenceLimits; five supporting pins drifted; old log absent. Seven primary source hashes unchanged."
+  },
+  "deadline": {
+    "returnUtc": "2026-10-14T01:05:28Z",
+    "hardUtc": "2026-10-14T01:10:28Z",
+    "renewed": false
+  },
+  "purpose": "Charging session START-time patterns, returned-session summaries and repeated charging places in shared vehicle/date scope.",
+  "native": "NOTRUN",
+  "browser": "NOTRUN",
+  "queueEvidence": {
+    "phase6-qa-charging-charging-heatmap": {
+      "line": 367,
+      "raw": "| [~] | 6 | phase6-qa-charging-charging-heatmap | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-charging-charging-heatmap.json | phase5-page-charging-charging-heatmap | 1 | actor=c96ef289-c635-4b31-86a7-2001a964869e; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | Accepted8a4c3ba0a sourceonly/currentChargingHeatmapPage/directparts; noexistingPhase6QA row. Calendar/timezone/bin/denominator/provenance/header actualscope/knownzero-vs-noobservation/SI/sign/preferences/trust/actions/sections/i18n/sourcea11y source-onlyreview, historicalsource/test/native limitationsnotwaived. Report/logonly/no source/tests/API/browser/native/fullsuite/helper/remigration or closedPhase0/3replay. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by c96ef289-c635-4b31-86a7-2001a964869e, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |",
+      "status": "[~]",
+      "files": "docs\\frontend-audits\\phase6-qa-charging-charging-heatmap.json"
+    },
+    "phase5-page-charging-charging-heatmap": {
+      "line": 1833,
+      "raw": "| [x] | 5 | phase5-page-charging-charging-heatmap | original-page-migration | web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx; web\\src\\features\\charging\\pages\\ChargingHeatmapPage.test.tsx | - | 2 | 2026-10-12T17:16:37.0134991Z | 8a4c3ba0ad9cc90eadf97b319040c7b3e327ca0f | Original Phase5 one-page adoption from accepted237-module inventory; aliases=/charging-heatmap; audit=docs\\frontend-audits\\audit-page-083.json. First check current page for no-change-needed. Completed shared/domain work stays complete; preserve every section/data/action. Exclusive page+namedcolocatedtest; extracted/shared changes need parent claim/integration. Next-phase work may proceed while pilot QA completes under original concurrency rule; no artificial whole-pilot validation dependency. Complete page QA remains Phase6, source acceptance not visual/fresh-live acceptance. Real fourth-wave source reservation to fill22 open slots alongside10 actually running retained repairs. Shared normal catalog after-check0. Excludes all prior objectives/no-output scopes/held delivery claims; actual actor ID follows. Actual fourth-wave actor=007b63e7-cdfc-4fc1-af9e-81fdbf9cc8a9; source-only exclusive page/test scope, notification pending, not QA accepted. Consumed actual terminal delivery; attempt1 partial preserved; continue retained owner, no capture/helper reset; Parent actual production compiler1496/1511 exit2: ChargingHeatmap217 ChartDataColumn format must accept unknown. Worker lint0/style0/preservation0;369-to465lines3sections,168slot alternative/raw-SI export; tests startup1 zero cases, capture2 resourceFAILED. WIP not accepted; commit=56af7ca2f8037b89720872d04858d44d6b337fc5; pushed. Continue original retained owner attempt2 from pushed partial WIP; precise scoped failure only; no capture/helper retry or budget reset. Consumed actual terminal delivery; accepted SOURCE ONLY, not native/application QA; Actual alreadyREADNEWterminal1 NOTREREAD. SAMEattempt2 SOURCEONLY surgicalpageformatteracceptsUNKNOWN retainingoriginalnumericguard-formatEnergy/displayconversion/ALL168slots/rawSIexports/three sections; testUNCHANGED. NewvalidationNOTRUNimmediatehealthstop/no capturelock acquired. HistoricalONLY test1catalogZEROdiscovery/lint0/preservation0/scan0/capture2 notrerun ornewpass. Parentliteral1661 ACTUALLYHeatmaperrorABSENT, notoverallgreen. Exactappendreceipt logs phase5-page-charging-charging-heatmap.log, no sharedtype masks/helper/budgetreset.; commit=8a4c3ba0ad9cc90eadf97b319040c7b3e327ca0f; pushed. |",
+      "status": "[x]",
+      "files": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx; web\\src\\features\\charging\\pages\\ChargingHeatmapPage.test.tsx"
+    },
+    "audit-page-083": {
+      "line": 572,
+      "raw": "| [x] | 0 | audit-page-083 | page | web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx; docs\\frontend-audits\\audit-page-083.json | - | 1 | 2026-10-07T08:58:24.420Z | 46537de204 | - / 1 / 2026-10-07T08:58:24.420Z / web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx; routes=/charging-heatmap; read-only audit; report docs\\frontend-audits\\audit-page-083.json; actor=0830c4a4-ceae-4d14-8cb2-7e6be299ff84; verified source audit; commit=46537de204; runtime unverified |",
+      "status": "[x]",
+      "files": "web\\src\\features\\charging\\pages\\ChargingHeatmapPage.tsx; docs\\frontend-audits\\audit-page-083.json"
+    },
+    "phase6-fix-disk-forecast-contracts": {
+      "line": 330,
+      "raw": "| [ ] | 6 | phase6-fix-disk-forecast-contracts | confirmed-DF001-through-005-source-fix | web\\src\\features\\admin\\pages\\DiskForecastPage.tsx; web\\src\\features\\admin\\pages\\DiskForecastPage.test.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\usage-manifest.json | phase6-qa-admin-disk-forecast | 0 | - | - | Reporta7de026a6 gives5 tightlycoupled samepage defects: unknownestimate falselyNoquota, unsupportedHYPERTABLE_QUOTA_BYTES advice, coldpaused falseempty, before/afterbytes wronglystacked/currentpercentages, CSSvartoken MetricBargradient appends99. Existingrawbackend/wire unchanged: truthfully labelbefore/aftercomparison withoutadditivestack/share or fabricatedcapacity, keepunknown/zero distinct, source-state no-payload branches, MetricBar supportedfill=solid. Preserve6metrics/5cards/2charts/6columns/allactions/cases; truthful existingcanonicalcopy/normalprojections/pins. Broadtestengineer boundedinline/nonstageablematrix, no subagents/backend/config/env/Docker/helpers or guessedSI; serializedEnglishclaim cannot overlapproviderplural. |",
+      "status": "[ ]",
+      "files": "web\\src\\features\\admin\\pages\\DiskForecastPage.tsx; web\\src\\features\\admin\\pages\\DiskForecastPage.test.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.tsx; web\\src\\features\\admin\\components\\statstrip-performance-storage\\DiskForecastSummary.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-admin.json; web\\src\\i18n\\en\\runtime-manifest.json; web\\src\\i18n\\en\\usage-manifest.json"
+    },
+    "phase3-chart-export-menu": {
+      "line": 986,
+      "raw": "| [x] | 3 | phase3-chart-export-menu | shared | web\\src\\components\\charts\\ChartExportMenu.tsx; web\\src\\components\\charts\\__tests__\\ChartExportMenu.test.tsx | primitive-button | 2 | 2026-10-08T13:58:19.147Z | 78b98f4bae | primitive-button / 2 / 2026-10-08T13:58:19.147Z / Verified real-owner plan=phase3-chart-export-menu in session frontend-phase3-owner-plan.json; category=composite-chart; sources=web\\src\\components\\charts\\ChartExportMenu.tsx; tests=web\\src\\components\\charts\\__tests__\\ChartExportMenu.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; actor context idle verified 2026-10-08T06:01:29.123Z: RELEASED acknowledgement; preserved attempt-one deltas; frozen preserved-delta retry baseline=phase3-chart-export-menu-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=1dce0d12-623b-461e-95bf-6984ec0aee27; actor context idle verified 2026-10-08T14:22:55.045Z: REVIEWED ready;19/19,lint/scan0; fixture types N/A; original behavior preserved; actual idle and full result read; no further writes; source/runtime/browser acceptance remains separate; Verified scoped delivery acceptance commit=78b98f4bae; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=19/19, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |",
+      "status": "[x]",
+      "files": "web\\src\\components\\charts\\ChartExportMenu.tsx; web\\src\\components\\charts\\__tests__\\ChartExportMenu.test.tsx"
+    },
+    "phase3-chart-container": {
+      "line": 985,
+      "raw": "| [x] | 3 | phase3-chart-container | integration | web\\src\\components\\charts\\ChartContainer.tsx; web\\src\\components\\charts\\__tests__\\ChartContainer.a11y.test.tsx; web\\src\\components\\charts\\__tests__\\ChartContainer.test.tsx | phase3-add-annotation-popover,phase3-annotation-list,phase3-chart-export-menu,phase3-chart-hidden-series-context,phase3-empty-state,phase3-query-error,phase3-section-error-boundary,phase3-table,primitive-button,primitive-typography,phase3-annotation-create-retention-contract,phase3-annotation-popover-async-lifecycle,phase3-annotation-create-retention-integration | 1 | 2026-10-09T04:25:03.530Z | d9bc87df74 | phase3-add-annotation-popover,phase3-annotation-list,phase3-chart-export-menu,phase3-chart-hidden-series-context,phase3-empty-state,phase3-query-error,phase3-section-error-boundary,phase3-table,primitive-button,primitive-typography,phase3-annotation-create-retention-contract,phase3-annotation-popover-async-lifecycle,phase3-annotation-create-retention-integration / 1 / 2026-10-09T04:25:03.530Z / Verified real-owner plan=phase3-chart-container in session frontend-phase3-owner-plan.json; category=chart-integration; sources=web\\src\\components\\charts\\ChartContainer.tsx; tests=web\\src\\components\\charts\\__tests__\\ChartContainer.a11y.test.tsx,web\\src\\components\\charts\\__tests__\\ChartContainer.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; blocked=Actual finalfailed HeaderFilter/SectionErrorBoundary prerequisite; preserve original pending scope, unblock only after explicit source-root repair and verified acceptance; Actual base SectionErrorBoundary root now accepted; final ChartContainer still held for known async create success-only-close/draft-retention contract and forthcoming exact lifecycle root, never treat passed styling as async fix. Add architect actual lifecycle dependency before unblocking; no circular root->final composite edge.; Accepted lifecycle architect now represented by separately leased popover then caller roots; final styling owner must preserve their accepted behavior and release, browser evidence separate.; Unblocked only after every recorded prerequisite actually accepted; prior failures/attempts and preserved delivery remain immutable; Fresh accepted HEAD 92b2dad1d0c91a1f22a532867531ac7f6ced3cda source/test snapshots reserved=C:\\Users\\AtulM\\.copilot\\session-state\\bba4960d-f516-4831-bda3-877640f907ce\\files\\phase3-chart-container-dispatch-20261009T0426-baseline.json; previous read-only source closure released after both independently accepted consumers. Concurrent authorized scopes layout/chart-container/palette-source-trust only, no shared writes.; actor context idle verified 2026-10-09T04:36:11.802Z: Actual notification/read_agent idle DONE; capped chart delivery awaits independent parent receipt verification.; Bounded host accepted d9bc87df74afe9166017aa70b8c91b0749283e7e: parent exact3scope/7guards/raw exits,17source lines within55 whole inverse,35original full AST calls/additive-only whole test inverses. Ordinary41 original then43 with2additions passed;strictlint/ALLtypes/scans0. Restrained frame/icon/header/sampling chrome and mobile44px controls preserve mutation/focus/clock/data/9exports. Reviews retained; no browser/fullphase acceptance. |",
+      "status": "[x]",
+      "files": "web\\src\\components\\charts\\ChartContainer.tsx; web\\src\\components\\charts\\__tests__\\ChartContainer.a11y.test.tsx; web\\src\\components\\charts\\__tests__\\ChartContainer.test.tsx"
+    },
+    "phase3-metric-bar": {
+      "line": 1331,
+      "raw": "| [x] | 3 | phase3-metric-bar | shared | web\\src\\components\\data-display\\MetricBar.tsx; web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx | primitive-typography | 2 | 2026-10-08T13:58:19.147Z | b5d2f450d4 | primitive-typography / 2 / 2026-10-08T13:58:19.147Z / Verified real-owner plan=phase3-metric-bar in session frontend-phase3-owner-plan.json; category=composite-data; sources=web\\src\\components\\data-display\\MetricBar.tsx; tests=web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx; read exact plan objective/evidence before dispatch; one owner, preservation first; source-only readiness is not runtime acceptance; failure=First delivered attempt has required post-change normal tests blocked by generated-catalog startup; current generator repair accepted; scoped deltas and receipt preserved, NOT an inherited pre-modernization defect; retry only after prior context releases and refreshed same-item baseline verified; actor context idle verified 2026-10-08T05:54:02.907Z: RELEASED acknowledgement; preserved attempt-one deltas; frozen preserved-delta retry baseline=phase3-metric-bar-retry-dispatch-baseline.json; distinct attempt2 heartbeat/receipt required; original manifest/proofs/tests remain authoritative; crash recovery 2026-10-08T13:10:44.944Z: actual no-live-context observation, delivery receipts/source preserved; acceptance reconciliation required before any new worker or attempt increment; Crash acceptance review READ-ONLY, no implementation retry/attempt increment; validate preserved original/delivered scopes; tests deferred while catalog root unaccepted; parent owns final acceptance and commits.; actor=4419f309-0ffd-41a6-a2a7-847322ba768b; actor context idle verified 2026-10-08T14:22:54.403Z: REVIEWED ready;30/30,lint/scan/types0; original/current/final hashes and assertions preserved; actual idle and full result read; no further writes; source/runtime/browser acceptance remains separate; Verified scoped delivery acceptance commit=b5d2f450d4; exact current source/test hashes match immutable review receipt and no held overlapping writer. Original cases/public semantics preserved per hash-backed delta review; actual normal tests=30/30, strict owned lint0, scoped runtime source scan0 (all token-review findings retained). No browser/composed/final application acceptance claimed. |",
+      "status": "[x]",
+      "files": "web\\src\\components\\data-display\\MetricBar.tsx; web\\src\\components\\data-display\\__tests__\\MetricBar.test.tsx"
+    }
+  },
+  "sections": [
+    {
+      "name": "Charging summary",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        174,
+        184
+      ],
+      "cards": 1,
+      "alwaysRenderedShell": true,
+      "evidence": "4 independently unavailable/partial/retained metrics, fatal summary retry"
+    },
+    {
+      "name": "When you charge",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        187,
+        341
+      ],
+      "cards": 2,
+      "alwaysRenderedShell": true,
+      "evidence": "7x24 start-time frequency grid and complete168-row Accordion; favorite slot and4 MetricBars"
+    },
+    {
+      "name": "Charging breakdowns",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        344,
+        460
+      ],
+      "cards": 2,
+      "alwaysRenderedShell": true,
+      "evidence": "Top10 repeated>=2 locations and7 weekday counts; separate stable LayoutCards/empty branches"
+    }
+  ],
+  "actions": [
+    {
+      "id": "refresh",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        144,
+        155
+      ],
+      "evidence": "Named44px refetch; unresolved vehicle CHH008",
+      "executed": false
+    },
+    {
+      "id": "fatal-retries",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        201,
+        276,
+        357,
+        413
+      ],
+      "evidence": "Card body retries and summary retry same query",
+      "executed": false
+    },
+    {
+      "id": "retained-retry",
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "lines": [
+        91,
+        113
+      ],
+      "evidence": "Busy disabled nonblocking recovery",
+      "executed": false
+    },
+    {
+      "id": "range",
+      "file": "web/src/components/layout/WorkspaceHeader.tsx",
+      "lines": [
+        59,
+        62
+      ],
+      "evidence": "Header range; same mobile scope Layout1413-1427",
+      "executed": false
+    },
+    {
+      "id": "vehicle",
+      "file": "web/src/components/layout/VehiclePicker.tsx",
+      "lines": [
+        87,
+        91
+      ],
+      "evidence": "Shared vehicle store/URL selection",
+      "executed": false
+    },
+    {
+      "id": "slot-hover",
+      "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+      "lines": [
+        56,
+        70
+      ],
+      "evidence": "Count/energy; missing0 defect CHH002",
+      "executed": false
+    },
+    {
+      "id": "slot-table",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        228,
+        265
+      ],
+      "evidence": "Complete168 rows semantic headers, tabIndex0, local scroll",
+      "executed": false
+    },
+    {
+      "id": "details",
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "lines": [
+        159,
+        172,
+        246,
+        318
+      ],
+      "evidence": "Existing Drawer and all summary metrics",
+      "executed": false
+    },
+    {
+      "id": "csv",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "lines": [
+        219,
+        221,
+        374,
+        375,
+        430,
+        431
+      ],
+      "evidence": "Three loaded-response row sets; weekly rawWh/null/recorded count",
+      "executed": false
+    },
+    {
+      "id": "image-export",
+      "file": "web/src/components/charts/ChartExportMenu.tsx",
+      "lines": [
+        220,
+        257
+      ],
+      "evidence": "PNG/copy/SVG; weekly unsupported SVG CHH007",
+      "executed": false
+    },
+    {
+      "id": "fullscreen",
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "lines": [
+        731,
+        734
+      ],
+      "evidence": "All3 figures opt in; native capability/open NOTRUN",
+      "executed": false
+    },
+    {
+      "id": "subtitle-help",
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "lines": [
+        192,
+        207
+      ],
+      "evidence": "Inherited localized more-information tooltip",
+      "executed": false
+    }
+  ],
+  "preservation": {
+    "page": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+    "sourceHash": "0e72aa6173acc637a0f8787c3047ca570a8d99ab0480dc3cef2ff69a1a5dc7ac",
+    "currentLines": 465,
+    "historicalLines": 369,
+    "ratio": 1.2601626016260163,
+    "historicalGitVerification": "NOTRUN",
+    "semanticSections": 3,
+    "layoutCards": 4,
+    "cardGrids": 2,
+    "charts": 3,
+    "metricBars": 4,
+    "summaryMetrics": 4,
+    "heatmapCells": 168,
+    "legendStops": 5,
+    "accordions": 1,
+    "tables": 1,
+    "sourceChangedByWorker": false
+  },
+  "calendarAndDenominators": {
+    "bins": "Browser-local session START getDay/getHours, Sunday-first7x24; frequency, not occupancy/calendar/per-week rate; invalid starts skipped; repeated DST hour merged; intended business timezone unknown.",
+    "bounds": "Page46-51 date-only request discards range656-669 exact instants; backend inclusivity/ordering unknown.",
+    "sample": "Single returned array limit2000 offset0, no total/hasMore/pagination/full-history claim; normal page loadedScope disclosure.",
+    "count": "sessions.length; count/max(count,1) bars, not elapsed periods. Favorite tie first crossed maximum; busiest day/hour lower-index ties.",
+    "energyCost": "Only recorded finite values summed with counts; partial/unobserved differs measured0. API energy declared number; null wire not established. Tooltip model discrepancy CHH002.",
+    "duration": "Only finite completed ended>started intervals seconds / durationCount; unfinished or zero-length excluded by disclosed definition.",
+    "locations": "trimmed names/localized Unknown, >=2 visits descending top10.",
+    "knownZeroVsNoObservation": "Successful[] count0 known returned count; energy/cost/duration remain unobserved. Unoccupied bins not full calendar coverage. Complete table distinguishes occupied null vs measured0; hover does not."
+  },
+  "headerScope": {
+    "route": "/charging-heatmap",
+    "vehicle": true,
+    "range": true,
+    "evidence": [
+      "workspaceScope.ts:31,157-167",
+      "WorkspaceHeader.tsx:34-35,59-69",
+      "Layout.tsx:832-834,1413-1427",
+      "useRangeState.ts:301-318,656-669"
+    ],
+    "backup": "all/persistKey overridden by header route, NOT duplicate page scope defect."
+  },
+  "dataSources": [
+    {
+      "hook": "useChargingSessionsPaginated",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 122,
+      "endpoint": "/charging?vehicle_id=<selected>&limit=2000&offset=0&start=<date>&end=<date> (client /api/v1)",
+      "backendRegistration": "internal/api/router.go:3545-3546 chargingHandler.ListByVehicle",
+      "queryKey": "charging,vehicleId,start,end,limit,offset",
+      "staleTimeMs": 30000,
+      "signal": true,
+      "rawSI": true,
+      "automaticEnabled": "vehicleId != null",
+      "manualRefetch": "CHH008 bypasses automatic enabled guard; no request executed"
+    },
+    {
+      "hook": "useSelectedVehicle/useVehicles",
+      "endpoint": "/vehicles",
+      "evidence": "useSelectedVehicle.ts:48-80;useVehicles.ts:74-81",
+      "precedence": "URL/path, known persisted vehicle, first fleet vehicle; readiness/error not locally returned"
+    }
+  ],
+  "states": {
+    "loading": "Per-section placeholders; PageLayout -> PageContainer has no global loading/error/empty gate.",
+    "fatal": "Only card/summary body fallback, stable shells always render.",
+    "retained": "Failed refresh or pause retains historical content; localized StaleRefreshWarning/summary marker; not fake live state.",
+    "empty": "Returned0 vs unobserved operands; repeat-location empty distinct.",
+    "independence": "One charging source, distinct derived outcomes; selected fleet/preferences indirect. Native/network trust NOTRUN."
+  },
+  "preferencesAndSigns": {
+    "SI": "Raw Wh, derived seconds and recorded monetary amount remain in cache/model/export; display-only useUnits/formatMetric converts; no abs/sign clamp.",
+    "preferences": "Locale/number precision/currency symbol respected by shared formatters, not all locale operands CHH003. Energy kWh/duration h hook defaults, no invented saved preference.",
+    "currency": "cost_currency summation normalization unknown CHHC02.",
+    "timezone": "Browser-local; intended business/settings zone unknown CHHC01."
+  },
+  "accessibility": {
+    "level": "SOURCE_REVIEWED_ONLY",
+    "evidence": [
+      "Named44px refresh/decorative icon",
+      "Shared Accordion expanded/controls, all168-slot semantic table with headers/tabIndex0",
+      "Canonical figure/figcaption plus structured fallback and forced-colors source branches",
+      "Shared reduced-motion/low-bandwidth motion owners"
+    ],
+    "native": "NOTRUN",
+    "keyboard": "NOTRUN",
+    "screenReader": "NOTRUN",
+    "touch": "NOTRUN",
+    "contrast": "NOTRUN",
+    "forcedColors": "NOTRUN"
+  },
+  "responsive": {
+    "level": "SOURCE_REVIEWED_ONLY",
+    "evidence": [
+      "Measured CardGrid/layoutPolicy and CardPlacementContext spans",
+      "Wrapping actions/min-w-0, grid internal640px scroll/table local scroll",
+      "Chart heights300/256/288, desktop header/mobile scope drawer"
+    ],
+    "viewport": "NOTRUN",
+    "RTL": "NOTRUN",
+    "zoom": "NOTRUN",
+    "actualClipping": "NOTRUN"
+  },
+  "i18n": {
+    "literalKeys": 57,
+    "missingKeys": 0,
+    "fallbackCallsCompared": 85,
+    "caseOnlyDifferences": 23,
+    "distinctCaseOnlyKeys": 14,
+    "meaning": "Sentence-case versus Title Case fallback, not missing catalog keys; raw DAYS/HH:00/count formatting defect CHH003",
+    "guards": "NOTRUN"
+  },
+  "needs": [
+    {
+      "id": "N01",
+      "findingIds": [
+        "CHH002"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx"
+      ],
+      "detail": "Observation coverage/hover known0 vs missing",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": null,
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    },
+    {
+      "id": "N02",
+      "findingIds": [
+        "CHH001"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "web/src/api/hooks/useCharging.ts"
+      ],
+      "detail": "Verify backend instant semantics, forward typed exact bounds",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": null,
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    },
+    {
+      "id": "N03",
+      "findingIds": [
+        "CHH003",
+        "CHH006"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+        "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx"
+      ],
+      "detail": "Existing locale operands and category type export",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": null,
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    },
+    {
+      "id": "N04",
+      "findingIds": [
+        "CHH004"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx"
+      ],
+      "detail": "Four MetricBar supported solid caller fills",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": "phase6-fix-disk-forecast-contracts mechanism ONLY; its scope excludes heatmap",
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    },
+    {
+      "id": "N05",
+      "findingIds": [
+        "CHH005"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx"
+      ],
+      "detail": "Existing restrained density color roles, preserve5 bands/legend",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": null,
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    },
+    {
+      "id": "N06",
+      "findingIds": [
+        "CHH007"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/components/charts/ChartExportMenu.tsx",
+        "web/src/components/charts/ChartContainer.tsx",
+        "web/src/hooks/useChartExport.ts"
+      ],
+      "detail": "Truthful shared format capability/outcome",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": null,
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    },
+    {
+      "id": "N07",
+      "findingIds": [
+        "CHH008"
+      ],
+      "exactSuggestedSourceScope": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "web/src/api/hooks/useCharging.ts"
+      ],
+      "detail": "Valid vehicle guard manual refresh/retries/queryFn",
+      "existingQueueOrigin": {
+        "item": "phase6-qa-charging-charging-heatmap",
+        "line": 367
+      },
+      "acceptedPageContext": {
+        "item": "phase5-page-charging-charging-heatmap",
+        "line": 1833
+      },
+      "matchingExistingRepair": null,
+      "queueRowsCreated": 0,
+      "requiresParentNarrowClaim": true,
+      "constraint": "No matching covering Phase6 scope; parent must reserve narrow followup; no reopening closed phases or unauthorized shared/tests/catalog writes."
+    }
+  ],
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "docs/frontend-inventory.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/CONTRIBUTING.md",
+    "docs/frontend-audits/audit-page-083.json",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".editorconfig",
+    ".gitignore",
+    "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+    "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+    "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+    "web/src/features/charging/components/charging-heatmap/index.ts",
+    "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx",
+    "web/src/features/charging/components/charging-heatmap-modernization/index.ts",
+    "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/api/types.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/client.ts",
+    "web/src/lib/constants.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/tokens.ts",
+    "web/src/lib/unitConversion.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/lib/metric-reference/glossary.ts",
+    "web/src/lib/metric-reference/types.ts",
+    "web/src/lib/safeArray.ts",
+    "web/src/i18n/en.json",
+    "web/src/components/layout/index.ts",
+    "web/src/components/charts/index.ts",
+    "web/src/components/data-display/index.ts",
+    "web/src/components/feedback/index.ts",
+    "web/src/components/motion/index.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/layout/layout-reference/CardGrid.tsx",
+    "web/src/components/layout/layout-reference/LayoutCard.tsx",
+    "web/src/components/layout/layout-reference/layoutPolicy.ts",
+    "web/src/components/layout/layout-reference/useContainerWidth.ts",
+    "web/src/components/layout/layout-reference/CardPlacementContext.ts",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/components/data-display/OperationalBrief.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/feedback/QueryError.tsx",
+    "web/src/components/feedback/_StatusAwareError.tsx",
+    "web/src/components/motion/FadeIn.tsx",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/components/ui/Accordion.tsx",
+    "web/src/components/ui/Table.tsx",
+    "web/src/components/ui/FullscreenButton.tsx",
+    "web/src/components/layout/WorkspaceHeader.tsx",
+    "web/src/components/layout/Layout.tsx",
+    "web/src/components/layout/WorkspaceContextControl.tsx",
+    "web/src/components/layout/VehiclePicker.tsx",
+    "web/src/components/charts/ChartExportMenu.tsx",
+    "web/src/hooks/useChartExport.ts",
+    "web/src/App.tsx",
+    "web/src/lib/routeLoaders.ts",
+    "web/src/features/charging/pages/ChargingHeatmapPage.test.tsx",
+    "web/node_modules/@tanstack/query-core/src/queryObserver.ts",
+    "internal/api/router.go",
+    "docs/frontend-audits/phase6-qa-charging-charging-heatmap.json"
+  ],
+  "source_hashes": [
+    {
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "sha256": "0e72aa6173acc637a0f8787c3047ca570a8d99ab0480dc3cef2ff69a1a5dc7ac",
+      "lines": 465
+    },
+    {
+      "file": "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+      "sha256": "9c0789451bf89d8649a642b17d07454248424a50cbaca1503472cbaaea7efb81",
+      "lines": 188
+    },
+    {
+      "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+      "sha256": "49e6e615af14f3a4c7f95db3c781b7c3ff54b184b70536c81b31800611638e58",
+      "lines": 95
+    },
+    {
+      "file": "web/src/features/charging/components/charging-heatmap/index.ts",
+      "sha256": "7bca909bbf20448d8bd52a4c436a34c7cfc06635a7a63c5c1adf0867fec68d55",
+      "lines": 15
+    },
+    {
+      "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx",
+      "sha256": "3f5eba358c8d69417a91771b6fe9440db5f5b4f7714842997dc55b140990159e",
+      "lines": 98
+    },
+    {
+      "file": "web/src/features/charging/components/charging-heatmap-modernization/index.ts",
+      "sha256": "595c90b01f6364d6d60606c8d5195f9de8560cd740897e86c770ed448b1057eb",
+      "lines": 1
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "lines": 73
+    },
+    {
+      "file": "web/src/api/hooks/useCharging.ts",
+      "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+      "lines": 643
+    },
+    {
+      "file": "web/src/hooks/useRangeState.ts",
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "lines": 694
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lines": 174
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "lines": 65
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lines": 434
+    },
+    {
+      "file": "web/src/api/types.ts",
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lines": 47
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "lines": 24
+    },
+    {
+      "file": "web/src/hooks/useFormatting.ts",
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "lines": 106
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lines": 1898
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lines": 458
+    },
+    {
+      "file": "web/src/lib/constants.ts",
+      "sha256": "76641391606b3616c45c2f0c1ea9bda0b130f4e190d6218e771ae1aeb64501e3",
+      "lines": 191
+    },
+    {
+      "file": "web/src/lib/dateFormat.ts",
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462
+    },
+    {
+      "file": "web/src/lib/tokens.ts",
+      "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+      "lines": 439
+    },
+    {
+      "file": "web/src/lib/unitConversion.ts",
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "lines": 500
+    },
+    {
+      "file": "web/src/lib/operationalMetrics.tsx",
+      "sha256": "211e403d2b7170a9ae96103d2694cd032560e2dca81cd02ac2bd235b604c807e",
+      "lines": 53
+    },
+    {
+      "file": "web/src/lib/metric-reference/formatMetric.ts",
+      "sha256": "0337b9f06cd2e21bbd763e3b7dc1d0c6f13ef3017df0b0ca84b36b2f3083ffe5",
+      "lines": 137
+    },
+    {
+      "file": "web/src/lib/metric-reference/glossary.ts",
+      "sha256": "3cdd7e4655b6ecd584d6fd0f799b740d762a5448f563ba12d22d54967f7d57a4",
+      "lines": 49
+    },
+    {
+      "file": "web/src/lib/metric-reference/types.ts",
+      "sha256": "3b9ebc9538365fe381ef8969132361f28da5501914a058a5d4eac8e3afc1b832",
+      "lines": 63
+    },
+    {
+      "file": "web/src/lib/safeArray.ts",
+      "sha256": "990891e88868caec74a263a9a8263528037c073d949925c206306fbec905ec14",
+      "lines": 28
+    },
+    {
+      "file": "web/src/i18n/en.json",
+      "sha256": "8d486e4996401ae48b7fbc3399c598885b38ea774b53917f0f4e90490715a893",
+      "lines": 38994
+    },
+    {
+      "file": "web/src/components/layout/index.ts",
+      "sha256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642",
+      "lines": 27
+    },
+    {
+      "file": "web/src/components/charts/index.ts",
+      "sha256": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d",
+      "lines": 88
+    },
+    {
+      "file": "web/src/components/data-display/index.ts",
+      "sha256": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9",
+      "lines": 178
+    },
+    {
+      "file": "web/src/components/feedback/index.ts",
+      "sha256": "9b5476cf4a88198e3852a4fff7c05db65c90bbf8f2bf094d4ddcf2b2d32dd02f",
+      "lines": 93
+    },
+    {
+      "file": "web/src/components/motion/index.ts",
+      "sha256": "b1bd3971b43540fb5b37f4bd81a816354ea9e4977e93edd79448441a962ee7e7",
+      "lines": 15
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lines": 17
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lines": 259
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/CardGrid.tsx",
+      "sha256": "7003a02baede8079ba897b91a0c84b68a0ea5ecca5607587dd23f5210d0148cf",
+      "lines": 44
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "sha256": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "lines": 67
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/layoutPolicy.ts",
+      "sha256": "42fa701bc8905a582347cffe2aa644af62ae09fbacf624f2963049071e4a15b8",
+      "lines": 66
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/useContainerWidth.ts",
+      "sha256": "30a2d6f599f25577195c258f8b2960af6b606d4d4d4e1894da2d1102d19e64e2",
+      "lines": 22
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/CardPlacementContext.ts",
+      "sha256": "af0f8575ef3727118fb09feb7bcfeeb8bf8b7df702c5019b7791454ead245047",
+      "lines": 19
+    },
+    {
+      "file": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256": "58c2c8279d0d050b9bd9b9df556bedd70713607a196488943d9425774f475721",
+      "lines": 42
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "lines": 1006
+    },
+    {
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+      "lines": 93
+    },
+    {
+      "file": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256": "a5c23fd85c5c557a68589728a3c5ea539e7e7fe7e86397b8ded5f9d7d7ab22a7",
+      "lines": 321
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "c8df62e2a4f40f60c2cbd3866c48e0590175f7307814fa7e7daea7e36a0312e9",
+      "lines": 115
+    },
+    {
+      "file": "web/src/components/feedback/QueryError.tsx",
+      "sha256": "5dc7d6a24694c2f34411d8b042864c94a630be9fc0a516586c2596172f19e48a",
+      "lines": 16
+    },
+    {
+      "file": "web/src/components/feedback/_StatusAwareError.tsx",
+      "sha256": "1b02ed9b09fd8befd1f0b38fa6b4957749874856ec6eedb5963b7601a6d23bcc",
+      "lines": 280
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lines": 39
+    },
+    {
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "sha256": "c39d22e8a322d39edfaec23f3bbffe1cc35b6afa02f297e18d617b959043821a",
+      "lines": 49
+    },
+    {
+      "file": "web/src/components/ui/Accordion.tsx",
+      "sha256": "131ed6c4eeea787cab62417c293919f1e97b47cbcd27bb9e27a00d46d0eb7658",
+      "lines": 139
+    },
+    {
+      "file": "web/src/components/ui/Table.tsx",
+      "sha256": "b61e99f1aedd878bc422456906b3c04071c3416c53e2b9a517d67a0204310026",
+      "lines": 41
+    },
+    {
+      "file": "web/src/components/ui/FullscreenButton.tsx",
+      "sha256": "f6ef219696c8f2c07ef7220c692f1d0197c757b454cc32a8e20a3ed2b01695a5",
+      "lines": 196
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceHeader.tsx",
+      "sha256": "b414ebcd4a69886a2e40f9ce24c06124f40d0552eeca10da881b72a78260b37c",
+      "lines": 74
+    },
+    {
+      "file": "web/src/components/layout/Layout.tsx",
+      "sha256": "2164103032c3971be0485f8ef0cf43b07e266ef283e80abb319601da554a46e1",
+      "lines": 1716
+    },
+    {
+      "file": "web/src/components/layout/WorkspaceContextControl.tsx",
+      "sha256": "3e4515c2bd815fce5fedaa96cfe74b20f1c78b040cf2a4326a0ad63f39379662",
+      "lines": 487
+    },
+    {
+      "file": "web/src/components/layout/VehiclePicker.tsx",
+      "sha256": "2fc60a77cd877a092a5d17df41300472293db5e543440809521f89169afe353b",
+      "lines": 106
+    },
+    {
+      "file": "web/src/components/charts/ChartExportMenu.tsx",
+      "sha256": "84d0aa6fd871b3d0374ee6f929f0d67a7080c11d2f0e1048086288a0a116184b",
+      "lines": 263
+    },
+    {
+      "file": "web/src/hooks/useChartExport.ts",
+      "sha256": "77dce8553101f62e45ca47bbf72e70914ba3db54955a026473a54b06d0bd56ef",
+      "lines": 237
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lines": 919
+    },
+    {
+      "file": "web/src/lib/routeLoaders.ts",
+      "sha256": "506f38fa71f84362044f3d99923e8347b31e4329d63d0365c81b29e90a614c58",
+      "lines": 127
+    },
+    {
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.test.tsx",
+      "sha256": "5019e7f536beb4a6392061e48ad5476c55a28ffebcf4d1243a23eb5d2698bf66",
+      "lines": 245
+    },
+    {
+      "file": "web/node_modules/@tanstack/query-core/src/queryObserver.ts",
+      "sha256": "4f8557df7b4d9426f4acca24634cd565fcac81af315377cceae1c7a4c0283262",
+      "lines": 902
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363
+    }
+  ],
+  "fileReadLimits": {
+    "authority": "orchestrator1-296;contract1-2539 all truncation gaps reread;general instructions1-707;mission1-320,1410-1593;latesthandoff5-139;queue exact rows/scope search",
+    "primary": "All7 full",
+    "hook": "useCharging1-165;range1-694;selected/trust/number/unit full",
+    "shared": "Actual rendered seams full or bounded excerpts, not entire transitive dependency audit",
+    "excerpts": [
+      "ChartContainer315-360,440-611,629-646,704-960",
+      "Layout824-850,1390-1440",
+      "WorkspaceContextControl56-113,370-408 plus grep",
+      "ChartExportMenu67-145,203-261",
+      "useChartExport113-197/capability grep",
+      "types145-207/client60-101,344-388",
+      "dateFormat75-140/unitConversion454-494/tokens399",
+      "App894-908/lazy57,routeLoaders10-20",
+      "router3535-3565 registration only",
+      "test100-161 authored fixture NOT executed",
+      "installed QueryObserver364-381,437-490"
+    ],
+    "catalog": "Full machine key/fallback JSON comparison; guards NOTRUN",
+    "historicalUninspectedTests": "Hashed old supporting pins only, not current semantic read."
+  },
+  "evidenceLimits": [
+    "SOURCE-ONLY: findings unrepaired, no application/native/release acceptance; mission43-45 gates not waived.",
+    "All application/API/browser/native/tests/tsc/lint/build/fullsuite/Git/server/Docker/installs/subagents/heartbeat NOTRUN.",
+    "Historical claimed log absent; old receipt preserved, not reauthenticated. Historical369 lines not Git reconstructed. Seven primary hashes match; supporting drift not worker attribution.",
+    "Actual API null energy not established (type number); source defensive contradiction confirmed. Backend bound/filter/pagination/currency/authorization semantics not inspected beyond route registration.",
+    "Source a11y/responsive/export wiring is not runtime acceptance. Contrast/focus/keyboard/touch/forced-colors/RTL/zoom/clipping/screenshots/download/fullscreen NOTRUN.",
+    "Bounded rendered seams, not full application/transitive graph; dynamic styles/semantic Table/PageLayout are acceptable exceptions. No catalog guard or user settings timezone acceptance.",
+    "Tool failures honest: initial Unicode print exit1 corrected utf8; guessed metric paths absent corrected actual .tsx/glossary; shell422 OS206 before execution/writes; shell517 deadline assertion exit1 before write; split shell458 report partial success.",
+    "Return deadline missed at01:05:28; no renewal. Finalize/release under original hard01:10:28, no scope expansion or application execution.",
+    "All7 needs require parent narrow Phase6 ownership; no matching heatmap repair claim, DiskForecast mechanism alone not scope permission; no closed phase replay."
+  ],
+  "updated_utc": "2026-10-14T01:07:37.383633Z",
+  "release": {
+    "utc": "2026-10-14T01:07:37.383633Z",
+    "allClaimsReleased": true,
+    "backgroundWorkRemaining": false,
+    "postReturnWrites": false,
+    "returnTargetMet": false,
+    "hardDeadlineMet": true
+  }
 }
