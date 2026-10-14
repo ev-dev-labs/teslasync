@@ -28,6 +28,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/api-logs',
   '/automations/history',
   '/charging',
+  '/charge-advisor',
   '/charging-curve',
   '/charging-heatmap',
   '/charging/costs',
@@ -36,6 +37,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/command-history',
   '/command-reliability',
   '/cost-analysis',
+  '/diagnostics/root-cause',
   '/drive-calendar',
   '/drive-score',
   '/drives',
@@ -45,6 +47,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/efficiency',
   '/energy',
   '/energy-flow',
+  '/explorer',
   '/fsd',
   '/locations',
   '/logbook',
@@ -110,6 +113,7 @@ export const VEHICLE_DISABLED_PREFIXES = [
 
 export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([
   '/action-center',
+  '/analytics',
   '/api-keys',
   '/api-logs',
   '/api-playground',

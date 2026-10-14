@@ -27,9 +27,36 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
-  it('keeps the charge advisor observed-history window independent of the header range', () => {
+  it('owns the Explorer range and vehicle on its actual route', () => {
+    for (const path of ['/explorer', '/explorer/', '/explorer?from=2026-01-01', '/explorer#methodology']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/driving/explorer').range).toBe(false);
+    expect(getWorkspaceQuickRangePresets('/explorer')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the root-cause analysis range without changing the service evidence workspace', () => {
+    for (const path of ['/diagnostics/root-cause', '/diagnostics/root-cause/', '/diagnostics/root-cause?from=2026-01-01']) {
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceRouteScope('/diagnostics/service-evidence')).toEqual({ range: false, vehicle: true });
+  });
+  it('keeps fleet analytics range-owned without implying single-vehicle scope', () => {
+    for (const path of [
+      '/analytics',
+      '/analytics/',
+      '/analytics?vehicle_id=42&from=2026-01-01',
+      '/analytics#overview',
+      'analytics',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/analytics/carbon')).toEqual({ range: true, vehicle: true });
+    expect(getWorkspaceRouteScope('/analytics/range')).toEqual({ range: false, vehicle: true });
+  });
+
+  it('owns the charge advisor analysis window in the header', () => {
     for (const path of ['/charge-advisor', '/charge-advisor/', '/charge-advisor?from=2026-01-01']) {
-      expect(getWorkspaceRouteScope(path)).toEqual({ range: false, vehicle: true });
+      expect(getWorkspaceRouteScope(path)).toEqual({ range: true, vehicle: true });
     }
   });
   it('does not scope account-wide energy installations to a vehicle or date range', () => {

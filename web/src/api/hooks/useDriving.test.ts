@@ -3,10 +3,39 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { request } from '@/api/client';
-import { drivingKeys, useDrives, useDrivingStats, useDriveHistory } from './useDriving';
-import { useChargingHistory } from './useCharging';
-import { useEnergyStats } from './useEnergy';
+import { drivingKeys, useDrives, useDrivingStats, useDriveHistory, useDriveCalendarHistory, useDriveScore } from './useDriving';
+import { chargingKeys, useChargingHistory } from './useCharging';
+import { useEnergyStats, useVampireDrainHistory, useVampireDrainStats } from './useEnergy';
+import { useDriveScorePage } from '@/features/driving/hooks/useDriveScorePage';
 
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string, fallback: string) => fallback ?? key }),
+}));
+vi.mock('@/components/ui', () => ({
+  useSortToggle: () => ({
+    sortKey: 'date', sortDir: 'desc', onSort: vi.fn(),
+    sortFn: <T,>(rows: T[]) => rows,
+  }),
+}));
+vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
+vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: 42 }) }));
+vi.mock('@/hooks/useRangeState', () => ({
+  useRangeState: () => ({
+    start: '2024-03-10',
+    end: '2024-03-11',
+    startInstant: '2024-03-10T15:42:19.125Z',
+    endInstantExclusive: '2024-03-11T15:42:19.125Z',
+  }),
+}));
+vi.mock('@/hooks/useUnits', () => ({
+  useUnits: () => ({
+    unitPrefs: { distance: 'km' },
+    formatDistance: String, formatSpeed: String, formatPower: String,
+  }),
+}));
+vi.mock('@/hooks/useNumberFormatting', () => ({
+  useNumberFormatting: () => ({ fmtInt: String, fmtNumber: String }),
+}));
 vi.mock('@/api/client', () => ({ request: vi.fn() }));
 vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: vi.fn(), error: vi.fn() }),
@@ -30,9 +59,204 @@ afterEach(() => {
   clients.length = 0;
 });
 
+describe('vampire-drain history extraction', () => {
+  it('preserves the page keys, raw envelope, request scope and cancellation', async () => {
+    const stats = { vehicle_id: 42, event_count: 1 };
+    const envelope = { vehicle_id: 42, events: [{ started_at: '2026-01-01T00:00:00Z' }] };
+    mockedRequest.mockImplementation(async (path) => path.startsWith('/vampire-drain/stats') ? stats : envelope);
+    const context = wrapper();
+    const { result } = renderHook(() => ({
+      stats: useVampireDrainStats('42', 0),
+      events: useVampireDrainHistory('42'),
+    }), { wrapper: context.wrapper });
+    await waitFor(() => expect(result.current.stats.isSuccess && result.current.events.isSuccess).toBe(true));
+    expect(result.current.stats.data).toBe(stats);
+    expect(result.current.events.data).toBe(envelope);
+    expect(context.client.getQueryData(['vampire-drain-stats', '42'])).toBe(stats);
+    expect(context.client.getQueryData(['vampire-drain-events', '42'])).toBe(envelope);
+    expect(mockedRequest.mock.calls.map(([path]) => path)).toEqual([
+      '/vampire-drain/stats?vehicle_id=42',
+      '/vampire-drain?vehicle_id=42&limit=200',
+    ]);
+    for (const [, options] of mockedRequest.mock.calls) {
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+    }
+  });
+
+  it('stays disabled without a vehicle and aborts both old requests on a vehicle change', async () => {
+    mockedRequest.mockImplementation(() => new Promise(() => {}));
+    const context = wrapper();
+    const { rerender, unmount } = renderHook((vehicleId: string) => ({
+      stats: useVampireDrainStats(vehicleId, 0),
+      events: useVampireDrainHistory(vehicleId),
+    }), { wrapper: context.wrapper, initialProps: '' });
+    expect(mockedRequest).not.toHaveBeenCalled();
+    rerender('42');
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    const oldSignals = mockedRequest.mock.calls.map(([, options]) => options?.signal);
+    rerender('43');
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(4));
+    expect(oldSignals.every((signal) => signal?.aborted)).toBe(true);
+    expect(mockedRequest.mock.calls.slice(2).map(([path]) => path)).toEqual([
+      '/vampire-drain/stats?vehicle_id=43',
+      '/vampire-drain?vehicle_id=43&limit=200',
+    ]);
+    unmount();
+    expect(mockedRequest.mock.calls.every(([, options]) => options?.signal?.aborted)).toBe(true);
+  });
+});
+
 describe('driving exact-range integration', () => {
   const start = '2024-03-10T15:42:19.125Z';
   const end = '2024-03-11T15:42:19.125Z';
+
+  it.each([
+    { start: '2026-10-13T20:15:39.843Z', end: '2026-10-14T20:15:39.843Z' },
+    { start: '2024-03-09T08:00:00.000Z', end: '2024-03-11T07:00:00.000Z' },
+  ])('preserves Explorer exact bounds $start to $end and the observed-row cap', async (window) => {
+    const rows = [{ id: 1 }, { id: 2 }];
+    mockedRequest.mockResolvedValue(rows);
+    const context = wrapper();
+    const { result } = renderHook(() => useDriveHistory('42', 1000, window), {
+      wrapper: context.wrapper,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const [path, options] = mockedRequest.mock.calls[0];
+    const url = new URL(path, 'http://fixture.test');
+    expect(url.pathname).toBe('/drives');
+    expect([...url.searchParams.entries()]).toEqual([
+      ['vehicle_id', '42'], ['limit', '1000'], ['start', window.start], ['end', window.end],
+    ]);
+    expect(options?.signal).toBeInstanceOf(AbortSignal);
+    expect(drivingKeys.history('42', 1000, window)).toEqual([
+      'drives', '42', 'history', 1000, window.start, window.end,
+    ]);
+    expect(context.client.getQueryData(drivingKeys.history('42', 1000, window))).toEqual(rows);
+  });
+
+  it('scopes analytical drive and charging requests and caches by each header instant', async () => {
+    let id = 1;
+    mockedRequest.mockImplementation(async () => [{ id: id++ }]);
+    const context = wrapper();
+    const { result, rerender } = renderHook(
+      (window: { start: string; end: string }) => ({
+        drives: useDriveHistory('42', 1000, window),
+        charging: useChargingHistory('42', 1000, window),
+      }),
+      { wrapper: context.wrapper, initialProps: { start, end } },
+    );
+    await waitFor(() => expect(result.current.drives.isSuccess && result.current.charging.isSuccess).toBe(true));
+    const originalDrives = result.current.drives.data;
+    const originalCharging = result.current.charging.data;
+    const laterStart = '2024-03-10T20:00:00.000Z';
+    rerender({ start: laterStart, end });
+    await waitFor(() => expect(result.current.drives.data?.[0].id).toBe(3));
+    await waitFor(() => expect(result.current.charging.data?.[0].id).toBe(4));
+    const earlierEnd = '2024-03-11T10:00:00.000Z';
+    rerender({ start: laterStart, end: earlierEnd });
+    await waitFor(() => expect(result.current.drives.data?.[0].id).toBe(5));
+    await waitFor(() => expect(result.current.charging.data?.[0].id).toBe(6));
+    expect(context.client.getQueryData(drivingKeys.history('42', 1000, { start, end }))).toEqual(originalDrives);
+    expect(context.client.getQueryData(chargingKeys.history('42', 1000, { start, end }))).toEqual(originalCharging);
+    expect(mockedRequest).toHaveBeenCalledTimes(6);
+    mockedRequest.mock.calls.forEach(([path, options], index) => {
+      const params = new URL(path, 'http://fixture.test').searchParams;
+      expect(params.get('vehicle_id')).toBe('42');
+      expect(params.get('limit')).toBe('1000');
+      expect(params.get('start')).toBe(index < 2 ? start : laterStart);
+      expect(params.get('end')).toBe(index < 4 ? end : earlierEnd);
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+    });
+  });
+
+  it('scores page history using canonical half-open instants and qualifies server score independently', async () => {
+    const drive = { distanceM: 10000, energyUsedWh: 1500, avgPowerW: 3000, maxSpeedMps: 20 };
+    const rows = [
+      { ...drive, id: 1, startTs: '2024-03-10T15:42:19.124Z' },
+      { ...drive, id: 2, startTs: start },
+      { ...drive, id: 3, startTs: '2024-03-11T15:42:19.124Z' },
+      { ...drive, id: 4, startTs: end },
+    ];
+    const score = { overall: 87, grade: 'A', efficiency: 35, smoothness: 25, speedDiscipline: 27 };
+    mockedRequest.mockImplementation(async (path) =>
+      path.startsWith('/drives/score') ? score : rows,
+    );
+    const context = wrapper();
+    const { result } = renderHook(useDriveScorePage, { wrapper: context.wrapper });
+    await waitFor(() => expect(result.current.drivesQuery.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.scoreQuery.isSuccess).toBe(true));
+    expect(result.current.filteredDrives.map((row) => row.id)).toEqual([2, 3]);
+    expect(result.current.scoredDrives).toHaveLength(2);
+    expect(result.current.hasDrives).toBe(true);
+    expect(result.current.overallReading).toBe(87);
+    expect(result.current.apiScore).toBe(score);
+    expect(result.current.apiScoreCoverage).toEqual({ scope: 'all-completed-drives' });
+    expect(result.current.driveHistoryCoverage).toEqual({ scope: 'selected-range', start, end });
+    const path = mockedRequest.mock.calls.find(([url]) => url.startsWith('/drives?'))![0];
+    const params = new URL(path, 'http://fixture.test').searchParams;
+    expect(params.get('start')).toBe(start);
+    expect(params.get('end')).toBe(end);
+  });
+
+  it('loads complete exact-range score history beyond one page while retaining the independent server score', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, id) => ({ id, startTs: start }));
+    const lastPage = [{ id: 1000, startTs: start }];
+    const score = { overall: 87, grade: 'A', totalDrives: 2500 };
+    mockedRequest.mockImplementation(async (path) => {
+      const url = new URL(path, 'http://fixture.test');
+      if (url.pathname === '/drives/score') return score;
+      return url.searchParams.get('offset') === '0' ? firstPage : lastPage;
+    });
+    const context = wrapper();
+    const { result } = renderHook(() => ({
+      history: useDriveCalendarHistory('42', start, end),
+      score: useDriveScore('42'),
+    }), { wrapper: context.wrapper });
+    await waitFor(() => expect(result.current.history.isSuccess).toBe(true));
+    await waitFor(() => expect(result.current.score.isSuccess).toBe(true));
+    expect(result.current.history.data).toEqual([...firstPage, ...lastPage]);
+    expect(result.current.score.data).toBe(score);
+    const historyCalls = mockedRequest.mock.calls.filter(([path]) => path.startsWith('/drives?'));
+    expect(historyCalls).toHaveLength(2);
+    historyCalls.forEach(([path, options], page) => {
+      const params = new URL(path, 'http://fixture.test').searchParams;
+      expect(params.get('vehicle_id')).toBe('42');
+      expect(params.get('start')).toBe(start);
+      expect(params.get('end')).toBe(end);
+      expect(params.get('limit')).toBe('1000');
+      expect(params.get('offset')).toBe(String(page * 1000));
+      expect(options?.signal).toBeInstanceOf(AbortSignal);
+    });
+    expect(mockedRequest.mock.calls.find(([path]) => path.startsWith('/drives/score'))?.[0])
+      .toBe('/drives/score?vehicle_id=42');
+  });
+
+  it('isolates complete history by both bounds without rescoping the all-completed-drive score', async () => {
+    let id = 1;
+    mockedRequest.mockImplementation(async (path) =>
+      path.startsWith('/drives/score') ? { overall: 87 } : [{ id: id++ }],
+    );
+    const context = wrapper();
+    const { result, rerender } = renderHook(
+      (window: { start: string; end: string }) => ({
+        history: useDriveCalendarHistory('42', window.start, window.end),
+        score: useDriveScore('42'),
+      }),
+      { wrapper: context.wrapper, initialProps: { start, end } },
+    );
+    await waitFor(() => expect(result.current.history.data).toEqual([{ id: 1 }]));
+    const laterStart = '2024-03-10T20:00:00.000Z';
+    rerender({ start: laterStart, end });
+    await waitFor(() => expect(result.current.history.data).toEqual([{ id: 2 }]));
+    const earlierEnd = '2024-03-11T10:00:00.000Z';
+    rerender({ start: laterStart, end: earlierEnd });
+    await waitFor(() => expect(result.current.history.data).toEqual([{ id: 3 }]));
+    expect(context.client.getQueryData(drivingKeys.calendar('42', start, end))).toEqual([{ id: 1 }]);
+    expect(mockedRequest.mock.calls.filter(([path]) => path.startsWith('/drives/score'))).toHaveLength(1);
+    const params = new URL(mockedRequest.mock.calls.at(-1)![0], 'http://fixture.test').searchParams;
+    expect(params.get('start')).toBe(laterStart);
+    expect(params.get('end')).toBe(earlierEnd);
+  });
 
   it('sends both exact bounds and vehicle to the list and whole-range stats without a cap change', async () => {
     const stats = { totalDrives: 125, totalDistanceKm: 8765, regenEnergyWh: null };

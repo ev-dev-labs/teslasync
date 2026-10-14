@@ -4,10 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { useDriveHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
-import { SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, SectionErrorBoundary, StaleRefreshWarning } from '@/components/feedback';
+import { Button, Text } from '@/components/ui';
 import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -38,9 +40,11 @@ export default function ExplorerPage() {
   const vehicleIdString =
     vehicleId != null ? String(vehicleId) : undefined;
   const { formatDistance } = useUnits();
+  const { startInstant, endInstantExclusive } = useRangeState();
   const historyQuery = useDriveHistory(
     vehicleIdString,
     EXPLORER_HISTORY_LIMIT,
+    { start: startInstant, end: endInstantExclusive },
   );
   const summary = useMemo(
     () =>
@@ -75,8 +79,23 @@ export default function ExplorerPage() {
         'How far and how wide your car actually roams',
       )}
       query={historyQuery}
-      busy={sectionState.isLoading || sourceState.isRefreshing}
+      busy={(sectionState.isLoading && !sourceState.isRefreshBlocked) || sourceState.isRefreshing}
     >
+      {sourceState.status === 'initial' && sourceState.isRefreshBlocked ? (
+        <AlertBanner
+          variant="info"
+          role="status"
+          data-refresh-blocked
+          title={t('dataSources.status.paused', 'Refresh paused')}
+        >
+          <Text as="p" variant="bodySm" color="secondary">
+            {t('explorer.brief.pending', 'Located-arrival evidence is not available yet.')}
+          </Text>
+          <Button variant="ghost" size="sm" onClick={sectionState.onRetry}>
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </AlertBanner>
+      ) : null}
       <StaleRefreshWarning state={sourceState} label={t('explorer.title', 'Explorer')} />
       <SectionErrorBoundary name="ExplorerKpis">
         <ExplorerKpis

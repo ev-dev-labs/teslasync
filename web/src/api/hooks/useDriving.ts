@@ -45,8 +45,10 @@ export const drivingKeys = {
     (window?.start || window?.end || window?.limit
       ? ['drives', vehicleId, window.start ?? null, window.end ?? null, window.limit ?? null] as const
       : ['drives', vehicleId] as const),
-  history: (vehicleId?: string, limit = 1000) =>
-    ['drives', vehicleId, 'history', limit] as const,
+  history: (vehicleId?: string, limit = 1000, window?: Pick<DriveWindow, 'start' | 'end'>) =>
+    (window?.start || window?.end
+      ? ['drives', vehicleId, 'history', limit, window.start ?? null, window.end ?? null] as const
+      : ['drives', vehicleId, 'history', limit] as const),
   calendar: (vehicleId?: string, start?: string, end?: string) =>
     ['drives', vehicleId, 'calendar', start, end] as const,
   // Detail key is namespaced under 'drive' (singular) so it never collides
@@ -123,10 +125,11 @@ export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
       if (opts.end) params.set('end', opts.end);
       if (boundedLimit != null) params.set('limit', String(boundedLimit));
       const qs = params.toString();
-      return request<Drive[]>(qs ? `/drives?${qs}` : '/drives', { signal });
+      // Go nil slices remain empty-compatible; other invalid shapes must not replace cached evidence.
+      return request<Drive[] | null>(qs ? `/drives?${qs}` : '/drives', { signal })
+        .then((rows) => validateAnalyticalHistory(rows === null ? [] : rows, 'drive'));
     },
     enabled: !!vehicleId,
-    select: safeArray,
     refetchInterval: opts.refetchInterval,
     staleTime: STALE_TIMES.FAST,
   });
@@ -140,14 +143,23 @@ export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
  *
  * The backend caps one request at 1,000 rows. Callers must still describe the
  * result as an observed history window rather than guaranteed lifetime data.
+ * Workspace callers pass startInstant/endInstantExclusive unchanged as
+ * start/end; both bounds scope the server result and its isolated cache key.
  */
-export function useDriveHistory(vehicleId?: string, limit = 1000) {
+export function useDriveHistory(
+  vehicleId?: string,
+  limit = 1000,
+  window?: Pick<DriveWindow, 'start' | 'end'>,
+) {
   const boundedLimit = Math.max(1, Math.min(1000, Math.floor(limit)));
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(boundedLimit) });
+  if (window?.start) params.set('start', window.start);
+  if (window?.end) params.set('end', window.end);
   return useQuery({
-    queryKey: drivingKeys.history(vehicleId, boundedLimit),
+    queryKey: drivingKeys.history(vehicleId, boundedLimit, window),
     queryFn: ({ signal }) =>
       request<Drive[]>(
-        `/drives?vehicle_id=${encodeURIComponent(String(vehicleId))}&limit=${boundedLimit}`,
+        `/drives?${params}`,
         { signal },
       ).then((rows) => validateAnalyticalHistory(rows, 'drive')),
     enabled: !!vehicleId,
@@ -206,6 +218,7 @@ export function useDrive(id: string) {
   });
 }
 
+/** Independent all-completed-drive score. The server ignores date range parameters. */
 export function useDriveScore(vehicleId?: string) {
   return useQuery({
     queryKey: drivingKeys.score(vehicleId),
