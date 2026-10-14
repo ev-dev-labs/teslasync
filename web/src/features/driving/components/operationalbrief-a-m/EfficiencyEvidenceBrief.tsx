@@ -38,6 +38,25 @@ export function EfficiencyEvidenceBrief(props: StatsPresentation & { kind: 'kpis
   const title = props.kind === 'kpis'
     ? t('efficiency.section.kpis', 'Key metrics') : t('efficiency.insights', 'Energy insights');
   const state = props.source.state;
+  const loading = props.source.loading && !state.hasData && !state.isRefreshBlocked;
+  const retained = state.hasData && (state.status === 'stale' || state.refreshError != null || state.isRefreshBlocked);
+  const statusLabel = props.source.malformed || state.fatalError != null || state.status === 'unavailable'
+    ? t('driving.brief.unavailable', 'Source unavailable')
+    : state.refreshError != null && state.hasData
+      ? t('driving.brief.retained', 'Retained evidence')
+      : state.isRefreshBlocked
+        ? state.hasData
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : t('energyFlow.state.pausedTitle', 'Source paused')
+        : !state.hasData
+          ? loading
+            ? t('driving.brief.loading', 'Loading evidence')
+            : t('driving.brief.awaiting', 'Awaiting evidence')
+          : state.status === 'stale'
+            ? t('driving.brief.retained', 'Retained evidence')
+            : state.status === 'partial'
+              ? t('driving.brief.partial', 'Partial evidence')
+              : t('driving.brief.returned', 'Returned evidence');
   return <div className="min-w-0 space-y-3">
     <DrivingSummaryBrief metrics={metrics} title={props.kind === 'kpis'
       ? t('efficiency.brief.title', 'Lifetime efficiency evidence') : title}
@@ -45,12 +64,10 @@ export function EfficiencyEvidenceBrief(props: StatsPresentation & { kind: 'kpis
       scope={t('efficiency.period.lifetime', 'Lifetime driving summary')}
       provenance={t('efficiency.period.statsSource', 'Vehicle driving aggregates; not filtered by the workspace range.')}
       preferences={{ units: props.units.unitPrefs, currency: { kind: 'symbol', value: '$' } }}
-      loading={props.source.loading && !state.hasData}
-      error={state.fatalError} showError={false} retained={state.status === 'stale' || state.refreshError != null}
+      loading={loading}
+      error={state.fatalError} showError={false} retained={retained}
       onRetry={() => { state.retry?.(); }}
-      statusLabel={props.source.malformed || state.status === 'unavailable'
-        ? t('driving.brief.unavailable', 'Source unavailable')
-        : state.status === 'partial' ? t('driving.brief.partial', 'Partial evidence') : undefined} />
+      statusLabel={statusLabel} />
     <EfficiencySource {...props.source} available={Boolean(props.stats)} label={title}
       emptyMessage={props.kind === 'kpis'
         ? t('efficiency.noStats', 'No efficiency data available yet')
