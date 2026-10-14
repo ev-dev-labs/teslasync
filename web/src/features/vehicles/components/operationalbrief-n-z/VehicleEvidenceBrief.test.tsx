@@ -1,6 +1,7 @@
 import { fireEvent, render, renderHook, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import { deriveDataState, type DataStatus } from '@/api/dataState';
 import type { StatMetric } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { VehicleEvidenceBrief } from './VehicleEvidenceBrief';
@@ -32,13 +33,17 @@ const metrics: readonly StatMetric[] = [
   { metricId: 'count', occurrenceId: 'coverage', label: 'Covered records', rawValue: 0, display: { countTotal: 4 } },
 ];
 
-function renderBrief(status: 'ok' | 'stale' | 'initial' = 'ok') {
-  return render(<MemoryRouter><VehicleEvidenceBrief
+function briefElement(status: DataStatus = 'ok', sourceMetrics = metrics, loading?: boolean) {
+  return <MemoryRouter><VehicleEvidenceBrief
     id="test-evidence" title="Returned vehicle evidence"
     description="Independent measurements, no shared observation timestamp."
     status={status} scope="Bounded to returned records"
-    provenance="Historical source" metrics={metrics} />
-  </MemoryRouter>);
+    provenance="Historical source" metrics={sourceMetrics} loading={loading} />
+  </MemoryRouter>;
+}
+
+function renderBrief(status: DataStatus = 'ok') {
+  return render(briefElement(status));
 }
 
 describe('VehicleEvidenceBrief raw operational bridge', () => {
@@ -68,7 +73,7 @@ describe('VehicleEvidenceBrief raw operational bridge', () => {
     renderBrief('stale');
     const brief = screen.getByTestId('test-evidence');
     expect(brief).toHaveAttribute('data-operational-brief');
-    expect(within(brief).getByText('Retained after refresh failure')).toBeInTheDocument();
+    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
     expect(brief.querySelector('[data-operational-metric="energy"]')).toHaveAttribute('data-value-state', 'missing');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
@@ -86,4 +91,65 @@ describe('VehicleEvidenceBrief raw operational bridge', () => {
     expect(brief.querySelectorAll('[data-operational-value]')).toHaveLength(0);
     expect(within(brief).queryByText('0.00 mph')).not.toBeInTheDocument();
   });
+
+  it('keeps paused-without-data readings unknown without an active loading or failure state', () => {
+    const state = deriveDataState({ fetchStatus: 'paused', isLoading: false });
+    const unknownMetrics = metrics.map(metric => ({ ...metric, rawValue: null }));
+    render(briefElement(state.status, unknownMetrics, false));
+    const brief = screen.getByTestId('test-evidence');
+    expect(brief).not.toHaveAttribute('aria-busy');
+    expect(within(brief).getByText('Pending')).toBeInTheDocument();
+    expect(within(brief).queryByText('Loading source')).not.toBeInTheDocument();
+    expect(brief.querySelectorAll('[data-value-state="missing"]')).toHaveLength(4);
+    expect(within(brief).queryByText(/failure|unavailable/i)).not.toBeInTheDocument();
+    expect(within(brief).queryByText('0.00 mph')).not.toBeInTheDocument();
+  });
+
+  it('preserves successful empty evidence as a real zero count, not loading or failure', () => {
+    const state = deriveDataState({ data: [], isSuccess: true });
+    render(briefElement(state.status, [
+      { metricId: 'count', occurrenceId: 'records', label: 'Returned records', rawValue: state.data?.length },
+    ]));
+    const brief = screen.getByTestId('test-evidence');
+    expect(within(brief).getByText('Source returned')).toBeInTheDocument();
+    expect(brief).not.toHaveAttribute('aria-busy');
+    expect(brief.querySelector('[data-value-state="value"]')).toBeInTheDocument();
+    expect(within(brief).getByText('0')).toBeInTheDocument();
+  });
+
+  it('keeps an authoritatively empty source distinct from a pending source', () => {
+    const state = deriveDataState({ data: [], isSuccess: true }, { unavailable: true });
+    render(briefElement(state.status, []));
+    const brief = screen.getByTestId('test-evidence');
+    expect(within(brief).getByText('No source data')).toBeInTheDocument();
+    expect(within(brief).queryByText('Pending')).not.toBeInTheDocument();
+    expect(brief).not.toHaveAttribute('aria-busy');
+    expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(0);
+  });
+
+  it.each(['paused', 'aged', 'failed'] as const)(
+    'keeps %s retained evidence cause-neutral and restores the returned state after recovery',
+    cause => {
+      const state = deriveDataState({
+        data: metrics,
+        dataUpdatedAt: 1_000,
+        fetchStatus: cause === 'paused' ? 'paused' : 'idle',
+        error: cause === 'failed' ? new Error('Refresh failed') : null,
+      }, { maxAgeMs: 1_000, now: () => cause === 'aged' ? 3_000 : 1_000 });
+      expect(state.status).toBe('stale');
+      expect(state.refreshError != null).toBe(cause === 'failed');
+      const { rerender } = render(briefElement(state.status, state.data));
+      const brief = screen.getByTestId('test-evidence');
+      expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
+      expect(within(brief).queryByText(/failure/i)).not.toBeInTheDocument();
+      expect(within(brief).getByText('0.00 mph')).toBeInTheDocument();
+      expect(brief).not.toHaveAttribute('aria-busy');
+
+      const recovered = deriveDataState({ data: metrics, isSuccess: true });
+      rerender(briefElement(recovered.status, recovered.data));
+      expect(within(brief).getByText('Source returned')).toBeInTheDocument();
+      expect(within(brief).queryByText('Retained source snapshots')).not.toBeInTheDocument();
+      expect(within(brief).getByText('0.00 mph')).toBeInTheDocument();
+    },
+  );
 });

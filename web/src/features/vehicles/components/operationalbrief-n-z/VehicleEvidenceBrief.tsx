@@ -26,9 +26,11 @@ export function VehicleEvidenceBrief({
     detail: <>{metric.detail}<div>{scope}</div></>,
   } : metric);
   const labels: Record<DataStatus, string> = {
-    initial: t('vehicles.evidenceBrief.status.initial', 'Loading source'),
+    initial: loading === false
+      ? t('dataSources.status.pending', 'Pending')
+      : t('vehicles.evidenceBrief.status.initial', 'Loading source'),
     ok: t('vehicles.evidenceBrief.status.ok', 'Source returned'),
-    stale: t('vehicles.evidenceBrief.status.stale', 'Retained after refresh failure'),
+    stale: t('digitalTwin.brief.status.stale', 'Retained source snapshots'),
     partial: t('vehicles.evidenceBrief.status.partial', 'Partial source coverage'),
     unavailable: t('vehicles.evidenceBrief.status.unavailable', 'No source data'),
     initialFailure: t('vehicles.evidenceBrief.status.initialFailure', 'Source unavailable'),
