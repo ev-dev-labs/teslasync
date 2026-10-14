@@ -17,10 +17,10 @@ import { FadeIn } from '@/components/motion';
 import { Badge, Button, Card, ConfirmDialog, DataTable, Icon, Input, Select, Text, Textarea } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { formatDateTime } from '@/lib/dateFormat';
 import { gaugeTone, severityTokens } from '@/lib/tokens';
 
 import type {
@@ -104,6 +104,7 @@ function UsageBar({ label, pct, hint }: { label: string; pct: number; hint: stri
 }
 
 export default function WarrantyCommandPage() {
+  const { formatDateTime } = useDateFormat();
   const { fmtNumber, fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const { vehicleId } = useSelectedVehicle();

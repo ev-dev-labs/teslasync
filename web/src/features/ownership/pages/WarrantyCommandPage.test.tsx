@@ -7,7 +7,7 @@
  * i18n are mocked; the table, buttons, and confirm dialog render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
@@ -65,6 +65,9 @@ import {
 import WarrantyCommandPage from './WarrantyCommandPage';
 import { expectOperationalBand, summaryMetric } from '../components/operationalbrief-all/testAssertions';
 import type { Warranty, WarrantyCoverage, WarrantyOverview } from '@/types/ownership';
+import { formatDateTime } from '@/lib/dateFormat';
+import * as settingsHook from '@/hooks/useSettings';
+import * as timezoneHook from '@/lib/timezone';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockOverview = useWarrantyOverview as unknown as ReturnType<typeof vi.fn>;
@@ -190,6 +193,76 @@ beforeEach(() => {
   mockCreate.mockReturnValue(makeMutation());
   mockRemove.mockReturnValue(makeMutation());
   mockClaim.mockReturnValue(makeMutation());
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
+describe('WarrantyCommandPage — saved date preferences', () => {
+  it.each([
+    ['de-DE', 'America/Los_Angeles', '2026-01-01T00:30:00Z', '31.'],
+    ['fr-FR', 'Asia/Tokyo', '2026-01-01T23:30:00Z', '2'],
+  ])('formats all expiry and ledger instants in %s / %s across day boundaries', (locale, tz, instant, day) => {
+    const defaults = settingsHook.useSettings();
+    vi.spyOn(settingsHook, 'useSettings').mockReturnValue({
+      ...defaults, locale,
+      settings: { ...defaults.settings, locale, tz_display_default: 'user', timezone_user: tz },
+    });
+    const timezone = vi.spyOn(timezoneHook, 'useTimezone').mockReturnValue(tz);
+    const overview = makeOverview();
+    const coverage = overview.coverages[0];
+    coverage.time_expiry_at = instant;
+    coverage.projected_expiry_at = instant;
+    coverage.capacity_retention_pct = 68;
+    coverage.capacity_floor_breach_at = instant;
+    coverage.claims[0].opened_at = instant;
+    overview.next_expiry_at = instant;
+    const warranty = makeWarranty({ start_at: instant });
+    mockOverview.mockReturnValue(makeQuery(overview));
+    mockWarranties.mockReturnValue(makeQuery({ items: [warranty] }));
+    renderPage();
+
+    const expected = formatDateTime(instant, { locale, tz });
+    expect(expected).toContain(day);
+    expect(timezone).toHaveBeenCalledWith('user');
+    expect(card('Recorded coverages')).toHaveTextContent(expected);
+    expect(card('Claim ledger')).toHaveTextContent(expected);
+    expect(summaryMetric('Coverage posture', 'next')).toHaveTextContent(expected);
+    const burnDown = card('Coverage burn-down');
+    expect(burnDown).toHaveTextContent(`expires ${expected}`);
+    expect(burnDown).toHaveTextContent(`Projected end ${expected}`);
+    expect(burnDown).toHaveTextContent(`Projected to reach the floor around ${expected}`);
+    expect(warranty.start_at).toBe(instant);
+    expect(coverage.claims[0].opened_at).toBe(instant);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add coverage' }));
+    fireEvent.change(screen.getByLabelText('Coverage start'), { target: { value: '2026-03-08' } });
+    expect(screen.getByLabelText('Coverage start')).toHaveValue('2026-03-08');
+    fireEvent.submit(screen.getByRole('button', { name: 'Save coverage' }).closest('form')!);
+    expect(mockCreate().mutate).toHaveBeenCalledWith(
+      expect.objectContaining({ start_at: '2026-03-08T00:00:00.000Z' }),
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+  });
+
+  it.each(['not-a-date', ''])('keeps invalid or missing dates unknown (%s)', (date) => {
+    const overview = makeOverview();
+    const coverage = overview.coverages[0];
+    coverage.time_expiry_at = date;
+    coverage.projected_expiry_at = date || null;
+    coverage.claims[0].opened_at = date;
+    overview.next_expiry_at = date || null;
+    mockOverview.mockReturnValue(makeQuery(overview));
+    mockWarranties.mockReturnValue(makeQuery({ items: [makeWarranty({ start_at: date })] }));
+    renderPage();
+    expect(card('Recorded coverages')).toHaveTextContent('—');
+    expect(card('Claim ledger')).toHaveTextContent('—');
+    expect(card('Coverage burn-down')).toHaveTextContent('expires —');
+    expect(card('Coverage burn-down')).toHaveTextContent('Projected end —');
+    expect(summaryMetric('Coverage posture', 'next')).not.toHaveTextContent('Invalid Date');
+    expect(screen.queryByText(/Invalid Date/)).not.toBeInTheDocument();
+  });
 });
 
 describe('WarrantyCommandPage — confirm-gated delete', () => {
