@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query'
+import i18n, { type TFunction } from 'i18next'
 import { request } from '@/api/client'
 import type { Vehicle } from '@/api/types'
+import { formatRelative, type FormatOptions } from '@/lib/dateFormat'
+import { fmtInt, getGlobalLocale } from '@/lib/numberFormat'
 import type { TelemetryError } from './types'
 
 /* ─── API helper ──────────────────────────────────────────────────────── */
@@ -10,14 +13,14 @@ export async function apiFetch(
   method: 'GET' | 'POST' | 'DELETE' = 'GET',
   body?: unknown,
 ): Promise<Record<string, unknown>> {
-  try {
-    return await request<Record<string, unknown>>(`/dev-tools/${endpoint}`, {
-      method,
-      ...(body ? { body: JSON.stringify(body) } : {}),
-    })
-  } catch (err) {
-    return { error: err instanceof Error ? err.message : 'Request failed' }
-  }
+  // Fleet status uses POST to submit a VIN list, but only reads upstream state.
+  const requiresLiveMode = method !== 'GET' &&
+    !(method === 'POST' && endpoint.split('?')[0] === 'fleet-status')
+  return request<Record<string, unknown>>(`/dev-tools/${endpoint}`, {
+    method,
+    ...(requiresLiveMode ? { requiresLiveMode: true } : {}),
+    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+  })
 }
 
 /* ─── vehicle options hook ────────────────────────────────────────────── */
@@ -56,54 +59,106 @@ export function rgbToHsl(r: number, g: number, b: number): [number, number, numb
 
 /* ─── cron helpers ────────────────────────────────────────────────────── */
 
-export function describeCron(parts: string[]): string {
-  if (parts.length !== 5) return 'Invalid cron expression'
+const CRON_BOUNDS = [[0, 59], [0, 23], [1, 31], [1, 12], [0, 6]] as const
+
+function parseCronField(field: string, min: number, max: number): Set<number> | null {
+  const values = new Set<number>()
+  for (const item of field.split(',')) {
+    const match = /^(\*|\d+(?:-\d+)?)(?:\/(\d+))?$/.exec(item)
+    if (!match) return null
+    const base = match[1]!
+    const step = match[2] === undefined ? 1 : Number(match[2])
+    if (!Number.isSafeInteger(step) || step < 1 || step > max - min + 1) return null
+    let start = min
+    let end = max
+    if (base !== '*') {
+      const range = base.split('-').map(Number)
+      start = range[0]!
+      end = range[1] ?? (match[2] === undefined ? start : max)
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) ||
+          start < min || end > max || start > end) return null
+    }
+    for (let value = start; value <= end; value += step) values.add(value)
+  }
+  return values
+}
+
+function parseCron(parts: string[]): Set<number>[] | null {
+  if (parts.length !== CRON_BOUNDS.length) return null
+  const fields = parts.map((field, index) => {
+    const [min, max] = CRON_BOUNDS[index]!
+    return parseCronField(field, min, max)
+  })
+  if (fields.some(field => field === null)) return null
+  return fields as Set<number>[]
+}
+
+export function isValidCron(parts: string[]): boolean {
+  return parseCron(parts) !== null
+}
+
+export function describeCron(
+  parts: string[],
+  t: TFunction = i18n.t,
+  locale = getGlobalLocale(),
+): string {
+  if (!isValidCron(parts)) {
+    return t('devtools.utils.cronInvalid', 'Invalid cron expression')
+  }
   const [min, hr, dom, mon, dow] = parts
   const pieces: string[] = []
-  if (min === '*' && hr === '*') pieces.push('Every minute')
-  else if (min !== '*' && hr === '*') pieces.push(`At minute ${min} of every hour`)
-  else if (min !== '*' && hr !== '*') pieces.push(`At ${hr!.padStart(2, '0')}:${min!.padStart(2, '0')}`)
-  else pieces.push(`Every minute of hour ${hr}`)
-  if (dom !== '*') pieces.push(`on day ${dom}`)
-  if (mon !== '*') pieces.push(`in month ${mon}`)
+  const displayField = (field: string | undefined) =>
+    field && /^\d+$/.test(field) ? fmtInt(Number(field), locale) : field
+  if (min === '*' && hr === '*') pieces.push(t('devtools.utils.cronEveryMinute', 'Every minute'))
+  else if (min !== '*' && hr === '*') {
+    pieces.push(t('devtools.utils.cronAtMinute', {
+      defaultValue: 'At minute {{minute}} of every hour', minute: displayField(min),
+    }))
+  } else if (min !== '*' && hr !== '*') {
+    pieces.push(t('devtools.utils.cronAtTime', {
+      defaultValue: 'At {{time}}', time: `${hr!.padStart(2, '0')}:${min!.padStart(2, '0')}`,
+    }))
+  } else {
+    pieces.push(t('devtools.utils.cronDuringHour', {
+      defaultValue: 'Every minute of hour {{hour}}', hour: displayField(hr),
+    }))
+  }
+  if (dom !== '*') pieces.push(t('devtools.utils.cronOnDay', {
+    defaultValue: 'on day {{day}}', day: displayField(dom),
+  }))
+  if (mon !== '*') pieces.push(t('devtools.utils.cronInMonth', {
+    defaultValue: 'in month {{month}}', month: displayField(mon),
+  }))
   if (dow !== '*') {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-    const idx = parseInt(dow!, 10)
-    pieces.push(`on ${days[idx] ?? dow}`)
+    const weekday = /^\d+$/.test(dow!)
+      ? new Intl.DateTimeFormat(locale, { weekday: 'short', timeZone: 'UTC' })
+        .format(new Date(Date.UTC(2024, 0, 7 + Number(dow))))
+      : dow
+    pieces.push(t('devtools.utils.cronOnWeekday', {
+      defaultValue: 'on {{weekday}}', weekday,
+    }))
   }
   return pieces.join(' ')
 }
 
 export function getNextCronRuns(parts: string[], count: number): Date[] {
-  if (parts.length !== 5) return []
+  const fields = parseCron(parts)
+  if (!fields || !Number.isSafeInteger(count) || count < 1) return []
   const results: Date[] = []
   const now = new Date()
   const check = new Date(now)
   check.setSeconds(0, 0)
   check.setMinutes(check.getMinutes() + 1)
-  const matchField = (field: string, value: number): boolean => {
-    if (field === '*') return true
-    if (field.includes('/')) {
-      const [, step] = field.split('/')
-      return value % parseInt(step ?? '1', 10) === 0
-    }
-    if (field.includes(',')) return field.split(',').map(Number).includes(value)
-    if (field.includes('-')) {
-      const [lo, hi] = field.split('-').map(Number)
-      return value >= (lo ?? 0) && value <= (hi ?? 0)
-    }
-    return parseInt(field, 10) === value
-  }
-  const [min, hr, dom, mon, dow] = parts
+  const [min, hr, dom, mon, dow] = fields
   let safety = 0
   while (results.length < count && safety < 525960) {
     safety++
     if (
-      matchField(min ?? '*', check.getMinutes()) &&
-      matchField(hr ?? '*', check.getHours()) &&
-      matchField(dom ?? '*', check.getDate()) &&
-      matchField(mon ?? '*', check.getMonth() + 1) &&
-      matchField(dow ?? '*', check.getDay())
+      min!.has(check.getMinutes()) &&
+      hr!.has(check.getHours()) &&
+      dom!.has(check.getDate()) &&
+      mon!.has(check.getMonth() + 1) &&
+      dow!.has(check.getDay())
     ) {
       results.push(new Date(check))
     }
@@ -170,18 +225,6 @@ export function pickString(row: Record<string, unknown>, keys: string[]): string
 
 /* ─── relative time ───────────────────────────────────────────────────── */
 
-export function getRelativeTime(date: Date): string {
-  const ms = date.getTime()
-  // Guard against an invalid Date (getTime() === NaN); the arithmetic below
-  // otherwise cascades NaN through every branch and renders "NaNd ago".
-  if (!Number.isFinite(ms)) return '—'
-  const diff = Math.abs(Date.now() - ms)
-  const s = Math.floor(diff / 1000)
-  if (s < 60) return `${s}s ago`
-  const m = Math.floor(s / 60)
-  if (m < 60) return `${m}m ago`
-  const h = Math.floor(m / 60)
-  if (h < 24) return `${h}h ago`
-  const d = Math.floor(h / 24)
-  return `${d}d ago`
+export function getRelativeTime(date: Date, opts?: FormatOptions): string {
+  return formatRelative(date, opts)
 }

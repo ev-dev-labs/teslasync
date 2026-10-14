@@ -3,20 +3,25 @@ import { useTranslation } from 'react-i18next'
 import { Timer } from 'lucide-react'
 import { Input, Button, Badge } from '@/components/ui'
 import { ToolCard } from '../ToolCard'
-import { describeCron, getNextCronRuns } from '../helpers'
-import { formatDateTime } from '@/lib/dateFormat'
+import { describeCron, getNextCronRuns, isValidCron } from '../helpers'
+import { useDateFormat } from '@/hooks/useDateFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 
-const CRON_FIELD_COUNT = 5
 const NEXT_RUN_COUNT = 5
 
 export function CronParserTool() {
   const { t } = useTranslation()
+  const { formatDateTime, locale } = useDateFormat()
+  const { fmtInt } = useNumberFormatting()
   const [expr, setExpr] = useState('')
 
   const trimmed = expr.trim()
   const parts = useMemo(() => (trimmed === '' ? [] : trimmed.split(/\s+/)), [trimmed])
-  const isValid = parts.length === CRON_FIELD_COUNT
-  const description = useMemo(() => (isValid ? describeCron(parts) : ''), [isValid, parts])
+  const isValid = isValidCron(parts)
+  const description = useMemo(
+    () => (isValid ? describeCron(parts, t, locale) : ''),
+    [isValid, parts, t, locale],
+  )
   const nextRuns = useMemo(
     () => (isValid ? getNextCronRuns(parts, NEXT_RUN_COUNT) : []),
     [isValid, parts],
@@ -62,6 +67,7 @@ export function CronParserTool() {
         {trimmed !== '' && !isValid && (
           <div role="alert" className="rounded bg-[var(--surface-overlay)] px-3 py-2">
             <p className="text-sm text-amber-300">
+              {t('devtools.utils.cronInvalid', 'Invalid cron expression')}.{' '}
               {t('devtools.utils.cronFieldsHint', 'Enter all 5 cron fields: minute, hour, day, month, weekday')}
             </p>
           </div>
@@ -78,7 +84,7 @@ export function CronParserTool() {
               {nextRuns.length > 0 ? (
                 nextRuns.map((d, i) => (
                   <div key={i} className="flex items-center gap-2 rounded bg-[var(--surface-overlay)] px-3 py-1">
-                    <Badge variant="info" size="sm">{i + 1}</Badge>
+                    <Badge variant="info" size="sm">{fmtInt(i + 1)}</Badge>
                     <span className="text-xs font-mono text-[var(--text-secondary)]">{formatDateTime(d)}</span>
                   </div>
                 ))
