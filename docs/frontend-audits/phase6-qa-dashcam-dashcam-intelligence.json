@@ -1,0 +1,2714 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-qa-dashcam-dashcam-intelligence",
+  "status": "DONE_SOURCE_AUDIT_REPORT",
+  "repoRoot": "D:/repos/teslasync",
+  "page": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+  "createdAt": "2026-10-14T01:04:15.460576+00:00",
+  "deadline": {
+    "returnBy": "2026-10-14T01:05:28.452Z",
+    "hard": "2026-10-14T01:10:28.452Z",
+    "returnDeadlineMissed": true,
+    "withinHardDeadlineAtReportWrite": true
+  },
+  "firstExistingReportCheck": {
+    "exists": false,
+    "noDuplicateRedo": true,
+    "decision": "Create missing exact authorized QA report only"
+  },
+  "queueAuthority": {
+    "file": "migration-queue.md",
+    "line": 379,
+    "rawExactRow": "| [~] | 6 | phase6-qa-dashcam-dashcam-intelligence | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-dashcam-dashcam-intelligence.json | phase5-page-dashcam-dashcam-intelligence | 1 | actor=96355402-eb5c-4dcc-96a6-090057f2641a; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | CurrentacceptedDashcamIntelligencePage/directparts source-onlyQA; report/logonly/no media/identity/API/browser/native/source/test/catalog/fullsuite. Privacy/sourceprovenance/unknownzero/scope/trust/actions/sections; exactfindings vs candidates/no remigration. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 96355402-eb5c-4dcc-96a6-090057f2641a, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |",
+    "actor": "96355402-eb5c-4dcc-96a6-090057f2641a",
+    "attempt": 1,
+    "acceptedPhase5Line": 379,
+    "rawAcceptedHistory": "| [~] | 6 | phase6-qa-dashcam-dashcam-intelligence | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-dashcam-dashcam-intelligence.json | phase5-page-dashcam-dashcam-intelligence | 1 | actor=96355402-eb5c-4dcc-96a6-090057f2641a; launch-observed=2026-10-14T00:48:33.105Z; conservative return=2026-10-14T01:05:28.452Z; hard=2026-10-14T01:10:28.452Z; LastConsumed=-1 | - | CurrentacceptedDashcamIntelligencePage/directparts source-onlyQA; report/logonly/no media/identity/API/browser/native/source/test/catalog/fullsuite. Privacy/sourceprovenance/unknownzero/scope/trust/actions/sections; exactfindings vs candidates/no remigration. New-machine exact scope reserved for built-in dispatch; recovered attempts continued (new zero-attempt QA starts at one); reservation is NOT a running worker. No browser grant. Actual built-in background launch accepted; exact files held by 96355402-eb5c-4dcc-96a6-090057f2641a, no native lock. Preserve same recovered attempt and original clocks/history; current running state requires health census. |",
+    "phase5Commit": "e12b0134bd95ecf196c7f4272f2def5780ca1df6",
+    "acceptanceLimit": "Historical source only; 6/6 scoped checks not rerun; original privacy-blocked capture is not native acceptance"
+  },
+  "history": {
+    "phase0Report": "docs/frontend-audits/audit-page-094.json",
+    "originalRecordedLines": {
+      "page": 116,
+      "combined": 1247
+    },
+    "currentLines": {
+      "page": 114,
+      "combined": 1245,
+      "nonTestPresentationFiles": 12
+    },
+    "resolvedNotRequeued": [
+      "Persistence warning now existing InlineCallout warning",
+      "Page comment now acknowledges vehicle catalog/history reads",
+      "Accepted SelectableCard uses semantic theme/surface/focus roles; no shared-card redo"
+    ],
+    "preservation": "5 top surfaces/5 detail tabs/6 reconstruction groups remain; originals and accepted phases untouched"
+  },
+  "routes": [
+    {
+      "path": "/dashcam",
+      "file": "web/src/App.tsx",
+      "line": 756,
+      "lazyImportLine": 222,
+      "shellMountLine": 574,
+      "registrationOnly": true,
+      "workspaceScope": {
+        "vehicle": true,
+        "range": false,
+        "source": "web/src/lib/workspaceScope.ts:23-76,95-166",
+        "meaning": "Browser-wide catalog; current selected vehicle associates import and reconstruction; camera assumption/clip window are independent dates"
+      }
+    }
+  ],
+  "purpose": "Local catalog/playback/masks, heuristic event evidence, statistical history alignment and honest local JSON/PNG export",
+  "sourcePins": [
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+      "sha256": "a50efc8b5f2fa32bfc52b415fb6724a7967cb682bc9ba1d03c0cbf89a6e08a5e",
+      "lineCount": 91,
+      "initialFeatureSha256": "a50efc8b5f2fa32bfc52b415fb6724a7967cb682bc9ba1d03c0cbf89a6e08a5e",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "sha256": "b81a7404aa367bc8dd9acba8b9c3922f8d24fb4d352706f6fb4a2aa7e60a2238",
+      "lineCount": 67,
+      "initialFeatureSha256": "b81a7404aa367bc8dd9acba8b9c3922f8d24fb4d352706f6fb4a2aa7e60a2238",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "sha256": "4eb79edd0b7e7fdef6709b2fadc1c6a9f286cb5685128a623b8ce3150aeb2128",
+      "lineCount": 112,
+      "initialFeatureSha256": "4eb79edd0b7e7fdef6709b2fadc1c6a9f286cb5685128a623b8ce3150aeb2128",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "sha256": "95535c816b963b1c40e38f44d576aad430ecb90788abfeda348c7e9c99264aac",
+      "lineCount": 135,
+      "initialFeatureSha256": "95535c816b963b1c40e38f44d576aad430ecb90788abfeda348c7e9c99264aac",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+      "sha256": "3d389c9f5770e9c4b6697f25afe94c31bf88eb07a60d43d5810379afdadc3380",
+      "lineCount": 64,
+      "initialFeatureSha256": "3d389c9f5770e9c4b6697f25afe94c31bf88eb07a60d43d5810379afdadc3380",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+      "sha256": "b818adb55c2453d4b1d6297d8c4c5dcfe4dc9dcda9d70f96a8c2dcb53cd18ea5",
+      "lineCount": 116,
+      "initialFeatureSha256": "b818adb55c2453d4b1d6297d8c4c5dcfe4dc9dcda9d70f96a8c2dcb53cd18ea5",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+      "sha256": "b55fb50ccb91a9f5be46add634520954af3a884b36609408155564009c447d88",
+      "lineCount": 94,
+      "initialFeatureSha256": "b55fb50ccb91a9f5be46add634520954af3a884b36609408155564009c447d88",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionSeriesList.tsx",
+      "sha256": "af86d246630605ff0b9223523c19e9e064a2bee0bb225911dbed121ee754ff36",
+      "lineCount": 61,
+      "initialFeatureSha256": "af86d246630605ff0b9223523c19e9e064a2bee0bb225911dbed121ee754ff36",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "sha256": "5151f6eed1a075ceddddb65703bd507147c411c5b9609db4ae350bc8db892b22",
+      "lineCount": 186,
+      "initialFeatureSha256": "5151f6eed1a075ceddddb65703bd507147c411c5b9609db4ae350bc8db892b22",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "sha256": "a3881772e52d709db8541b6a253bc9161540cf5cb8a2827157faee0095428f98",
+      "lineCount": 114,
+      "initialFeatureSha256": "a3881772e52d709db8541b6a253bc9161540cf5cb8a2827157faee0095428f98",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/RedactionOverlay.tsx",
+      "sha256": "745298198f0dd0c73447aaec2d2cc9bf84dd4c4ff5d6cec407c73e302ca03c90",
+      "lineCount": 42,
+      "initialFeatureSha256": "745298198f0dd0c73447aaec2d2cc9bf84dd4c4ff5d6cec407c73e302ca03c90",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+      "sha256": "8bdc6166ab062647bca96d068ccca60fc9c2300c8283441ac4b18823b2d3a501",
+      "lineCount": 49,
+      "initialFeatureSha256": "8bdc6166ab062647bca96d068ccca60fc9c2300c8283441ac4b18823b2d3a501",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/constants.ts",
+      "sha256": "0b989ba187a4436fbdf82b0008cb1e5e6576c275fbf188fbef17bdb7af7be5ac",
+      "lineCount": 52,
+      "initialFeatureSha256": "0b989ba187a4436fbdf82b0008cb1e5e6576c275fbf188fbef17bdb7af7be5ac",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/helpers.ts",
+      "sha256": "907d35196e93b7bc5c4045fbb1d725bc141659b92a8255c2d4b728278ffe3d98",
+      "lineCount": 51,
+      "initialFeatureSha256": "907d35196e93b7bc5c4045fbb1d725bc141659b92a8255c2d4b728278ffe3d98",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/index.ts",
+      "sha256": "e645aaec2a70a0062d59cdae8b97ee71106cb3633ab1a4225a78a6d7601cc83f",
+      "lineCount": 12,
+      "initialFeatureSha256": "e645aaec2a70a0062d59cdae8b97ee71106cb3633ab1a4225a78a6d7601cc83f",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+      "sha256": "1fcfaf08b396ab17d1210197817ff9d105ec7c9a3431491f8363f91dde75bc15",
+      "lineCount": 138,
+      "initialFeatureSha256": "1fcfaf08b396ab17d1210197817ff9d105ec7c9a3431491f8363f91dde75bc15",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useDashcamDb.ts",
+      "sha256": "7b957ad2aae830d0efa1ec0a0dd8fbb6a5d1a675fe5aebef50be020bb73a294f",
+      "lineCount": 29,
+      "initialFeatureSha256": "7b957ad2aae830d0efa1ec0a0dd8fbb6a5d1a675fe5aebef50be020bb73a294f",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useDashcamSettings.ts",
+      "sha256": "2fe251d368c583f608755949884dd2678feb0595062b2960452352ceb207c7d3",
+      "lineCount": 32,
+      "initialFeatureSha256": "2fe251d368c583f608755949884dd2678feb0595062b2960452352ceb207c7d3",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useMotionAnalysis.ts",
+      "sha256": "15a0f32650af012fbc6fc4f2ceb35b9e4995ac287ea184cbb3528618dff41182",
+      "lineCount": 78,
+      "initialFeatureSha256": "15a0f32650af012fbc6fc4f2ceb35b9e4995ac287ea184cbb3528618dff41182",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+      "sha256": "45f7d8de5084a5f11e3a5ae458b51a0a618646e352fa93e8f6874ed6e3afa723",
+      "lineCount": 87,
+      "initialFeatureSha256": "45f7d8de5084a5f11e3a5ae458b51a0a618646e352fa93e8f6874ed6e3afa723",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/index.ts",
+      "sha256": "1ddbc5b374b677acbc783459aa0be041994a7ce0fdbb1b0f4a3454303b9dd9c3",
+      "lineCount": 18,
+      "initialFeatureSha256": "1ddbc5b374b677acbc783459aa0be041994a7ce0fdbb1b0f4a3454303b9dd9c3",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/clipFilter.ts",
+      "sha256": "3937b038bf5570b8a2564d4ecb874e15873c8748cb42a1883c62e0bf99d9b296",
+      "lineCount": 44,
+      "initialFeatureSha256": "3937b038bf5570b8a2564d4ecb874e15873c8748cb42a1883c62e0bf99d9b296",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/clipMetadata.ts",
+      "sha256": "9b39202ce4b00146a025a19e9b5135e49b8c77eb0b8efe2e40944e99d295b022",
+      "lineCount": 48,
+      "initialFeatureSha256": "9b39202ce4b00146a025a19e9b5135e49b8c77eb0b8efe2e40944e99d295b022",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/clipParsing.ts",
+      "sha256": "1274302e1109bff6c15321acfe5480890a4099b6ce803f09fad724c6960fee49",
+      "lineCount": 83,
+      "initialFeatureSha256": "1274302e1109bff6c15321acfe5480890a4099b6ce803f09fad724c6960fee49",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/constants.ts",
+      "sha256": "cf744a13a25c7dfe7f82c65e26b5594dfb2ad7dc127354b7d630e0ee3e44cda3",
+      "lineCount": 62,
+      "initialFeatureSha256": "cf744a13a25c7dfe7f82c65e26b5594dfb2ad7dc127354b7d630e0ee3e44cda3",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/index.ts",
+      "sha256": "9c7d771898b04a800458f2bf24259b15e5c499dbe9db3669b7641ee0b9235363",
+      "lineCount": 38,
+      "initialFeatureSha256": "9c7d771898b04a800458f2bf24259b15e5c499dbe9db3669b7641ee0b9235363",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/indexedDbAdapter.ts",
+      "sha256": "eedc9fc1376db818f4fcb0f0bf59ea8a06145d29ba8566c9bef09b62e5748407",
+      "lineCount": 95,
+      "initialFeatureSha256": "eedc9fc1376db818f4fcb0f0bf59ea8a06145d29ba8566c9bef09b62e5748407",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/memoryAdapter.ts",
+      "sha256": "474832e9220820036b99d7fe1f7b08391e4aa5cd5c421ff027a3acf1cbacb03b",
+      "lineCount": 35,
+      "initialFeatureSha256": "474832e9220820036b99d7fe1f7b08391e4aa5cd5c421ff027a3acf1cbacb03b",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/types.ts",
+      "sha256": "01da93fee988ea1594e8e62e7c03867d032d6eecfd2206460130568725e3b1ff",
+      "lineCount": 19,
+      "initialFeatureSha256": "01da93fee988ea1594e8e62e7c03867d032d6eecfd2206460130568725e3b1ff",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/eventDetection.ts",
+      "sha256": "a696f8ece53d9bd206a6bff1324c9f47aaa2a1aa8a3234cf1e463e1ede5b3eda",
+      "lineCount": 121,
+      "initialFeatureSha256": "a696f8ece53d9bd206a6bff1324c9f47aaa2a1aa8a3234cf1e463e1ede5b3eda",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/motionScore.ts",
+      "sha256": "8aece2c4380b7bb8197433bbe699f25903c5b6ca9bc77bd85477546506273d39",
+      "lineCount": 138,
+      "initialFeatureSha256": "8aece2c4380b7bb8197433bbe699f25903c5b6ca9bc77bd85477546506273d39",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/redactionExport.ts",
+      "sha256": "59fbb2d2a8b24309dce805a5dcfa6aefc40bef9d05e8e91f5c719d9187e83160",
+      "lineCount": 123,
+      "initialFeatureSha256": "59fbb2d2a8b24309dce805a5dcfa6aefc40bef9d05e8e91f5c719d9187e83160",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+      "sha256": "45d08f5e75a16cb8e04dce2123f8a46841e805121a4008e9968c2882bf1543bb",
+      "lineCount": 244,
+      "initialFeatureSha256": "45d08f5e75a16cb8e04dce2123f8a46841e805121a4008e9968c2882bf1543bb",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/types.ts",
+      "sha256": "6a6b808eb81194e2adfffe38173761cabd215cf3eed4229060d264cdf7161433",
+      "lineCount": 147,
+      "initialFeatureSha256": "6a6b808eb81194e2adfffe38173761cabd215cf3eed4229060d264cdf7161433",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "sha256": "631314d0b11ccea7449769933b3a461784c2532294384a59fe508687e3056edd",
+      "lineCount": 114,
+      "initialFeatureSha256": "631314d0b11ccea7449769933b3a461784c2532294384a59fe508687e3056edd",
+      "unchangedSinceInitialFeaturePin": true,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "lineCount": 17,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9b423c800d3c77d0018a939b1c200a86ff851e781052393a4026dae914b7faa7",
+      "lineCount": 74,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "sha256": "409641019732349e44d45adf5e2c13dd93c5b38a0f037564ae43b93fc4099a1e",
+      "lineCount": 67,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "lineCount": 259,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/ui/Tabs.tsx",
+      "sha256": "6754cd3469dbec346cc6069fa5c12d6660204dd2b721e4ab2752f6ecb0fb82bf",
+      "lineCount": 132,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/ui/SelectableCard.tsx",
+      "sha256": "f736cb0cacc4f6d7095cf14d4ab34c328d133d6c1c6d7fce95f8b8a1a0ebba20",
+      "lineCount": 58,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "sha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+      "lineCount": 93,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "sha256": "2c687ddcf37022148906e67b891ddaec5aeb7a6f18385a93e92dba2f32095b40",
+      "lineCount": 116,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "sha256": "3157a4b90d9142e619e619028ff33d8d980d80e4daf880a45d1b120ed6782cd2",
+      "lineCount": 119,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+      "sha256": "bfa050b201eda4d19630676257dd28f6256eb57ae9ae2500a9188da800f7f478",
+      "lineCount": 70,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "lineCount": 174,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lineCount": 194,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "lineCount": 47,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lineCount": 148,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lineCount": 168,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "lineCount": 39,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/data-display/PlaybackControls.tsx",
+      "sha256": "5f77e4f4a7271fbf2b913d1542833944e535e0697ca16168e345c71ac8fc8dce",
+      "lineCount": 488,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/api/queryClient.ts",
+      "sha256": "6cebfb8ecdf6f4482756692866bd98b635e84974476d015cce780ecb797ebc57",
+      "lineCount": 86,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "lineCount": 434,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "sha256": "f536fbdb5705d3abb19869b0b5d73e65e72fb5e992f50e664754e4fa4f76853e",
+      "lineCount": 683,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/forms/ComboboxMulti.tsx",
+      "sha256": "b765b898c3c74f61d0f32b12db1967614a75ea747d8f0c3288814eddb934b53f",
+      "lineCount": 617,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/components/data-display/TimelineScrubber.tsx",
+      "sha256": "d099131bfdfcfd902f58ed34d995a5e9d1423d9869e0ad51bce78a3a309bbccd",
+      "lineCount": 674,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "lineCount": 1898,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "lineCount": 458,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "lineCount": 919,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lineCount": 5363,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    },
+    {
+      "file": "web/src/api/hooks/_toastHelpers.ts",
+      "sha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+      "lineCount": 123,
+      "initialFeatureSha256": null,
+      "unchangedSinceInitialFeaturePin": null,
+      "collectedAt": "2026-10-14T01:04:15.460576+00:00",
+      "note": "Full-file byte pin does not imply full semantic review of bounded shared reads"
+    }
+  ],
+  "filesRead": [
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionSeriesList.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/RedactionOverlay.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/constants.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/helpers.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/components/dashcam/index.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useDashcamDb.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useDashcamSettings.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useMotionAnalysis.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/index.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/clipFilter.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/clipMetadata.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/clipParsing.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/constants.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/index.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/indexedDbAdapter.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/memoryAdapter.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/db/types.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/eventDetection.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/motionScore.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/redactionExport.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/lib/types.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/LayoutCard.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/ui/Tabs.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/ui/SelectableCard.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/ui/Button.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/ui/Input.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/ui/Select.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/hooks/useDateFormat.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/motion/FadeIn.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/components/data-display/PlaybackControls.tsx",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/api/queryClient.ts",
+      "extent": "full production source"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          1,
+          350
+        ]
+      ]
+    },
+    {
+      "file": "web/src/api/hooks/useTelemetry.ts",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          1,
+          125
+        ],
+        [
+          176,
+          290
+        ]
+      ]
+    },
+    {
+      "file": "web/src/components/forms/ComboboxMulti.tsx",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          1,
+          120
+        ],
+        [
+          144,
+          144
+        ],
+        [
+          201,
+          202
+        ],
+        [
+          411,
+          413
+        ],
+        [
+          493,
+          493
+        ],
+        [
+          553,
+          563
+        ]
+      ]
+    },
+    {
+      "file": "web/src/components/data-display/TimelineScrubber.tsx",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          1,
+          294
+        ]
+      ]
+    },
+    {
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          69,
+          79
+        ]
+      ]
+    },
+    {
+      "file": "web/src/api/client.ts",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          53,
+          57
+        ],
+        [
+          73,
+          78
+        ],
+        [
+          91,
+          94
+        ],
+        [
+          239,
+          243
+        ],
+        [
+          342,
+          372
+        ]
+      ]
+    },
+    {
+      "file": "web/src/App.tsx",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          220,
+          224
+        ],
+        [
+          572,
+          578
+        ],
+        [
+          754,
+          758
+        ]
+      ]
+    },
+    {
+      "file": "internal/api/router.go",
+      "extent": "bounded relevant source/lookup",
+      "ranges": [
+        [
+          531,
+          531
+        ],
+        [
+          550,
+          561
+        ],
+        [
+          3360,
+          3370
+        ],
+        [
+          4929,
+          4965
+        ]
+      ]
+    },
+    {
+      "file": "web/src/api/hooks/_toastHelpers.ts",
+      "extent": "bounded relevant source/lookup",
+      "ranges": "Targeted error-detail/toast source lookup"
+    },
+    {
+      "file": "docs/frontend-design-contract.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": "docs/orchestrator-loop.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": "docs/frontend-worker-conventions.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": ".github/copilot-instructions.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": ".github/instructions/react-frontend.instructions.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": ".github/instructions/frontend-si-cutover.instructions.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": ".github/instructions/unit-conversion.instructions.md",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": "docs/frontend-audits/audit-page-094.json",
+      "extent": "full governing/history document"
+    },
+    {
+      "file": "migration-queue.md",
+      "extent": "Current lifecycle/dispatch/claims; exact QA and Phase5 Dashcam rows; exact-file Phase6 dedup"
+    },
+    {
+      "file": "docs/session-handoff.md",
+      "extent": "1-240 latest recovery/conventions; whole-document exact Dashcam name search no matches"
+    },
+    {
+      "file": "docs/frontend-inventory.md",
+      "extent": "Dashcam inventory and relevant SelectableCard owner entries"
+    },
+    {
+      "file": "docs/frontend-mission.md",
+      "extent": "1-260,507-811,921-1081,1403-1518 relevant principles, states, responsive/a11y and acceptance"
+    },
+    {
+      "file": ".agents/state.md",
+      "extent": "Supplementary historical exact Dashcam name search only; no match"
+    }
+  ],
+  "sections": [
+    {
+      "name": "Persistence warning",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 59,
+      "behavior": "Conditional actual memory fallback warning"
+    },
+    {
+      "name": "Local import",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 69,
+      "behavior": "Always visible independently of catalog"
+    },
+    {
+      "name": "Search/facets/chips",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 73,
+      "behavior": "Always rendered; local catalog-wide facets"
+    },
+    {
+      "name": "Catalog and metadata",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 76,
+      "behavior": "Loading/fatal source body only, retained rows with recovery"
+    },
+    {
+      "name": "Selected detail or EmptyState",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 95,
+      "behavior": "Persistent right-side surface; all five tabs when selected"
+    }
+  ],
+  "detailTabs": [
+    {
+      "key": "player",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 50
+    },
+    {
+      "key": "redaction",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 51
+    },
+    {
+      "key": "events",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 52
+    },
+    {
+      "key": "reconstruction",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 53
+    },
+    {
+      "key": "export",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 64
+    }
+  ],
+  "reconstructionContentGroups": [
+    {
+      "name": "Camera offset and dynamic signals",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 105
+    },
+    {
+      "name": "Lookback/retention caveats",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 116
+    },
+    {
+      "name": "Complete source trust and individual retry",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 130
+    },
+    {
+      "name": "Read-only markers/signed window",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 149
+    },
+    {
+      "name": "Per-series coverage/count/gaps/first-last",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 164
+    },
+    {
+      "name": "Statistical incidents or partial/no-incidents",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 166
+    }
+  ],
+  "actions": [
+    {
+      "name": "Choose videos",
+      "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+      "line": 55,
+      "sourceGuard": "Local multiple labeled input; no upload",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Choose shared optional event.json",
+      "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+      "line": 63,
+      "sourceGuard": "Local JSON file, applied to all batch clips",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Import/retry retained files",
+      "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+      "line": 30,
+      "sourceGuard": "No files return; pending disabled via shared Button; clear only success",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Search filename/notes",
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "line": 68,
+      "sourceGuard": "Local AND filter and historyScope=dashcam",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Camera facet",
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "line": 75,
+      "sourceGuard": "Known local identities/all",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Source facet",
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "line": 84,
+      "sourceGuard": "No folder inferred without relative path",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Event type facet",
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "line": 93,
+      "sourceGuard": "Counts clips carrying type",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Clear individual/all/no-match filters",
+      "file": "web/src/features/dashcam/components/dashcam/ClipFilterBar.tsx",
+      "line": 38,
+      "sourceGuard": "Reset filters, selected detail remains",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Select clip",
+      "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+      "line": 58,
+      "sourceGuard": "Native activation; full-catalog ID lookup",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Delete local clip",
+      "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+      "line": 79,
+      "sourceGuard": "Local write, success invalidation/error; no pending/confirm caller guard",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Switch five tabs",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 48,
+      "sourceGuard": "Shared roving tabs; conditional mounting",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Play",
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "line": 62,
+      "sourceGuard": "Ref guarded, media failure missing",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Pause",
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "line": 68,
+      "sourceGuard": "Ref guarded",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Restart",
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "line": 72,
+      "sourceGuard": "Ref guarded; progress reset",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Seek",
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "line": 55,
+      "sourceGuard": "Ref and known positive duration required",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Run motion analysis",
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "line": 126,
+      "sourceGuard": "Local heuristic; pending disabled/error toast",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Add mask",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "line": 60,
+      "sourceGuard": "Local full-snapshot write; serialization missing",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Remove mask",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "line": 96,
+      "sourceGuard": "Named control; source 32px allocation",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Edit kind/label/X/Y/width/height",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "line": 72,
+      "sourceGuard": "Shared fields; all six editable values retained",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Set signed camera UTC offset",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 105,
+      "sourceGuard": "-720..840 minutes/step15; local settings mutation",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Select dynamic signals",
+      "file": "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+      "line": 26,
+      "sourceGuard": "Unlimited UI versus API eight cap",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Retry signal catalog",
+      "file": "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+      "line": 43,
+      "sourceGuard": "Actual source refetch",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Retry reconstruction bundle",
+      "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+      "line": 144,
+      "sourceGuard": "Refetch actual independent histories",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Download manifest",
+      "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+      "line": 27,
+      "sourceGuard": "Local JSON try/catch; missing source-trust export",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Export redacted PNG",
+      "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+      "line": 37,
+      "sourceGuard": "Local separate decoder/canvas error handlers; per-attempt guard missing",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Retry local catalog",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 83,
+      "sourceGuard": "Affected source only; actual refetch",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Retry individual failed/retained/paused history",
+      "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+      "line": 59,
+      "sourceGuard": "Actual per-source retry, disabled refreshing",
+      "execution": "NOTRUN"
+    }
+  ],
+  "confirmedFindings": [
+    {
+      "id": "DC001",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 34,
+      "rule": "settings-source-trust",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Unresolved/failed saved settings silently become defaults",
+      "detail": "settingsQuery.data ?? defaultDashcamSettings() is used without initial/fatal/retained settings feedback. ImportPanel line37 uses the same fallback. A stored camera offset/autoDetectMetadataEvents preference that has not loaded is replaced by browser-offset/default assumptions. db.getSettings already returns legitimate defaults on a SUCCESSFUL missing record: query absence is not that outcome.",
+      "fix": "Derive independent local-settings trust; retain saved preferences after refresh error, show source-specific retry, and block or explicitly qualify dependent import/alignment until a real read resolves. Do not reset settings or equate failed read with absent record.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+          "line": 34
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+          "line": 27,
+          "endLine": 38
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useDashcamSettings.ts",
+          "line": 9,
+          "endLine": 15
+        },
+        {
+          "file": "web/src/features/dashcam/lib/db/indexedDbAdapter.ts",
+          "line": 81,
+          "endLine": 87
+        }
+      ],
+      "sourceReproductionInference": "For data undefined with pending/error, both callers choose defaults and dependent reconstruction/import consumes them. No read failure induced.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC002",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+      "line": 65,
+      "rule": "media-error-recovery",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Playback rejection/decode failures have no local recovery",
+      "detail": "void video.play() discards a rejecting promise; video lines84-97 has no onError. isPlaying changes from native events only. Motion-analysis errors are a separate operation, not a playback failure handler.",
+      "fix": "Catch rejected play and actual media error with localized persistent failure/replay recovery. Retain Blob lifecycle, custom controls, unknown duration and event-confirmed playing state.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+          "line": 65
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+          "line": 84,
+          "endLine": 111
+        }
+      ],
+      "sourceReproductionInference": "A rejection/media-error event has no path to displayed player recovery. Actual codec/autoplay behavior NOTRUN.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC003",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 48,
+      "rule": "a11y-tabpanel-linkage",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Five tab controls reference absent panels",
+      "detail": "Tabs generates {tablistId}-panel-{key} controls IDs; consumer supplies neither idBase nor id/role=tabpanel/aria-labelledby for any active body. Shared Tabs explicitly leaves panel semantics to the caller.",
+      "fix": "Provide locale-independent per-instance idBase and a linked active panel for all five stable keys; retain conditional media mounting/cleanup.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+          "line": 48
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+          "line": 50,
+          "endLine": 64
+        },
+        {
+          "file": "web/src/components/ui/Tabs.tsx",
+          "line": 33,
+          "endLine": 35
+        },
+        {
+          "file": "web/src/components/ui/Tabs.tsx",
+          "line": 104,
+          "endLine": 116
+        }
+      ],
+      "sourceReproductionInference": "Player/redaction/events/reconstruction/export tab IDs have no matching descendant panel in inspected roots. Screen-reader behavior not exercised.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC004",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+      "line": 50,
+      "rule": "a11y-listbox-keyboard",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Listbox lacks coherent keyboard/child model",
+      "detail": "role=listbox contains li wrappers, option-role native SelectableCard buttons and separate delete buttons. Every card remains a tab stop; feature and shared card provide no Arrow/Home/End or roving listbox controller. Native Enter/Space is available, but is not the declared listbox pattern.",
+      "fix": "Use the existing ordinary list/native selectable-button semantics, or separately authorize a complete shared listbox pattern. Preserve selected state, labels, deletion and all fields; do not redo accepted SelectableCard.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+          "line": 50
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+          "line": 54,
+          "endLine": 84
+        },
+        {
+          "file": "web/src/components/ui/SelectableCard.tsx",
+          "line": 24,
+          "endLine": 54
+        }
+      ],
+      "sourceReproductionInference": "Entire mapping/card inspected: onClick selection only, no listbox focus model. No native activation failure claimed.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC005",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+      "line": 58,
+      "rule": "unknown-as-zero",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Unknown duration becomes zero-length measured window",
+      "detail": "clip.durationSeconds ?? 0 reaches alignment. Metadata probe intentionally returns null on decode/timeout; player mediaDuration fallback is not persisted into ClipRecord. Timestamped unknown-duration clips get start=end and shortened post-roll window.",
+      "fix": "Retain explicit unresolved duration and source/prerequisite recovery. Do not render/export a measured zero-length window; use real duration when available and preserve any legitimate measured zero separately.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+          "line": 58
+        },
+        {
+          "file": "web/src/features/dashcam/lib/clipMetadata.ts",
+          "line": 10,
+          "endLine": 15
+        },
+        {
+          "file": "web/src/features/dashcam/lib/clipMetadata.ts",
+          "line": 44,
+          "endLine": 46
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+          "line": 29,
+          "endLine": 46
+        },
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 237,
+          "endLine": 239
+        }
+      ],
+      "sourceReproductionInference": "Captured timestamp + durationSeconds null -> alignment input0 -> clipWindow.endSeconds0. Logical trace only, no private video.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC006",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+      "line": 157,
+      "rule": "coverage-window-boundaries",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Good coverage ignores leading/trailing missing spans",
+      "detail": "largestGap=0 considers only adjacent observed points, never windowStart-to-first or last-to-windowEnd. >=3 clustered samples can be labeled good despite most of the requested reconstruction window lacking samples.",
+      "fix": "Account for actual uncovered boundary spans with existing requested bounds and tuning thresholds; retain all points and signed offsets. Do not invent continuity or sample away data.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 157
+        },
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 109,
+          "endLine": 113
+        },
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 139,
+          "endLine": 141
+        },
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 159,
+          "endLine": 163
+        }
+      ],
+      "sourceReproductionInference": "A 100-second window with three samples at0,1,2 has internal largestGap1 and passes good, while98 trailing seconds are uncovered. Algorithm not executed.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC007",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+      "line": 223,
+      "rule": "coverage-aggregate-completeness",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Good plus none coverage produces overall good",
+      "detail": "Aggregate tests all-none, then any sparse/partial, else good. [good,none] reaches good even though the no-coverage series supplies an absence note; exported overallQuality repeats this classification.",
+      "fix": "Use explicit partial/non-complete for mixed missing/present coverage, retaining all-none, per-series points/identities/notes and incidents.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 223
+        },
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 219,
+          "endLine": 233
+        },
+        {
+          "file": "web/src/features/dashcam/lib/redactionExport.ts",
+          "line": 63,
+          "endLine": 67
+        }
+      ],
+      "sourceReproductionInference": "Branch trace: all-none=false, any partial/sparse=false, else overallQuality=good. Not a test result.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC008",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+      "line": 64,
+      "rule": "export-independent-source-trust",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Manifest drops reconstruction source trust and target",
+      "detail": "Export gets only reconstruction.reconstruction, not sources/hasRetainedHistory, selected vehicle or camera-offset assumption. Reconstruction is computed before requests settle and uses only received bundle.data. Pending/failed identities and retained refresh errors exist in sources but are absent from ReconstructionResult. Manifest included=true for non-null result exports quality/count/sequence without those trust facts.",
+      "fix": "Thread actual selected target/clock assumption/complete source trust into export and distinguish unresolved/empty/partial/retained versus evaluated complete reconstruction. Preserve schemaVersion=1 and existing raw fields; any additive schema change needs explicit integration authority.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+          "line": 64
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+          "line": 54,
+          "endLine": 71
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+          "line": 79,
+          "endLine": 84
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 266,
+          "endLine": 283
+        },
+        {
+          "file": "web/src/features/dashcam/lib/redactionExport.ts",
+          "line": 61,
+          "endLine": 70
+        }
+      ],
+      "sourceReproductionInference": "One retained signal plus a failed/pending neighbor: sources has both; derived series/manifest omit the unresolved identity. Refresh-failure qualification visible in Reconstruction disappears from export. No download executed.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC009",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "line": 30,
+      "rule": "mutation-lost-update",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Rapid mask edits write stale whole-clip snapshots",
+      "detail": "Each change uses current clip prop and immediately mutates the full record. No draft, latch, serialization or pending guard exists; useUpdateClip writes full clip and invalidates only after success. An edit before refreshed props arrive may replace an earlier edit.",
+      "fix": "Serialize/merge against current stored record or retain an owned local draft. Keep all six fields, real save feedback, failed-draft recovery and normalized coordinates; no network offline queue.",
+      "owner": "Exact existing dashcam/domain integration owner; not this report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+          "line": 30
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+          "line": 47,
+          "endLine": 52
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+          "line": 80,
+          "endLine": 106
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+          "line": 113,
+          "endLine": 119
+        }
+      ],
+      "sourceReproductionInference": "From labelA/x=.35, edit label -> sends B/.35. Before prop refresh, edit x -> sends A/.40. Successful writes in that order lose B. Hypothetical source schedule, not actual DB writes.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source observation plus deterministic logical trace; no mounted behavior claimed"
+    },
+    {
+      "id": "DC010",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+      "line": 40,
+      "rule": "export-inflight-ownership",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Still-export attempts share mutable URL cleanup owner",
+      "detail": "Each click revokes current URL and starts a new decoder. Earlier callbacks revoke whatever URL is now in objectUrlRef, not their captured URL. A later attempt can invalidate an earlier decode and earlier cleanup can invalidate the later attempt. No pending duplicate guard or unmount decoder cleanup exists.",
+      "fix": "Own URL/decoder/cleanup per attempt with pending/disposal/context guards; prevent stale completion from changing another clip/tab. Retain real local decode/canvas/PNG errors and initial-frame semantics.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+          "line": 40
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+          "line": 37,
+          "endLine": 57
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+          "line": 72,
+          "endLine": 91
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+          "line": 105,
+          "endLine": 113
+        }
+      ],
+      "sourceReproductionInference": "A creates URLA; B revokes A and sets refB; A cleanup revokes B. Ownership trace, browser NOTRUN.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    },
+    {
+      "id": "DC011",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/lib/eventDetection.ts",
+      "line": 59,
+      "rule": "hardcoded-string",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Generated event basis bypasses localization",
+      "detail": "Metadata/motion English basis is stored and rendered via candidate.basis.join at EventEvidencePanel52, without t(). Type/confidence localization does not translate application-authored explanations. Raw reason/folder identifiers remain source data.",
+      "fix": "Coordinate a bounded generated-message localization adapter/catalog review, preserving raw metadata/persisted basis/export schema. Never translate arbitrary user text or rewrite saved evidence.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/lib/eventDetection.ts",
+          "line": 59
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+          "line": 43,
+          "endLine": 56
+        }
+      ],
+      "sourceReproductionInference": "Six literal sites41,42,59,67,92,93 flow to direct rendered subtitle. One producer-root finding, not six fix tasks; catalogs uninspected.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence",
+      "literalSites": [
+        41,
+        42,
+        59,
+        67,
+        92,
+        93
+      ]
+    },
+    {
+      "id": "DC012",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+      "line": 165,
+      "rule": "hardcoded-string",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Coverage/incident explanations bypass localization",
+      "detail": "English gap notes/statistical descriptions/no-signal note use interpolated prose and toFixed values. Series list renders gapNotes verbatim; Reconstruction timeline uses descriptions as subtitle/marker evidence. Signal names are technical identifiers; prose is application-authored.",
+      "fix": "Localize generated templates with interpolation/plurals/preference-aware display, retaining raw values/signs/identifiers and schema. Keep calculations separate from renderer text and existing stored evidence untouched.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+          "line": 165
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ReconstructionSeriesList.tsx",
+          "line": 51,
+          "endLine": 54
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx",
+          "line": 88,
+          "endLine": 96
+        }
+      ],
+      "sourceReproductionInference": "Seven producer sites165,167,170,196,197,215,233 reach unlocalized rendered/export explanations. No language-switch rendering or catalog validation.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence",
+      "literalSites": [
+        165,
+        167,
+        170,
+        196,
+        197,
+        215,
+        233
+      ]
+    },
+    {
+      "id": "DC013",
+      "status": "confirmed-source",
+      "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+      "line": 52,
+      "rule": "date-preferences",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Last-success timestamps bypass saved locale/timezone",
+      "detail": "new Date(state.updatedAt).toLocaleString() has no effective locale/timezone options. The imported renderer uses browser defaults rather than TeslaSync saved UTC/user/vehicle zone and locale.",
+      "fix": "Use existing useDateFormat().formatDateTime for valid last-success instants at this owner only; preserve unknown/raw updatedAt/source trust/retries. Do not reinterpret naive filename clocks or change date root.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+          "line": 52
+        },
+        {
+          "file": "web/src/hooks/useDateFormat.ts",
+          "line": 74,
+          "endLine": 97
+        }
+      ],
+      "sourceReproductionInference": "Compare browser-default call with existing useDateFormat saved locale/tz resolution. Preference mismatch inferred, not measured.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    },
+    {
+      "id": "DC014",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "line": 97,
+      "rule": "mobile-target-allocation",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Remove mask requests 32px, not mobile 44px",
+      "detail": "h-8 w-8 p-0 on size=sm overrides the Button h-9 branch, which has no min size. At16px root requested allocation32x32; no below-md44 minimum or documented exception. This is source allocation, not measured native rectangle.",
+      "fix": "Adopt existing below-md min-h-11/min-w-11 with explicit desktop density restoration, preserving non-overlap/names/focus/fields. Mounted touch proof remains separate.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+          "line": 97
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 35,
+          "endLine": 47
+        },
+        {
+          "file": "web/src/components/ui/Button.tsx",
+          "line": 63,
+          "endLine": 75
+        }
+      ],
+      "sourceReproductionInference": "Inspect caller-last cn merge and Button size map; no hit-slop/browser measurement inferred.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    },
+    {
+      "id": "DC015",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+      "line": 26,
+      "rule": "silent-source-truncation",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Unlimited UI choices silently reduce to eight sources",
+      "detail": "ComboboxMulti has no maxItems/guidance here; selected chips can exceed8. Evidence hook normalized names.slice(0,8) requests/reports only first8, so later visible choices never contribute source identity or history.",
+      "fix": "Use existing maxItems=8 and truthful local limit guidance; preserve original hook cap/order/cache/cancellation. Do not increase API fan-out or silently delete requested identities.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+          "line": 26
+        },
+        {
+          "file": "web/src/components/forms/ComboboxMulti.tsx",
+          "line": 58,
+          "endLine": 60
+        },
+        {
+          "file": "web/src/components/forms/ComboboxMulti.tsx",
+          "line": 144
+        },
+        {
+          "file": "web/src/api/hooks/useTelemetry.ts",
+          "line": 245,
+          "endLine": 247
+        }
+      ],
+      "sourceReproductionInference": "Nine distinct choices remain nine UI chips while evidence normalizedSignals is8. No request executed.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    },
+    {
+      "id": "DC016",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+      "line": 36,
+      "rule": "capability-guidance",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Empty guidance promises an unwired telemetry-candidate path",
+      "detail": "Message suggests connect telemetry to derive event candidates; this panel only reads clip.eventCandidates. Import persists metadata and motion persists motion candidates. Reconstruction computes a separate incidentSequence, never persists deriveTelemetryCandidates. The pure helper has no mounted caller in inspected feature.",
+      "fix": "Correct existing localized guidance to distinguish metadata/motion candidates from reconstruction incidents. Preserve both surfaces; do not invent telemetry-to-clip write capability.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+          "line": 36
+        },
+        {
+          "file": "web/src/features/dashcam/lib/eventDetection.ts",
+          "line": 97,
+          "endLine": 110
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useMotionAnalysis.ts",
+          "line": 64,
+          "endLine": 69
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useReconstruction.ts",
+          "line": 54,
+          "endLine": 71
+        }
+      ],
+      "sourceReproductionInference": "All feature sources inspected/scanned: helper definition exists but no mounted invocation. No user flow exercised.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    },
+    {
+      "id": "DC017",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+      "line": 74,
+      "rule": "visible-field-label",
+      "confidence": "high",
+      "priority": "P2",
+      "title": "Kind/label fields have ARIA names but no visible labels",
+      "detail": "Select has aria-label only. Input has aria-label/placeholder but no label prop/associated visible label. Existing primitives render visible Label only when label is supplied. This is not a missing screen-reader name; placeholder does not satisfy visible-label contract once text exists.",
+      "fix": "Provide existing localized kind/label strings as visible shared field labels; preserve unique opaque IDs/native values/events and all mask fields.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+          "line": 74
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+          "line": 84,
+          "endLine": 90
+        },
+        {
+          "file": "web/src/components/ui/Input.tsx",
+          "line": 65,
+          "endLine": 76
+        },
+        {
+          "file": "web/src/components/ui/Select.tsx",
+          "line": 68,
+          "endLine": 79
+        }
+      ],
+      "sourceReproductionInference": "Caller props and Input/Select conditional Label inspected; absence source-proven, composed usability NOTRUN.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    },
+    {
+      "id": "DC018",
+      "status": "confirmed-source",
+      "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+      "line": 89,
+      "rule": "partial-import-reconciliation",
+      "confidence": "high",
+      "priority": "P1",
+      "title": "Later batch failure leaves earlier stored clips unreconciled",
+      "detail": "Sequential import immediately puts each record. Catalog invalidates only on entire-batch onSuccess; onError only toast. First write success then later build/put rejection leaves selected files retained, but Infinity-stale catalog receives no reconciliation of already stored prefix.",
+      "fix": "Reconcile known committed prefix after partial failure while preserving honest rejected batch/retained files. No fake all-success, reset, transaction-wide atomicity or clip identity change.",
+      "owner": "Exact existing domain/shared integration owner; not report worker",
+      "citations": [
+        {
+          "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+          "line": 89
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+          "line": 18,
+          "endLine": 20
+        },
+        {
+          "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+          "line": 84,
+          "endLine": 103
+        },
+        {
+          "file": "web/src/features/dashcam/components/dashcam/ImportPanel.tsx",
+          "line": 39,
+          "endLine": 46
+        }
+      ],
+      "sourceReproductionInference": "First put resolves, next build/put rejects -> onSuccess skipped -> onError no invalidation. Logical schedule, no files imported.",
+      "runtimeReproduction": "NOTRUN",
+      "evidenceType": "Source statement plus logical trace; not mounted evidence"
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 78,
+      "rule": "paused-local-source",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Catalog/signal catalog mapping lacks explicit every paused/initial state.",
+      "whyNotConfirmed": "offlineFirst permits first local read; missing mapping does not prove offline IndexedDB failure.",
+      "requiredEvidence": "Authorized safe synthetic initial-paused/retained-paused/independent retry proof; no remote-offline assumptions.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+      "line": 59,
+      "rule": "reimport-overwrite",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Same deterministic file ID rebuilds empty notes/masks and replaces record.",
+      "whyNotConfirmed": "Explicitly retained original behavior in audit-page-094; merge-policy change requires business authority, not accepted identity remigration.",
+      "requiredEvidence": "Parent-approved reimport preservation contract and covering owned proof.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/dashcam/lib/db/indexedDbAdapter.ts",
+      "line": 74,
+      "rule": "idb-commit-boundary",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Request-success awaited rather than tx complete/abort; persistent flag selected before asynchronous open.",
+      "whyNotConfirmed": "No abort/quota/privacy-mode open error induced. Adapter choice is not demonstrated durable commit.",
+      "requiredEvidence": "Safe synthetic commit/open-failure evidence and intended fallback contract; no private browser storage.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C04",
+      "file": "web/src/features/dashcam/lib/motionScore.ts",
+      "line": 60,
+      "rule": "media-seek-completion",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "seekTo waits only for seeked, no timeout/error/disposal path.",
+      "whyNotConfirmed": "No unfulfilled seek/hung pending state observed.",
+      "requiredEvidence": "Safe synthetic seek error/no-event/unmount proof, never private video.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+      "line": 45,
+      "rule": "still-frame-semantics",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Separate loadeddata decoder has no player-time seek handoff; comment says current frame.",
+      "whyNotConfirmed": "Visible UI promises redacted still, not current playback position; prior report preserves initial-frame behavior.",
+      "requiredEvidence": "Comment clarification or explicit authorization for new current-frame capability; no silent change.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/dashcam/components/dashcam/RedactionOverlay.tsx",
+      "line": 9,
+      "rule": "composed-overlay-contrast",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Three 400-hue mask indicators and delete rose ink warrant composed review.",
+      "whyNotConfirmed": "Identity meaning is legitimate; no fluorescent output/contrast/forced-color failure measured. Black media/PNG paint intentional.",
+      "requiredEvidence": "Safe synthetic-media theme/forced-colors/contrast review preserving masks/kinds.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C07",
+      "file": "web/src/features/dashcam/pages/DashcamIntelligencePage.tsx",
+      "line": 53,
+      "rule": "privacy-copy-scope",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Nothing leaves browser wording coexists with vehicle/history GET; hours derives from clip age.",
+      "whyNotConfirmed": "May refer specifically to clip bytes; no local upload path found and no network observed. Not exfiltration evidence.",
+      "requiredEvidence": "Precisely qualify local bytes versus remote reads in privacy-copy review.",
+      "queueAction": "NONE from candidate alone"
+    },
+    {
+      "id": "C08",
+      "file": "web/src/features/dashcam/lib/timelineAlignment.ts",
+      "line": 189,
+      "rule": "statistical-sign-meaning",
+      "confidence": "medium",
+      "status": "candidate-not-promoted",
+      "detail": "Keyword hints can name hard_brake/accel/turn for either sign.",
+      "whyNotConfirmed": "UI calls it statistical, unknown dynamic signal units; no physical sign defect proved.",
+      "requiredEvidence": "Domain-approved signal kind/unit/sign requirements; preserve raw SI and valid signs.",
+      "queueAction": "NONE from candidate alone"
+    }
+  ],
+  "narrowFixNeeds": [
+    {
+      "id": "N01",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n01",
+      "findings": [
+        "DC001"
+      ],
+      "title": "Local settings trust",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+        "web/src/features/dashcam/components/dashcam/ImportPanel.tsx"
+      ],
+      "scopeContract": "Successful defaults separate from unresolved/fatal; retain previous settings/retry without implying clock correctness",
+      "priority": "P1",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N02",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n02",
+      "findings": [
+        "DC002"
+      ],
+      "title": "Media failure/recovery",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx"
+      ],
+      "scopeContract": "Actual native error/rejected-play recovery with existing Blob cleanup; safe synthetic proof only",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N03",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n03",
+      "findings": [
+        "DC003"
+      ],
+      "title": "Tab-to-panel linkage",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx"
+      ],
+      "scopeContract": "Five stable locale-independent linked active panels; preserve conditional mounting/focus lifecycle",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N04",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n04",
+      "findings": [
+        "DC004"
+      ],
+      "title": "Catalog selection semantics",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx"
+      ],
+      "scopeContract": "Ordinary list/native button model preferable; no accepted shared-card or new listbox-family redo",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N05",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n05",
+      "findings": [
+        "DC005"
+      ],
+      "title": "Unknown-duration reconstruction",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/hooks/useReconstruction.ts",
+        "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx"
+      ],
+      "scopeContract": "Unknown is not zero; explicit unresolved prerequisites; retain signed actual clip/window bounds",
+      "priority": "P1",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N06",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n06",
+      "findings": [
+        "DC006",
+        "DC007"
+      ],
+      "title": "Coverage completeness",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/lib/timelineAlignment.ts"
+      ],
+      "scopeContract": "Boundary uncovered spans and mixed-none aggregate remain incomplete; preserve all points/raw signs",
+      "priority": "P1",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N07",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n07",
+      "findings": [
+        "DC008"
+      ],
+      "title": "Export source trust/target",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+        "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+        "web/src/features/dashcam/lib/redactionExport.ts"
+      ],
+      "scopeContract": "Complete independent sources/retained/pending/error and chosen vehicle/offset; preserve old raw manifest schema, additive contract approval needed",
+      "priority": "P1",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N08",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n08",
+      "findings": [
+        "DC009"
+      ],
+      "title": "Concurrent field preservation",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+        "web/src/features/dashcam/hooks/useClipCatalog.ts"
+      ],
+      "scopeContract": "Serialize/merge/draft whole-record edits; six fields and real errors; no fake save or offline replay",
+      "priority": "P1",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N09",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n09",
+      "findings": [
+        "DC010"
+      ],
+      "title": "Per-attempt still-export lifecycle",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx"
+      ],
+      "scopeContract": "Own URL/decoder/disposal/pending per request; preserve initial-frame behavior, no new current-frame feature",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N10",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n10",
+      "findings": [
+        "DC011",
+        "DC012"
+      ],
+      "title": "Generated evidence localization",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/lib/eventDetection.ts",
+        "web/src/features/dashcam/lib/timelineAlignment.ts",
+        "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+        "web/src/features/dashcam/components/dashcam/ReconstructionSeriesList.tsx",
+        "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx"
+      ],
+      "scopeContract": "13 exact producer sites; bounded catalog-owner review. Preserve source text/identifiers/persisted evidence; catalog membership UNKNOWN",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N11",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n11",
+      "findings": [
+        "DC013"
+      ],
+      "title": "Saved timestamp preferences",
+      "proposedShippingFiles": [
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx"
+      ],
+      "scopeContract": "Use existing formatDateTime; no date-root/filename clock redo",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N12",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n12",
+      "findings": [
+        "DC014",
+        "DC017"
+      ],
+      "title": "Mask visible labels/mobile target",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx"
+      ],
+      "scopeContract": "Existing shared labels and44px below-md target; explicit desktop density; native layout NOTRUN",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N13",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n13",
+      "findings": [
+        "DC015"
+      ],
+      "title": "Truthful source selection cap",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/SignalPicker.tsx"
+      ],
+      "scopeContract": "Existing ComboboxMulti maxItems8/guidance; preserve query8 cap/identity/no polling",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N14",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n14",
+      "findings": [
+        "DC016"
+      ],
+      "title": "Honest event guidance",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx"
+      ],
+      "scopeContract": "Correct current empty guidance/localized fallback through catalog owner; no telemetry persistence capability",
+      "priority": "P2",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    },
+    {
+      "id": "N15",
+      "itemProposal": "phase6-qa-dashcam-dashcam-intelligence-n15",
+      "findings": [
+        "DC018"
+      ],
+      "title": "Partial import reconciliation",
+      "proposedShippingFiles": [
+        "web/src/features/dashcam/hooks/useClipCatalog.ts"
+      ],
+      "scopeContract": "Real successfully stored prefix reconciled after later rejection; retain files/rejected batch; no identity/policy/atomicity change",
+      "priority": "P1",
+      "dedup": "No existing exact-file Phase6 fix rows at inspected snapshot; not written to queue",
+      "authority": "PROPOSED ONLY; parent must reconcile current claims/reserve exact shipping and owned existing test paths before dispatch",
+      "tests": "NOTRUN; no invented test file/path, parent reservation required",
+      "nativeAcceptance": "NOTRUN; source mechanisms not native application acceptance",
+      "candidatePromotion": false
+    }
+  ],
+  "preservation": {
+    "observed": [
+      "Browser-local Blob/metadata/notes/masks with stable DB/version/stores/singleton and explicit memory fallback",
+      "Deterministic filename/size/lastModified ID; original overwrite policy not silently changed",
+      "Browser-wide catalog, import association and current workspace reconstruction target are distinct preserved scopes",
+      "Naive filename time displayed raw; explicit signed UTC camera offset; negative pre-roll/event offsets valid",
+      "Raw SI seconds/bytes/dynamic numeric|string|bool wire values remain unconverted in hooks/cache; no guessed unknown signal units",
+      "useUnits duration/useNumberFormatting scalar displays; unknown time/camera/source remain unknown",
+      "All six redaction fields, file/sidecar choices, filters/chips/delete/play/pause/restart/seek/retries/JSON/PNG actions remain",
+      "Translucent playback indicators are not irreversible video redaction; PNG masks opaque black; no CV object/face/plate detection",
+      "Manifest schemaVersion=1 and saved data retained; no source/test/catalog/queue/accepted history edits"
+    ],
+    "lineCountScope": "Page + 12 non-test presentation TSX; hooks/libs excluded",
+    "pageOpeningTags": {
+      "PageLayout": 1,
+      "GlassPanel": 1,
+      "LayoutCard": 1,
+      "SourceContent": 1,
+      "InlineCallout": 1,
+      "Grid": 1,
+      "ChartContainer": 0
+    }
+  },
+  "scope": {
+    "writePaths": [
+      "docs/frontend-audits/phase6-qa-dashcam-dashcam-intelligence.json",
+      "web/logs/phase6-qa-dashcam-dashcam-intelligence.log"
+    ],
+    "sourceReadOnly": true,
+    "featureProductionSources": 35,
+    "backendScope": "Router registration only, not Go audit",
+    "catalogs": "Not read/edited/validated",
+    "scopeDeviations": [
+      "Initial read-only git status and check-ignore despite no-Git restriction; no Git writes or subsequent Git use",
+      "Initial unfiltered TSX count accessed four test-file line counts only. Its 16/1806 result is invalid; corrected to 12/1245. No test semantic audit/edit/execution."
+    ]
+  },
+  "checks": [
+    {
+      "command": "Python scoped regex and SHA256 scan",
+      "exitCode": 0,
+      "rawOutput": "web/logs/phase6-qa-dashcam-dashcam-intelligence.log",
+      "matches": {
+        "static-inline-style": 0,
+        "raw-html": 0,
+        "direct-library-import": 0,
+        "old-api-import": 0,
+        "double-prefix": 0,
+        "camelcase-param": 0,
+        "hidden-section-candidate": 14,
+        "hardcoded-string-candidate": 59,
+        "page-wrapper-candidate": 1,
+        "fetch-useeffect-candidate": 2
+      },
+      "review": "Lexical candidates not violations. PageLayout delegates to PageContainer; both effects are local media cleanup/reset. Optional notices/tab selection/prerequisite bodies under explicit SourceContent fallback are not all-page data gates. X/Y technical symbols/dynamic geometry exempt."
+    },
+    {
+      "command": "Corrected non-test count/route/exact-file dedup/pin recheck",
+      "exitCode": 0,
+      "rawOutput": "web/logs/phase6-qa-dashcam-dashcam-intelligence.log"
+    },
+    {
+      "command": "rg --files discovery",
+      "exitCode": 1,
+      "failure": "rg unavailable"
+    },
+    {
+      "command": "Two initial Python discovery probes",
+      "exitCode": 1,
+      "failure": "cp1252 UnicodeEncodeError; corrected narrow UTF-8 probe is separate exit0 evidence"
+    },
+    {
+      "command": "First oversized report construction",
+      "exitCode": 1,
+      "failure": "PowerShell tool OS error206 filename or extension too long; Python never executed, no report written by that attempt"
+    }
+  ],
+  "native": {
+    "status": "NOTRUN",
+    "browser": "NOTRUN",
+    "routeAcceptance": "NOTRUN",
+    "API": "NOTRUN",
+    "privateVideo": "NOTRUN",
+    "IndexedDB": "NOTRUN",
+    "visualMobile": "NOTRUN",
+    "keyboardScreenReader": "NOTRUN",
+    "contrastForcedColors": "NOTRUN",
+    "mediaDecode": "NOTRUN"
+  },
+  "evidenceLimits": {
+    "observations": "Read-only exact source statements, byte pins, paths/lines, actual scoped lexical scans/counts. No rendered/data/network/media/runtime observation.",
+    "inferences": "Source traces and hypothetical schedules are inferences, not executed tests or app behavior proof.",
+    "notRun": [
+      "npx tsc --noEmit",
+      "lint/build/Vitest/full suites",
+      "browser/server/API/Docker",
+      "installs/subagents/heartbeat",
+      "private media/identity/browser storage",
+      "Git writes"
+    ],
+    "unknowns": [
+      "Handler query units/retention/full result coverage/auth behavior",
+      "Mounted router and current server revision",
+      "Catalog membership/plurals/actual language switching",
+      "Composed safe areas/themes/contrast/density/font scale/focus/hit targets",
+      "Media/seek/Canvas/download and durable IndexedDB transaction outcomes",
+      "Transitive providers/shell/shared roots beyond explicit reads"
+    ],
+    "acceptance": "Source report delivery is not native/page/application acceptance or a completed-phase redo"
+  },
+  "release": {
+    "released": true,
+    "at": "2026-10-14T01:08:44.514087+00:00",
+    "ownedCommandRunning": false,
+    "sourceClaims": "No source/test/catalog/Git claims taken; report-only assignment released to caller",
+    "furtherWork": "None by this worker; needs require separate parent authorization",
+    "acceptedPhaseRedo": false,
+    "nativeAcceptance": false,
+    "report": "Closed; no further writes by this worker",
+    "log": "Closed after final raw receipt",
+    "commands": "This final bounded synchronous command ends before terminal delivery; no service/background command owned"
+  },
+  "dedup": {
+    "queue": "migration-queue.md",
+    "exactItem": "phase6-qa-dashcam-dashcam-intelligence",
+    "currentExactFilePhase6FixMatchCount": 0,
+    "method": "Python exact shipping-file strings in current phase6-fix rows; raw inspected results in permitted log",
+    "shippingFileOverlaps": {
+      "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx": [
+        "N01",
+        "N03",
+        "N07"
+      ],
+      "web/src/features/dashcam/components/dashcam/ReconstructionTimeline.tsx": [
+        "N05",
+        "N10"
+      ],
+      "web/src/features/dashcam/lib/timelineAlignment.ts": [
+        "N06",
+        "N10"
+      ],
+      "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx": [
+        "N07",
+        "N09"
+      ],
+      "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx": [
+        "N08",
+        "N12"
+      ],
+      "web/src/features/dashcam/hooks/useClipCatalog.ts": [
+        "N08",
+        "N15"
+      ],
+      "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx": [
+        "N10",
+        "N14"
+      ]
+    },
+    "requiredDisposition": "Serialize overlapping proposals and reserve exact tests/catalog ownership before any writer. These needs are observations, not queue items/leases. Reconcile current queue at parent dispatch.",
+    "historicalResolvedOmissionsNotRequeued": [
+      "Persistence warning now existing InlineCallout warning",
+      "Page comment now acknowledges vehicle catalog/history reads",
+      "Accepted SelectableCard uses semantic theme/surface/focus roles; no shared-card redo"
+    ]
+  },
+  "sources": [
+    {
+      "name": "Local clip catalog",
+      "identity": "IndexedDB teslasync-dashcam v1/clips; per-tab DB singleton; memory fallback only when selected by adapter",
+      "kind": "local browser read/write",
+      "hook": "web/src/features/dashcam/hooks/useClipCatalog.ts",
+      "query": "dashcam/clips; staleTime Infinity",
+      "scope": "Entire browser-local catalog, intentionally no global vehicle filter",
+      "sourceTrust": "SourceContent initial skeleton, empty catalog, fatal source recovery, retained data warning + refetch. Filtering no-match and no-selection have separate EmptyState. Paused cases C01 candidate.",
+      "writes": [
+        "Import sequential putClip",
+        "deleteClip",
+        "full-record mask/note/motion edits"
+      ],
+      "trustNeeds": [
+        "DC009",
+        "DC018"
+      ]
+    },
+    {
+      "name": "Local camera/event preferences",
+      "identity": "teslasync-dashcam v1/settings; global record",
+      "hook": "web/src/features/dashcam/hooks/useDashcamSettings.ts",
+      "query": "staleTime Infinity; mutation invalidates actual local key",
+      "trustNeeds": [
+        "DC001"
+      ],
+      "successfulAbsentRecord": "db.getSettings resolves explicit default object; not unresolved query data"
+    },
+    {
+      "name": "Vehicle catalog",
+      "endpoint": "/vehicles",
+      "method": "GET",
+      "hook": "web/src/api/hooks/useVehicles.ts:73-79",
+      "requestLine": 76,
+      "registration": "internal/api/router.go:3362-3363",
+      "scope": "Workspace selected vehicle; route vehicle selector enabled/range disabled; clip association separate",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Dynamic signal catalog",
+      "endpoint": "/signals/${vehicleId}/available",
+      "method": "GET",
+      "hook": "web/src/api/hooks/useTelemetry.ts:98-125",
+      "requestLine": 105,
+      "registration": "internal/api/router.go:4929 + helper554",
+      "scope": "Actual workspace vehicle identity; no fixed ECU/CAN keys",
+      "trust": "UI loading/failed picker + explicit retry; unavailable signal catalog does not hide local player/import",
+      "execution": "NOTRUN"
+    },
+    {
+      "name": "Independent reconstruction history",
+      "endpoint": "/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}",
+      "method": "GET",
+      "hook": "web/src/api/hooks/useTelemetry.ts:245-283",
+      "requestLine": 258,
+      "registration": "internal/api/router.go:4929 + helper557",
+      "normalization": "Trim/dedupe, first8; hours1..8760, limit1..10000 per source",
+      "identity": "Separate vehicle/signal/hours/limit query keys and AbortSignal per source",
+      "retention": "No polling; clip-age lookback capped, limit10000 bounds what can be inferred; real server full coverage UNKNOWN",
+      "trust": "sources includes pending/failed/paused/unavailable/retained; data only received responses. Successful empty unavailable, not zero; retained rows stay identifiable on refresh failure. Source-list retries affected source, reconstruction retries actual bundle. Export loses this, DC008.",
+      "execution": "NOTRUN"
+    }
+  ],
+  "trustAndStates": {
+    "localVsRemote": "Local files/masks/motion/export are browser-only in inspected feature; vehicle/signal/history GETs are real remote reads. No mounted feature HTTP mutation/vehicle command found. Not whole-app privacy acceptance.",
+    "queryBoundary": "API client adds /api/v1 and defensively strips legacy prefix; mounted hooks use relative routes/snake_case. Query offlineFirst retry1; mutations retry0/networkMode always, no deferred reconnect replay. Local DB mutations remain real writes.",
+    "independentTrust": "Catalog does not gate import. Failed signal catalog/history does not hide local playback. Settings trust missing independently. Each requested history source has own identity/trust and retained timestamp. Data-only series insufficient for export, DC008.",
+    "loading": "Catalog scoped skeleton retains layout; history source list has pending rows; local settings resolved status currently discarded. Initial selected-vehicle/signal prerequisites use explicit guidance.",
+    "empty": "No catalog/no filter matches/no selected clip/no event candidates/no redactions/no histories/no statistical incidents represented separately. None does not mean numeric zero.",
+    "fatal": "Catalog fatal error has real retry. Catalog/history failure surfaces scoped feedback. Media/settings failures need DC001/DC002.",
+    "retained": "Catalog/individual histories retain actual successful payload with warning/retry; failure is not all-page replacement nor success. Export qualification incomplete.",
+    "sections": "Conditional persistence warning/selected detail/tab bodies are state-driven notices, not hidden data-backed whole-page sections. All five surfaces counted.",
+    "actions": "27 groups inventoried; source-only guard review. Real import pending/files retention and motion pending/error exist; playback/field-edit/PNG/partial import need bounded guards/reconciliation.",
+    "remoteWriteGuard": "No mounted Dashcam HTTP mutation found; client operational assert exists at api/client.ts:358. No runtime assertion exercise."
+  },
+  "siSignPreferences": {
+    "rawEvidence": "Dynamic signal values/units are not guessed/transformed in hooks/cache; successful empty means unavailable. Metadata duration null preserved until problematic reconstruction coercion, DC005. Counts0 and measured scores0 may be valid.",
+    "signedValues": "Camera offset-720..840m and negative before-clip offsets are valid. Retain signed marker/window coordinates, UTC relation and all samples. Statistical keyword names not calibrated physical incident proof; C08 separate.",
+    "formatting": "Duration uses unit formatting, compact bytes/scalars use locale-aware number helpers. Naive filename clock kept raw/intentionally distinct from instant timezone preference. Signal-source last-success timestamp bypasses saved preferences DC013. Generated toFixed prose/i18n DC011/DC012.",
+    "routeRange": "Global range disabled for /dashcam; clip timestamp plus camera offset/window drives history. Import-associated vehicle and current reconstruction vehicle distinct; export must state actual target DC008.",
+    "i18n": "Existing t(key,fallback) use predominates, technical X/Y/camera/raw filenames/IDs are not prose violations. Confirmed generated prose roots13 sites. Catalog existence/missing keys/plurals UNKNOWN, catalogs not read.",
+    "accessibility": "Native shared controls provide names; Tabs/SelectableCard family accepted. Consumer panel linkage/listbox semantics and visible field labels confirmed. No browser/assistive technology proof.",
+    "mobile": "Source is responsive grid/detail layout; redaction delete allocation32px is confirmed source contract gap. Composed viewport safe area/reflow/zoom/focus/contrast/overlay hit rectangles remain NOTRUN."
+  },
+  "counts": {
+    "featureProductionFiles": 35,
+    "sourcePins": 62,
+    "filesReadEntries": 75,
+    "pageLines": 114,
+    "nonTestPresentationFiles": 12,
+    "combinedPagePresentationLines": 1245,
+    "topLevelSurfaces": 5,
+    "detailTabs": 5,
+    "reconstructionGroups": 6,
+    "actionGroups": 27,
+    "confirmedFindings": 18,
+    "candidates": 8,
+    "narrowFixNeeds": 15,
+    "generatedEnglishLiteralSites": 13,
+    "confirmedByRule": {
+      "settings-source-trust": 1,
+      "media-error-recovery": 1,
+      "a11y-tabpanel-linkage": 1,
+      "a11y-listbox-keyboard": 1,
+      "unknown-as-zero": 1,
+      "coverage-window-boundaries": 1,
+      "coverage-aggregate-completeness": 1,
+      "export-independent-source-trust": 1,
+      "mutation-lost-update": 1,
+      "export-inflight-ownership": 1,
+      "hardcoded-string": 2,
+      "date-preferences": 1,
+      "mobile-target-allocation": 1,
+      "silent-source-truncation": 1,
+      "capability-guidance": 1,
+      "visible-field-label": 1,
+      "partial-import-reconciliation": 1
+    },
+    "confirmedByPrimaryFile": {
+      "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx": 3,
+      "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx": 1,
+      "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx": 1,
+      "web/src/features/dashcam/hooks/useReconstruction.ts": 1,
+      "web/src/features/dashcam/lib/timelineAlignment.ts": 3,
+      "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx": 3,
+      "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx": 1,
+      "web/src/features/dashcam/lib/eventDetection.ts": 1,
+      "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx": 1,
+      "web/src/features/dashcam/components/dashcam/SignalPicker.tsx": 1,
+      "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx": 1,
+      "web/src/features/dashcam/hooks/useClipCatalog.ts": 1
+    },
+    "priority": {
+      "P1": 7,
+      "P2": 11
+    }
+  },
+  "summary": {
+    "priorityOrder": [
+      "P1 settings/duration/coverage/export trust",
+      "P1 field/partial-import persistence truth",
+      "P2 media/export lifecycle/source cap",
+      "P2 consumer a11y, generated localization, saved timestamp preference, mobile labels/targets/capability guidance"
+    ],
+    "mostIssues": [
+      [
+        "web/src/features/dashcam/components/dashcam/ClipDetailPanel.tsx",
+        3
+      ],
+      [
+        "web/src/features/dashcam/components/dashcam/RedactionEditor.tsx",
+        3
+      ],
+      [
+        "web/src/features/dashcam/lib/timelineAlignment.ts",
+        3
+      ],
+      [
+        "web/src/features/dashcam/components/dashcam/ClipCatalogList.tsx",
+        1
+      ],
+      [
+        "web/src/features/dashcam/components/dashcam/ClipPlayerPanel.tsx",
+        1
+      ],
+      [
+        "web/src/features/dashcam/components/dashcam/EventEvidencePanel.tsx",
+        1
+      ],
+      [
+        "web/src/features/dashcam/components/dashcam/ExportManifestPanel.tsx",
+        1
+      ],
+      [
+        "web/src/features/dashcam/components/dashcam/SignalPicker.tsx",
+        1
+      ],
+      [
+        "web/src/features/dashcam/hooks/useClipCatalog.ts",
+        1
+      ],
+      [
+        "web/src/features/dashcam/hooks/useReconstruction.ts",
+        1
+      ],
+      [
+        "web/src/features/dashcam/lib/eventDetection.ts",
+        1
+      ],
+      [
+        "web/src/features/diagnostics/components/SignalEvidenceSourceList.tsx",
+        1
+      ]
+    ],
+    "releaseMeaning": "Report-only task complete; no migration acceptance, source fixes, queue completion or native acceptance claimed"
+  },
+  "completedAt": "2026-10-14T01:08:16.255044+00:00",
+  "finalization": {
+    "at": "2026-10-14T01:08:44.514087+00:00",
+    "status": "PASS strict JSON, stored counts and exact-once need mapping",
+    "scope": "Existing report only; no further source inspection/new checks. Native/tests remain NOTRUN.",
+    "sourcePinCheck": "Prior bounded verification: all35 feature initial pins matched, no reported source drift; no new source hash check at finalization",
+    "artifactWritesClosedAfterThisCommand": true
+  }
+}
