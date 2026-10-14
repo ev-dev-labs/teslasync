@@ -1,0 +1,270 @@
+{
+  "schemaVersion": 1,
+  "item": "phase6-proof-repair-confidence-copy-semantics",
+  "status": "BLOCKED_EXTERNAL_CATALOG",
+  "purpose": "Execute previously unexecuted affected confidence-copy covering tests against the exact current read-only drawer/queue source; preserve failures and provenance without bypassing startup guards.",
+  "runtimeProof": "NOTRUN_STARTUP_BLOCKED",
+  "sourceApproval": "NOT_GRANTED",
+  "nativeContrast": "NOTRUN",
+  "nativeAcceptance": "NOTRUN",
+  "applicationAcceptance": "NOTRUN",
+  "authority": {
+    "queue": "migration-queue.md:2691",
+    "predecessorQueue": "migration-queue.md:2610",
+    "sourceCommitSuppliedByQueue": "6639b6d12a7be94ee0aa618e1089c0c3e9e059bb",
+    "commitObjectVerified": false,
+    "commitVerificationLimit": "Git prohibited; current source bytes instead match all four predecessor final SHA-256 pins.",
+    "workerContract": "docs\\frontend-worker-conventions.md",
+    "returnContract": "docs\\orchestrator-loop.md:43-49",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-proof-repair-confidence-copy-semantics.json",
+      "web\\logs\\phase6-proof-repair-confidence-copy-semantics.log"
+    ],
+    "applicationSourceFixturesCatalogConfig": "READ_ONLY",
+    "heartbeat": "Exact matching log only; no third writable heartbeat authorized."
+  },
+  "timebox": {
+    "assignedUtc": "2026-10-14T07:40:55.292Z",
+    "firstClockUtc": "2026-10-14T07:41:13.7273617Z",
+    "deadlineUtc": "2026-10-14T08:00:55.292Z",
+    "finalHashCheckUtc": "2026-10-14T07:47:22.1634821Z",
+    "releaseUtc": "2026-10-14T07:50:16.7103562Z",
+    "initialReleaseDecisionUtc": "2026-10-14T07:49:30.7627402Z",
+    "deadlineRenewed": false
+  },
+  "commands": [
+    {
+      "command": "node --version",
+      "exitCode": 0,
+      "rawOutput": "v26.8.1",
+      "result": "Supported installed runtime used; no install."
+    },
+    {
+      "shellId": "repair-confidence-proof",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseDrawer.test.tsx src\\features\\system\\components\\RepairCaseQueue.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose -t \"confidence semantics\"",
+      "startedUtc": "2026-10-14T07:42:30.2182835Z",
+      "endedUtc": "2026-10-14T07:46:08.3393471Z",
+      "exitCode": 1,
+      "normalConfig": "vite.config.ts",
+      "guardsUnmodified": true,
+      "result": "FAILED_STARTUP_EXTERNAL_CATALOG",
+      "rawOutputLocation": "web\\logs\\phase6-proof-repair-confidence-copy-semantics.log",
+      "failureCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+      "failureExitCode": 1,
+      "failureStage": "verify-english-catalog-split buildStart before test discovery",
+      "repeatedAfterFailure": false
+    },
+    {
+      "command": "Get-FileHash -Algorithm SHA256 for exact four source/tests and observed direct supports/config/catalog; compare to logged BEFORE",
+      "startedUtc": "2026-10-14T07:47:22.1634821Z",
+      "shellExitCode": 0,
+      "result": "Ten observed pins unchanged between before and after; four assigned files also equal predecessor final pins."
+    }
+  ],
+  "testAccounting": {
+    "basis": "Source declarations establish selection only. Startup log reports no Vitest test inventory or test-result summary.",
+    "declaredCasesInAssignedFiles": 8,
+    "selectedSourceDeclaredCases": 7,
+    "selectedDrawer": 4,
+    "selectedQueue": 3,
+    "intentionallyUnselectedSourceDeclaredCases": 1,
+    "runnerDiscoveredCases": 0,
+    "runnerExecutedCases": 0,
+    "observedPassedCases": 0,
+    "observedFailedAssertions": 0,
+    "startupFailures": 1,
+    "runnerSkippedCases": null,
+    "runnerUnselectedCases": null,
+    "zeroPassMeaning": "NOTPASS: no case executed. Zero assertion failures never imply success.",
+    "selectedCases": [
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.test.tsx",
+        "name": "RepairCaseDrawer confidence semantics > renders the canonical high confidence badge once with neutral roles",
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.test.tsx",
+        "name": "RepairCaseDrawer confidence semantics > renders the canonical medium confidence badge once with neutral roles",
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.test.tsx",
+        "name": "RepairCaseDrawer confidence semantics > renders a complete translated confidence label without adding English words",
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.test.tsx",
+        "name": "RepairCaseDrawer confidence semantics > retains neutral confidence, severity, full evidence and read-only actions after a refresh failure",
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.test.tsx",
+        "name": "RepairCaseQueue confidence semantics > renders canonical high confidence neutrally without changing findings or review actions",
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.test.tsx",
+        "name": "RepairCaseQueue confidence semantics > renders canonical medium confidence neutrally without changing findings or review actions",
+        "status": "NOTRUN"
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.test.tsx",
+        "name": "RepairCaseQueue confidence semantics > uses the translated complete confidence label with neutral roles and preserves selected-row bulk controls",
+        "status": "NOTRUN"
+      }
+    ],
+    "unselectedCases": [
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.test.tsx",
+        "name": "RepairCaseQueue table ownership > explicitly retains server filtering and cursor navigation rather than filtering a partial page",
+        "reason": "Unchanged original ownership oracle; excluded by confidence selector, no passing-repeat permission inferred."
+      }
+    ],
+    "unselectedFiles": "RepairCaseDrawer.continuation.test.tsx and all unrelated tests were not sent to the runner.",
+    "historicalGenuinePassesRerun": 0
+  },
+  "externalCatalogBlocker": {
+    "ownership": "External shared catalog-generation owner; uncharged to confidence source/test owner.",
+    "rawDiagnostic": "[i18n-split] generated locale files are invalid (locale-detail-errorBoundary.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-unreferenced.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-power-user.json, locale-driving-route-efficiency.json, locale-driving-trip-planner.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+    "diagnosticArtifactCount": 25,
+    "generatedDirectory": "web\\src\\i18n\\en",
+    "canonicalInput": "web\\src\\i18n\\en.json",
+    "locationEvidence": "web\\scripts\\split-i18n-catalog.mjs:44-47",
+    "preciseNeed": "Separately leased catalog owner must reconcile/regenerate these artifacts using the existing generator and preserve normal --check and strict namespace startup guards. Then execute the still-unexecuted same seven selected cases. No new catalog key requested by this proof.",
+    "workerCatalogEdits": 0,
+    "guardBypasses": 0
+  },
+  "ownedFailures": {
+    "sourceOrAssertionFailuresObserved": 0,
+    "sourceCorrectionNeed": null,
+    "limit": "No covering tests executed; absence of observed failures is not proof of source correctness.",
+    "inspectionFailures": [
+      {
+        "utc": "2026-10-14T07:46:08.4168871Z",
+        "shellId": "5827",
+        "command": "Get-Content src\\i18n\\en.json -Raw | ConvertFrom-Json",
+        "exitCode": 1,
+        "rawError": "Cannot convert the JSON string because it contains keys with different casing. Please use the -AsHashTable switch instead. The key that was attempted to be added to the existing key 'subFSMs' was 'subFsms'.",
+        "exactCorrection": "Re-read with ConvertFrom-Json -AsHashtable; no catalog or fixture edit.",
+        "correctedUtc": "2026-10-14T07:46:40.3412241Z",
+        "correctedShellExitCode": 0,
+        "result": "Read completed; high=High confidence, medium=Medium confidence, unknown=Unrated confidence."
+      },
+      {
+        "shellId": "5918",
+        "command": "PowerShell ConvertFrom-Json -AsHashtable followed by string comparison of release ISO timestamps",
+        "exitCode": 1,
+        "rawError": "Final report metadata invalid",
+        "cause": "PowerShell JSON parser converted ISO timestamp strings to DateTime objects; string equality rejected valid report metadata.",
+        "exactCorrection": "Use installed Node JSON.parse to preserve timestamp strings; no source/catalog/fixture modification.",
+        "correctedShellId": "5927",
+        "correctedUtc": "2026-10-14T07:50:16.7103562Z",
+        "correctedExitCode": 0,
+        "result": "FINAL_JSON_VALID status=BLOCKED_EXTERNAL_CATALOG selected=7 executed=0 startupExit=1"
+      }
+    ]
+  },
+  "sourceEvidence": [
+    {
+      "property": "Canonical label without doubled confidence suffix",
+      "evidence": "web\\src\\features\\system\\components\\RepairCaseDrawer.tsx:155-160; web\\src\\features\\system\\components\\RepairCaseQueue.tsx:64-77",
+      "status": "SOURCE_ONLY",
+      "detail": "Each confidence badge consumes the complete existing high/medium translation directly, with no confidenceBadge wrapper. This is per-badge copy, not a claim that the drawer has only one confidence field globally."
+    },
+    {
+      "property": "Neutral dimensionless confidence, not a health verdict",
+      "evidence": "web\\src\\components\\ui\\Badge.tsx:16; Drawer.tsx:155; Queue.tsx:69",
+      "status": "SOURCE_ONLY",
+      "detail": "Neutral surface-2/text-secondary roles; no numeric confidence conversion or measurement suffix. Token classes do not certify native contrast or actual composited theme colors."
+    },
+    {
+      "property": "Severity and eligibility remain independent",
+      "evidence": "web\\src\\features\\system\\components\\repairCasePresentation.ts:16-28; RepairCaseEvidencePanel.tsx:27-31; RepairCaseControlledActions.tsx:51-65",
+      "status": "SOURCE_ONLY",
+      "detail": "Open remains danger in drawer status mapping; applicable remains Actionable versus Blocked. Queue overrides only confidence column render; source-derived finding/status/owner/review and bulk controls remain."
+    },
+    {
+      "property": "Evidence, raw precision, unknown and zero preservation",
+      "evidence": "web\\src\\features\\system\\components\\RepairCaseEvidencePanel.tsx; web\\src\\features\\system\\components\\RepairCaseDrawer.test.tsx:28-37; web\\src\\features\\system\\components\\RepairCaseQueue.test.tsx:70-75",
+      "status": "SOURCE_ONLY_RUNTIME_NOTRUN",
+      "detail": "Optional evidence uses nullish em-dash fallback, related_session_id uses != null and thus includes known zero. Confidence-only source change adds no evidence arithmetic/coercion. Selected fixtures retain signed -1.00123456789 and gap120.125. No explicit unknown/zero runtime fixture exists in these selected cases; that matrix was not executed or invented. Declared RepairConfidence remains high|medium; catalog unknown leaf is not evidence of supported unknown wire values."
+    },
+    {
+      "property": "Routes unchanged and correctly mounted",
+      "evidence": "web\\src\\api\\hooks\\useDataRepair.ts:618-655; internal\\api\\router.go:485-512",
+      "status": "SOURCE_ONLY",
+      "detail": "GET /data-repair/cases/{id} and POST /data-repair/cases/{id}/transition match mounted routes; source still retains optimistic concurrency. No actual API request or repair mutation executed."
+    }
+  ],
+  "hashCurrentness": {
+    "method": "Get-FileHash SHA256 before and after ordinary runner; exact four hashes also matched predecessor final raw log pins.",
+    "sourceAndFixtureCurrent": true,
+    "pins": [
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.tsx",
+        "beforeAndAfterSha256": "33ECD7DB7A5D9CE9E908076BF2BB833ED751BFCA01CB34FCAB5E357E8CE53C88",
+        "matchesPredecessorFinal": true,
+        "lines": 211
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseDrawer.test.tsx",
+        "beforeAndAfterSha256": "FF031DCD048FF98B89A0F9E5DAEF6B6A4E1C4BAF6C71DB87F94CBA5F71F4BAC6",
+        "matchesPredecessorFinal": true,
+        "lines": 157
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.tsx",
+        "beforeAndAfterSha256": "E978D94D4D54A0B1D6C263655605F2DA3856DC10522D7DD9B324F03D135FA395",
+        "matchesPredecessorFinal": true,
+        "lines": 209
+      },
+      {
+        "file": "web\\src\\features\\system\\components\\RepairCaseQueue.test.tsx",
+        "beforeAndAfterSha256": "A2BAA1D53262459916BC2F8BC921C63E6A124F9132FF1552A5AD5A251EABB038",
+        "matchesPredecessorFinal": true,
+        "lines": 136
+      }
+    ],
+    "canonicalCatalogSha256": "4F3772FDB879F420E513CA411442D48D85B7CA2501F16F6113736E6DD89B8202",
+    "observedConfigSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+    "configCatalogAndFourObservedSupportsUnchanged": true,
+    "limit": "No whole dependency closure or Git object was hashed; generated-artifact mismatch is an actual startup observation, not acceptance of any catalog."
+  },
+  "historicalEvidencePreserved": {
+    "log": "web\\logs\\phase6-fix-repair-confidence-copy-semantics.log",
+    "normalVitestExit": 1,
+    "normalDiscovered": 0,
+    "normalExecuted": 0,
+    "previousNormalStartup": "NOTPASS",
+    "historicalLintExit": 0,
+    "historicalScopedTypesExit": 0,
+    "historicalOwnedTypesDiagnostics": 0,
+    "historicalExternalTypesDiagnostics": 0,
+    "lintTypesRerun": false,
+    "historicalViolationCounts": "Drawer/queue static inline styles0, raw controls0, direct libraries0, old imports0, corrected category imports0; retained historical scan only, not freshly rerun.",
+    "lineCounts": "Predecessor drawer213 -> current211 (99.06%); queue196 -> current209 (106.63%), exact predecessor final bytes. Earlier fresh log split-on-newline counts include trailing empty line and are explicitly corrected by final physical line counts.",
+    "sections": "Direct GlassPanel drawer0/queue1, ChartContainer0, Button drawer3/queue4; unchanged historical final source pins. No page or section removal, extraction, production change or passing repetition."
+  },
+  "notRun": [
+    "npx tsc --noEmit/global compiler: not run by this exact report-only covering-proof worker; historical scoped type pass not repeated or promoted to global pass.",
+    "Violations skill audit script: read, not run because it invokes global compiler beyond assigned proof scope; historical genuine scoped audit pass retained.",
+    "Lint/build/full suite or unrelated/genuine-passing oracles.",
+    "Browser/server/Docker/native contrast/keyboard/viewport/theme acceptance.",
+    "Unknown/zero runtime matrix absent from selected immutable fixtures.",
+    "Real API requests, production repair operations or mutations."
+  ],
+  "release": {
+    "utc": "2026-10-14T07:50:16.7103562Z",
+    "sourceClaims": "No source write claim acquired.",
+    "commandClaims": "repair-confidence-proof completed exit1; all other own commands completed; no background service started.",
+    "artifactClaims": "Released at measured final seal UTC after correction of the owned timestamp-inspection failure; no post-return writes.",
+    "validation": {
+      "command": "Get-Content exact report -Raw | ConvertFrom-Json -AsHashtable; require exact item, seven selected names and startup exit1; Get-FileHash each four assigned paths against recorded pins",
+      "startedUtc": "2026-10-14T07:49:30.5810205Z",
+      "shellExitCode": 0,
+      "result": "JSON parsed; selected7; runtime executed0; startup exit1; all4 source/test pins current."
+    },
+    "followUp": "External generated-catalog reconciliation, then same seven still-unexecuted affected cases; source/fixture fix only if an actual named assertion fails."
+  }
+}
