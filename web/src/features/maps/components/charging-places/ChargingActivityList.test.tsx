@@ -12,8 +12,8 @@
  *      comes back shorter than the page size (last page); clicking Next/
  *      Previous advances/retreats the offset passed to the hook.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -41,6 +41,10 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ locale: 'en-US' }),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ formatDateTime: (value: string | null | undefined) => value ?? '—' }),
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -91,12 +95,31 @@ function makeQuery(overrides: Partial<ActivityQuery> = {}): ActivityQuery {
   } as unknown as ActivityQuery;
 }
 
+const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+
+function resizeTable(width: number) {
+  act(() => observers.forEach(({ element, callback }) => callback(
+    [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+    {} as ResizeObserver,
+  )));
+}
+
 beforeEach(() => {
   cleanup();
+  localStorage.clear();
+  observers.length = 0;
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(element: Element) { observers.push({ element, callback: this.callback }); }
+    unobserve() {}
+    disconnect() {}
+  });
   vi.clearAllMocks();
   refetch = vi.fn();
   mockedActivity.mockReturnValue(makeQuery());
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 function renderList() {
   return render(
@@ -214,5 +237,83 @@ describe('ChargingActivityList — pagination', () => {
     renderList();
 
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+  });
+});
+
+describe('ChargingActivityList — shared mobile presentation', () => {
+  it('retains end time, display energy, currency-aware cost and provenance in the summary and full details', () => {
+    const row = makeRow();
+    mockedActivity.mockReturnValue(makeQuery({ data: [row] }));
+    const { container } = renderList();
+    resizeTable(375);
+
+    expect(container.querySelector('[data-mobile-table]')).not.toBeNull();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    [row.started_at, row.ended_at!, '10.0 kWh', '$1.20', 'geofence_tariff']
+      .forEach((value) => expect(screen.getByText(value)).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+    const dialog = screen.getByRole('dialog');
+    ['Started', 'Ended', 'Energy', 'Cost', 'Source', row.started_at, row.ended_at!, '10.0 kWh', '$1.20', 'geofence_tariff']
+      .forEach((value) => expect(within(dialog).getByText(value)).toBeInTheDocument());
+    expect(row.energy_wh).toBe(10_000);
+    expect(mockedActivity).toHaveBeenLastCalledWith(7, 25, 0);
+  });
+
+  it.each([640, 768])('keeps every activity column reachable in the table at allocated width %s', (width) => {
+    mockedActivity.mockReturnValue(makeQuery({ data: [makeRow()] }));
+    const { container } = renderList();
+    resizeTable(375);
+    resizeTable(width);
+    expect(container.querySelector('[data-mobile-table]')).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('2026-09-01T13:00:00Z')).toBeInTheDocument();
+    expect(screen.getByText('10.0 kWh')).toBeInTheDocument();
+    expect(container.querySelector('.hidden.md\\:table-cell')).toBeNull();
+  });
+
+  it('does not substitute recorded zero for unknown end time, energy or cost in mobile details', () => {
+    mockedActivity.mockReturnValue(makeQuery({
+      data: [makeRow({ ended_at: null, energy_wh: null, cost_decimal: null, cost_currency: null, cost_source: null })],
+    }));
+    renderList();
+    resizeTable(375);
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).getAllByText('—')).toHaveLength(3);
+    expect(within(dialog).getByText('Unknown')).toBeInTheDocument();
+    expect(within(dialog).queryByText('0.0 kWh')).not.toBeInTheDocument();
+    expect(within(dialog).queryByText('$0.00')).not.toBeInTheDocument();
+  });
+
+  it('preserves recorded zero and source retry after a failed mobile refresh', () => {
+    mockedActivity.mockReturnValue(makeQuery({
+      data: [makeRow({ energy_wh: 0, cost_decimal: 0 })], isError: true, error: new Error('refresh'),
+    }));
+    renderList();
+    resizeTable(375);
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('$0.00')).toBeInTheDocument();
+    expect(screen.getByText('geofence_tariff')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('preserves server paging and Previous recovery when a later mobile page is empty', () => {
+    mockedActivity.mockReturnValue(makeQuery({
+      data: Array.from({ length: 25 }, (_, session_id) => makeRow({ session_id })),
+    }));
+    const view = renderList();
+    resizeTable(375);
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(mockedActivity).toHaveBeenLastCalledWith(7, 25, 25);
+    mockedActivity.mockReturnValue(makeQuery({ data: [] }));
+    view.rerender(<MemoryRouter><ChargingActivityList geofenceId={7} /></MemoryRouter>);
+
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled();
+    expect(screen.getByText('Showing 0–25')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }));
+    expect(mockedActivity).toHaveBeenLastCalledWith(7, 25, 0);
   });
 });

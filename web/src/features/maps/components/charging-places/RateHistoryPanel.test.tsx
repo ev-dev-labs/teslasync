@@ -12,8 +12,8 @@
  *      highlights the selected row, and calls `onSelectRate`.
  *   4. Only future schedules can be cancelled, gated behind confirmation.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { act, render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
@@ -31,6 +31,10 @@ vi.mock('react-i18next', async () => {
 
 vi.mock('@/hooks/useSettings', () => ({
   useSettings: () => ({ locale: 'en-US' }),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({ formatDateTime: (value: string | null | undefined) => value ?? '—' }),
 }));
 
 vi.mock('@/components/data-display', () => ({
@@ -69,9 +73,28 @@ function renderPanel(props: Partial<Parameters<typeof RateHistoryPanel>[0]> = {}
   );
 }
 
+const observers: { element: Element; callback: ResizeObserverCallback }[] = [];
+
+function resizeTable(width: number) {
+  act(() => observers.forEach(({ element, callback }) => callback(
+    [{ target: element, contentRect: { width } } as ResizeObserverEntry],
+    {} as ResizeObserver,
+  )));
+}
+
 beforeEach(() => {
   cleanup();
+  localStorage.clear();
+  observers.length = 0;
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(private callback: ResizeObserverCallback) {}
+    observe(element: Element) { observers.push({ element, callback: this.callback }); }
+    unobserve() {}
+    disconnect() {}
+  });
 });
+
+afterEach(() => vi.unstubAllGlobals());
 
 describe('RateHistoryPanel — loading/error/empty', () => {
   it('shows a loading skeleton when loading with no rows yet', () => {
@@ -224,5 +247,97 @@ describe('RateHistoryPanel — delete flow', () => {
       deletePending: true,
     });
     expect(screen.getByRole('button', { name: 'Cancel scheduled rate' })).toBeDisabled();
+  });
+});
+
+describe('RateHistoryPanel — shared mobile presentation', () => {
+  it('retains currency, interval meaning, selection and future-only cancellation in mobile rows', () => {
+    const historical = makeRate({ id: 1 });
+    const current = makeRate({ id: 2, effective_from: pastIso(), effective_to: null, rate_per_wh: 0 });
+    const scheduled = makeRate({ id: 3, effective_from: futureIso(), effective_to: null, currency: 'EUR' });
+    const onSelectRate = vi.fn();
+    const onDelete = vi.fn();
+    const { container } = renderPanel({
+      rates: [historical, current, scheduled], selectedRateId: current.id, onSelectRate, onDelete,
+    });
+    resizeTable(375);
+
+    expect(container.querySelector('[data-mobile-table]')).not.toBeNull();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.getAllByText('USD')).toHaveLength(2);
+    expect(screen.getByText('EUR')).toBeInTheDocument();
+    expect(screen.getByText('Current')).toBeInTheDocument();
+    expect(screen.getByText('Scheduled')).toBeInTheDocument();
+    expect(screen.getByText('$0.000')).toBeInTheDocument();
+    const previews = screen.getAllByRole('button', { name: 'Preview sessions' });
+    expect(previews).toHaveLength(3);
+    [scheduled, current, historical].forEach((rate, index) => {
+      fireEvent.click(previews[index]);
+      expect(onSelectRate).toHaveBeenLastCalledWith(rate);
+    });
+    expect(previews[1].className).toMatch(/primary|bg-/);
+    expect(screen.getAllByRole('button', { name: 'Cancel scheduled rate' })).toHaveLength(1);
+    expect(onDelete).not.toHaveBeenCalled();
+  });
+
+  it('shows every historical field and the original preview action in Quick view and restores its trigger', async () => {
+    const rate = makeRate();
+    const onSelectRate = vi.fn();
+    const { container } = renderPanel({ rates: [rate], onSelectRate });
+    resizeTable(375);
+    const trigger = screen.getByRole('button', { name: 'Quick view' });
+    trigger.focus();
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog');
+    ['Effective from', 'Rate / kWh', 'Currency', 'Effective to', rate.effective_from, rate.effective_to!, '$0.100', 'USD']
+      .forEach((value) => expect(within(dialog).getByText(value)).toBeInTheDocument());
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Preview sessions' }));
+    expect(onSelectRate).toHaveBeenCalledWith(rate);
+    const footer = dialog.querySelector('[data-modal-footer]') as HTMLElement;
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await waitFor(() => expect(trigger).toHaveFocus());
+
+    resizeTable(640);
+    expect(container.querySelector('[data-mobile-table]')).toBeNull();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    expect(screen.getByText('USD')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preview sessions' })).toBeInTheDocument();
+    expect(container.querySelector('.hidden.md\\:table-cell')).toBeNull();
+  });
+
+  it('requires confirmation for the same scheduled rate from its mobile action', async () => {
+    const rate = makeRate({ effective_from: futureIso(), effective_to: null });
+    const onDelete = vi.fn();
+    renderPanel({ rates: [rate], onDelete });
+    resizeTable(375);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel scheduled rate' }));
+
+    const dialog = await screen.findByRole('dialog');
+    expect(onDelete).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel rate' }));
+    await waitFor(() => expect(onDelete).toHaveBeenCalledWith(rate));
+    expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+
+  it('retains rows, currency and source-specific retry after a failed refresh on mobile', () => {
+    const onRetry = vi.fn();
+    renderPanel({ rates: [makeRate()], error: new Error('refresh'), onRetry });
+    resizeTable(375);
+
+    expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeInTheDocument();
+    expect(screen.getByText('USD')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Preview sessions' })).toBeEnabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps pending cancellation disabled in the inline action and full details', () => {
+    renderPanel({ rates: [makeRate({ effective_from: futureIso(), effective_to: null })], deletePending: true });
+    resizeTable(375);
+    expect(screen.getByRole('button', { name: 'Cancel scheduled rate' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Quick view' }));
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Cancel scheduled rate' })).toBeDisabled();
   });
 });

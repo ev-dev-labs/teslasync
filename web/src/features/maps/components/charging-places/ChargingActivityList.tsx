@@ -2,12 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ListChecks } from 'lucide-react';
 
-import { Badge, Button, Text, DataTable, type Column } from '@/components/ui';
+import { Badge, Button, Text, DataTable, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useUnits } from '@/hooks/useUnits';
 import { formatCurrencyValue } from '@/lib/currencyFormat';
 import { useGeofenceChargingActivity } from '@/api/hooks/useLocations';
@@ -38,6 +39,7 @@ const SOURCE_BADGE: Record<CostSource, 'success' | 'info' | 'warning' | 'neutral
 export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) {
   const { t } = useTranslation();
   const { locale } = useSettings();
+  const { formatDateTime } = useDateFormat();
   const { formatEnergy } = useUnits();
   const [offset, setOffset] = useState(0);
 
@@ -102,6 +104,35 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
     [t, locale, formatEnergy],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<GeofenceChargingActivity>>(
+    () => ({
+      roles: {
+        started_at: 'title',
+        ended_at: 'meta',
+        energy_wh: 'meta',
+        cost_decimal: 'primary',
+        cost_source: 'badge',
+      },
+      displayValue: (row, key) => {
+        if (key === 'started_at') return formatDateTime(row.started_at);
+        if (key === 'ended_at') return formatDateTime(row.ended_at);
+        if (key === 'energy_wh') return row.energy_wh != null ? formatEnergy(row.energy_wh) : '—';
+        if (key === 'cost_decimal') {
+          return row.cost_decimal != null && row.cost_currency
+            ? formatCurrencyValue(row.cost_decimal, row.cost_currency, locale, 2, { useGrouping: true })
+            : '—';
+        }
+        if (key === 'cost_source') {
+          return row.cost_source
+            ? t(`chargingPlaces.costSource.${row.cost_source}`, row.cost_source)
+            : t('chargingPlaces.costSource.unknown', 'Unknown');
+        }
+        return undefined;
+      },
+    }),
+    [formatDateTime, formatEnergy, locale, t],
+  );
+
   return (
     <LayoutCard title={t('chargingPlaces.activity.title', 'Charging activity')} actions={<ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <SourceContent
@@ -128,7 +159,7 @@ export function ChargingActivityList({ geofenceId }: ChargingActivityListProps) 
           <DataTable
             tableId="maps:charging-place-activity"
             columns={columns}
-            mobileColumns={['started_at', 'cost_decimal', 'cost_source']}
+            mobilePresentation={mobilePresentation}
             data={rows}
             keyExtractor={(r) => r.session_id}
             emptyMessage={t('chargingPlaces.activity.empty', 'No charging sessions recorded at this place yet.')}

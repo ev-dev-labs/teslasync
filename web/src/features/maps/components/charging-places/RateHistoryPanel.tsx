@@ -2,12 +2,13 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { History, ListChecks, Trash2 } from 'lucide-react';
 
-import { Badge, Button, Text, DataTable, useSortToggle, ConfirmDialog, type Column } from '@/components/ui';
+import { Badge, Button, Text, DataTable, useSortToggle, ConfirmDialog, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { LayoutCard, SourceContent } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { TimeStamp } from '@/components/data-display';
 import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { useConfirm } from '@/hooks/useConfirm';
 import { formatRatePerWh, isRateActiveAt, isRateOpen } from './helpers';
 import type { GeofenceRate } from '@/api/types';
@@ -43,6 +44,7 @@ export function RateHistoryPanel({
 }: RateHistoryPanelProps) {
   const { t } = useTranslation();
   const { locale } = useSettings();
+  const { formatDateTime } = useDateFormat();
   const { sortKey, sortDir, onSort } = useSortToggle('effective_from', 'desc');
   const { confirm, dialogProps } = useConfirm();
 
@@ -161,6 +163,32 @@ export function RateHistoryPanel({
     [t, locale, selectedRateId, onSelectRate, deletePending],
   );
 
+  const mobilePresentation = useMemo<MobileDataTablePresentation<GeofenceRate>>(
+    () => ({
+      roles: {
+        effective_from: 'title',
+        rate_per_wh: 'primary',
+        currency: 'meta',
+        effective_to: 'meta',
+      },
+      displayValue: (rate, key) => {
+        if (key === 'effective_from') return formatDateTime(rate.effective_from);
+        if (key === 'rate_per_wh') return formatRatePerWh(rate.rate_per_wh, rate.currency, locale) || '—';
+        if (key === 'currency') return rate.currency;
+        if (key === 'effective_to') {
+          if (isRateActiveAt(rate)) return t('chargingPlaces.rateHistory.current', 'Current');
+          if (isRateOpen(rate) && Date.parse(rate.effective_from) > Date.now()) {
+            return t('chargingPlaces.rateHistory.scheduled', 'Scheduled');
+          }
+          return formatDateTime(rate.effective_to);
+        }
+        return undefined;
+      },
+      inlineActions: (rate) => columns.find((column) => column.key === 'actions')?.render(rate),
+    }),
+    [columns, formatDateTime, locale, t],
+  );
+
   return (
     <LayoutCard title={t('chargingPlaces.rateHistory.title', 'Rate history')} actions={<History className="h-4 w-4 text-cyan-300" aria-hidden="true" />}>
       <Text as="p" size="sm" color="muted" className="mb-3">
@@ -196,7 +224,7 @@ export function RateHistoryPanel({
           tableId="maps:charging-place-rate-history"
           enableValueFilters
           columns={columns}
-          mobileColumns={['effective_from', 'rate_per_wh', 'effective_to']}
+          mobilePresentation={mobilePresentation}
           data={sortedRows}
           keyExtractor={(r) => r.id}
           sortKey={sortKey}
