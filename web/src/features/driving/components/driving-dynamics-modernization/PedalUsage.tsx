@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Footprints } from 'lucide-react';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { Badge, Caption } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';

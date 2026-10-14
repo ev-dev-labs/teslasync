@@ -5,8 +5,7 @@ import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, chartGrid,
   axisTick, Tooltip, ResponsiveContainer, AREA_DEFAULTS,
 } from '@/components/charts';
-import { CardGrid } from '@/components/layout/layout-reference';
-import { ChartCard } from '@/components/layout';
+import { CardGrid, ChartCard } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';

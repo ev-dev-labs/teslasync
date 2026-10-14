@@ -21,6 +21,7 @@
  * the shared URL window is fixed at [2025-06-09, 2025-06-15].
  */
 
+import { readFileSync } from 'node:fs';
 import { describe, it, expect, beforeAll, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider, QueryObserver, type UseQueryResult } from '@tanstack/react-query';
@@ -32,6 +33,31 @@ import type { DataStateSource } from '@/api/dataState';
 import type { Drive, DrivingCoachData } from '@/types/driving';
 import type { Vehicle } from '@/types/vehicle';
 import i18n from 'i18next';
+
+describe('Driving dynamics layout import boundary', () => {
+  it.each([
+    'components/driving-dynamics-modernization/DrivingTips.tsx',
+    'components/driving-dynamics-modernization/DynamicsPlacement.tsx',
+    'components/driving-dynamics-modernization/DynamicsTripToolbar.tsx',
+    'components/driving-dynamics-modernization/GForcePanel.tsx',
+    'components/driving-dynamics-modernization/LiveMotorStatus.tsx',
+    'components/driving-dynamics-modernization/MotorHistoryCharts.tsx',
+    'components/driving-dynamics-modernization/PedalUsage.tsx',
+    'components/driving-dynamics-modernization/PowertrainSummary.tsx',
+    'components/driving-dynamics-modernization/RideOverview.tsx',
+    'components/driving-dynamics-modernization/SpeedGearPanel.tsx',
+    'components/driving-dynamics/DrivingCoachSection.tsx',
+    'components/driving-dynamics/GrokDynamicsBriefing.tsx',
+    'components/operationalbrief-a-m/MotorSamplesBrief.tsx',
+    'pages/DrivingDynamicsPage.tsx',
+  ])('%s uses only the public layout category boundary', (file) => {
+    const source = readFileSync(`src/features/driving/${file}`, 'utf8');
+    expect(source).not.toMatch(/from\s+['"]@\/components\/layout\//);
+    if (file.includes('driving-dynamics-modernization') || file.startsWith('pages/')) {
+      expect(source).toMatch(/from\s+['"]@\/components\/layout['"]/);
+    }
+  });
+});
 
 // i18n stub: echo the fallback string so assertions target rendered English.
 vi.mock('react-i18next', () => ({

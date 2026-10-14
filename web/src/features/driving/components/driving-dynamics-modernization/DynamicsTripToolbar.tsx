@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { Badge, Select, Text } from '@/components/ui';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useUnits } from '@/hooks/useUnits';

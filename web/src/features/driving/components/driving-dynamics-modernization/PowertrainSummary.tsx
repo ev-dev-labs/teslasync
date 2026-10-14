@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { LayoutCard } from '@/components/layout/layout-reference';
+import { LayoutCard } from '@/components/layout';
 import { EmptyState, QueryError, Skeleton, StaleRefreshWarning } from '@/components/feedback';
 import { Badge, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
