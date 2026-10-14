@@ -1,4 +1,229 @@
 {
+  "schemaVersion": 2,
+  "item": "phase6-proof-command-tile-interactive-targets",
+  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+  "sameExistingItem": true,
+  "attemptsUnchanged": true,
+  "sourceCommit": "79aaeea10f4cce8a46198f0be5dcc4f0525d4e0f",
+  "previousExternalReceiptIdentity": "6b0c77018d8d3408fbb8b1f45f363fa0b7157955",
+  "newPrerequisiteIdentity": "9c7b4f10c8b92284c14f59a0b14e0a13e55fddab",
+  "prerequisiteEvidence": "Current dispatch and migration-queue.md:2717 identify materially new canonical closure. The user-reported genuine 49-leaf check exit0 is prerequisite context, not this worker's current verification. No Git lookup or duplicate prerequisite/genuine-pass run.",
+  "requestUtc": "2026-10-14T12:28:07.256Z",
+  "firstObservedWorkerUtc": "2026-10-14T12:28:15.6563522Z",
+  "absoluteReturnDeadlineUtc": "2026-10-14T12:48:07.256Z",
+  "writeScope": [
+    "docs\\frontend-audits\\phase6-proof-command-tile-interactive-targets.json",
+    "web\\logs\\phase6-proof-command-tile-interactive-targets.log"
+  ],
+  "applicationFilesReadOnly": true,
+  "fixtureEdits": 0,
+  "normalVitestPool": "forks",
+  "maxWorkers": 2,
+  "nodeVersion": "v26.8.1",
+  "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+  "nodeEngineRequirement": ">=26.0.0",
+  "historicalNodeDirectory": "The old handoff's Node26.11.1 directory is unavailable on this machine; existing Node26.8.1 meets package engines. No installation or configuration changes.",
+  "accounting": {
+    "originalAuthored": 11,
+    "addedExpandedAuthored": 8,
+    "totalAuthored": 19,
+    "selected": 17,
+    "originalSelected": 9,
+    "addedExpandedSelected": 8,
+    "deliberatelyUnselected": 2,
+    "unchangedHistoricalGenuinePassesRepeated": 0,
+    "authoredNamesMatchPreviousReceipt": true,
+    "selectedNamesMatchPreviousReceipt": true,
+    "fixtureByteHashMatchesPreviousReceipt": true
+  },
+  "originalAccountingAuthority": "previousReceipt.originalCaseInventory, originalPreservation, authoredCases and selectedCases remain intact below; fresh TypeScript AST name expansion and source/fixture byte pins are recorded in RETRY_PREFLIGHT_JSON.",
+  "selector": "^(?!.*(?:renders the optional sublabel and colours a success status green|colours a non-success status red and omits the optional rows when sublabel/status are absent)).*$",
+  "selectedNames": [
+    "renders a native command button with the translated label, the command icon (not a spinner), and no busy state when idle",
+    "executes the command with its params on click for a non-dangerous action, without opening a dialog",
+    "opens the confirmation dialog instead of executing when the command is dangerous, and shows the extra warning glyph",
+    "shows a spinner, marks the command busy/disabled/unfocusable, and ignores clicks while loading",
+    "activates natively on Enter and Space when the command is focused, but ignores other keys",
+    "routes native Enter and Space activation to the dialog (not execute) for a dangerous command",
+    "toggles only the sibling favorite on native Enter and Space activation, including dangerous commands",
+    "toggles the favorite without activating the tile, and exposes the pressed state via aria-pressed",
+    "applies the per-variant hover border and falls back to the default for an unknown variant",
+    "uses a noninteractive frame with two named sibling buttons and no nested interactive descendants",
+    "preserves command-first Tab order, reverse navigation, and focus through favorite/status rerenders",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=false",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=false dangerous=true",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=false",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=false disabled=true dangerous=true",
+    "blocks execution/confirmation but keeps favorite keyboard-ready when loading=true disabled=true dangerous=true",
+    "re-enables the same command target when readiness recovers, without firing until activated"
+  ],
+  "deliberatelyUnselectedNames": [
+    "renders the optional sublabel and colours a success status green",
+    "colours a non-success status red and omits the optional rows when sublabel/status are absent"
+  ],
+  "runtimeDiscovery": {
+    "status": "BLOCKED_BEFORE_COLLECTION",
+    "discovered": 0,
+    "names": [],
+    "selectorMiss": false,
+    "zeroExecutionIsPass": false
+  },
+  "execution": {
+    "status": "NOTRUN_STARTUP_BLOCKED",
+    "executed": 0,
+    "passed": 0,
+    "failedAssertions": 0,
+    "skipped": 0,
+    "selectedButNotRun": 17,
+    "authoredButNotRun": 19,
+    "runnerJsonEmitted": false,
+    "runnerJson": null
+  },
+  "commands": [
+    {
+      "ordinal": 1,
+      "cwd": "D:\\repos\\teslasync\\web",
+      "rawCommand": "$env:VITE_GIT_SHA='79aaeea10f4cce8a46198f0be5dcc4f0525d4e0f'; node .\\node_modules\\vitest\\vitest.mjs run .\\src\\features\\system\\components\\CommandTile.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json -t '^(?!.*(?:renders the optional sublabel and colours a success status green|colours a non-success status red and omits the optional rows when sublabel/status are absent)).*$'",
+      "startUtc": "2026-10-14T12:32:12.2458997Z",
+      "endUtc": "2026-10-14T12:35:45.9820052Z",
+      "exitCode": 1,
+      "durationSeconds": 213.7361055,
+      "pool": "forks",
+      "maxWorkers": 2,
+      "reporters": ["verbose", "json"],
+      "rawOutput": "[i18n-split] generated locale files are invalid (usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.\r\n\r\n⎯⎯⎯⎯⎯⎯⎯ Startup Error ⎯⎯⎯⎯⎯⎯⎯⎯\r\nError: Command failed: C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check\r\n    at genericNodeError (node:internal/errors:999:15)\r\n    at wrappedFn (node:internal/errors:544:14)\r\n    at checkExecSyncError (node:child_process:942:11)\r\n    at execFileSync (node:child_process:978:15)\r\n    at PluginContext.buildStart (file:///D:/repos/teslasync/web/node_modules/.vite-temp/vite.config.ts.timestamp-1791981132814-8fde431b9927e.mjs:55:5)\r\n    at EnvironmentPluginContainer.hookParallel (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42315:39)\r\n    at EnvironmentPluginContainer.buildStart (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:42330:12)\r\n    at file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38867:49\r\n    at initServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38875:6)\r\n    at _createServer (file:///D:/repos/teslasync/web/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js:38890:11) {\r\n  status: 1,\r\n  signal: null,\r\n  output: [ null, null, null ],\r\n  pid: 40288,\r\n  stdout: null,\r\n  stderr: null\r\n}\r\n\r\n\r\n\r\n",
+      "rawOutputSha256": "1da4efe654061837f9a27ce724acd07386148406ceee9ce39451f2a69a451b80",
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "startupFailures": 1,
+      "freshReporterJson": false
+    }
+  ],
+  "failureOwnership": {
+    "classification": "EXTERNAL_CATALOG_ONLY_STARTUP",
+    "externalUncharged": true,
+    "chargeOwnAttempt": false,
+    "ownAssertionFailureCount": 0,
+    "ownQueuedFixNeed": null,
+    "invalidGeneratedFileCount": 1,
+    "invalidGeneratedFiles": ["web\\src\\i18n\\en\\usage-manifest.json"],
+    "externalRoot": "Normal English split --check rejected usage-manifest.json before Vitest collection. Concurrent canonical en.json drift was observed; this worker did not write canonical or generated projections.",
+    "queuedExternalOwner": "phase6-fix-next12-and-location-canonical-copy",
+    "queueCitation": "migration-queue.md:2745 (active when inspected)",
+    "requiredExternalWork": "Already assigned sole canonical/projection owner must release current normal projections, split --check and strict namespace evidence. No repair, case edit, configuration change or guard bypass by this proof worker.",
+    "followUp": "Only after materially new current catalog closure: retain SAME item/attempt and original 17 affected selectors. Exact own assertion failure, if one executes later, requires a separately assigned surgical correction rather than bypass.",
+    "secondRunPerformed": false
+  },
+  "preflightUtc": "2026-10-14T12:31:56.905Z",
+  "hashCurrentnessUtc": "2026-10-14T12:36:06.218Z",
+  "sourcePairHashesUnchanged": true,
+  "sourceHashes": [
+    {
+      "path": "web\\src\\features\\system\\components\\CommandTile.tsx",
+      "sha256Before": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+      "sha256After": "9c718d3d1545d5dc83e4be3bd31405760451ec95643b7c3ef30f4bbeb8eeec17",
+      "bytesBefore": 4055,
+      "bytesAfter": 4055,
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\features\\system\\components\\CommandTile.test.tsx",
+      "sha256Before": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+      "sha256After": "8a910bf2f610a6b1e226f26ce391bab2e11efbea0de6e1c99849859a92448174",
+      "bytesBefore": 13352,
+      "bytesAfter": 13352,
+      "unchanged": true
+    },
+    {
+      "path": "web\\vite.config.ts",
+      "sha256Before": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "sha256After": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\split-i18n-catalog.mjs",
+      "sha256Before": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598",
+      "sha256After": "cda6ccfcdc442bd7524343921c18efd43ff74dc3ffd6cc61bc34a37631850598",
+      "unchanged": true
+    },
+    {
+      "path": "web\\scripts\\audit-i18n-namespaces.mjs",
+      "sha256Before": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96",
+      "sha256After": "2869fe9085c8629a0f042634f990088c2b64fb9a4b40e53bbf75bf5ff200bc96",
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\i18n\\en\\usage-manifest.json",
+      "sha256Before": "983aaa0397e8e99c900b9de162c783fff1a3d8db6a5afb51cac4c1a1bff82597",
+      "sha256After": "983aaa0397e8e99c900b9de162c783fff1a3d8db6a5afb51cac4c1a1bff82597",
+      "unchanged": true,
+      "currentness": "Byte-stable during command, but rejected by normal catalog guard; byte stability is not semantic freshness."
+    }
+  ],
+  "pinInventory": {
+    "totalPins": 199,
+    "catalogPins": 187,
+    "catalogDigestBefore": "a2077488077c28cabf7955c8eede9cc11dd597d80b57a16337c35198b6d61ca5",
+    "catalogDigestAfter": "6b658879f2f1dc8361670c79df8f924850f175be0c71348dd97264018645e8b1",
+    "digestMethod": "SHA256 of sorted path=sha256 entries joined by LF, including canonical en.json and all generated en/*.json.",
+    "fullRawEvidence": "web\\logs\\phase6-proof-command-tile-interactive-targets.log: RETRY_PREFLIGHT_JSON and RETRY_POSTFLIGHT_JSON record all 199 before/after pins, byte counts and last-write UTCs.",
+    "globalCurrentnessClaim": false
+  },
+  "externalObservedDrift": [
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256Before": "20b99693ea4207275a05d693ddfb1d4e7e6ea21f0dfa8891fe2d9749b5a9eb61",
+      "sha256After": "6e1e8ff4ddb120705d08ecf840ac959f8dad8e8eda35bd088f01c3437bbb9867",
+      "bytesBefore": 1852774,
+      "bytesAfter": 1854647,
+      "lastWriteUtcBefore": "2026-10-14T07:48:35.473Z",
+      "lastWriteUtcAfter": "2026-10-14T12:33:26.921Z",
+      "note": "Observed concurrent shared-checkout drift; no write or causal actor attribution by this proof worker."
+    }
+  ],
+  "preservation": {
+    "sourceBaselineLines": 114,
+    "currentSourcePhysicalLines": 104,
+    "sourceLineRatio": 0.9122807017543859,
+    "fixtureBaselineLines": 217,
+    "currentFixturePhysicalLines": 330,
+    "baselinePanels": 1,
+    "currentSourcePanels": 1,
+    "baselineCharts": 0,
+    "currentSourceCharts": 0,
+    "originalCasesAccountedFor": 11,
+    "exactOriginalBodiesUnchangedBySourceOwner": 4,
+    "proofWorkerChangedOriginalBodies": false,
+    "publicExport": "CommandTile",
+    "sourceOwnerPublicApiAndBehaviorBytePreserved": true,
+    "evidence": "Current byte pins match owner source and prior fixture; AST preserves all 19 names and the exact 17-case selection. Sibling buttons, command/favorite isolation, keyboard, readiness, dangerous confirmation and params coverage remain authored but NOTRUN. Counts are lexical source evidence, not rendered/native acceptance."
+  },
+  "nativeHitboxVerification": "NOTRUN",
+  "nativeBrowserVerification": "NOTRUN",
+  "fullTypecheck": "NOTRUN: not assigned; no full npx tsc --noEmit.",
+  "violationsAudit": "NOTRUN: no new source changes and this item authorizes only affected runtime proof.",
+  "hookVerification": "NOTRUN: no hook/API changes or endpoint claims.",
+  "fullGateAcceptance": false,
+  "evidenceLimits": [
+    "17 selected is source-inventory coverage only; discovery0/execution0/pass0 is NOTPASS.",
+    "Two deliberately unselected cases are not runtime skips because collection never occurred.",
+    "Original fixture bodies and prior raw evidence remain intact; no duplicate historical genuine-pass run.",
+    "Source/fixture currentness is pinned at the stated UTC, not an evergreen global projection gate.",
+    "No Git, queue/catalog/config/source/fixture changes, install, subagents, external server, browser, Docker, API mutations or guard bypass.",
+    "No runtime assertion failures executed; own correction need is none, not a claim that all assertions pass."
+  ],
+  "receiptValidationHistory": "Initial persistence check exited1 only because the report raw-output copy had one extra trailing CRLF. Corrected the assigned report to exactly match original raw log bytes/hash; retained the failed validation output. No test rerun, source/fixture repair or guard bypass.",
+  "sourceReleaseUtc": "2026-10-14T12:40:20.3211597Z",
+  "commandReleaseUtc": "2026-10-14T12:35:45.9820052Z",
+  "sourceCommandReleaseUtc": "2026-10-14T12:40:20.3211597Z",
+  "releaseUtc": "2026-10-14T12:40:20.3211597Z",
+  "allClaimsReleased": true,
+  "noOwnedCommandsRemainRunning": true,
+  "deadlineMet": true,
+  "previousReceipt": {
   "schemaVersion": 1,
   "item": "phase6-proof-command-tile-interactive-targets",
   "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
@@ -860,4 +1085,5 @@
   "allClaimsReleased": true,
   "noOwnedCommandsRemainRunning": true,
   "deadlineMet": true
+  }
 }
