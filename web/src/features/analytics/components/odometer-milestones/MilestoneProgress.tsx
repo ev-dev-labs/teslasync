@@ -2,7 +2,7 @@ import { Gauge } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { ProgressRing } from '@/components/data-display';
-import { Grid, LayoutCard } from '@/components/layout';
+import { LayoutCard } from '@/components/layout';
 import {
   HelpTooltip,
   Text,
@@ -14,8 +14,6 @@ import { MilestoneSectionBody } from './MilestoneSectionBody';
 import type { MilestoneSectionState } from './types';
 import { useOdometerMilestoneDisplay } from './useOdometerMilestoneDisplay';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-const DETAIL_COLUMNS = { default: 2, lg: 4 } as const;
 
 interface MilestoneProgressProps {
   summary: OdometerMilestoneResult;
@@ -68,7 +66,7 @@ export function MilestoneProgress({
         actions={<HelpTooltip
             size="sm"
             i18nKey="help.milestones.body"
-            defaultValue="Calibration is the odometer immediately before the chronologically first row in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit."
+            defaultValue="Calibration is the odometer immediately before the chronologically first eligible drive in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit."
             ariaLabel={t(
               'help.milestones.iconLabel',
               'More info about milestone math',
@@ -92,7 +90,10 @@ export function MilestoneProgress({
                 { percent: fmtNumber(percent) },
               )}
             />
-            <Grid cols={DETAIL_COLUMNS} gap={3}>
+            <dl
+              data-layout="responsive-columns"
+              className="grid min-w-0 grid-cols-2 gap-3 lg:grid-cols-4"
+            >
               {[
                 {
                   key: 'previous',
@@ -122,7 +123,7 @@ export function MilestoneProgress({
                   key={item.key}
                   className="rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-3"
                 >
-                  <Text variant="caption">{item.label}</Text>
+                  <Text as="dt" variant="caption">{item.label}</Text>
                   <Text
                     as="dd"
                     size="sm"
@@ -134,7 +135,7 @@ export function MilestoneProgress({
                   </Text>
                 </div>
               ))}
-            </Grid>
+            </dl>
           </div>
           <div className="mt-5 flex gap-2 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3">
             <Gauge
