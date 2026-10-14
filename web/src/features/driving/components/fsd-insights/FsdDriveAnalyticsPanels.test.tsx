@@ -4,10 +4,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { contributingDriveExportRows, FsdDriveAnalyticsPanels } from './FsdDriveAnalyticsPanels';
 import { fsdInsights } from './__tests__/fixtures';
+import type { UnitPref } from '@/lib/unitConversion';
 
-const { downloadJSON, downloadRowsAsCSV } = vi.hoisted(() => ({
+const { downloadJSON, downloadRowsAsCSV, display } = vi.hoisted(() => ({
   downloadJSON: vi.fn(),
   downloadRowsAsCSV: vi.fn(),
+  display: { unitPrefs: { distance: 'km', precision: 2, locale: 'en-US' } as UnitPref },
 }));
 
 vi.mock('@/lib/csvExport', async () => {
@@ -31,7 +33,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
-    unitPrefs: { distance: 'km' },
+    unitPrefs: display.unitPrefs,
     formatDistance: (meters: number | null, options?: { precision?: number }) =>
       meters == null ? '-' : `${(meters / 1000).toFixed(options?.precision ?? 1)} km`,
   }),
@@ -47,9 +49,88 @@ const readyState = {
 beforeEach(() => {
   downloadJSON.mockReset();
   downloadRowsAsCSV.mockReset();
+  display.unitPrefs = { distance: 'km', precision: 2, locale: 'en-US' };
 });
 
 describe('FsdDriveAnalyticsPanels', () => {
+  function efficiencyInsights() {
+    const insights = fsdInsights();
+    insights.drive_analytics.route_efficiency = [{
+      route_key: 'home-office',
+      route_label: 'Home to Office',
+      fsd_heavy_drive_count: 3,
+      low_fsd_drive_count: 5,
+      fsd_heavy_efficiency_wh_per_km: 1234.567,
+      low_fsd_efficiency_wh_per_km: -12.345,
+      difference_pct: -1.234,
+    }];
+    return insights;
+  }
+
+  it('formats SI efficiency with current distance, precision, and locale preferences', () => {
+    const insights = efficiencyInsights();
+    const { rerender } = render(
+      <MemoryRouter>
+        <FsdDriveAnalyticsPanels insights={insights} state={readyState} />
+      </MemoryRouter>,
+    );
+    const panel = screen.getByTestId('fsd-route-efficiency');
+    expect(within(panel).getByText('3 / 1,234.57 Wh/km')).toBeInTheDocument();
+    expect(within(panel).getByText('5 / -12.35 Wh/km')).toBeInTheDocument();
+    expect(within(panel).getByText('-1.23%')).toBeInTheDocument();
+
+    display.unitPrefs = { distance: 'mi', precision: 3, locale: 'de-DE' };
+    insights.drive_analytics.route_efficiency[0].difference_pct = 1.234;
+    rerender(
+      <MemoryRouter>
+        <FsdDriveAnalyticsPanels insights={insights} state={readyState} />
+      </MemoryRouter>,
+    );
+    expect(within(panel).getByText('3 / 1.986,843 Wh/mi')).toBeInTheDocument();
+    expect(within(panel).getByText('5 / -19,867 Wh/mi')).toBeInTheDocument();
+    expect(within(panel).getByText('+1,234%')).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps unavailable efficiency and difference (%s) distinct from measured zero',
+    (value) => {
+      const insights = efficiencyInsights();
+      Object.assign(insights.drive_analytics.route_efficiency[0], {
+        fsd_heavy_efficiency_wh_per_km: value,
+        low_fsd_efficiency_wh_per_km: value,
+        difference_pct: value,
+      });
+      render(
+        <MemoryRouter>
+          <FsdDriveAnalyticsPanels insights={insights} state={readyState} />
+        </MemoryRouter>,
+      );
+      const panel = screen.getByTestId('fsd-route-efficiency');
+      expect(within(panel).getByText('3 / Not measured')).toBeInTheDocument();
+      expect(within(panel).getByText('5 / Not measured')).toBeInTheDocument();
+      expect(within(panel).getByText('Not measured')).toBeInTheDocument();
+      expect(within(panel).queryByText(/Wh\/|[+-]0.*%/)).not.toBeInTheDocument();
+    },
+  );
+
+  it('retains measured zero efficiency and a signed zero difference', () => {
+    const insights = efficiencyInsights();
+    Object.assign(insights.drive_analytics.route_efficiency[0], {
+      fsd_heavy_efficiency_wh_per_km: 0,
+      low_fsd_efficiency_wh_per_km: 0,
+      difference_pct: 0,
+    });
+    render(
+      <MemoryRouter>
+        <FsdDriveAnalyticsPanels insights={insights} state={readyState} />
+      </MemoryRouter>,
+    );
+    const panel = screen.getByTestId('fsd-route-efficiency');
+    expect(within(panel).getByText('3 / 0.00 Wh/km')).toBeInTheDocument();
+    expect(within(panel).getByText('5 / 0.00 Wh/km')).toBeInTheDocument();
+    expect(within(panel).getByText('+0.00%')).toBeInTheDocument();
+  });
+
   it('renders period comparison, attribution, drives, groups, and correlation caveat', () => {
     render(
       <MemoryRouter>

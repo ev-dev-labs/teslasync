@@ -30,6 +30,7 @@ import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';
 import { defaultExportFilename, downloadJSON, downloadRowsAsCSV } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
+import { convertEfficiencyFromSI } from '@/lib/unitConversion';
 
 import type {
   DriveFsdInsight,
@@ -631,33 +632,36 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const { unitPrefs } = useUnits();
   const rows = insights?.drive_analytics?.route_efficiency ?? [];
   const efficiencyUnit = unitPrefs.distance === 'mi' ? 'Wh/mi' : 'Wh/km';
-  const efficiencyMultiplier = unitPrefs.distance === 'mi' ? 1.609344 : 1;
-  const columns = useMemo<Column<FsdRouteEfficiencyComparison>[]>(() => [
-    {
-      key: 'route_label',
-      header: t('fsd.efficiency.route', 'Route'),
-      render: (row) => row.route_label,
-    },
-    {
-      key: 'fsd_heavy_drive_count',
-      header: t('fsd.efficiency.heavy', 'FSD-heavy'),
-      render: (row) => `${row.fsd_heavy_drive_count} / ${fmtNumber(
-        row.fsd_heavy_efficiency_wh_per_km * efficiencyMultiplier,
-      )} ${efficiencyUnit}`,
-    },
-    {
-      key: 'low_fsd_drive_count',
-      header: t('fsd.efficiency.low', 'Low-FSD'),
-      render: (row) => `${row.low_fsd_drive_count} / ${fmtNumber(
-        row.low_fsd_efficiency_wh_per_km * efficiencyMultiplier,
-      )} ${efficiencyUnit}`,
-    },
-    {
-      key: 'difference_pct',
-      header: t('fsd.efficiency.difference', 'Difference'),
-      render: (row) => `${row.difference_pct >= 0 ? '+' : ''}${fmtNumber(row.difference_pct)}%`,
-    },
-  ], [efficiencyMultiplier, efficiencyUnit, t, fmtNumber]);
+  const columns = useMemo<Column<FsdRouteEfficiencyComparison>[]>(() => {
+    const formatEfficiency = (value: number | null | undefined) =>
+      value != null && Number.isFinite(value)
+        ? `${fmtNumber(convertEfficiencyFromSI(value, unitPrefs.distance), unitPrefs.precision, unitPrefs.locale)} ${efficiencyUnit}`
+        : t('fsd.notMeasured', 'Not measured');
+    return [
+      {
+        key: 'route_label',
+        header: t('fsd.efficiency.route', 'Route'),
+        render: (row) => row.route_label,
+      },
+      {
+        key: 'fsd_heavy_drive_count',
+        header: t('fsd.efficiency.heavy', 'FSD-heavy'),
+        render: (row) => `${row.fsd_heavy_drive_count} / ${formatEfficiency(row.fsd_heavy_efficiency_wh_per_km)}`,
+      },
+      {
+        key: 'low_fsd_drive_count',
+        header: t('fsd.efficiency.low', 'Low-FSD'),
+        render: (row) => `${row.low_fsd_drive_count} / ${formatEfficiency(row.low_fsd_efficiency_wh_per_km)}`,
+      },
+      {
+        key: 'difference_pct',
+        header: t('fsd.efficiency.difference', 'Difference'),
+        render: (row) => row.difference_pct != null && Number.isFinite(row.difference_pct)
+          ? `${row.difference_pct >= 0 ? '+' : ''}${fmtNumber(row.difference_pct, unitPrefs.precision, unitPrefs.locale)}%`
+          : t('fsd.notMeasured', 'Not measured'),
+      },
+    ];
+  }, [unitPrefs, efficiencyUnit, t, fmtNumber]);
 
   return (
     <GlassPanel className="p-4 sm:p-5" data-testid="fsd-route-efficiency">
