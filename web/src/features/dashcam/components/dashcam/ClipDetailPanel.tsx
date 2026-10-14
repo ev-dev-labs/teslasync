@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tabs } from '@/components/ui';
+import { deriveDataState } from '@/api/dataState';
 import type { ClipRecord } from '../../lib/types';
 import { defaultDashcamSettings } from '../../lib/types';
 import { useDashcamSettings, useUpdateDashcamSettings } from '../../hooks/useDashcamSettings';
@@ -10,6 +11,7 @@ import { RedactionEditor } from './RedactionEditor';
 import { EventEvidencePanel } from './EventEvidencePanel';
 import { ReconstructionTimeline } from './ReconstructionTimeline';
 import { ExportManifestPanel } from './ExportManifestPanel';
+import { DashcamSettingsSource } from './DashcamSettingsSource';
 
 export interface ClipDetailPanelProps {
   clip: ClipRecord;
@@ -31,9 +33,16 @@ export function ClipDetailPanel({ clip, vehicleId }: ClipDetailPanelProps) {
 
   const settingsQuery = useDashcamSettings();
   const updateSettings = useUpdateDashcamSettings();
+  const settingsSource = deriveDataState(settingsQuery);
   const settings = settingsQuery.data ?? defaultDashcamSettings();
 
-  const reconstruction = useReconstruction(vehicleId ?? 0, clip, settings, selectedSignals);
+  // Defaults are only a hook argument until the local read establishes preferences.
+  const reconstruction = useReconstruction(
+    settingsSource.hasData ? vehicleId ?? 0 : 0,
+    settingsSource.hasData ? clip : null,
+    settings,
+    settingsSource.hasData ? selectedSignals : [],
+  );
 
   const tabs = [
     { key: 'player' as const, label: t('dashcam.tabs.player', 'Player') },
@@ -46,22 +55,24 @@ export function ClipDetailPanel({ clip, vehicleId }: ClipDetailPanelProps) {
   return (
     <div className="space-y-4">
       <Tabs tabs={tabs} activeTab={activeTab} onChange={(key) => setActiveTab(key as TabKey)} ariaLabel={t('dashcam.tabs.ariaLabel', 'Clip detail sections')} />
+      <DashcamSettingsSource source={settingsSource} isLoading={settingsQuery.isLoading}>
+        {activeTab === 'reconstruction' && (
+          <ReconstructionTimeline
+            clip={clip}
+            vehicleId={vehicleId}
+            settings={settings}
+            onUpdateSettings={(next) => updateSettings.mutate(next)}
+            selectedSignals={selectedSignals}
+            onSelectedSignalsChange={setSelectedSignals}
+            result={reconstruction}
+          />
+        )}
+      </DashcamSettingsSource>
 
       {activeTab === 'player' && <ClipPlayerPanel clip={clip} />}
       {activeTab === 'redaction' && <RedactionEditor clip={clip} />}
       {activeTab === 'events' && <EventEvidencePanel clip={clip} />}
-      {activeTab === 'reconstruction' && (
-        <ReconstructionTimeline
-          clip={clip}
-          vehicleId={vehicleId}
-          settings={settings}
-          onUpdateSettings={(next) => updateSettings.mutate(next)}
-          selectedSignals={selectedSignals}
-          onSelectedSignalsChange={setSelectedSignals}
-          result={reconstruction}
-        />
-      )}
-      {activeTab === 'export' && <ExportManifestPanel clip={clip} reconstruction={reconstruction.reconstruction} />}
+      {activeTab === 'export' && <ExportManifestPanel clip={clip} reconstruction={settingsSource.hasData ? reconstruction.reconstruction : null} />}
     </div>
   );
 }

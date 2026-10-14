@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Input, Button, Caption } from '@/components/ui';
 import { LayoutCard } from '@/components/layout';
 import { QueryError } from '@/components/feedback';
+import { deriveDataState } from '@/api/dataState';
 import { useImportClips } from '../../hooks/useClipCatalog';
 import { useDashcamSettings } from '../../hooks/useDashcamSettings';
-import { defaultDashcamSettings } from '../../lib/types';
+import { DashcamSettingsSource } from './DashcamSettingsSource';
 
 export interface ImportPanelProps {
   vehicleId: number | null;
@@ -25,16 +26,17 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
   const sidecarInputRef = useRef<HTMLInputElement>(null);
 
   const settingsQuery = useDashcamSettings();
+  const settingsSource = deriveDataState(settingsQuery);
   const importClips = useImportClips();
 
   const handleImport = async () => {
-    if (videoFiles.length === 0) return;
+    if (videoFiles.length === 0 || !settingsSource.hasData || !settingsSource.data || importClips.isPending) return;
     try {
       await importClips.mutateAsync({
         files: videoFiles,
         sidecarFile,
         vehicleId,
-        settings: settingsQuery.data ?? defaultDashcamSettings(),
+        settings: settingsSource.data,
       });
     } catch {
       // Keep the native mutation error and selected files available for retry.
@@ -51,6 +53,7 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
       title={t('dashcam.import.title', 'Import clips from disk')}
       description={t('dashcam.import.description', 'Clips never leave this browser tab. Files are parsed and stored locally in IndexedDB, along with any redaction masks and notes you add.')}
     >
+      <DashcamSettingsSource source={settingsSource} isLoading={settingsQuery.isLoading} />
       <div className="grid gap-3 sm:grid-cols-2">
         <Input
           ref={videoInputRef}
@@ -72,7 +75,7 @@ export function ImportPanel({ vehicleId }: ImportPanelProps) {
         <Button
           wrapLabel
           onClick={handleImport}
-          disabled={videoFiles.length === 0}
+          disabled={videoFiles.length === 0 || !settingsSource.hasData || importClips.isPending}
           loading={importClips.isPending}
         >
           {t('dashcam.import.cta', 'Import {{count}} clip(s)', { count: videoFiles.length })}
