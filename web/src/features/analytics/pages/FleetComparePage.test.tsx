@@ -4,18 +4,15 @@
  * The page fans a handful of TanStack Query hooks (vehicles, live state,
  * lifetime driving stats, cost breakdown, monthly mileage) out to a selector
  * toolbar, a KPI band, two side-by-side status cards, two trend charts, and a
- * winner-annotated comparison table. These tests exercise the page end-to-end —
+ * lifetime comparison table. These tests exercise the page end-to-end —
  * the real hooks + real unit-conversion/formatting boundary run against a
  * mocked `request()` — so every branch a user can hit is covered:
  *
  *   1. Full render: title, both selectors, KPI band, status cards, and the
  *      lifetime comparison table with real metric labels + formatted values.
- *   2. Winner semantics — `getWinner`/`winnerCell` across all three branches:
- *      'higher' (A wins Total Drives), 'lower' (B wins Avg Efficiency),
- *      'neutral' (Avg Speed is a tie), and the `a === b` equality tie
- *      (equal Total Distance never annotates a winner). The ✓ is the
- *      non-color a11y signal that must sit next to — and only next to —
- *      the winning cell.
+ *   2. Lifetime readings retain unequal totals, averages, and ties without
+ *      winner verdicts: the responses supply no comparable window, exposure,
+ *      or coverage evidence.
  *   3. Swap — the ⇄ control exchanges the two selected vehicles in place.
  *   4. Single-vehicle account — a focused EmptyState (not empty selectors),
  *      and its "Manage vehicles" CTA navigates to /vehicles.
@@ -106,6 +103,8 @@ import type { Vehicle } from '@/types/vehicle'
 import type { VehicleState, VehicleStateReadings } from '@/api/types'
 import type { DrivingStats } from '@/types/driving'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
+import { analyticsKeys } from '@/api/hooks/useAnalytics'
+import type { CostBreakdown } from '@/types/analytics'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
@@ -172,11 +171,8 @@ function makeStats(overrides: Partial<DrivingStats> = {}): DrivingStats {
   }
 }
 
-// Vehicle B is tuned so every winner branch has a deterministic outcome:
-//   Total Drives (higher)   A 210 > B 140   → A wins
-//   Total Distance (higher) A 5000 = B 5000 → tie via the a===b branch
-//   Avg Efficiency (lower)  A 170 > B 155   → B wins
-//   Avg Speed (neutral)     A 60 vs B 62    → tie via the neutral branch
+// Unequal lifetime totals and averages are not evidence of a fair winner.
+// Equal distance also stays visible without a verdict.
 const statsA = makeStats()
 const statsB = makeStats({
   totalDrives: 140,
@@ -212,6 +208,7 @@ const monthlyB = monthly(2, [
 ])
 
 interface InstallOptions {
+  costForA?: Partial<CostBreakdown>
   vehicles?: Vehicle[]
   /** /vehicles never resolves — drives the page-level loading shell. */
   vehiclesPending?: boolean
@@ -241,6 +238,7 @@ function install(opts: InstallOptions = {}) {
     monthlyPendingB = false,
     monthlyErrorB = false,
     monthlyForA = monthlyA,
+    costForA = costA,
     stateEvidence,
     stateResponse,
     statePending = false,
@@ -264,7 +262,7 @@ function install(opts: InstallOptions = {}) {
       return Promise.resolve(idOf(path) === '2' ? statsB : statsA)
     }
     if (path.startsWith('/analytics/tco')) {
-      return Promise.resolve(idOf(path) === '2' ? costB : costA)
+      return Promise.resolve(idOf(path) === '2' ? costB : costForA)
     }
     if (path.startsWith('/mileage/monthly')) {
       if (idOf(path) === '2' && monthlyPendingB) return never()
@@ -317,6 +315,39 @@ beforeEach(() => {
 })
 
 describe('FleetComparePage evidence preservation', () => {
+  it.each([
+    { total_charging_cost: 500, total_wh: 45000, total_sessions: 80 },
+    { total_charging_cost: 0, total_wh: 0, total_sessions: 0 },
+  ])('discloses positive-cost coverage and preserves authoritative aggregates (%j)', async (totals) => {
+    const response = {
+      ...totals,
+      monthly_breakdown: [{
+        month: '2025-01', ev_cost: 5, energy_wh: 1000,
+        equiv_gas_cost: 10, savings: 5, cumulative_savings: 5,
+      }],
+    }
+    install({ costForA: response })
+    const { client } = renderPage()
+    const table = within(await screen.findByRole('table'))
+    const spendRow = (await table.findByText('Recorded-cost spend')).closest('tr')
+    if (!spendRow) throw new Error('Recorded-cost spend must have a table row')
+    await waitFor(() => expect(within(spendRow).getByText(`$${totals.total_charging_cost.toFixed(2)}`)).toBeInTheDocument())
+    const energyRow = table.getByText('Recorded-cost energy').closest('tr')
+    const sessionsRow = table.getByText('Costed sessions').closest('tr')
+    if (!energyRow || !sessionsRow) throw new Error('Charging subset rows must render')
+    expect(within(energyRow).getByText(`${(totals.total_wh / 1000).toFixed(2)} kWh`)).toBeInTheDocument()
+    expect(within(sessionsRow).getByText(String(totals.total_sessions))).toBeInTheDocument()
+    expect(screen.getAllByText('Charging totals include only sessions whose recorded cost is greater than zero; excluded free or missing-cost sessions cannot be counted from this response.')).toHaveLength(2)
+    expect(screen.getByText('Charging spend and energy use a different filter and temporal scope from positive-drive distance and dates.')).toBeInTheDocument()
+    expect(screen.queryByText('Statistics shown are lifetime totals across all tracked data.')).toBeNull()
+    expect(table.queryByText('Total energy')).toBeNull()
+    expect(table.queryByText('Charge sessions')).toBeNull()
+    expect(client.getQueryData(analyticsKeys.cost('1'))).toEqual(response)
+    const highlight = screen.getByText('Recorded-cost spend · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
+    if (!highlight) throw new Error('Recorded-cost spend must have a highlight')
+    expect(within(highlight).getByText(`$${totals.total_charging_cost.toFixed(2)} vs $650.00`)).toBeInTheDocument()
+  })
+
   it('shows active state loading without invented readings', async () => {
     install({ statePending: true })
     const { client } = renderPage()
@@ -423,15 +454,21 @@ describe('FleetComparePage evidence preservation', () => {
     expect(screen.getByRole('heading', { name: 'Lifetime statistics', level: 2 })).toBeInTheDocument()
   })
 
-  it('announces only actual winner cells without changing their exported readings', async () => {
+  it('retains all lifetime rows without announcing unsupported winners', async () => {
     renderPage()
     const table = within(await screen.findByRole('table'))
-    const winner = await table.findByText('210')
-    expect(within(winner).getByText('Winner')).toHaveClass('sr-only')
-    expect(within(table.getByText('140')).queryByText('Winner')).toBeNull()
-    for (const tiedCell of table.getAllByText('5,000.00 km')) {
-      expect(within(tiedCell).queryByText('Winner')).toBeNull()
+    await table.findByText('210')
+    expect(table.getAllByRole('row')).toHaveLength(11)
+    for (const label of [
+      'Total drives', 'Total distance', 'Avg efficiency', 'Avg speed', 'Top speed',
+      'Regen ratio', 'CO₂ saved', 'Recorded-cost spend', 'Recorded-cost energy', 'Costed sessions',
+    ]) {
+      expect(table.getByText(label)).toBeInTheDocument()
     }
+    expect(table.getByText('140')).toBeInTheDocument()
+    expect(table.getAllByText('5,000.00 km')).toHaveLength(2)
+    expect(table.queryByText('Winner')).toBeNull()
+    expect(table.queryByText('✓')).toBeNull()
   })
 
   it('retains stale snapshot readings and identifies their observation limits', async () => {
@@ -486,7 +523,7 @@ describe('FleetComparePage', () => {
     // Charging Cost / CO₂ Saved also appear as KPI-band labels → getAllByText).
     for (const label of [
       'Total drives', 'Total distance', 'Avg efficiency', 'Avg speed', 'Top speed',
-      'Regen ratio', 'CO₂ saved', 'Charging cost', 'Total energy', 'Charge sessions',
+      'Regen ratio', 'CO₂ saved', 'Recorded-cost spend', 'Recorded-cost energy', 'Costed sessions',
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     }
@@ -496,8 +533,8 @@ describe('FleetComparePage', () => {
     // KPI band interpolates the i18n "A vs B" connector with live/lifetime data.
     const batteryReading = screen.getByText('Battery level · Model 3 LR').closest('[role="listitem"]') as HTMLElement
     expect(await within(batteryReading).findByText('72% vs 65%')).toBeInTheDocument()
-    const chargingCostReading = screen.getByText('Charging cost · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
-    if (!chargingCostReading) throw new Error('Charging cost · Model 3 LR must belong to a semantic listitem')
+    const chargingCostReading = screen.getByText('Recorded-cost spend · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
+    if (!chargingCostReading) throw new Error('Recorded-cost spend · Model 3 LR must belong to a semantic listitem')
     expect(await within(chargingCostReading).findByText('$500.00 vs $650.00')).toBeInTheDocument()
 
     // Vehicle names surface as the table's value-column headers.
@@ -508,29 +545,24 @@ describe('FleetComparePage', () => {
     expect(comparisonTable.querySelectorAll('[role="separator"], [draggable="true"]')).toHaveLength(0)
   })
 
-  it('annotates the winner with a ✓ across higher / lower / tie semantics', async () => {
+  it('preserves populated lifetime differences and ties without winner styling', async () => {
     renderPage()
     const comparisonTable = within(await screen.findByRole('table'))
 
     // Settle past the transient auto-select window before reading cell values.
-    // 'higher' → A (210) beats B (140): ✓ sits with the winner only.
-    const drivesWinner = await comparisonTable.findByText('210')
-    expect(within(drivesWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(comparisonTable.getByText('140')).queryByText('✓')).toBeNull()
-
-    // 'lower' → B (155 Wh/km) beats A (170 Wh/km).
-    const effWinner = comparisonTable.getByText('155.00 Wh/km')
-    expect(within(effWinner).getByText('✓')).toBeInTheDocument()
-    expect(within(comparisonTable.getByText('170.00 Wh/km')).queryByText('✓')).toBeNull()
-
-    // 'neutral' → Avg Speed never annotates a winner even though the values differ.
-    expect(within(comparisonTable.getByText('60.00 km/h')).queryByText('✓')).toBeNull()
-    expect(within(comparisonTable.getByText('62.00 km/h')).queryByText('✓')).toBeNull()
-
-    // a === b → equal Total Distance is a tie despite the 'higher' semantic.
-    for (const cell of comparisonTable.getAllByText('5,000.00 km')) {
-      expect(within(cell).queryByText('✓')).toBeNull()
+    await comparisonTable.findByText('210')
+    for (const value of [
+      '210', '140', '155.00 Wh/km', '170.00 Wh/km', '60.00 km/h', '62.00 km/h',
+      '50.00%', '30.00%', '320.00 kg', '300.00 kg', '$500.00', '$650.00',
+      '45.00 kWh', '52.00 kWh', '80', '95',
+    ]) {
+      expect(comparisonTable.getByText(value)).toHaveClass('text-[var(--text-primary)]')
     }
+    for (const cell of comparisonTable.getAllByText('5,000.00 km')) {
+      expect(cell).toHaveClass('text-[var(--text-primary)]')
+    }
+    expect(comparisonTable.queryByText('✓')).toBeNull()
+    expect(comparisonTable.queryByText('Winner')).toBeNull()
   })
 
   it('swaps the two selected vehicles in place', async () => {

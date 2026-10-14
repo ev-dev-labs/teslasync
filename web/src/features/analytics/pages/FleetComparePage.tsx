@@ -498,6 +498,8 @@ export default function FleetComparePage() {
     const cA = costA;
     const cB = costB;
 
+    // Lifetime responses do not establish comparable windows, exposure, or coverage.
+    // Keep every reading, but do not turn quantity differences into winner verdicts.
     return [
       {
         metric: t('comparison.totalDrives', 'Total drives'),
@@ -505,7 +507,7 @@ export default function FleetComparePage() {
         valueB: formatKnown(dsB?.totalDrives, fmtInt),
         rawA: dsA?.totalDrives ?? null,
         rawB: dsB?.totalDrives ?? null,
-        winner: 'higher',
+        winner: 'neutral',
       },
       {
         metric: t('comparison.totalDistance', 'Total distance'),
@@ -513,7 +515,7 @@ export default function FleetComparePage() {
         valueB: formatKnown(dsB?.totalDistanceKm, value => `${fmtNumber(fromKm(value))} ${distanceUnit}`),
         rawA: dsA?.totalDistanceKm ?? null,
         rawB: dsB?.totalDistanceKm ?? null,
-        winner: 'higher',
+        winner: 'neutral',
       },
       {
         metric: t('comparison.avgEfficiency', 'Avg efficiency'),
@@ -521,7 +523,7 @@ export default function FleetComparePage() {
         valueB: formatKnown(dsB?.avgEfficiencyWhKm, value => `${fmtNumber(whPerKmToDisplay(value))} ${efficiencyUnit}`),
         rawA: dsA?.avgEfficiencyWhKm ?? null,
         rawB: dsB?.avgEfficiencyWhKm ?? null,
-        winner: 'lower',
+        winner: 'neutral',
       },
       {
         metric: t('comparison.avgSpeed', 'Avg speed'),
@@ -545,7 +547,7 @@ export default function FleetComparePage() {
         valueB: formatKnown(dsB?.regenRatio, value => `${fmtNumber(value * 100)}%`),
         rawA: dsA?.regenRatio ?? null,
         rawB: dsB?.regenRatio ?? null,
-        winner: 'higher',
+        winner: 'neutral',
       },
       {
         metric: t('comparison.co2Saved', 'CO₂ saved'),
@@ -553,18 +555,18 @@ export default function FleetComparePage() {
         valueB: formatKnown(dsB?.co2SavedKg, value => `${fmtNumber(value)} kg`),
         rawA: dsA?.co2SavedKg ?? null,
         rawB: dsB?.co2SavedKg ?? null,
-        winner: 'higher',
+        winner: 'neutral',
       },
       {
-        metric: t('comparison.chargingCost', 'Charging cost'),
+        metric: t('tco.kpis.recordedSpend', 'Recorded-cost spend'),
         valueA: formatKnown(cA?.total_charging_cost, formatCurrency),
         valueB: formatKnown(cB?.total_charging_cost, formatCurrency),
         rawA: cA?.total_charging_cost ?? null,
         rawB: cB?.total_charging_cost ?? null,
-        winner: 'lower',
+        winner: 'neutral',
       },
       {
-        metric: t('comparison.totalEnergy', 'Total energy'),
+        metric: t('tco.kpis.recordedEnergy', 'Recorded-cost energy'),
         valueA: formatKnown(cA?.total_wh, formatEnergy),
         valueB: formatKnown(cB?.total_wh, formatEnergy),
         rawA: cA?.total_wh ?? null,
@@ -572,7 +574,7 @@ export default function FleetComparePage() {
         winner: 'neutral',
       },
       {
-        metric: t('comparison.chargeSessions', 'Charge sessions'),
+        metric: t('tco.kpis.costedSessions', 'Costed sessions'),
         valueA: formatKnown(cA?.total_sessions, fmtInt),
         valueB: formatKnown(cB?.total_sessions, fmtInt),
         rawA: cA?.total_sessions ?? null,
@@ -626,8 +628,8 @@ export default function FleetComparePage() {
         { id: 'state-b', label: `${nameB} · ${t('comparison.vehicleState', 'Vehicle state')}`, query: stateQueryB, enabled: numIdB > 0 },
         { id: 'stats-a', label: `${nameA} · ${t('comparison.lifetimeStats', 'Lifetime statistics')}`, query: statsQueryA, enabled: !!vehicleIdA },
         { id: 'stats-b', label: `${nameB} · ${t('comparison.lifetimeStats', 'Lifetime statistics')}`, query: statsQueryB, enabled: !!vehicleIdB },
-        { id: 'cost-a', label: `${nameA} · ${t('comparison.chargingCost', 'Charging cost')}`, query: costQueryA, enabled: !!vehicleIdA },
-        { id: 'cost-b', label: `${nameB} · ${t('comparison.chargingCost', 'Charging cost')}`, query: costQueryB, enabled: !!vehicleIdB },
+        { id: 'cost-a', label: `${nameA} · ${t('tco.kpis.recordedSpend', 'Recorded-cost spend')}`, query: costQueryA, enabled: !!vehicleIdA },
+        { id: 'cost-b', label: `${nameB} · ${t('tco.kpis.recordedSpend', 'Recorded-cost spend')}`, query: costQueryB, enabled: !!vehicleIdB },
         { id: 'monthly-a', label: `${nameA} · ${t('comparison.monthlyDistance', 'Monthly distance')}`, query: monthlyQueryA, enabled: !!vehicleIdA },
         { id: 'monthly-b', label: `${nameB} · ${t('comparison.monthlyDistance', 'Monthly distance')}`, query: monthlyQueryB, enabled: !!vehicleIdB },
       ]}
@@ -709,7 +711,11 @@ export default function FleetComparePage() {
 
       {/* ── Key highlights (KPI band) ── */}
       <FadeIn delay={0.05}>
-        <Section id="fleet-compare-highlights-section" title={t('comparison.highlights', 'Key highlights')}>
+        <Section
+          id="fleet-compare-highlights-section"
+          title={t('comparison.highlights', 'Key highlights')}
+          description={t('tco.methodology.costedOnly', 'Charging totals include only sessions whose recorded cost is greater than zero; excluded free or missing-cost sessions cannot be counted from this response.')}
+        >
           <FleetHighlights nameA={nameA} nameB={nameB} items={[
             {
               id: 'battery-pair',
@@ -740,7 +746,7 @@ export default function FleetComparePage() {
             },
             {
               id: 'cost-pair',
-              label: t('comparison.costDiff', 'Charging cost'),
+              label: t('tco.kpis.recordedSpend', 'Recorded-cost spend'),
               metricId: 'currency', rawA: costA?.total_charging_cost, rawB: costB?.total_charging_cost,
               format: formatCurrency,
               retained: (costA != null && (costQueryA.isError || costQueryA.fetchStatus === 'paused'))
@@ -908,9 +914,14 @@ export default function FleetComparePage() {
           <GlassPanel className="min-w-0 p-3 @[640px]:p-4">
             <div className="mb-3 flex items-center gap-2">
               <Info className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
-              <Caption>
-                {t('comparison.lifetimeNote', 'Statistics shown are lifetime totals across all tracked data.')}
-              </Caption>
+              <div className="min-w-0">
+                <Caption className="block">
+                  {t('tco.methodology.costedOnly', 'Charging totals include only sessions whose recorded cost is greater than zero; excluded free or missing-cost sessions cannot be counted from this response.')}
+                </Caption>
+                <Caption className="block">
+                  {t('tco.methodology.scopeMismatch', 'Charging spend and energy use a different filter and temporal scope from positive-drive distance and dates.')}
+                </Caption>
+              </div>
             </div>
             {vehiclesLoading || (statsLoading && !drivingStatsA && !drivingStatsB && !costA && !costB) ? (
               <Skeleton lines={8} />
