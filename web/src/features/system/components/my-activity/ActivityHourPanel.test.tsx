@@ -234,6 +234,19 @@ describe('ActivityHourPanel — chart wiring', () => {
 
 /* ── Structure / a11y invariants ─────────────────────────────────────────── */
 describe('ActivityHourPanel — structure', () => {
+  it('uses the neutral secondary role for the clock without recolouring the chart series', () => {
+    renderPanel();
+
+    const title = screen.getByRole('heading', { name: 'By hour of day' });
+    const icon = title.querySelector('svg');
+
+    expect(icon).toHaveClass('lucide-clock', 'h-4', 'w-4', 'text-[var(--text-secondary)]');
+    expect(icon).not.toHaveClass('text-cyan-300');
+    expect(icon).toHaveAttribute('aria-hidden', 'true');
+    expect(H.barProps?.fill).toBe(chartTokens.series[4]);
+    expect(H.barProps?.name).toBe('Actions');
+  });
+
   it('marks the decorative title icon as aria-hidden', () => {
     renderPanel();
 

@@ -58,7 +58,7 @@ export function ActivityHourPanel({
     <GlassPanel className={className}>
       <div className="p-4 sm:p-5">
         <PanelTitle className="mb-3 flex items-center gap-2">
-          <Icons.clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.clock className="h-4 w-4 text-[var(--text-secondary)]" aria-hidden="true" />
           {t('activity.myActivity.byHour.title', 'By hour of day')}
         </PanelTitle>
         <EmbeddedChart
