@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { fireEvent, render, screen, within, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { RedisSignalsResponse } from '@/api/hooks/useRedisSignals'
+import { deriveDataState } from '@/api/dataState'
 
 const state = vi.hoisted(() => ({
   vehicleId: 4 as number | null,
@@ -16,6 +17,10 @@ const state = vi.hoisted(() => ({
   purgeOne: vi.fn(),
   purgeAll: vi.fn(),
   setVehicleId: vi.fn(),
+  fleetData: [{ id: 4, display_name: 'DRILL fixture', vin: '' }] as { id: number; display_name: string; vin: string }[] | undefined,
+  fleetError: null as Error | null,
+  fleetFetchStatus: 'idle' as 'idle' | 'paused' | 'fetching',
+  fleetRefetch: vi.fn(),
 }))
 
 vi.mock('react-i18next', async () => {
@@ -37,12 +42,20 @@ vi.mock('react-i18next', async () => {
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({
     vehicleId: state.vehicleId,
-    vehicles: [{ id: 4, display_name: 'DRILL fixture', vin: '' }],
+    vehicles: state.fleetData ?? [],
+    vehiclesState: deriveDataState({
+      data: state.fleetData,
+      error: state.fleetError,
+      fetchStatus: state.fleetFetchStatus,
+      isFetching: state.fleetFetchStatus === 'fetching',
+      refetch: state.fleetRefetch,
+    }),
     setVehicleId: state.setVehicleId,
   }),
 }))
 
-vi.mock('@/api/hooks/useRedisSignals', () => ({
+vi.mock('@/api/hooks/useRedisSignals', async () => ({
+  ...await vi.importActual<typeof import('@/api/hooks/useRedisSignals')>('@/api/hooks/useRedisSignals'),
   useRedisSignals: () => ({
     data: state.data,
     isLoading: state.isLoading,
@@ -81,6 +94,7 @@ vi.mock('@tanstack/react-virtual', async () => {
 import { ToastProvider } from '@/components/feedback/Toast'
 import { gaugeTone } from '@/lib/tokens'
 import RedisSignalViewerPage from './RedisSignalViewerPage'
+import { getRedisSignalKeys } from '@/api/devtools'
 
 function fixture(): RedisSignalsResponse {
   return {
@@ -108,13 +122,16 @@ function fixture(): RedisSignalsResponse {
 }
 
 function mount() {
-  return render(
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  const content = () => (
     <MemoryRouter>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider client={client}>
         <ToastProvider><RedisSignalViewerPage /></ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  const page = render(content())
+  return { ...page, rerenderPage: () => page.rerender(content()) }
 }
 
 function signalRow(name: string) {
@@ -138,9 +155,169 @@ beforeEach(() => {
   state.isError = false
   state.error = null
   state.fetchStatus = 'idle'
+  state.fleetData = [{ id: 4, display_name: 'DRILL fixture', vin: '' }]
+  state.fleetError = null
+  state.fleetFetchStatus = 'idle'
 })
 
 describe('RedisSignalViewerPage semantic adoption', () => {
+  it('renders structured JSON and explicit null without changing the backend type or cache identity', () => {
+    const object = { nested: { enabled: false, count: 0, missing: null }, label: '<script>fixture</script>' }
+    const array = [0, false, '', null, { mode: 'fixture' }]
+    state.data = {
+      vehicle_id: 4,
+      signal_count: 3,
+      signals: {
+        DiagnosticObject: { value: object, type: 'string', source: 'redis', freshness: 'unknown' },
+        DiagnosticArray: { value: array, type: 'string' },
+        DiagnosticNull: { value: null, type: 'string' },
+      },
+      meta: fixture().meta,
+    }
+    mount()
+    for (const [name, value] of Object.entries({ DiagnosticObject: object, DiagnosticArray: array, DiagnosticNull: null })) {
+      const row = signalRow(name)
+      const code = row.getAllByRole('cell')[1].querySelector('code')
+      expect(code?.textContent).toBe(JSON.stringify(value, null, 2))
+      expect(code).toHaveClass('whitespace-pre-wrap', 'break-all')
+      expect(row.getByText('string')).toBeInTheDocument()
+    }
+    expect(screen.queryByText('[object Object]')).not.toBeInTheDocument()
+    expect(screen.getByText('vehicle:4:signals')).toBeInTheDocument()
+    expectSections()
+  })
+
+  it('distinguishes an absent boundary value from JSON null, false and measured zero', () => {
+    state.data = {
+      vehicle_id: 4,
+      signal_count: 4,
+      signals: {
+        DiagnosticMissing: JSON.parse('{"type":"string"}'),
+        DiagnosticNull: { value: null, type: 'string' },
+        DoorOpen: { value: false, type: 'boolean' },
+        BatteryLevel: { value: 0, type: 'number' },
+      },
+    }
+    mount()
+    expect(signalRow('DiagnosticMissing').getByText('Unknown')).toBeInTheDocument()
+    expect(signalRow('DiagnosticNull').getByText('null')).toBeInTheDocument()
+    expect(signalRow('DoorOpen').getByText('false')).toBeInTheDocument()
+    expect(signalRow('BatteryLevel').getByText('0')).toBeInTheDocument()
+  })
+
+  it('distinguishes unresolved, failed and successful-empty fleet selection and retries the fleet', () => {
+    state.vehicleId = null
+    state.data = undefined
+    state.fleetData = undefined
+    state.fleetFetchStatus = 'fetching'
+    const page = mount()
+    const selector = within(screen.getByTestId('redis-fleet-selector'))
+    expect(selector.getByText('Loading...')).toBeInTheDocument()
+    expect(selector.getByRole('combobox')).toBeDisabled()
+    expect(selector.queryByText('No data available')).not.toBeInTheDocument()
+    state.fleetFetchStatus = 'paused'
+    page.rerenderPage()
+    expect(selector.getByText('Refresh paused')).toBeInTheDocument()
+    expect(selector.queryByText('Loading...')).not.toBeInTheDocument()
+    expect(selector.queryByText('No data available')).not.toBeInTheDocument()
+    fireEvent.click(selector.getByRole('button', { name: 'Retry' }))
+    expect(state.fleetRefetch).toHaveBeenCalledTimes(1)
+    state.fleetFetchStatus = 'idle'
+    state.fleetError = new Error('Fleet failed')
+    page.rerenderPage()
+    expect(selector.getByRole('alert')).toHaveTextContent('Failed')
+    fireEvent.click(selector.getByRole('button', { name: 'Retry' }))
+    expect(state.fleetRefetch).toHaveBeenCalledTimes(2)
+    expect(state.refetch).not.toHaveBeenCalled()
+    state.fleetError = null
+    state.fleetData = []
+    page.rerenderPage()
+    expect(selector.getByText('No data available')).toBeInTheDocument()
+    expect(selector.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument()
+    expect(selector.getByRole('combobox')).toBeDisabled()
+  })
+
+  it('retains populated fleet choices and signals across fleet refresh failure, pause and recovery', () => {
+    const page = mount()
+    const selector = within(screen.getByTestId('redis-fleet-selector'))
+    state.fleetError = new Error('Fleet refresh failed')
+    page.rerenderPage()
+    expect(selector.getByText('Cached · refresh failed')).toBeInTheDocument()
+    expect(selector.getByRole('combobox')).toBeEnabled()
+    expect(selector.getByRole('option', { name: 'DRILL fixture' })).toBeInTheDocument()
+    expect(signalRow('BatteryLevel').getByText('0')).toBeInTheDocument()
+    fireEvent.click(selector.getByRole('button', { name: 'Retry' }))
+    expect(state.fleetRefetch).toHaveBeenCalledTimes(1)
+    state.fleetError = null
+    state.fleetFetchStatus = 'paused'
+    page.rerenderPage()
+    expect(selector.getByText('Refresh paused')).toBeInTheDocument()
+    state.fleetFetchStatus = 'fetching'
+    page.rerenderPage()
+    expect(selector.getByText('Refreshing')).toBeInTheDocument()
+    state.fleetFetchStatus = 'idle'
+    page.rerenderPage()
+    expect(selector.queryByText('Refreshing')).not.toBeInTheDocument()
+    expect(selector.getByRole('combobox')).toHaveValue('4')
+    expectSections()
+  })
+
+  it.each([
+    { name: 'active loading', fetchStatus: 'fetching' as const, message: null },
+    { name: 'paused without data', fetchStatus: 'paused' as const, message: 'Refresh paused' },
+    { name: 'pending without data', fetchStatus: 'idle' as const, message: 'Pending' },
+  ])('does not diagnose an empty cache during $name', async ({ fetchStatus, message }) => {
+    state.data = undefined
+    state.fetchStatus = fetchStatus
+    state.isLoading = fetchStatus === 'fetching'
+    const page = mount()
+    expectSections()
+    if (message) expect(screen.getAllByText(message).length).toBeGreaterThanOrEqual(4)
+    const skeletons = page.container.querySelectorAll('[aria-hidden="true"][class*="--skeleton-bg"]')
+    if (message) expect(skeletons).toHaveLength(0)
+    else expect(skeletons.length).toBeGreaterThanOrEqual(11)
+    expect(screen.queryByText('No signals cached for this vehicle')).not.toBeInTheDocument()
+    expect(screen.queryByText('Cache diagnostics are unavailable for this vehicle')).not.toBeInTheDocument()
+    expect(screen.queryByText('No categorized signals to summarize')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('redis-diagnostic-banner')).not.toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).not.toBeInTheDocument()
+    await waitFor(() => expect(getRedisSignalKeys).not.toHaveBeenCalled())
+    page.unmount()
+  })
+
+  it('preserves successful empty cache diagnostics and measured zero counts', async () => {
+    state.data = {
+      vehicle_id: 4, signal_count: 0, signals: {},
+      meta: { ...fixture().meta!, l1_signal_count: 0, redis_field_count: 0, l1_last_seen_at: new Date().toISOString() },
+    }
+    mount()
+    expectSections()
+    expect(screen.getByText('No signals cached for this vehicle')).toBeInTheDocument()
+    expect(screen.getByText('No categorized signals to summarize')).toBeInTheDocument()
+    expect(screen.queryByText('Pending')).not.toBeInTheDocument()
+    expect(screen.getByTestId('redis-signals-summary')).toHaveTextContent('0')
+    await waitFor(() => expect(getRedisSignalKeys).toHaveBeenCalledTimes(1))
+  })
+
+  it('retains all section data through refresh failure and removes the retained state on recovery', () => {
+    const page = mount()
+    state.isError = true
+    state.error = new Error('Synthetic refresh failure')
+    page.rerenderPage()
+    expect(screen.getByText('Showing retained measurements')).toBeInTheDocument()
+    expect(signalRow('BatteryLevel').getByText('0')).toBeInTheDocument()
+    expect(screen.getByText('vehicle:4:signals')).toBeInTheDocument()
+    expect(screen.getAllByRole('progressbar')).toHaveLength(5)
+    state.isError = false
+    state.error = null
+    page.rerenderPage()
+    expect(screen.queryByText('Showing retained measurements')).not.toBeInTheDocument()
+    expect(screen.getByTestId('redis-signals-summary')).toHaveAttribute('data-retained', 'false')
+    expect(signalRow('BatteryLevel').getByText('0')).toBeInTheDocument()
+    expectSections()
+    expect(getRedisSignalKeys).not.toHaveBeenCalled()
+  })
+
   it('preserves raw SI values, types, diagnostic fields and all five sections', () => {
     mount()
     expectSections()
@@ -158,7 +335,7 @@ describe('RedisSignalViewerPage semantic adoption', () => {
     }
     expect(signalRow('DiagnosticBlank').getAllByRole('cell')[1].textContent).toBe('')
     for (const label of ['Live store mode', 'VIN', 'Redis key', 'L1 signals', 'L2 fields (raw)', 'L1 last seen', 'L2 last seen']) {
-      expect(screen.getByText(label)).toBeInTheDocument()
+      expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     }
     expect(screen.getByText('vehicle:4:signals')).toBeInTheDocument()
     expect(screen.getByLabelText('Select vehicle')).toHaveValue('4')
@@ -188,7 +365,7 @@ describe('RedisSignalViewerPage semantic adoption', () => {
     }
     mount()
     expect(signalRow('Latitude').getByText('number')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Coordinate, click to reveal' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Coordinate, click to reveal')).toBeInTheDocument()
     expect(screen.queryByText('12.345678')).not.toBeInTheDocument()
     expect(state.purgeOne).not.toHaveBeenCalled()
   })

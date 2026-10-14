@@ -32,9 +32,24 @@ import type {
 export const getCaptureStats = () => request<CaptureStats>('/dev-tools/telemetry-capture/stats')
 
 // === Redis Signal Cache ===
+export type RedisSignalValue =
+  | number
+  | string
+  | boolean
+  | null
+  | RedisSignalValue[]
+  | { [key: string]: RedisSignalValue }
+
 export interface RedisSignalEntry {
-  value: number | string | boolean
+  value: RedisSignalValue
+  // The backend labels non-numeric, non-boolean JSON (including objects
+  // and null) as "string"; this is not a JSON-shape discriminator.
   type: 'number' | 'string' | 'boolean'
+  observed_at?: string | null
+  source?: 'redis'
+  timestamp_provenance?: 'observation' | 'unknown'
+  freshness?: 'fresh' | 'stale' | 'unknown'
+  read_availability?: 'available'
 }
 
 export interface RedisSignalsMeta {
@@ -42,8 +57,8 @@ export interface RedisSignalsMeta {
   redis_key: string
   redis_field_count: number
   l1_signal_count: number
-  l1_last_seen_at?: string
-  l2_last_seen_at?: string
+  l1_last_seen_at?: string | null
+  l2_last_seen_at?: string | null
   vehicle_vin?: string
 }
 

@@ -154,6 +154,29 @@ describe('getExtendedHealth', () => {
 // ---------------------------------------------------------------------------
 
 describe('Redis signal cache', () => {
+  it('preserves supported JSON shapes and the backend string fallback discriminator verbatim', async () => {
+    const payload = {
+      vehicle_id: 7,
+      signal_count: 3,
+      signals: {
+        Compound: { value: { nested: [0, false, '', null, { status: 'fixture' }] }, type: 'string' },
+        Array: { value: [false, null, 0], type: 'string' },
+        Null: {
+          value: null, type: 'string', source: 'redis', observed_at: null,
+          timestamp_provenance: 'unknown', freshness: 'unknown', read_availability: 'available',
+        },
+      },
+    } satisfies RedisSignalsResponse
+    mockedRequest.mockResolvedValueOnce(payload)
+    const controller = new AbortController()
+
+    const result = await getRedisSignals(7, { signal: controller.signal })
+
+    expect(result).toBe(payload)
+    expect(result.signals).toEqual(payload.signals)
+    expect(call()).toEqual(['/dev-tools/redis-signals?vehicle_id=7', { signal: controller.signal }])
+  })
+
   it('preserves omitted Go metadata fields without inventing timestamps or VIN', async () => {
     const payload = {
       vehicle_id: 7,

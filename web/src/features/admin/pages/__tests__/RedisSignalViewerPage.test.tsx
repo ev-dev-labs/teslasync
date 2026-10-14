@@ -9,9 +9,9 @@
  * the top-of-page numbers don't lie about a 0 count.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { ReactNode } from 'react';
 
@@ -72,12 +72,18 @@ vi.mock('framer-motion', () => {
 
 // ── Vehicle hook: mutable so the empty-fleet safety state stays covered ─
 const vehicleHook = vi.hoisted(() => ({
-  data: [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }],
+  data: [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }] as
+    { id: number; display_name: string; vin: string }[] | undefined,
+  error: null as Error | null,
+  refetch: vi.fn(),
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({
     data: vehicleHook.data,
-    isLoading: false,
+    isLoading: vehicleHook.data === undefined && !vehicleHook.error,
+    isSuccess: vehicleHook.data !== undefined && !vehicleHook.error,
+    error: vehicleHook.error,
+    refetch: vehicleHook.refetch,
   }),
 }));
 
@@ -95,7 +101,7 @@ vi.mock('@/api/devtools', async () => {
   };
 });
 
-import { getRedisSignals, purgeRedisSignals, purgeAllRedisSignals } from '@/api/devtools';
+import { getRedisSignals, getRedisSignalKeys, purgeRedisSignals, purgeAllRedisSignals } from '@/api/devtools';
 import { ApiError } from '@/lib/resilience';
 import RedisSignalViewerPage from '../RedisSignalViewerPage';
 
@@ -105,6 +111,8 @@ const mockedPurgeAll = purgeAllRedisSignals as unknown as ReturnType<typeof vi.f
 
 beforeEach(() => {
   vehicleHook.data = [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }];
+  vehicleHook.error = null;
+  vehicleHook.refetch.mockClear();
 });
 
 function renderPage() {
@@ -132,6 +140,69 @@ function makeApiError(status: number, message: string): ApiError {
 describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => {
   beforeEach(() => {
     mockedGetSignals.mockReset();
+    vi.mocked(getRedisSignalKeys).mockClear();
+  });
+
+  it.each([
+    { name: 'initial fleet loading', data: undefined, notice: 'Loading...' },
+    { name: 'successful empty fleet', data: [], notice: 'No data available' },
+  ])('distinguishes $name through the real selected-vehicle hook', ({ data, notice }) => {
+    vehicleHook.data = data;
+    renderPage();
+    const selector = within(screen.getByTestId('redis-fleet-selector'));
+    expect(selector.getByRole('combobox')).toBeDisabled();
+    expect(selector.getByText(notice)).toBeInTheDocument();
+    expect(selector.queryByRole('alert')).not.toBeInTheDocument();
+    expect(selector.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(mockedGetSignals).not.toHaveBeenCalled();
+    expect(getRedisSignalKeys).not.toHaveBeenCalled();
+    expect(screen.queryByTestId('redis-diagnostic-banner')).not.toBeInTheDocument();
+  });
+
+  it('exposes fleet prerequisite failure and retry through the real selected-vehicle hook', () => {
+    vehicleHook.data = undefined;
+    vehicleHook.error = new Error('Fleet inventory failed');
+    renderPage();
+    expect(screen.getByLabelText('Select vehicle')).toBeDisabled();
+    expect(screen.getByRole('alert')).toHaveTextContent('Failed');
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(vehicleHook.refetch).toHaveBeenCalledTimes(1);
+    expect(mockedGetSignals).not.toHaveBeenCalled();
+    expect(screen.queryByText('No signals cached for this vehicle')).not.toBeInTheDocument();
+  });
+
+  it('defers empty diagnostics while the initial query is paused and shows successful empty after recovery', async () => {
+    mockedGetSignals.mockResolvedValue({
+      vehicle_id: 1,
+      signal_count: 0,
+      signals: {},
+      meta: {
+        live_signal_store_mode: 'hybrid',
+        redis_key: 'vehicle:1:signals',
+        redis_field_count: 0,
+        l1_signal_count: 0,
+        vehicle_vin: '',
+        l1_last_seen_at: new Date().toISOString(),
+        l2_last_seen_at: null,
+      },
+    });
+    onlineManager.setOnline(false);
+    const page = renderPage();
+    try {
+      fireEvent.change(screen.getByLabelText('Select vehicle'), { target: { value: '1' } });
+      await waitFor(() => expect(screen.getAllByText('Refresh paused').length).toBeGreaterThanOrEqual(4));
+      expect(mockedGetSignals).not.toHaveBeenCalled();
+      expect(getRedisSignalKeys).not.toHaveBeenCalled();
+      expect(screen.queryByText('No signals cached for this vehicle')).not.toBeInTheDocument();
+      expect(screen.queryByText('No categorized signals to summarize')).not.toBeInTheDocument();
+      onlineManager.setOnline(true);
+      expect(await screen.findByText('No signals cached for this vehicle')).toBeInTheDocument();
+      expect(screen.getByText('No categorized signals to summarize')).toBeInTheDocument();
+      await waitFor(() => expect(getRedisSignalKeys).toHaveBeenCalledTimes(1));
+    } finally {
+      page.unmount();
+      onlineManager.setOnline(true);
+    }
   });
 
   it('renders the cacheNotWired banner when getRedisSignals rejects with 503 "not available" (NOT the legacy "No signals cached" string)', async () => {
@@ -164,6 +235,23 @@ describe('RedisSignalViewerPage — Phase-46 / Prompt 59 (error states)', () => 
       // Walk up to the StatCard root and inspect its rendered value text.
       const card = labelEl.closest('div')?.parentElement?.parentElement;
       expect(card?.textContent).toContain('—');
+    });
+
+    it('retains structured raw values through the real Redis query hook', async () => {
+      const value = { active: false, samples: [0, null, 'fixture'] };
+      mockedGetSignals.mockResolvedValue({
+        vehicle_id: 1,
+        signal_count: 1,
+        signals: { DiagnosticCompound: { value, type: 'string', source: 'redis' } },
+      });
+      renderPage();
+      fireEvent.change(screen.getByLabelText('Select vehicle'), { target: { value: '1' } });
+
+      const name = await screen.findByText('DiagnosticCompound');
+      const row = name.closest('tr');
+      expect(row?.querySelector('code')?.textContent).toBe(JSON.stringify(value, null, 2));
+      expect(row).toHaveTextContent('string');
+      expect(mockedGetSignals).toHaveBeenCalledWith(1, { signal: expect.any(AbortSignal) });
     });
   });
 });
@@ -272,7 +360,7 @@ describe('RedisSignalViewerPage — Purge cache controls', () => {
     renderPage();
     const selects = screen.getAllByRole('combobox');
     fireEvent.change(selects[0] as HTMLSelectElement, { target: { value: '1' } });
-    await waitFor(() => expect(mockedGetSignals).toHaveBeenCalledWith(1));
+    await waitFor(() => expect(mockedGetSignals).toHaveBeenCalledWith(1, { signal: expect.any(AbortSignal) }));
 
     // Open dialog targeting vehicle 1.
     fireEvent.click(screen.getByRole('button', { name: /^Purge Redis \(L2\)$/ }));

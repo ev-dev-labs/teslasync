@@ -68,10 +68,8 @@ function categorizeSignal(name: string): SignalCategory {
 
 /* ─── table row type ────────────────────────────────────────────────── */
 
-interface SignalRow {
+interface SignalRow extends RedisSignalEntry {
   name: string
-  value: number | string | boolean
-  type: string
   category: SignalCategory
 }
 
@@ -101,6 +99,16 @@ function buildColumns(t: (key: string, fb: string) => string): Column<SignalRow>
       key: 'value',
       header: t('redis.value', 'Value'),
       render: (row) => {
+        if (row.value === undefined) {
+          return <Text size="sm" color="secondary">{t('common.unknown', 'Unknown')}</Text>
+        }
+        if (row.value === null || typeof row.value === 'object') {
+          return (
+            <Code className="block whitespace-pre-wrap break-all">
+              {JSON.stringify(row.value, null, 2)}
+            </Code>
+          )
+        }
         // Location signals are routed through MaskedValue so the raw
         // coordinate never sits on screen by default. The mask still
         // shows enough structure (••.•••) to confirm the row carries
@@ -165,6 +173,7 @@ export default function RedisSignalViewerPage() {
   const {
     vehicleId: selectedVehicleId,
     vehicles: vehicleList,
+    vehiclesState,
     setVehicleId: setSelectedVehicleId,
   } = useSelectedVehicle()
   const [search, setSearch] = useState('')
@@ -190,7 +199,6 @@ export default function RedisSignalViewerPage() {
   const signalQuery = useRedisSignals(selectedVehicleId, autoRefresh)
   const {
     data: signalData,
-    isLoading,
     isFetching,
     refetch,
   } = signalQuery
@@ -198,6 +206,14 @@ export default function RedisSignalViewerPage() {
   const purgeAll = usePurgeAllRedisSignals()
   const source = deriveDataState(signalQuery, { provenance: 'live' })
   const fatalError = source.fatalError
+  const initialLoading = source.status === 'initial' && isFetching && !source.isRefreshBlocked
+  const initialNotice = source.status === 'initial' && !initialLoading ? (
+    <Text as="p" variant="bodySm" role="status">
+      {source.isRefreshBlocked
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : t('dataSources.status.pending', 'Pending')}
+    </Text>
+  ) : null
 
   const selectedVehicle = useMemo(
     () => vehicleList.find((v) => v.id === selectedVehicleId),
@@ -278,9 +294,8 @@ export default function RedisSignalViewerPage() {
     if (!signalData?.signals) return []
     return Object.entries(signalData.signals)
       .map(([name, entry]: [string, RedisSignalEntry]) => ({
+        ...entry,
         name,
-        value: entry.value,
-        type: entry.type,
         category: categorizeSignal(name),
       }))
       .sort((a, b) => a.name.localeCompare(b.name))
@@ -326,21 +341,54 @@ export default function RedisSignalViewerPage() {
     value: String(v.id),
     label: v.display_name || v.vin || t('redis.vehicleFallback', 'Vehicle {{id}}', { id: v.id }),
   }))
+  const fleetNotice = vehiclesState.fatalError
+    ? t('dataSources.status.failed', 'Failed')
+    : !vehiclesState.hasData
+      ? vehiclesState.isRefreshBlocked
+        ? t('dataSources.status.paused', 'Refresh paused')
+        : t('common.loading', 'Loading...')
+      : vehiclesState.refreshError
+        ? t('dataSources.status.refreshFailed', 'Cached · refresh failed')
+        : vehiclesState.isRefreshBlocked
+          ? t('dataSources.status.paused', 'Refresh paused')
+          : vehiclesState.isRefreshing
+            ? t('dataSources.status.refreshing', 'Refreshing')
+            : vehicleList.length === 0
+              ? t('common.noData', 'No data available')
+              : vehiclesState.status === 'stale'
+                ? t('dataSources.staleMessage', 'Previously loaded data remains visible while affected sources recover.')
+                : undefined
 
   /* ─── toolbar (header actions) ─── */
 
   const actions = (
     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-      <Select
-        aria-label={t('redis.selectVehicleLabel', 'Select vehicle')}
-        className="min-w-44"
-        value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
-        onChange={(e) => {
-          const val = e.target.value
-          setSelectedVehicleId(val ? Number(val) : null)
-        }}
-        options={[{ value: '', label: t('redis.selectVehicle', 'Select vehicle…') }, ...vehicleOptions]}
-      />
+      <div className="space-y-2" data-testid="redis-fleet-selector">
+        <Select
+          aria-label={t('redis.selectVehicleLabel', 'Select vehicle')}
+          className="min-w-44"
+          value={selectedVehicleId !== null ? String(selectedVehicleId) : ''}
+          onChange={(e) => {
+            const val = e.target.value
+            setSelectedVehicleId(val ? Number(val) : null)
+          }}
+          options={[{ value: '', label: t('redis.selectVehicle', 'Select vehicle…') }, ...vehicleOptions]}
+          disabled={!vehiclesState.hasData || vehicleList.length === 0}
+          hint={vehiclesState.fatalError ? undefined : fleetNotice}
+          error={vehiclesState.fatalError ? fleetNotice : undefined}
+        />
+        {vehiclesState.retry && (vehiclesState.fatalError || vehiclesState.status === 'stale' || vehiclesState.isRefreshBlocked) && (
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={vehiclesState.retry}
+            disabled={vehiclesState.isRefreshing}
+          >
+            {t('error.retry', 'Retry')}
+          </Button>
+        )}
+      </div>
       <Toggle
         label={t('redis.autoRefresh', 'Auto-refresh')}
         checked={autoRefresh}
@@ -376,11 +424,12 @@ export default function RedisSignalViewerPage() {
       <FadeIn>
         <RedisOperationalBrief
           data={selectedVehicleId === null ? undefined : signalData}
-          loading={selectedVehicleId !== null && source.status === 'initial'}
+          loading={selectedVehicleId !== null && initialLoading}
           retained={source.hasData && source.status === 'stale'}
           enabled={selectedVehicleId !== null}
           error={fatalError}
         />
+        {selectedVehicleId !== null && initialNotice}
       </FadeIn>
 
       {/* 2 — Main bento: signals table (hero) + cache side column */}
@@ -420,7 +469,9 @@ export default function RedisSignalViewerPage() {
                   icon={<Database className="h-10 w-10" />}
                   message={t('redis.selectPrompt', 'Select a vehicle to view its cached Redis signals')}
                 />
-              ) : isLoading ? (
+              ) : initialNotice ? (
+                initialNotice
+              ) : initialLoading ? (
                 <div className="space-y-3">
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-8 w-full" />
@@ -477,7 +528,9 @@ export default function RedisSignalViewerPage() {
                   />
                 ) : fatalError ? (
                   <QueryError error={fatalError} onRetry={() => refetch()} resourceName={t('redis.resourceName', 'Redis signals')} />
-                ) : isLoading ? (
+                ) : initialNotice ? (
+                  initialNotice
+                ) : initialLoading ? (
                   <div className="space-y-2">
                     <Skeleton className="h-6 w-full" />
                     <Skeleton className="h-6 w-full" />
@@ -522,7 +575,9 @@ export default function RedisSignalViewerPage() {
                     icon={<Layers className="h-8 w-8" />}
                     message={t('redis.catSelect', 'Select a vehicle to see its signal category mix')}
                   />
-                ) : isLoading ? (
+                ) : initialNotice ? (
+                  initialNotice
+                ) : initialLoading ? (
                   <div className="space-y-3">
                     <Skeleton className="h-8 w-full" />
                     <Skeleton className="h-8 w-full" />
