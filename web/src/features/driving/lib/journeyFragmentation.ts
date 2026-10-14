@@ -1,4 +1,5 @@
 import type { Drive } from '@/types/driving';
+import { isFiniteNumber } from '@/lib/numberFormat';
 
 /**
  * Journey fragmentation is deliberately a descriptive analysis of the
@@ -154,7 +155,7 @@ export interface JourneyFragmentationResult {
   observedParkingSeconds: number;
   shortFragmentCount: number;
   shortFragmentDenominator: number;
-  shortFragmentDistanceM: number;
+  shortFragmentDistanceM: number | null;
   shortFragmentDistanceShare: number | null;
   compactObservedChainCount: number;
   totalDistanceM: number;
@@ -220,6 +221,13 @@ interface BuiltChains {
 
 function finiteOr(value: unknown, fallback: number): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+}
+
+export function formatJourneyFragmentDistance(
+  value: unknown,
+  formatter: (distanceM: number) => string,
+): string {
+  return isFiniteNumber(value) ? formatter(value) : '—';
 }
 
 function positiveOption(value: unknown, fallback: number): number {
@@ -734,6 +742,9 @@ export function analyzeJourneyFragmentation(
     const distance = distanceM(row.drive);
     return distance > 0 && distance <= options.shortFragmentDistanceM;
   });
+  const hasMeasuredDistance = includedRows.some((row) =>
+    isFiniteNumber(row.drive.distanceM) && row.drive.distanceM >= 0,
+  );
   const singleEnergy = groupEnergy(journeys, false);
   const multiEnergy = groupEnergy(journeys, true);
   const energySupport =
@@ -798,7 +809,9 @@ export function analyzeJourneyFragmentation(
     observedParkingSeconds: journeys.reduce((sum, journey) => sum + journey.observedParkingSeconds, 0),
     shortFragmentCount: shortRows.length,
     shortFragmentDenominator: includedRows.length,
-    shortFragmentDistanceM: shortRows.reduce((sum, row) => sum + distanceM(row.drive), 0),
+    shortFragmentDistanceM: hasMeasuredDistance
+      ? shortRows.reduce((sum, row) => sum + distanceM(row.drive), 0)
+      : null,
     shortFragmentDistanceShare:
       totalDistanceM > 0
         ? shortRows.reduce((sum, row) => sum + distanceM(row.drive), 0) / totalDistanceM

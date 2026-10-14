@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { Drive } from '@/types/driving';
 import {
   analyzeJourneyFragmentation,
   DEFAULT_GPS_TOLERANCE_M,
   DEFAULT_HISTORY_LIMIT,
   DEFAULT_MAX_PARKING_GAP_MIN,
+  formatJourneyFragmentDistance,
 } from './journeyFragmentation';
 
 const MINUTE = 60_000;
@@ -55,12 +56,86 @@ function linkedPair(firstMinute: number, secondMinute: number): Drive[] {
 }
 
 describe('analyzeJourneyFragmentation', () => {
+  it.each([null, undefined, Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1])(
+    'keeps missing or invalid distance %s distinct from measured zero',
+    (distanceM) => {
+      const drive = driveAt(0);
+      Object.defineProperty(drive, 'distanceM', { value: distanceM });
+      const result = analyzeJourneyFragmentation([drive], NOW, 'UTC');
+
+      expect(result.includedDrives).toBe(1);
+      expect(result.shortFragmentCount).toBe(0);
+      expect(result.shortFragmentDenominator).toBe(1);
+      expect(result.shortFragmentDistanceM).toBeNull();
+      expect(result.shortFragmentDistanceShare).toBeNull();
+      expect(result.energyComparison.singleDrive.completeEnergyJourneys).toBe(0);
+      expect(result.energyComparison.singleDrive.distanceCoverage).toBeNull();
+    },
+  );
+
+  it('retains measured zero without inventing distance coverage', () => {
+    const result = analyzeJourneyFragmentation([driveAt(0, { distanceM: 0 })], NOW, 'UTC');
+
+    expect(result.shortFragmentCount).toBe(0);
+    expect(result.shortFragmentDenominator).toBe(1);
+    expect(result.shortFragmentDistanceM).toBe(0);
+    expect(result.shortFragmentDistanceShare).toBeNull();
+    expect(result.energyComparison.singleDrive.completeEnergyJourneys).toBe(0);
+    expect(result.energyComparison.singleDrive.distanceCoverage).toBeNull();
+  });
+
+  it('reports zero short-fragment distance when measured drives are not short', () => {
+    const result = analyzeJourneyFragmentation([driveAt(0)], NOW, 'UTC');
+
+    expect(result.shortFragmentDistanceM).toBe(0);
+    expect(result.shortFragmentDistanceShare).toBe(0);
+    expect(result.shortFragmentCount).toBe(0);
+  });
+
+  it('preserves fractional short distance and the included-row denominator', () => {
+    const missingDistance = driveAt(300);
+    Object.defineProperty(missingDistance, 'distanceM', { value: null });
+    const result = analyzeJourneyFragmentation([
+      driveAt(0, { distanceM: 0.25 }),
+      missingDistance,
+      driveAt(600, { distanceM: 0 }),
+    ], NOW, 'UTC');
+
+    expect(result.shortFragmentDistanceM).toBe(0.25);
+    expect(result.shortFragmentCount).toBe(1);
+    expect(result.shortFragmentDenominator).toBe(3);
+    expect(result.shortFragmentDistanceShare).toBe(1);
+  });
+
+  it('does not report an empty history as measured zero', () => {
+    const result = analyzeJourneyFragmentation([], NOW, 'UTC');
+    expect(result.shortFragmentDistanceM).toBeNull();
+    expect(result.shortFragmentDenominator).toBe(0);
+  });
+
   it('sorts a copied view of input and links an inclusive selected threshold', () => {
     const drives = linkedPair(0, 150);
     const returnedOutOfOrder = [drives[1]!, drives[0]!];
     const original = returnedOutOfOrder.map((drive) => ({ ...drive }));
     const result = analyzeJourneyFragmentation(returnedOutOfOrder, NOW, 'UTC', {
       maxParkingGapMin: 120,
+    });
+
+    describe('formatJourneyFragmentDistance', () => {
+      it.each([0, -0, 1, -1, 0.25, -0.25])('formats finite signed value %s', (value) => {
+        const formatter = vi.fn((distanceM: number) => `${distanceM} m`);
+        expect(formatJourneyFragmentDistance(value, formatter)).toBe(`${value} m`);
+        expect(formatter).toHaveBeenCalledExactlyOnceWith(value);
+      });
+
+      it.each([null, undefined, Number.NaN, Infinity, -Infinity, '', '0', false])(
+        'uses an em dash only for unknown or invalid value %s',
+        (value) => {
+          const formatter = vi.fn((distanceM: number) => `${distanceM} m`);
+          expect(formatJourneyFragmentDistance(value, formatter)).toBe('—');
+          expect(formatter).not.toHaveBeenCalled();
+        },
+      );
     });
 
     expect(result.journeyCount).toBe(1);

@@ -6,17 +6,17 @@ import { GlassPanel, Text } from '@/components/ui';
 import { NestedDrivingBrief } from '../operationalbrief-a-m/NestedDrivingBrief';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { formatJourneyFragmentDistance } from '../../lib/journeyFragmentation';
 
 import { JourneyFragmentationSectionProps, percent } from './_types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { PendingEvidence } from './PendingEvidence';
 
-export function StructureIndicators({ result }: JourneyFragmentationSectionProps) {
+export function StructureIndicators({ result, state, loading = false }: JourneyFragmentationSectionProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const { formatDistance, unitPrefs } = useUnits();
-  const shortDistance = result.shortFragmentDistanceM > 0
-    ? formatDistance(result.shortFragmentDistanceM)
-    : '—';
+  const shortDistance = formatJourneyFragmentDistance(result.shortFragmentDistanceM, formatDistance);
   const observedDistance = convertDistanceFromSI(result.totalDistanceM, unitPrefs.distance);
   return (
     <GlassPanel className="space-y-4 p-4 sm:p-5">
@@ -24,7 +24,7 @@ export function StructureIndicators({ result }: JourneyFragmentationSectionProps
         <Text as="h2" variant="panelTitle">{t('journeyFragmentation.structure.title', 'Short-fragment and chain structure')}</Text>
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.structure.subtitle', 'Structural indicators describe the returned records; they are not route or intent recommendations.')}</Text>
       </div>
-      {result.includedDrives === 0 ? (
+      {state && !state.hasData ? <PendingEvidence state={state} loading={loading} /> : result.includedDrives === 0 ? (
         <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<Footprints className="h-7 w-7" />} message={t('journeyFragmentation.structure.empty', 'No included drives are available for structural indicators.')} />
       ) : (
         <NestedDrivingBrief title={t('journeyFragmentation.brief.structureTitle', 'Observed chain quantities')}
