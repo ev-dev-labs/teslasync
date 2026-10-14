@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import ConnectPage from './ConnectPage'
@@ -45,6 +45,31 @@ afterEach(() => {
 })
 
 describe('ConnectPage', () => {
+  it.each(['', 'https://saved.example.com'])('keeps the standalone form immediately accessible with saved address "%s"', (savedAddress) => {
+    if (savedAddress) window.localStorage.setItem('teslasync-server-base-url', savedAddress)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+    const { container } = renderPage()
+
+    const main = screen.getByRole('main')
+    const page = main.querySelector('[data-role="page-container"]')
+    expect(page).not.toBeNull()
+    expect(container.querySelectorAll('[data-role="page-container"]')).toHaveLength(1)
+    expect(main.querySelectorAll('[data-role="page-header"]')).toHaveLength(1)
+    expect(within(main).getAllByRole('heading', { level: 1 })).toHaveLength(1)
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(page).not.toHaveAttribute('aria-busy')
+    const server = within(main).getByRole('textbox', { name: 'Server address' })
+    expect(page).toContainElement(server)
+    expect(server).toHaveValue(savedAddress)
+    expect(server).toBeEnabled()
+    expect(server).toHaveFocus()
+    expect(within(main).getByLabelText('Access token (optional)')).toBeEnabled()
+    expect(within(main).getByRole('button', { name: /^connect$/i })).toBeEnabled()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it('renders the server and token fields', () => {
     renderPage()
     expect(screen.getByRole('heading', { name: /Connect to your server/i })).toBeInTheDocument()
@@ -133,6 +158,10 @@ describe('ConnectPage', () => {
     expect(screen.getByRole('button', { name: /Connecting/i })).toBeDisabled()
     expect(screen.getByRole('button', { name: /Connecting/i })).toHaveAttribute('aria-busy', 'true')
     expect(fetchMock).toHaveBeenCalledTimes(1)
+    const page = server.closest('[data-role="page-container"]')
+    expect(page).toHaveAttribute('aria-busy', 'true')
+    expect(page).toContainElement(server)
+    expect(page).toContainElement(token)
     expect(fetchMock).toHaveBeenCalledWith('https://pending.example.com/api/v1/system/auth-mode', expect.objectContaining({ credentials: 'omit' }))
     expect(window.localStorage.getItem('teslasync-server-base-url')).toBeNull()
 
@@ -145,6 +174,9 @@ describe('ConnectPage', () => {
     expect(server).not.toHaveAttribute('aria-invalid')
     expect(token).not.toHaveAttribute('aria-invalid')
     expect(screen.getByRole('button', { name: /^connect$/i })).toBeEnabled()
+    expect(page).not.toHaveAttribute('aria-busy')
+    expect(page).toContainElement(screen.getByRole('alert'))
+    expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
   })
 
   it('uses growing mobile targets while retaining masked token entry and desktop sizing', () => {

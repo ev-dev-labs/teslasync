@@ -1,7 +1,7 @@
 /**
  * ConnectPage — server picker for the generic native apps.
  *
- * Standalone route (no Layout chrome): the user enters their server
+ * Standalone route (PageContainer, no Layout chrome): the user enters their server
  * address, optionally pastes a personal access token, and the form
  * probes `/system/auth-mode` to validate reachability and learn whether
  * a token is required before saving. Saving reloads the app so every
@@ -9,8 +9,8 @@
  */
 import { useId, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { KeyRound, Server } from 'lucide-react'
-import { PageHeader } from '@/components/layout'
+import { KeyRound } from 'lucide-react'
+import { PageContainer } from '@/components/layout'
 import { Button, ErrorText, GlassPanel, Icon, Input, Text } from '@/components/ui'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import {
@@ -111,13 +111,14 @@ export default function ConnectPage() {
   }
 
   return (
-    <div className="flex min-h-dvh items-center justify-center p-4">
+    <main className="flex min-h-dvh items-center justify-center p-4">
       <GlassPanel className="w-full max-w-md p-4 sm:p-6">
-        <PageHeader
+        <PageContainer
           title={t('serverConnect.connect.title', 'Connect to your server')}
           subtitle={t('serverConnect.connect.subtitle', 'Enter your TeslaSync address to continue.')}
-          icon={<Icon icon={Server} size="lg" />}
-        />
+          busy={busy}
+          announce={false}
+        >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             label={t('serverConnect.connect.serverLabel', 'Server address')}
@@ -163,7 +164,8 @@ export default function ConnectPage() {
               : t('serverConnect.connect.submit', 'Connect')}
           </Button>
         </form>
+        </PageContainer>
       </GlassPanel>
-    </div>
+    </main>
   )
 }
