@@ -7,6 +7,7 @@ import {
 import { EmptyState } from '@/components/feedback';
 import { ChartCard } from '@/components/layout';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { chartTokens } from '@/lib/tokens';
 
 export interface TripReplayElevationPoint {
   index: number;
@@ -44,7 +45,6 @@ export function TripReplayElevation({
   }
   const cursor = data.find(point => point.index === currentIndex);
 
-  // chart-a11y:no-table dense route samples; summary and current altitude are readable above
   return (
     <ChartCard
       title={t('replay.elevation.title', 'Elevation Profile')}
@@ -55,6 +55,20 @@ export function TripReplayElevation({
       height={height}
       size="standard"
       exportable
+      data={data.map(({ index, distance, elevation }) => ({ index, distance, elevation }))}
+      dataColumns={[
+        { key: 'index', label: t('sweetSpot.col.sample', 'Sample') },
+        {
+          key: 'distance',
+          label: `${t('trips.detail.distance', 'Distance')} (${distanceUnit})`,
+          format: value => typeof value === 'number' ? fmtNumber(value) : '—',
+        },
+        {
+          key: 'elevation',
+          label: `${t('replay.elevation.label', 'Elevation')} (m)`,
+          format: value => typeof value === 'number' ? fmtNumber(value) : '—',
+        },
+      ]}
     >
       {hasElevation ? (
         <ResponsiveContainer width="100%" height="100%">
@@ -66,7 +80,7 @@ export function TripReplayElevation({
               if (point) onClickIndex(point.index);
             }}
           >
-            {areaGradient('replayElevationGrad', '#10b981', 0.4)}
+            {areaGradient('replayElevationGrad', chartTokens.series[0], 0.08)}
             <CartesianGrid {...chartGrid} />
             <XAxis
               dataKey="distance"
@@ -87,13 +101,13 @@ export function TripReplayElevation({
             <Area
               {...AREA_DEFAULTS}
               dataKey="elevation"
-              stroke="#10b981"
+              stroke={chartTokens.series[0]}
               fill="url(#replayElevationGrad)"
               isAnimationActive={false}
               connectNulls={false}
             />
             {cursor && Number.isFinite(cursor.distance) && (
-              <ReferenceLine x={cursor.distance} stroke="var(--theme-primary, #3b82f6)" strokeWidth={2} strokeDasharray="4 2" />
+              <ReferenceLine x={cursor.distance} {...chartTokens.cursor} />
             )}
           </AreaChart>
         </ResponsiveContainer>
