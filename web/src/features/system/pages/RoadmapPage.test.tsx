@@ -75,7 +75,8 @@ vi.mock('react-i18next', async () => {
 });
 
 // ── motion: render children inline (no animation frames in jsdom) ──
-vi.mock('@/components/motion', () => ({
+vi.mock('@/components/motion', async importOriginal => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
   FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
   StaggerContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
   StaggerItem: ({ children }: { children?: ReactNode }) => <>{children}</>,
