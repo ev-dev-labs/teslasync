@@ -110,7 +110,29 @@ describe('SitePriceRadar', () => {
   it('shows the spread and unpriced count', () => {
     render(<SitePriceRadar />);
     expect(screen.getByText('+1 visits without invoice pricing')).toBeTruthy();
-    expect(screen.getByText(/Cheapest stop saves/)).toBeTruthy();
+    expect(screen.getByText('Cheapest stop saves $0.20/kWh vs priciest')).toBeTruthy();
+  });
+
+  it('compares the complete returned ranking while displaying only the first eight sites in source order', () => {
+    const sites = Array.from({ length: 10 }, (_, i) => ({
+      ...ranking.sites[0],
+      site: `Ranked SC ${i + 1}`,
+      avg_per_kwh: (i + 1) / 10,
+    }));
+    setQuery({ data: { sites, unpriced_count: 7 } });
+    render(<SitePriceRadar />);
+
+    const rows = screen.getAllByText(/^\d+\. Ranked SC/);
+    expect(rows.map(row => row.textContent)).toEqual(
+      sites.slice(0, 8).map((site, i) => `${i + 1}. ${site.site}`),
+    );
+    expect(screen.queryByText('9. Ranked SC 9')).toBeNull();
+    expect(screen.queryByText('10. Ranked SC 10')).toBeNull();
+    expect(screen.getByText('Cheapest stop saves $0.90/kWh vs priciest')).toBeTruthy();
+    expect(screen.getByText('+7 visits without invoice pricing')).toBeTruthy();
+    expect(sites.map(site => site.site)).toEqual(
+      Array.from({ length: 10 }, (_, i) => `Ranked SC ${i + 1}`),
+    );
   });
 
   it('shows the empty state without priced visits', () => {

@@ -24,8 +24,11 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
   const state = useDataState(query, { provenance: 'historical' });
   const data = state.data;
 
-  const sites = (data?.sites ?? []).slice(0, 8);
+  // The endpoint ranks all sites in its bounded invoice scan; only the rows are capped here.
+  const rankedSites = data?.sites ?? [];
+  const sites = rankedSites.slice(0, 8);
   const cheapest = sites[0]?.avg_per_kwh ?? 0;
+  const priciest = rankedSites[rankedSites.length - 1]?.avg_per_kwh ?? cheapest;
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -86,7 +89,7 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
           {sites.length > 1 && (
             <Caption className="block tabular-nums">
               {t('tesla_charging.spread', 'Cheapest stop saves {{save}}/kWh vs priciest', {
-                save: formatCurrency((sites[sites.length - 1]?.avg_per_kwh ?? cheapest) - cheapest),
+                save: formatCurrency(priciest - cheapest),
               })}
             </Caption>
           )}
