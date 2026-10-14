@@ -42,6 +42,8 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
     const dcSessions = list.filter(isDcSession);
     if (!dcSessions.length) return empty;
 
+    // These are whole-session durations for threshold-spanning cohorts, not
+    // observed times between SOC crossings.
     // Only sessions with a real, positive elapsed time can contribute a
     // duration to the SOC-window averages. A live/incomplete session that
     // already reports end_soc >= 80 (ended_at still null) otherwise folds a
@@ -106,7 +108,7 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
         label: t('charging.curve.avg10to80', '10% → 80%'),
         metricId: 'duration',
         rawValue: timeToCharge.avg10to80 != null ? timeToCharge.avg10to80 * 60 : null,
-        subtitle: t('charging.curve.avgDuration', 'Avg duration'),
+        subtitle: t('developerReference.stats.metric.charge.avgDuration.label', 'Average session duration'),
         icon: <Timer className="h-5 w-5" aria-hidden="true" />,
       },
       {
@@ -114,7 +116,7 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
         label: t('charging.curve.avg20to80', '20% → 80%'),
         metricId: 'duration',
         rawValue: timeToCharge.avg20to80 != null ? timeToCharge.avg20to80 * 60 : null,
-        subtitle: t('charging.curve.avgDuration', 'Avg duration'),
+        subtitle: t('developerReference.stats.metric.charge.avgDuration.label', 'Average session duration'),
         icon: <Clock className="h-5 w-5" aria-hidden="true" />,
       },
       {
@@ -152,7 +154,7 @@ export default function TimeToChargeSection({ sessions }: TimeToChargeSectionPro
     <div className="space-y-4">
       <ChargingSummaryBrief metrics={metrics}
         title={t('charging.curve.timeToCharge', 'Time-to-Charge Analysis')}
-        description={t('charging.curve.timeToChargeDesc', 'How long DC sessions take to reach key SOC thresholds')}
+        description={t('developerReference.stats.metric.charge.avgDuration.label', 'Average session duration')}
         period={{ kind: 'unknown', label: t('charging.curve.modernization.returnedSessions', 'Returned sessions in the workspace range'),
           reason: t('charging.curve.brief.dcThresholdScope',
             'Completed DC sessions from the returned history only. Threshold means exclude unfinished sessions; fastest and slowest use recorded energy divided by positive elapsed time.') }} />

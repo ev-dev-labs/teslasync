@@ -5,7 +5,8 @@
  * distils a list of charging sessions into four "time-to-charge" metrics
  * (10→80% avg minutes, 20→80% avg minutes, fastest + slowest kWh/h) plus a
  * per-year trend it hands to <YearlyTrendChart>. Its real work is derivation,
- * not pixels: it filters DC sessions, averages the SOC-window durations,
+ * not pixels: it filters DC sessions, averages whole-session durations for
+ * threshold-spanning cohorts,
  * computes charge rates from SI watt-hours, and buckets everything by calendar
  * year.
  *
@@ -210,9 +211,9 @@ describe('TimeToChargeSection', () => {
     render(<TimeToChargeSection sessions={MAIN} />);
 
     expect(screen.getByRole('heading', { name: 'Time-to-Charge Analysis' })).toBeInTheDocument();
-    expect(screen.getByText(
-      'How long DC sessions take to reach key SOC thresholds',
-    )).toBeInTheDocument();
+    expect(screen.getAllByText(
+      'Average session duration',
+    )[0]).toBeInTheDocument();
   });
 
   it('renders exactly four KPI cards with correct labels, colours and aria-hidden icons', () => {
@@ -244,8 +245,26 @@ describe('TimeToChargeSection', () => {
     expect(cardByLabel(L10).querySelector('[data-operational-value]')).toHaveTextContent('30.00 min');
     // 20→80: s1 (30) + s2 (60) ⇒ avg 45 min.
     expect(cardByLabel(L20).querySelector('[data-operational-value]')).toHaveTextContent('45.00 min');
-    expect(cardByLabel(L10)).toHaveTextContent('Avg duration');
-    expect(cardByLabel(L20)).toHaveTextContent('Avg duration');
+    expect(cardByLabel(L10)).toHaveTextContent('Average session duration');
+    expect(cardByLabel(L20)).toHaveTextContent('Average session duration');
+  });
+
+  it('labels threshold-spanning cohorts as session durations without inventing crossing times', () => {
+    const spanning = makeSession({
+      start_soc_pct: 5,
+      end_soc_pct: 95,
+      ended_at: '2023-01-01T11:30:00Z',
+    });
+    render(<TimeToChargeSection sessions={[spanning]} />);
+
+    for (const label of [L10, L20]) {
+      expect(cardByLabel(label)).toHaveTextContent('Average session duration');
+      expect(cardByLabel(label).querySelector('[data-operational-value]')).toHaveTextContent('90.00 min');
+    }
+    expect(screen.queryByText('How long DC sessions take to reach key SOC thresholds')).not.toBeInTheDocument();
+    expect(yearlyRows()).toEqual([
+      { year: '2023', avg10to80: 90, avg20to80: 90, count: 1 },
+    ]);
   });
 
   it('identifies the fastest and slowest sessions by kWh/h with their session ids', () => {
