@@ -222,6 +222,10 @@ function query(overrides: Record<string, unknown> = {}) {
     isError: false,
     error: null,
     isFetching: false,
+    isPending: false,
+    isSuccess: true,
+    status: 'success',
+    fetchStatus: 'idle',
     isStale: false,
     dataUpdatedAt: 1,
     refetch: vi.fn(),
@@ -440,7 +444,10 @@ describe('UtilizationPage', () => {
   });
 
   it('threads loading, error, and empty states to every mounted section', () => {
-    drivesMock.mockReturnValue(query({ isLoading: true }));
+    drivesMock.mockReturnValue(query({
+      data: undefined, isPending: true, isLoading: true, isFetching: true,
+      isSuccess: false, status: 'pending', fetchStatus: 'fetching',
+    }));
     const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
     for (const id of SECTION_IDS) {
       if (id === 'utilization-kpis') expect(screen.getByTestId('utilization-summary')).toHaveAttribute('aria-busy', 'true');
@@ -560,8 +567,10 @@ import { deriveDataState } from '@/api/dataState';
 
 describe('UtilizationPage source coverage', () => {
   it('keeps paused-without-data operands unknown, then recovers to measured zero', () => {
+    const refetch = vi.fn();
     drivesMock.mockReturnValue(query({
-      data: undefined, isPending: true, isLoading: false, fetchStatus: 'paused',
+      data: undefined, isPending: true, isLoading: false, isSuccess: false,
+      status: 'pending', fetchStatus: 'paused', refetch,
     }));
     const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
     const brief = screen.getByTestId('utilization-summary');
@@ -569,6 +578,17 @@ describe('UtilizationPage source coverage', () => {
       expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
     }
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+    expect(brief).toHaveTextContent('Pending');
+    expect(brief).not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('No drives in this period yet.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Source unavailable')).not.toBeInTheDocument();
+    for (const id of SECTION_IDS.slice(1)) {
+      const section = within(screen.getByTestId(id));
+      expect(section.getByRole('status')).toHaveTextContent('Refresh paused');
+      expect(section.getByRole('status')).toHaveTextContent('missing evidence is not a confirmed empty result');
+    }
+    fireEvent.click(within(screen.getByTestId('utilization-trend')).getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
     expect(summaryMock.mock.calls.at(-1)![0].days).toEqual([]);
     drivesMock.mockReturnValue(query({
       data: [{ ...eligibleDrive(), durationS: 0, distanceM: 0, energyUsedWh: 0 }],
@@ -578,6 +598,25 @@ describe('UtilizationPage source coverage', () => {
     expect(brief.querySelector('[data-operational-metric="distance-per-day"]')).toHaveAttribute('data-value-state', 'value');
     expect(summaryMock.mock.calls.at(-1)![0].accounting.usableEnergyRows).toBe(1);
     expect(summaryMock.mock.calls.at(-1)![0].totalEnergyCost).toBe(0);
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    expect(brief.querySelector('[data-operational-metric="driving-share"]')).toHaveTextContent(/0(?:[.,]0+)?%/);
+    expect(brief.querySelector('[data-operational-metric="distance-per-day"]')).toHaveTextContent('0');
+  });
+
+  it('keeps an idle pending source distinct from confirmed empty history', () => {
+    drivesMock.mockReturnValue(query({
+      data: undefined, isPending: true, isSuccess: false, status: 'pending',
+    }));
+    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Pending');
+    expect(screen.queryByText('No drives in this period yet.')).not.toBeInTheDocument();
+    expect(within(screen.getByTestId('utilization-trend')).getByRole('status')).toHaveTextContent('This source has not resolved yet');
+    expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
+    drivesMock.mockReturnValue(query());
+    view.rerender(<UtilizationPage />);
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    expect(screen.getByText('No drives in this period yet.')).toBeInTheDocument();
+    for (const id of SECTION_IDS.slice(1)) expect(screen.getByTestId(id)).toHaveTextContent('empty');
   });
 
   it('retains partial rollup coverage during refresh failure and replaces it on recovery', () => {
@@ -749,7 +788,7 @@ describe('UtilizationPage source coverage', () => {
     const driveRefetch = vi.fn();
     drivesMock.mockReturnValue(query({ data: [eligibleDrive()], refetch: driveRefetch }));
     formattingMock.mockReturnValue({ costPerKwh: null, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: undefined, isError: true, error: new Error('pricing unavailable'), refetch }) });
-    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
     fireEvent.click(within(screen.getByTestId('utilization-pricing')).getByRole('button', { name: /retry/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(driveRefetch).not.toHaveBeenCalled();
@@ -757,6 +796,10 @@ describe('UtilizationPage source coverage', () => {
     for (const id of SECTION_IDS) {
       if (id !== 'utilization-kpis') expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
+    formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0.15 } }) });
+    view.rerender(<UtilizationPage />);
+    expect(within(screen.getByTestId('utilization-pricing')).queryByRole('button')).not.toBeInTheDocument();
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'value');
   });
 
   it('retains estimated costs with a source-specific warning after pricing refresh fails', () => {
@@ -764,7 +807,7 @@ describe('UtilizationPage source coverage', () => {
     const driveRefetch = vi.fn();
     drivesMock.mockReturnValue(query({ data: [eligibleDrive()], refetch: driveRefetch }));
     formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0.15 }, isError: true, error: new Error('pricing refresh failed'), refetch }) });
-    render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
     const pricing = screen.getByTestId('utilization-pricing');
     expect(pricing).toHaveTextContent('Settings electricity rate may be out of date');
     expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'value');
@@ -772,6 +815,31 @@ describe('UtilizationPage source coverage', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
     expect(driveRefetch).not.toHaveBeenCalled();
     for (const id of SECTION_IDS) expect(screen.getByTestId(id)).toBeInTheDocument();
+    formattingMock.mockReturnValue({ costPerKwh: 0, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0 } }) });
+    view.rerender(<UtilizationPage />);
+    expect(within(pricing).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(summaryMock.mock.calls.at(-1)![0].totalEnergyCost).toBe(0);
+  });
+
+  it('explains deferred pricing without blocking drive evidence and recovers independently', () => {
+    const refetch = vi.fn();
+    const driveRefetch = vi.fn();
+    drivesMock.mockReturnValue(query({ data: [eligibleDrive()], refetch: driveRefetch }));
+    formattingMock.mockReturnValue({ costPerKwh: 0.15, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ isPending: true, fetchStatus: 'paused', refetch }) });
+    const view = render(<UtilizationPage />, { wrapper: MemoryRouter });
+    const pricing = within(screen.getByTestId('utilization-pricing'));
+    expect(pricing.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(pricing.getByRole('status')).not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByTestId('utilization-summary')).toHaveTextContent('Source returned');
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'missing');
+    fireEvent.click(pricing.getByRole('button', { name: 'Retry' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    expect(driveRefetch).not.toHaveBeenCalled();
+    formattingMock.mockReturnValue({ costPerKwh: 0, formatCurrency: (amount: number) => `$${amount.toFixed(2)}`, pricingState: deriveDataState({ data: { base_cost_per_kwh: 0 } }) });
+    view.rerender(<UtilizationPage />);
+    expect(pricing.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.getByTestId('utilization-summary').querySelector('[data-operational-metric="cost-per-distance"]')).toHaveAttribute('data-value-state', 'value');
+    expect(summaryMock.mock.calls.at(-1)![0].totalEnergyCost).toBe(0);
   });
 
   it('keeps paused pricing distinct from an initial drive error and retains its estimate', () => {

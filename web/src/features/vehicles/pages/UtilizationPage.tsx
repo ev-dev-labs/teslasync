@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useDriveCalendarHistory } from '@/api/hooks/useDriving';
 
 import { Grid, PageLayout } from '@/components/layout';
+import { Button, GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -70,6 +71,9 @@ export default function UtilizationPage() {
     provenance: 'historical',
     partial: drivesQuery.isFetching,
   });
+  const initialDeferred = drivesState.status === 'initial'
+    && (drivesState.isRefreshBlocked || !drivesQuery.isFetching);
+  const initialLoading = drivesState.status === 'initial' && !initialDeferred;
   const summary = useMemo(
     () => {
       const startMs = Date.parse(startInstant);
@@ -130,13 +134,13 @@ export default function UtilizationPage() {
   }, [drivesQuery.refetch]);
   const sectionState = useMemo<UtilizationSectionState>(
     () => ({
-      isLoading: drivesQuery.isLoading,
+      isLoading: initialLoading,
       error: drivesState.fatalError,
       onRetry: retry,
     }),
     [
       drivesState.fatalError,
-      drivesQuery.isLoading,
+      initialLoading,
       retry,
     ],
   );
@@ -166,7 +170,8 @@ export default function UtilizationPage() {
           <VehicleEvidenceBrief id="utilization-summary"
             title={t('utilization.kpis', 'Utilization summary metrics')}
             description={t('utilization.briefDescription', 'Drive-derived utilization over the observed window; energy-only cost is an estimate, not a billed total.')}
-            status={summaryStatus} loading={drivesQuery.isLoading}
+            status={summaryStatus} loading={initialLoading}
+            freshness={initialDeferred ? t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.') : undefined}
             provenance={t('utilization.briefSource', 'Returned drive history and configured energy price')}
             scope={t('utilization.briefWindow', 'Requested {{start}} → {{end}}; metrics use the observed window', {
               start: start || t('vehicles.evidenceBrief.unbounded', 'Unbounded'),
@@ -180,19 +185,19 @@ export default function UtilizationPage() {
               { metricId: 'percent', occurrenceId: 'active-days', label: t('utilization.activeDays', 'Days used'),
                 rawValue: drivesState.data == null || summary.activeDayShare == null ? null : summary.activeDayShare * 100,
                 display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) },
-                context: t('utilization.observedCalendarDays', '{{active}} of {{days}} observed UTC days', {
+                context: !drivesState.hasData ? t('dataSources.status.pending', 'Pending') : t('utilization.observedCalendarDays', '{{active}} of {{days}} observed UTC days', {
                   active: fmtInt(summary.consistency.activeDays), days: fmtInt(summary.observedCalendarDays),
                 }) },
               { metricId: 'distance', occurrenceId: 'distance-per-day', label: t('utilization.perDay', 'Distance per day'),
                 rawValue: drivesState.data == null || summary.accounting.usableDistanceRows === 0 ? null : summary.distancePerDayM,
                 display: { formatter: raw => ({ value: formatDistance(raw), unit: '' }) },
-                context: t('utilization.driveCount', '{{count}} drives', { count: summary.drives }) },
+                context: !drivesState.hasData ? t('dataSources.status.pending', 'Pending') : t('utilization.driveCount', '{{count}} drives', { count: summary.drives }) },
               { metricId: 'rate', occurrenceId: 'cost-per-distance', label: t('utilization.costPerKmCard', 'Cost per distance'),
                 rawValue: drivesState.data == null ? null : summary.costPerKm,
                 display: { formatter: raw => ({ value: `${formatCurrency(raw * convertDistanceToSI(1, distanceUnit) / 1000)}/${distanceUnit}`, unit: '' }) },
                 context: <>{t('utilization.energyOnly', 'energy only')}<div>{t('utilization.costInput', 'Source estimate is cost per kilometre before display-unit conversion.')}</div></> },
             ]} />
-          {!drivesQuery.isLoading && !sectionState.error && summary.accounting.eligibleRows === 0 ? <EmptyState
+          {drivesState.hasData && summary.accounting.eligibleRows === 0 ? <EmptyState
             message={t('utilization.noData', 'No drives in this period yet.')}
             actionTo={{ label: t('utilization.browseDrives', 'Browse drives'), to: '/drives' }} /> : null}
         </section>
@@ -206,7 +211,18 @@ export default function UtilizationPage() {
               label={t('utilization.energyRate', 'Settings electricity rate')} />
             {pricingState.fatalError ? (
               <QueryError error={pricingState.fatalError} onRetry={pricingState.retry ?? undefined} />
-            ) : !pricingState.hasData ? (
+            ) : !pricingState.hasData && pricingState.isRefreshBlocked ? (
+              <div className="space-y-3" role="status">
+                <Text as="p" variant="bodySm" color="secondary">
+                  {t('fleetOps.brief.refreshBlocked', 'Refresh paused')}
+                  {' · '}
+                  {t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+                </Text>
+                {pricingState.retry ? <Button variant="secondary" onClick={pricingState.retry}>
+                  {t('error.retry', 'Retry')}
+                </Button> : null}
+              </div>
+            ) : pricingState.status === 'initial' ? (
               <div role="status" aria-busy="true"
                 aria-label={t('utilization.energyRate', 'Settings electricity rate')}>
                 <Skeleton className="h-11" />
@@ -214,45 +230,49 @@ export default function UtilizationPage() {
             ) : null}
           </div>
         ) : null}
-        <TimeCostOverview
-          summary={summary}
-          state={sectionState}
-          hasSource={drivesState.hasData}
-        />
+      </FadeIn>
+
+      {initialDeferred ? (
+        [
+          { id: 'utilization-time-cost', title: t('utilization.sections.timeCost', 'Observed time split and energy-only cost ledger') },
+          { id: 'utilization-trend', title: t('utilization.sections.trend', 'Monthly utilization trend') },
+          { id: 'utilization-weekday', title: t('utilization.sections.weekday', 'Weekday utilization profile') },
+          { id: 'utilization-distributions', title: t('utilization.sections.distributions', 'Drive duration and distance distributions') },
+          { id: 'utilization-consistency', title: t('utilization.sections.consistency', 'Active-day consistency') },
+          { id: 'utilization-busiest', title: t('utilization.sections.busiest', 'Ranked busiest observed days') },
+          { id: 'utilization-method', title: t('utilization.sections.method', 'Coverage and methodology') },
+        ].map(section => (
+          <GlassPanel key={section.id} className="min-w-0 space-y-3 p-6" data-testid={section.id}>
+            <PanelTitle>{section.title}</PanelTitle>
+            <Text as="p" variant="bodySm" color="secondary" role="status">
+              {drivesState.isRefreshBlocked ? <>{t('fleetOps.brief.refreshBlocked', 'Refresh paused')}{' · '}</> : null}
+              {t('system.outage.awaitingSource', 'This source has not resolved yet; missing evidence is not a confirmed empty result.')}
+            </Text>
+            <Button variant="secondary" onClick={retry}>{t('error.retry', 'Retry')}</Button>
+          </GlassPanel>
+        ))
+      ) : <>
+      <FadeIn delay={0.05}>
+        <TimeCostOverview summary={summary} state={sectionState} hasSource={drivesState.hasData} />
       </FadeIn>
 
       <FadeIn delay={0.1}>
         <Grid cols={TWO_COLUMNS} gap={4}>
-          <UtilizationTrend
-            summary={summary}
-            state={sectionState}
-          />
-          <WeekdayProfile
-            summary={summary}
-            state={sectionState}
-          />
+          <UtilizationTrend summary={summary} state={sectionState} />
+          <WeekdayProfile summary={summary} state={sectionState} />
         </Grid>
       </FadeIn>
 
       <FadeIn delay={0.15}>
-        <DriveDistributions
-          summary={summary}
-          state={sectionState}
-        />
+        <DriveDistributions summary={summary} state={sectionState} />
       </FadeIn>
 
       <FadeIn delay={0.2}>
-        <ActiveDayConsistency
-          summary={summary}
-          state={sectionState}
-        />
+        <ActiveDayConsistency summary={summary} state={sectionState} />
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <BusiestDays
-          summary={summary}
-          state={sectionState}
-        />
+        <BusiestDays summary={summary} state={sectionState} />
       </FadeIn>
 
       <FadeIn delay={0.3}>
@@ -264,6 +284,7 @@ export default function UtilizationPage() {
           hasSource={drivesState.data != null}
         />
       </FadeIn>
+      </>}
     </PageLayout>
   );
 }
