@@ -569,6 +569,55 @@ describe('FleetComparePage evidence preservation', () => {
     await waitFor(() => expect(left.value).toBe('1'))
     expect(right.value).toBe('2')
   })
+
+  it.each([
+    ['leftId=2', '2', '1', []],
+    ['rightId=1', '2', '1', []],
+    ['leftId=999&rightId=1', '2', '1', ['999']],
+    ['leftId=2&rightId=999', '2', '1', ['999']],
+    ['leftId=bad&rightId=999', '1', '2', ['bad', '999']],
+    ['leftId=1&rightId=1', '1', '2', []],
+  ])('reconciles URL choices independently (%s)', async (query, expectedA, expectedB, unavailable) => {
+    renderPage(`/fleet-compare?${query}`)
+    const left = await screen.findByLabelText('Vehicle A') as HTMLSelectElement
+    const right = screen.getByLabelText('Vehicle B') as HTMLSelectElement
+    await waitFor(() => {
+      expect(left.value).toBe(expectedA)
+      expect(right.value).toBe(expectedB)
+    })
+    for (const id of unavailable) {
+      expect(screen.getByText(`Unavailable vehicle ${id}`)).toBeInTheDocument()
+    }
+    await screen.findByRole('table')
+    const aggregates = mockedRequest.mock.calls
+      .map(([path]) => String(path))
+      .filter(path => /^\/(drives\/stats|analytics\/tco|mileage\/monthly)/.test(path))
+    expect(aggregates.length).toBeGreaterThan(0)
+    for (const path of aggregates) {
+      expect(['1', '2']).toContain(new URLSearchParams(path.split('?')[1]).get('vehicle_id'))
+    }
+  })
+
+  it('does not enable URL aggregate queries before the fleet list resolves', async () => {
+    install({ vehiclesPending: true })
+    renderPage('/fleet-compare?leftId=1&rightId=999')
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledWith('/vehicles', expect.anything()))
+    expect(mockedRequest.mock.calls.some(([path]) =>
+      /^\/(drives\/stats|analytics\/tco|mileage\/monthly)/.test(String(path)))).toBe(false)
+  })
+
+  it('reconciles a removed vehicle after list refresh without replacing its valid peer', async () => {
+    const { client } = renderPage('/fleet-compare?leftId=2&rightId=1')
+    const left = await screen.findByLabelText('Vehicle A') as HTMLSelectElement
+    const right = screen.getByLabelText('Vehicle B') as HTMLSelectElement
+    await waitFor(() => expect(left.value).toBe('2'))
+    act(() => {
+      client.setQueryData(vehicleKeys.all, [makeVehicle(), makeVehicle({ id: 3, display_name: 'Model S' })])
+    })
+    await waitFor(() => expect(left.value).toBe('3'))
+    expect(right.value).toBe('1')
+    expect(screen.getByText('Unavailable vehicle 2')).toBeInTheDocument()
+  })
 })
 
 describe('FleetComparePage', () => {

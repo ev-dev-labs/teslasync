@@ -340,6 +340,7 @@ export default function FleetComparePage() {
 
   const [vehicleIdA, setVehicleIdA] = useState<string>(initialLeftId);
   const [vehicleIdB, setVehicleIdB] = useState<string>(initialRightId);
+  const [unavailableIds, setUnavailableIds] = useState<string[]>([]);
 
   // Swap the two selected vehicles in place — keeps the comparison meaningful
   // when the user wants A and B reversed without re-picking both selectors.
@@ -373,20 +374,27 @@ export default function FleetComparePage() {
   // re-running the auto-select effect and defeating the optionsA/optionsB memos.
   const vehicleList = useMemo(() => vehicles ?? [], [vehicles]);
 
-  // Auto-select first two vehicles if not provided via query params.
   useEffect(() => {
-    if (vehicleList.length >= 2) {
-      if (!vehicleIdA) setVehicleIdA(String(vehicleList[0].id));
-      if (!vehicleIdB) setVehicleIdB(String(vehicleList[1].id));
-    } else if (vehicleList.length === 1 && !vehicleIdA) {
-      setVehicleIdA(String(vehicleList[0].id));
+    if (!vehiclesQuery.isSuccess) return;
+    const ids = vehicleList.map(vehicle => String(vehicle.id));
+    const missing = [vehicleIdA, vehicleIdB].filter(id => id && !ids.includes(id));
+    if (missing.length) {
+      setUnavailableIds(previous => [...new Set([...previous, ...missing])]);
     }
-  }, [vehicleList, vehicleIdA, vehicleIdB]);
+    const validA = ids.includes(vehicleIdA) ? vehicleIdA : '';
+    const validB = ids.includes(vehicleIdB) && vehicleIdB !== validA ? vehicleIdB : '';
+    const nextA = validA || ids.find(id => id !== validB) || '';
+    const nextB = validB || ids.find(id => id !== nextA) || '';
+    if (nextA !== vehicleIdA) setVehicleIdA(nextA);
+    if (nextB !== vehicleIdB) setVehicleIdB(nextB);
+  }, [vehicleList, vehicleIdA, vehicleIdB, vehiclesQuery.isSuccess]);
 
   const vehicleA = vehicleList.find(v => String(v.id) === vehicleIdA);
   const vehicleB = vehicleList.find(v => String(v.id) === vehicleIdB);
   const numIdA = vehicleA?.id ?? 0;
   const numIdB = vehicleB?.id ?? 0;
+  const resolvedIdA = vehicleA ? String(vehicleA.id) : '';
+  const resolvedIdB = vehicleB && vehicleIdB !== vehicleIdA ? String(vehicleB.id) : '';
 
   /* ── Vehicle state (live) ── */
   const stateQueryA = useVehicleState(numIdA);
@@ -395,20 +403,20 @@ export default function FleetComparePage() {
   const stateB = comparisonState(stateQueryB.data?.state);
 
   /* ── Driving stats (lifetime) ── */
-  const statsQueryA = useDrivingStats(vehicleIdA || undefined);
-  const statsQueryB = useDrivingStats(vehicleIdB || undefined);
+  const statsQueryA = useDrivingStats(resolvedIdA || undefined);
+  const statsQueryB = useDrivingStats(resolvedIdB || undefined);
   const drivingStatsA = statsQueryA.data;
   const drivingStatsB = statsQueryB.data;
 
   /* ── Cost breakdown (lifetime) ── */
-  const costQueryA = useCostBreakdown(vehicleIdA || '');
-  const costQueryB = useCostBreakdown(vehicleIdB || '');
+  const costQueryA = useCostBreakdown(resolvedIdA);
+  const costQueryB = useCostBreakdown(resolvedIdB);
   const costA = costQueryA.data;
   const costB = costQueryB.data;
 
   /* ── Monthly mileage (for charts) ── */
-  const monthlyQueryA = useMonthlyMileage(vehicleIdA || '');
-  const monthlyQueryB = useMonthlyMileage(vehicleIdB || '');
+  const monthlyQueryA = useMonthlyMileage(resolvedIdA);
+  const monthlyQueryB = useMonthlyMileage(resolvedIdB);
   const monthlyA = monthlyQueryA.data;
   const monthlyB = monthlyQueryB.data;
 
@@ -660,6 +668,15 @@ export default function FleetComparePage() {
       <FadeIn>
         <Section id="fleet-compare-select" title={t('comparison.selectVehicles', 'Select vehicles to compare')}>
           <GlassPanel className="p-3 @[640px]:p-4">
+            {unavailableIds.length > 0 && (
+              <AlertBanner variant="warning" role="status" className="mb-3">
+                {unavailableIds.map(id => (
+                  <Text key={id} as="p">
+                    {t('productPreferences.defaultVehicle.unavailable', 'Unavailable vehicle {{id}}', { id })}
+                  </Text>
+                ))}
+              </AlertBanner>
+            )}
             {vehiclesLoading && <Skeleton lines={2} />}
             {vehiclesQuery.isError && <QueryError error={vehiclesQuery.error} onRetry={() => vehiclesQuery.refetch()} />}
             {vehiclesQuery.isSuccess && vehicleList.length < 2 && (
