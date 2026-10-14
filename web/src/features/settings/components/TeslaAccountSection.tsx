@@ -8,7 +8,7 @@ import { GlassPanel, Button, ConfirmDialog, IconBox, Heading, HelperText, Text, 
 import { FadeIn } from '@/components/motion'
 import { SourceContent } from '@/components/layout'
 import { deriveDataState } from '@/api/dataState'
-import { useToast } from '@/components/feedback/Toast'
+import { useToast } from '@/components/feedback'
 import { useConfirm } from '@/hooks/useConfirm'
 import { cn } from '@/lib/cn'
 import { formatDateTime } from '@/lib/dateFormat'

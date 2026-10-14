@@ -67,7 +67,7 @@ import {
   useDisconnectAuth,
   useSyncVehicles,
 } from '@/api/hooks/useSettings'
-import { ToastProvider } from '@/components/feedback/Toast'
+import { ToastProvider } from '@/components/feedback'
 import { TeslaAccountSection } from './TeslaAccountSection'
 
 const mockedAuthStatus = useAuthStatus as unknown as Mock
@@ -484,6 +484,28 @@ describe('TeslaAccountSection — disconnect confirmation flow', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
     )
     expect(mutate).not.toHaveBeenCalled()
+  })
+
+  it('announces disconnect failures through the feedback provider and retains account controls', async () => {
+    const mutate = vi.fn((_v: undefined, opts?: { onError?: (e: Error) => void }) => {
+      opts?.onError?.(new Error('Tesla disconnect unavailable'))
+    })
+    mockedDisconnect.mockReturnValue(mutation({ mutate }))
+    renderSection()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Disconnect' }))
+    const dialog = await screen.findByRole('dialog')
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Disconnect' }))
+
+    const alert = await screen.findByRole('alert')
+    expect(within(alert).getByText('Disconnect failed')).toBeInTheDocument()
+    expect(within(alert).getByText('Tesla disconnect unavailable')).toBeInTheDocument()
+    expect(alert).toHaveAttribute('aria-live', 'assertive')
+    expect(mutate).toHaveBeenCalledTimes(1)
+    expect(screen.getByText('Connected')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Refresh token' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Sync vehicles' })).toBeEnabled()
+    expect(screen.queryByText('Tesla account disconnected')).not.toBeInTheDocument()
   })
 })
 
