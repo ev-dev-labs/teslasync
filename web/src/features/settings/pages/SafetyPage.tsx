@@ -147,8 +147,8 @@ const SAFETY_ROWS: SafetySettingRow[] = [
     docsAnchor: '/docs/notifications/digest.md',
     icon: BellRing,
     accent: 'neutral',
-    hasValue: (s) => typeof s.alert_digest_mode === 'string',
-    renderValue: (s) => coalesceBlank(s.alert_digest_mode, 'instant'),
+    hasValue: (s) => coalesceBlank(s.alert_digest_mode, '').length > 0,
+    renderValue: (s) => coalesceBlank(s.alert_digest_mode, '—'),
     badgeVariant: () => 'info',
   },
   {
@@ -244,9 +244,7 @@ export default function SafetyPage() {
   const quietWindow = settings.quiet_hours_enabled
     ? `${coalesceBlank(settings.quiet_hours_start, '—')}–${coalesceBlank(settings.quiet_hours_end, '—')}`
     : t('safetySettings.kpi.quietWindowOff', 'Off')
-  const digest = typeof settings.alert_digest_mode === 'string'
-    ? coalesceBlank(settings.alert_digest_mode, 'instant')
-    : null
+  const digest = coalesceBlank(settings.alert_digest_mode, '') || null
   const digestMeta = digest == null ? undefined : DIGEST_LABELS[digest]
   const digestLabel = digestMeta ? t(digestMeta.key, digestMeta.fallback) : digest
   const apiActive = !settings.api_suspended

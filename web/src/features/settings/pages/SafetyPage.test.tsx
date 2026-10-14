@@ -278,21 +278,38 @@ describe('SafetyPage — safety-posture KPI band', () => {
     ).toBeInTheDocument()
   })
 
-  it('translates the alert-cadence label for a known digest mode', () => {
-    mountWith({ alert_digest_mode: 'daily' })
+  it.each([
+    { mode: 'instant', label: 'Instant' },
+    { mode: 'hourly', label: 'Hourly' },
+    { mode: 'daily', label: 'Daily' },
+  ])('translates the alert-cadence label for $mode without changing the canonical row', ({ mode, label }) => {
+    mountWith({ alert_digest_mode: mode })
 
     const kpi = kpiRegion()
     expect(within(kpi).getByText('Alert cadence')).toBeInTheDocument()
-    // The KPI shows the translated label ("Daily"); the listing row below
-    // shows the raw canonical enum ("daily").
-    expect(within(kpi).getByText('Daily')).toBeInTheDocument()
+    expect(within(kpi).getByText(label)).toBeInTheDocument()
+    expect(valueBadge('safetySettings.rows.alertDigestMode.title')).toHaveTextContent(mode)
   })
 
-  it('falls back to the Instant cadence label when the digest mode is blank', () => {
-    // Bug guard: '' digest would otherwise leave the cadence KPI empty.
-    mountWith({ alert_digest_mode: '' })
+  it.each(['', '   ', '\t\n'])('keeps blank digest %j unknown in the KPI without hiding confirmed zero safeguards', (mode) => {
+    mountWith({
+      alert_digest_mode: mode,
+      quiet_hours_enabled: false,
+      critical_flash_enabled: false,
+      tab_badge_enabled: false,
+      api_suspended: false,
+    })
 
-    expect(within(kpiRegion()).getByText('Instant')).toBeInTheDocument()
+    const kpi = kpiRegion()
+    expect(within(kpi).getAllByText(EM_DASH)).toHaveLength(1)
+    expect(within(kpi).queryByText('Instant')).toBeNull()
+    expect(within(kpi).getByText('0 / 3')).toBeInTheDocument()
+    expect(within(kpi).getByText('Off')).toBeInTheDocument()
+    expect(within(kpi).getByText('Active')).toBeInTheDocument()
+    for (const key of ['quietHoursEnabled', 'criticalFlashEnabled', 'tabBadgeEnabled']) {
+      expect(valueBadge(`safetySettings.rows.${key}.title`)).toHaveTextContent('Off')
+    }
+    expect(valueBadge('safetySettings.rows.apiSuspended.title')).toHaveTextContent('Active')
   })
 
   it('shows an unknown digest value verbatim instead of crashing or blanking', () => {
@@ -325,6 +342,9 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
     { name: 'null', value: null },
     { name: 'nonboolean text', value: 'false' },
     { name: 'numeric zero', value: 0 },
+    { name: 'signed negative number', value: -1 },
+    { name: 'positive number', value: 1 },
+    { name: 'fractional number', value: 0.5 },
   ])('keeps $name safety flags unknown without losing explanations or docs', ({ value }) => {
     const settings = Object.assign({}, baseSettings, {
       quiet_hours_enabled: value,
@@ -446,12 +466,40 @@ describe('SafetyPage — deterministic safety-settings listing', () => {
     ).toHaveTextContent('daily')
   })
 
-  it('defaults a blank digest enum to instant in the listing', () => {
-    mountWith({ alert_digest_mode: '' })
+  it.each(['', '   ', '\t\n'])('keeps blank digest %j unknown with a neutral listing badge', (mode) => {
+    mountWith({ alert_digest_mode: mode })
 
-    expect(
-      valueBadge('safetySettings.rows.alertDigestMode.title'),
-    ).toHaveTextContent('instant')
+    const badge = valueBadge('safetySettings.rows.alertDigestMode.title')
+    expect(badge).toHaveTextContent(EM_DASH)
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
+    expect(badge).not.toHaveTextContent('instant')
+  })
+
+  it.each([
+    { name: 'missing', value: undefined },
+    { name: 'null', value: null },
+    { name: 'false', value: false },
+    { name: 'numeric zero', value: 0 },
+    { name: 'signed negative number', value: -1 },
+    { name: 'positive number', value: 1 },
+    { name: 'fractional number', value: 0.5 },
+  ])('keeps a $name digest unknown without blanking valid neighboring settings', ({ value }) => {
+    const settings = Object.assign({}, baseSettings, { alert_digest_mode: value })
+    mockUseSettings.mockReturnValue({
+      settings,
+      settingsState: deriveDataState({ data: settings }),
+      settingsUnavailable: false,
+      refetch: refetchSettings,
+    })
+    render(<SafetyPage />)
+
+    const badge = valueBadge('safetySettings.rows.alertDigestMode.title')
+    expect(badge).toHaveTextContent(EM_DASH)
+    expect(badge).toHaveClass(BADGE_VARIANTS.neutral)
+    expect(within(kpiRegion()).getAllByText(EM_DASH)).toHaveLength(1)
+    expect(within(kpiRegion()).getByText('3 / 3')).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText(`22:00${EN_DASH}07:00`)).toBeInTheDocument()
+    expect(within(kpiRegion()).getByText('Active')).toBeInTheDocument()
   })
 
   it('maps the API kill-switch to Suspended with a warning colour when suspended', () => {
