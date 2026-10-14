@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next'
 
 import { AIFeatureCard } from '@/components/ai/AIFeatureCard'
 import { withAiFeature } from '@/components/ai/withAiFeature'
-import { Textarea } from '@/components/ui'
+import { Textarea } from '@/components/ui/Textarea'
 import { useAiStream } from '@/hooks/useAiStream'
 
 // Stable no-op event sink hoisted to module scope so useAiStream's
@@ -52,6 +52,7 @@ function InnerSection() {
       stream={stream}
       inputSlot={
         <Textarea
+          label={t('search.aiSearch.inputLabel', 'Search query')}
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           aria-label={t('search.aiSearch.inputLabel', 'Search query')}
