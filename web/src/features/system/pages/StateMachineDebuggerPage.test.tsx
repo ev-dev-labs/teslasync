@@ -9,10 +9,11 @@
  * error surfaces render for real.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { getStateColor } from '@/types/fsm';
 
@@ -32,6 +33,98 @@ vi.hoisted(() => {
       },
     })) as unknown as typeof window.matchMedia;
   }
+});
+
+describe('StateMachineDebuggerPage — mobile field access', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('opens all transition fields with the keyboard at a 375px table width', async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal('ResizeObserver', class implements ResizeObserver {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        this.callback([{
+          target, contentRect: new DOMRect(0, 0, 375, 44),
+          borderBoxSize: [], contentBoxSize: [], devicePixelContentBoxSize: [],
+        }], this);
+      }
+      unobserve() {}
+      disconnect() {}
+    });
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'drive_evidence', ts: '2026-01-07T12:00:00Z',
+        details: { guard: 'safe_guard', nested: { reason: 'full evidence' } } }],
+      total: 1,
+    } }));
+    renderPage();
+
+    const log = await screen.findByRole('group', { name: 'Transition log' });
+    const row = within(log).getByRole('button', { name: '2026-01-07T12:00:00Z' });
+    row.focus();
+    expect(row).toHaveFocus();
+    fireEvent.keyDown(row, { key: 'Enter' });
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('drive_evidence')).toBeInTheDocument();
+    expect(within(dialog).getByText('Transition ID')).toBeInTheDocument();
+    expect(within(dialog).getByText('42')).toBeInTheDocument();
+    expect(within(dialog).getByText('Vehicle ID')).toBeInTheDocument();
+    expect(within(dialog).getByText('7')).toBeInTheDocument();
+    expect(within(dialog).getByText(/"reason": "full evidence"/)).toBeInTheDocument();
+    fireEvent.keyDown(dialog, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(row).toHaveFocus();
+
+    const detail = within(log).getByRole('button', { name: 'View detail' });
+    expect(detail).toHaveClass('min-h-11', 'min-w-11');
+    const detailRegion = screen.getByRole('region', { name: 'Transition detail' });
+    expect(detail).toHaveAttribute('aria-controls', detailRegion.id);
+    detail.focus();
+    await user.keyboard('{Enter}');
+    expect(detail).toHaveAttribute('aria-expanded', 'true');
+    expect(document.getElementById(detail.getAttribute('aria-controls')!)).toHaveTextContent('safe_guard');
+    await user.keyboard(' ');
+    expect(detail).toHaveAttribute('aria-expanded', 'false');
+    expect(detailRegion).toHaveTextContent('Select a transition to inspect its snapshot');
+    expect(detail).toHaveFocus();
+  });
+});
+
+describe('StateMachineDebuggerPage — timeline detail association', () => {
+  it('shares a stable named detail region between timeline selection and log disclosure', async () => {
+    const user = userEvent.setup();
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [
+        { id: 41, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+          to_state: 'driving', trigger: 'start_drive', ts: new Date(Date.now() - 120_000).toISOString() },
+        { id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'driving',
+          to_state: 'parked', trigger: 'end_drive', ts: new Date(Date.now() - 60_000).toISOString() },
+      ],
+      total: 2,
+    } }));
+    renderPage();
+    const region = screen.getByRole('region', { name: 'Transition detail' });
+    const first = screen.getByTestId('state-timeline-tick-41');
+    const second = screen.getByTestId('state-timeline-tick-42');
+    expect(first).toHaveAttribute('aria-pressed', 'false');
+    expect(second).toHaveAttribute('aria-controls', region.id);
+    second.focus();
+    await user.keyboard('{Enter}');
+    expect(second).toHaveAttribute('aria-pressed', 'true');
+    expect(first).toHaveAttribute('aria-pressed', 'false');
+    expect(region).toHaveTextContent('end_drive');
+    const disclosures = screen.getAllByRole('button', { name: 'View detail' });
+    expect(disclosures[1]).toHaveAttribute('aria-expanded', 'true');
+    expect(disclosures[0]).toHaveAttribute('aria-expanded', 'false');
+    disclosures[0].focus();
+    await user.keyboard(' ');
+    expect(first).toHaveAttribute('aria-pressed', 'true');
+    expect(second).toHaveAttribute('aria-pressed', 'false');
+    expect(region).toHaveTextContent('start_drive');
+    expect(screen.getByRole('region', { name: 'Transition detail' })).toBe(region);
+    expect(disclosures[0]).toHaveAttribute('aria-controls', region.id);
+  });
 });
 
 vi.mock('react-i18next', () => {
@@ -89,7 +182,7 @@ vi.mock('@/components/ai/AIStateMachineDebuggerNarrator', () => ({
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useVehicleStateMachine } from '@/api/hooks/useAdmin';
-import { useFSMStats, useFSMTransitions } from '@/api/hooks/useFSM';
+import { useFSMStats, useFSMTransitions, fsmKeys, buildTransitionsPath } from '@/api/hooks/useFSM';
 import { useSignalSnapshot } from '@/api/hooks/useTelemetry';
 import StateMachineDebuggerPage from './StateMachineDebuggerPage';
 
@@ -120,15 +213,30 @@ function makeQuery(overrides: Record<string, unknown> = {}) {
 const EMPTY_TRANS = { data: [], total: 0 };
 const EMPTY_STATS = { active_subs: [] };
 
-function renderPage() {
+function UrlEvidence() {
+  const location = useLocation();
+  return <output aria-label="URL evidence">{location.search}</output>;
+}
+
+function renderPage(entry = '/system/fsm') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
-    <MemoryRouter>
+  const page = (
+    <MemoryRouter initialEntries={[entry]}>
       <QueryClientProvider client={client}>
         <StateMachineDebuggerPage />
+        <UrlEvidence />
+      </QueryClientProvider>
+    </MemoryRouter>
+  );
+  const result = render(page);
+  return { ...result, rerenderPage: () => result.rerender(
+    <MemoryRouter initialEntries={[entry]}>
+      <QueryClientProvider client={client}>
+        <StateMachineDebuggerPage />
+        <UrlEvidence />
       </QueryClientProvider>
     </MemoryRouter>,
-  );
+  ) };
 }
 
 beforeEach(() => {
@@ -258,6 +366,152 @@ describe('StateMachineDebuggerPage — query branches', () => {
 
 
 describe('StateMachineDebuggerPage — shared presentation and preservation', () => {
+  it('preserves linked evidence and time scope through loading, failure and an absent server-page row until resolution', () => {
+    const at = '2026-01-07T12:00:00Z';
+    const entry = `/system/fsm?selected=42&at=${at}&from=2026-01-01&to=2026-01-07&time_scope=custom`;
+    mockTrans.mockReturnValue(makeQuery({ isLoading: true }));
+    const { rerenderPage } = renderPage(entry);
+    const params = () => new URLSearchParams(screen.getByLabelText('URL evidence').textContent ?? '');
+    expect(params().get('at')).toBe(at);
+    expect(params().get('selected')).toBe('42');
+    expect(params().get('time_scope')).toBe('custom');
+    expect(mockSnapshot).toHaveBeenCalledWith(7, '', '', { enabled: false });
+
+    mockTrans.mockReturnValue(makeQuery({ isError: true, error: new Error('offline'), status: 'error' }));
+    rerenderPage();
+    expect(params().get('at')).toBe(at);
+    mockTrans.mockReturnValue(makeQuery({ data: { data: [], total: 233 } }));
+    rerenderPage();
+    expect(params().get('at')).toBe(at);
+
+    const resolvedAt = '2026-01-07T12:01:00Z';
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'start', ts: resolvedAt }], total: 233,
+    } }));
+    rerenderPage();
+    expect(params().get('at')).toBe(resolvedAt);
+    expect(params().get('from')).toBe('2026-01-01');
+    expect(params().get('to')).toBe('2026-01-07');
+    expect(mockSnapshot).toHaveBeenCalledWith(7, resolvedAt, '', { enabled: true });
+    expect(screen.getByText('42')).toBeInTheDocument();
+  });
+
+  it('retains a timestamp-only link until the user explicitly resumes live mode', () => {
+    renderPage('/system/fsm?at=2026-01-07T12:00:00Z');
+    expect(screen.getByLabelText('URL evidence')).toHaveTextContent('at=');
+    fireEvent.click(screen.getByRole('button', { name: /Live/ }));
+    expect(screen.getByLabelText('URL evidence')).not.toHaveTextContent('at=');
+    fireEvent.click(screen.getByRole('button', { name: 'Freeze' }));
+    expect(screen.getByLabelText('URL evidence')).not.toHaveTextContent('at=');
+  });
+
+  it('rejects invalid incoming evidence identifiers, timestamps and FSM types', () => {
+    renderPage('/system/fsm?selected=-3&at=not-a-time&fsm=unsupported');
+    expect(screen.getByLabelText('URL evidence')).not.toHaveTextContent('selected=');
+    expect(screen.getByLabelText('URL evidence')).not.toHaveTextContent('at=');
+    expect(mockTrans).toHaveBeenCalledWith('7', 'all', 168, 1, 50,
+      '2026-01-01T00:00:00Z', '2026-01-08T00:00:00Z');
+  });
+
+  it('serializes a stored calendar range even when the incoming URL has no range', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Share permalink' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const params = new URL(String(writeText.mock.calls[0][0])).searchParams;
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('from')).toBe('2026-01-01');
+    expect(params.get('to')).toBe('2026-01-08');
+    expect(params.get('time_scope')).toBe('custom');
+  });
+
+  it('labels and serializes rolling permalink bounds as a preset rather than an exact historical replay', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mockRange.mockReturnValue({
+      start: '2026-01-07', end: '2026-01-08', presetId: '24h',
+      startInstant: '2026-01-07T12:00:00Z', endInstantExclusive: '2026-01-08T12:00:00Z',
+    });
+    renderPage();
+    expect(screen.getByText('The link reopens the rolling preset, not these exact time bounds.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Share permalink' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    expect(new URL(String(writeText.mock.calls[0][0])).searchParams.get('time_scope')).toBe('24h');
+  });
+
+  it('does not declare the matching range empty when only the loaded page is empty', () => {
+    mockTrans.mockReturnValue(makeQuery({ data: { data: [], total: 233 } }));
+    renderPage();
+    expect(screen.getByText('0 / 233')).toBeInTheDocument();
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '0 in window · 0 in filtered buffer · 0 loaded · 233 matching',
+    );
+    expect(screen.getAllByText('No transitions on the loaded server page.').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/No transitions in 2026-01/)).not.toBeInTheDocument();
+  });
+
+  it('clears only the filtered buffer while preserving the loaded page and matching total', () => {
+    mockTrans.mockReturnValue(makeQuery({ data: {
+      data: [{ id: 42, vehicle_id: 7, fsm_name: 'vehicle', from_state: 'parked',
+        to_state: 'driving', trigger: 'start', ts: '2026-01-07T12:00:00Z' }],
+      total: 233,
+    } }));
+    renderPage();
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '0 in window · 1 in filtered buffer · 1 loaded · 233 matching',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Clear buffer' }));
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '0 in window · 0 in filtered buffer · 1 loaded · 233 matching',
+    );
+    expect(screen.getByText('1 / 233')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View detail' })).toBeInTheDocument();
+    expect(screen.getAllByText('Loaded transition page only').length).toBeGreaterThanOrEqual(4);
+  });
+
+  it.each([
+    ['rolling', '2026-06-14T12:07:12.345Z', '2026-06-15T12:07:12.345Z', 24],
+    ['custom DST', '2026-03-08T00:00:00-08:00', '2026-03-09T00:00:00-07:00', 23],
+    ['all time', '', '', 0],
+  ])('passes exact %s instants and duration to the transition query', (_name, startInstant, endInstantExclusive, hours) => {
+    mockRange.mockReturnValue({
+      start: '2026-03-08', end: '2026-03-08', startInstant, endInstantExclusive,
+      setRange: vi.fn(),
+    });
+    renderPage();
+    expect(mockTrans).toHaveBeenCalledWith('7', 'all', hours, 1, 50, startInstant, endInstantExclusive);
+    const path = buildTransitionsPath('7', 'all', hours, 1, 50, startInstant, endInstantExclusive);
+    const params = new URL(path, 'https://example.test').searchParams;
+    expect(params.get('end')).toBe(endInstantExclusive || null);
+    expect(params.get('start')).toBe(startInstant || null);
+  });
+
+  it('changes the query key when rolling bounds move without changing the calendar dates', () => {
+    const initial = {
+      start: '2026-06-14', end: '2026-06-15',
+      startInstant: '2026-06-14T12:07:12.345Z',
+      endInstantExclusive: '2026-06-15T12:07:12.345Z',
+      setRange: vi.fn(),
+    };
+    mockRange.mockReturnValue(initial);
+    const { rerender } = renderPage();
+    const firstArgs = mockTrans.mock.calls.at(-1)!;
+    const firstKey = fsmKeys.transitions(...firstArgs as Parameters<typeof fsmKeys.transitions>);
+    mockRange.mockReturnValue({
+      ...initial, startInstant: '2026-06-14T12:08:12.345Z',
+      endInstantExclusive: '2026-06-15T12:08:12.345Z',
+    });
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    rerender(<MemoryRouter><QueryClientProvider client={client}>
+      <StateMachineDebuggerPage />
+    </QueryClientProvider></MemoryRouter>);
+    const nextArgs = mockTrans.mock.calls.at(-1)!;
+    expect(nextArgs[2]).toBe(24);
+    expect(fsmKeys.transitions(...nextArgs as Parameters<typeof fsmKeys.transitions>)).not.toEqual(firstKey);
+  });
+
   it('threads independent selected and previous snapshot loading, retries, retention and recovery', () => {
     const previousAt = '2026-01-07T11:00:00Z';
     const selectedAt = '2026-01-07T12:00:00Z';

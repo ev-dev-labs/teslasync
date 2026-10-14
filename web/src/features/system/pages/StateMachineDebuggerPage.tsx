@@ -1,11 +1,11 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useState, useMemo, useEffect, useCallback, useId } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
 
-import type { Column } from '@/components/ui';
+import type { Column, MobileDataTablePresentation } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import {
@@ -84,10 +84,11 @@ export default function StateMachineDebuggerPage() {
   /* ─── Vehicle selector — global sticky picker ─── */
   const { vehicleId: selectedVehicleId, vehicles } = useSelectedVehicle();
   const [searchParams, setSearchParams] = useSearchParams();
+  const { pathname } = useLocation();
   const activeId = selectedVehicleId != null ? String(selectedVehicleId) : '';
 
   /* ─── FSM filters ─── */
-  const initialFsm = (searchParams.get('fsm') ?? 'all') as FSMType;
+  const initialFsm = FSM_TYPE_OPTIONS.find((option) => option.value === searchParams.get('fsm'))?.value ?? 'all';
   const [fsmType, setFsmType] = useState<FSMType>(initialFsm);
 
   /* Time range — header View settings. Default 7d so the debugger surfaces
@@ -100,35 +101,41 @@ export default function StateMachineDebuggerPage() {
    * or west of UTC (the original "missing today's transitions" symptom on
    * the production deploy was a PST user's evening drives recorded at
    * next-day UTC falling outside the UTC-midnight filter). The
-   * `FSMTimelineChart` still consumes `hours` for bucket sizing. */
+   * The API and timeline chart share these exact half-open bounds. */
   const vehicleTz = useTimezone('vehicle');
-  const { start, end, startInstant, endInstantExclusive } = useRangeState({
+  const { start, end, startInstant, endInstantExclusive, presetId } = useRangeState({
     persistKey: 'fsm-debugger.range',
     defaultPresetId: '7d',
     timezone: vehicleTz,
   });
   const hours = useMemo(() => {
-    if (!start || !end) return 0; // empty range == "all time" for the API
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T23:59:59.999`).getTime();
-    return Math.max(1, Math.round((endMs - startMs) / 3_600_000));
-  }, [start, end]);
+    if (!startInstant || !endInstantExclusive) return 0;
+    return (Date.parse(endInstantExclusive) - Date.parse(startInstant)) / 3_600_000;
+  }, [startInstant, endInstantExclusive]);
 
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
 
   useEffect(() => {
     setServerPage(1);
-  }, [activeId, end, start]);
+  }, [activeId, endInstantExclusive, startInstant]);
 
   /* ─── Detail panel ─── */
-  const [selectedId, setSelectedId] = useState<number | null>(() => {
+  const [initialSelectedId] = useState<number | null>(() => {
     const id = searchParams.get('selected');
-    return id ? Number(id) : null;
+    return id && /^\d+$/.test(id) && Number.isSafeInteger(Number(id)) && Number(id) > 0
+      ? Number(id) : null;
   });
+  const [selectedId, setSelectedId] = useState<number | null>(initialSelectedId);
+  const detailId = useId();
+  const detailTitleId = `${detailId}-title`;
 
   /* ─── Live/freeze + timeline window ─── */
-  const initialAt = searchParams.get('at');
+  const [initialAt, setInitialAt] = useState(() => {
+    const at = searchParams.get('at');
+    return at && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(at)
+      && Number.isFinite(Date.parse(at)) ? at : '';
+  });
   const [isLive, setIsLive] = useState<boolean>(!initialAt);
   const [windowMinutes, setWindowMinutes] = useState(10);
   const [bufferClearedAt, setBufferClearedAt] = useState<Date | null>(null);
@@ -312,7 +319,10 @@ export default function StateMachineDebuggerPage() {
           <Button
             variant="ghost"
             size="sm"
+            className="min-h-11 min-w-11 md:min-h-0 md:min-w-0"
             aria-label={t('fsm.viewDetail', 'View detail')}
+            aria-expanded={selectedId === row.id}
+            aria-controls={detailId}
             onClick={(e) => {
               e.stopPropagation();
               setSelectedId(selectedId === row.id ? null : row.id);
@@ -327,8 +337,40 @@ export default function StateMachineDebuggerPage() {
         ),
       },
     ],
-    [t, transitions, serverPage, perPage, selectedId],
+    [t, transitions, serverPage, perPage, selectedId, detailId],
   );
+
+  const timelineMobilePresentation: MobileDataTablePresentation<FSMTransition> = {
+    roles: {
+      time: 'title',
+      to_state: 'primary',
+      from_state: 'meta',
+      fsm_name: 'meta',
+      trigger: 'meta',
+    },
+    displayValue: (row, key) => {
+      switch (key) {
+        case 'time': return row.ts;
+        case 'fsm_name': return row.fsm_name?.replace('_', ' ') ?? 'vehicle';
+        case 'from_state': return row.from_state;
+        case 'to_state': return row.to_state;
+        case 'trigger': return row.trigger;
+        default: return null;
+      }
+    },
+    inlineActions: (row) => timelineColumns.find(column => column.key === 'detail')?.render(row),
+    allDetails: (row) => [
+      { key: 'transition_id', label: t('fsm.detail.id', 'Transition ID'), value: row.id },
+      { key: 'vehicle_id', label: t('fsm.detail.vehicleId', 'Vehicle ID'), value: row.vehicle_id },
+      {
+        key: 'context',
+        label: t('fsm.detail.context', 'Details'),
+        value: row.details && Object.keys(row.details).length > 0
+          ? <Text as="pre" mono className="whitespace-pre-wrap break-words">{JSON.stringify(row.details, null, 2)}</Text>
+          : '—',
+      },
+    ],
+  };
 
   /* Resolve the active range's human label for empty-state copy so users see
    * "No transitions in the selected window" rather than a generic message.
@@ -338,7 +380,9 @@ export default function StateMachineDebuggerPage() {
     if (start === end) return start;
     return `${start} → ${end}`;
   }, [start, end, t]);
-  const emptyRangeMessage = t('fsm.noTransitionsInRange', {
+  const emptyRangeMessage = totalRows > 0
+    ? t('fsm.noTransitionsOnPage', 'No transitions on the loaded server page.')
+    : t('fsm.noTransitionsInRange', {
     range: activeRangeLabel,
     defaultValue: 'No transitions in {{range}}. Try expanding the time range.',
   });
@@ -365,6 +409,12 @@ export default function StateMachineDebuggerPage() {
     kind: 'unknown', label: activeRangeLabel,
     reason: t('fsm.statstrip.unknownPeriod', 'Transition bounds were not supplied. Page and flap counts remain page-scoped; current state is a separate live snapshot.'),
   };
+  const rangeScope = startInstant && endInstantExclusive
+    ? t('fsm.brief.bounds', '{{label}} · [{{start}}, {{end}}) · {{timezone}}', {
+        label: activeRangeLabel, start: startInstant, end: endInstantExclusive, timezone: vehicleTz,
+      })
+    : summaryPeriod.kind === 'unknown' ? summaryPeriod.reason : activeRangeLabel;
+  const pageScope = t('fsm.statstrip.pageOnly', 'Loaded transition page only');
 
   // Map transitions for timeline chart: use to_state as the grouping key
   const timelineTransitions = useMemo(() =>
@@ -452,6 +502,7 @@ export default function StateMachineDebuggerPage() {
   const handleClearBuffer = useCallback(() => {
     setBufferClearedAt(new Date());
     setSelectedId(null);
+    setInitialAt('');
   }, []);
 
   /* ─── Snapshot hooks: live (when no `at`) + selected/previous (when frozen) ─── */
@@ -475,29 +526,41 @@ export default function StateMachineDebuggerPage() {
   const selectedSnapshotTrust = useDataState(selectedSnapshotQuery, { provenance: 'historical' });
   const previousSnapshotTrust = useDataState(previousSnapshotQuery, { provenance: 'historical' });
 
-  /* ─── Permalink: keep ?vehicle_id / ?fsm / ?selected / ?at in sync ───
-   * Vehicle id is owned by useSelectedVehicle (writes ?vehicle_id when
-   * navigated). Time range is persisted by useRangeState in localStorage,
-   * so it does not need a URL slot here. */
+  /* A linked transition can be absent during loading or on another server
+   * page. Keep its timestamp without inventing a row or fetching outside
+   * the typed queries; a resolved row supplies the authoritative timestamp. */
+  const evidenceAt = selectedAtIso || (selectedId === initialSelectedId ? initialAt : '');
   useEffect(() => {
     const next = new URLSearchParams(searchParams);
     if (fsmType && fsmType !== 'all') next.set('fsm', fsmType);
     else next.delete('fsm');
     if (selectedId != null) next.set('selected', String(selectedId));
     else next.delete('selected');
-    if (!isLive && selectedAtIso) next.set('at', selectedAtIso);
+    if (!isLive && evidenceAt) next.set('at', evidenceAt);
     else next.delete('at');
     // Drop the legacy ?vehicle / ?range params on first render so old
     // permalinks don't keep them stale.
     next.delete('vehicle');
     next.delete('range');
-    setSearchParams(next, { replace: true });
-  }, [fsmType, selectedId, isLive, selectedAtIso, searchParams, setSearchParams]);
+    if (next.toString() !== searchParams.toString()) setSearchParams(next, { replace: true });
+  }, [fsmType, selectedId, isLive, evidenceAt, searchParams, setSearchParams]);
 
+  const rollingScope = presetId === 'live' || presetId === '24h';
   const permalinkUrl = useMemo(() => {
     if (typeof window === 'undefined') return '';
-    return `${window.location.origin}${window.location.pathname}?${searchParams.toString()}`;
-  }, [searchParams]);
+    const next = new URLSearchParams(searchParams);
+    if (activeId) next.set('vehicle_id', activeId);
+    if (start && end) {
+      next.set('from', start);
+      next.set('to', end);
+      next.set('time_scope', rollingScope ? presetId ?? 'custom' : 'custom');
+    } else if (!start && !end) {
+      next.delete('from');
+      next.delete('to');
+      next.set('time_scope', 'all');
+    }
+    return `${window.location.origin}${pathname}?${next.toString()}`;
+  }, [searchParams, pathname, activeId, start, end, rollingScope, presetId]);
 
   const subFsmType = fsmType === 'all' ? 'vehicle' : fsmType;
 
@@ -519,6 +582,11 @@ export default function StateMachineDebuggerPage() {
               size="sm"
             />
           ) : null}
+          {rollingScope && (
+            <Caption as="p">
+              {t('fsm.shareRollingLimit', 'The link reopens the rolling preset, not these exact time bounds.')}
+            </Caption>
+          )}
         </div>
       }
     >
@@ -574,6 +642,7 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── 3 — FSM Health Indicators (full-width alert band) ──── */}
       <FadeIn delay={0.06}>
+        <Caption as="p">{pageScope}</Caption>
         {transLoading ? (
           <GlassPanel className="p-4">
             <Skeleton height={24} />
@@ -692,7 +761,10 @@ export default function StateMachineDebuggerPage() {
               isLive={isLive}
               onToggleLive={(live) => {
                 setIsLive(live);
-                if (live) setSelectedId(null);
+                if (live) {
+                  setSelectedId(null);
+                  setInitialAt('');
+                }
               }}
               onStepPrev={handleStepPrev}
               onStepNext={handleStepNext}
@@ -701,14 +773,21 @@ export default function StateMachineDebuggerPage() {
               windowMinutes={windowMinutes}
               onWindowChange={setWindowMinutes}
               onClearBuffer={handleClearBuffer}
-              windowCount={windowed.inWindow.length}
-              totalCount={visibleTransitions.length}
+              windowCount={transData ? windowed.inWindow.length : undefined}
+              filteredBufferCount={transData ? visibleTransitions.length : undefined}
+              loadedCount={transData ? transitions.length : undefined}
+              totalCount={transData?.total}
+              rangeScope={rangeScope}
+              page={serverPage}
+              bufferSince={bufferClearedAt?.toISOString()}
+              windowEnd={windowed.anchor.toISOString()}
             />
           </div>
           <StateTimeline
             transitions={windowed.inWindow}
             fsmType={subFsmType}
             selectedId={selectedId}
+            detailId={detailId}
             onSelect={(tr) => {
               setSelectedId(tr.id);
               setIsLive(false);
@@ -742,6 +821,7 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── 7 — State Diagram (full-width graph) ──── */}
       <FadeIn delay={0.18}>
+        <Caption as="p">{pageScope}</Caption>
         <FSMStateDiagram fsmType={subFsmType} transitions={transitions} />
       </FadeIn>
 
@@ -751,6 +831,7 @@ export default function StateMachineDebuggerPage() {
           aria-label={t('fsm.analysis', 'Transition analysis')}
           className="grid grid-cols-1 gap-4 lg:grid-cols-2"
         >
+          <Caption as="p" className="lg:col-span-2">{pageScope}</Caption>
           <ChartContainer
             title={t('fsm.distributionByState', 'State distribution')}
             ariaLabel={t('fsm.distributionByStateAria', 'FSM state distribution donut chart with per-state counts')}
@@ -829,10 +910,17 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── 9 — Transition Timeline Chart (full-width) ──── */}
       <FadeIn delay={0.24}>
+        <Caption as="p">{pageScope}</Caption>
         {transError ? (
           <QueryError error={transError} onRetry={() => refetchTrans()} />
         ) : (
-          <FSMTimelineChart transitions={timelineTransitions} hours={Number(hours)} emptyMessage={emptyRangeMessage} />
+          <FSMTimelineChart
+            transitions={timelineTransitions}
+            hours={hours}
+            startInstant={startInstant}
+            endInstantExclusive={endInstantExclusive}
+            emptyMessage={emptyRangeMessage}
+          />
         )}
       </FadeIn>
 
@@ -847,6 +935,7 @@ export default function StateMachineDebuggerPage() {
               </Text>
             )}
           </PanelTitle>
+          <Caption as="p" className="mb-4">{rangeScope} · {pageScope}</Caption>
           {transLoading ? (
             <div className="space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
@@ -859,9 +948,11 @@ export default function StateMachineDebuggerPage() {
             <>
               <DataTable<FSMTransition>
                 tableId="system:fsm-transitions"
+                caption={t('fsm.timelineTitle', 'Transition log')}
                 enableValueFilters={false}
                 columns={timelineColumns}
-                mobileColumns={['time', 'from_state', 'to_state']}
+                mobilePresentation={timelineMobilePresentation}
+                mobileColumns={['index', 'time', 'fsm_name', 'from_state', 'to_state', 'trigger', 'detail']}
                 data={transitions}
                 keyExtractor={(tr) => String(tr.id)}
                 compact
@@ -886,8 +977,8 @@ export default function StateMachineDebuggerPage() {
 
       {/* ──── 11 — Selected Transition Detail (full-width) ──── */}
       <FadeIn>
-        <GlassPanel className="p-4 sm:p-5">
-          <PanelTitle className="mb-4">
+        <GlassPanel id={detailId} role="region" aria-labelledby={detailTitleId} className="p-4 sm:p-5">
+          <PanelTitle id={detailTitleId} className="mb-4">
             {t('fsm.detailTitle', 'Transition detail')}
           </PanelTitle>
           {selectedTransition ? (

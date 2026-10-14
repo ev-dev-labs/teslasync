@@ -1,4 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import { StateTimeline } from '../StateTimeline';
 import type { FSMTransition } from '@/types/fsm';
@@ -89,5 +90,35 @@ describe('StateTimeline', () => {
     const tick = screen.getByTestId('state-timeline-tick-21');
     // Selected ticks ring themselves with `ring-2`
     expect(tick.className).toContain('ring-2');
+    expect(tick).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('exposes selection and the persistent detail target without changing names or keyboard activation', async () => {
+    const user = userEvent.setup();
+    const anchor = new Date('2025-01-15T12:00:00Z');
+    const first = makeTransition({ id: 31, ts: '2025-01-15T11:55:00Z' });
+    const second = makeTransition({ id: 32, from_state: 'driving', to_state: 'parked', ts: '2025-01-15T11:58:00Z' });
+    const onSelect = vi.fn();
+    const props = { transitions: [first, second], fsmType: 'vehicle', anchor, onSelect, detailId: 'transition-detail' };
+    const { rerender } = render(<StateTimeline {...props} selectedId={31} />);
+
+    const firstTick = screen.getByRole('button', { name: 'parked to driving', pressed: true });
+    const secondTick = screen.getByRole('button', { name: 'driving to parked', pressed: false });
+    expect(firstTick).toHaveAttribute('aria-controls', 'transition-detail');
+    expect(secondTick).toHaveAttribute('aria-controls', 'transition-detail');
+    expect(secondTick).not.toHaveAttribute('aria-expanded');
+    secondTick.focus();
+    await user.keyboard('{Enter}');
+    expect(onSelect).toHaveBeenLastCalledWith(second);
+    await user.keyboard(' ');
+    expect(onSelect).toHaveBeenCalledTimes(2);
+
+    rerender(<StateTimeline {...props} selectedId={32} />);
+    expect(firstTick).toHaveAttribute('aria-pressed', 'false');
+    expect(secondTick).toHaveAttribute('aria-pressed', 'true');
+    expect(secondTick).toHaveFocus();
+    rerender(<StateTimeline {...props} selectedId={null} />);
+    expect(firstTick).toHaveAttribute('aria-pressed', 'false');
+    expect(secondTick).toHaveAttribute('aria-pressed', 'false');
   });
 });

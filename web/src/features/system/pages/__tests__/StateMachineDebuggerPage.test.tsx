@@ -52,6 +52,12 @@ const mockStore = {
   flapIds: new Set<number>(),
   snapshot: null as unknown,
   snapshotFetching: false,
+  timelineProps: undefined as {
+    transitions: FSMTransition[];
+    hours: number;
+    startInstant?: string;
+    endInstantExclusive?: string;
+  } | undefined,
 };
 
 // ── i18n: return the English defaultValue, interpolating {{placeholders}} ──
@@ -117,7 +123,14 @@ vi.mock('@/features/system/components/FSMStateDiagram', () => ({
   FSMStateDiagram: () => <div data-testid="mock-fsm-diagram" />,
 }));
 vi.mock('@/features/system/components/FSMTimelineChart', () => ({
-  FSMTimelineChart: () => <div data-testid="mock-fsm-timeline" />,
+  FSMTimelineChart: (props: NonNullable<typeof mockStore.timelineProps>) => {
+    mockStore.timelineProps = props;
+    return <div data-testid="mock-fsm-timeline" />;
+  },
+}));
+vi.mock('@/lib/timezone', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/lib/timezone')>(),
+  useTimezone: () => 'America/Los_Angeles',
 }));
 vi.mock('@/features/system/components/FSMSubFSMPanel', () => ({
   FSMSubFSMPanel: () => <div data-testid="mock-fsm-subfsm" />,
@@ -212,6 +225,29 @@ beforeEach(() => {
   mockStore.flapIds = new Set<number>();
   mockStore.snapshot = null;
   mockStore.snapshotFetching = false;
+  mockStore.timelineProps = undefined;
+});
+
+describe('StateMachineDebuggerPage — exact chart range', () => {
+  it('threads a historical non-UTC custom range while retaining the loaded-page state series', () => {
+    mockStore.transitions = [makeTransition({ to_state: 'driving', ts: '2026-03-08T09:00:00Z' })];
+    mockStore.total = 200;
+    renderPage(['/system/fsm?from=2026-03-08&to=2026-03-08&time_scope=custom']);
+    expect(mockStore.timelineProps).toMatchObject({
+      hours: 23,
+      startInstant: '2026-03-08T08:00:00.000Z',
+      endInstantExclusive: '2026-03-09T07:00:00.000Z',
+      transitions: [{ ...mockStore.transitions[0], fsm_name: 'driving' }],
+    });
+    expect(mockStore.timelineProps?.transitions).toHaveLength(1);
+    expect(within(kpiCard('Transitions (Page)')).getByText('1 / 200')).toBeInTheDocument();
+    expect(screen.getByTestId('live-controls-counter')).toHaveTextContent(
+      '0 in window · 1 in filtered buffer · 1 loaded · 200 matching',
+    );
+    expect(screen.getAllByText(/2026-03-08T08:00:00.000Z/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Loaded transition page only').length).toBeGreaterThanOrEqual(4);
+    expect(screen.getByTestId('live-controls-counter')).not.toHaveTextContent('in 24 h');
+  });
 });
 
 describe('StateMachineDebuggerPage — KPI band', () => {
@@ -332,6 +368,11 @@ describe('StateMachineDebuggerPage — transition log', () => {
     expect(screen.getByText('speed_changed')).toBeInTheDocument();
     expect(screen.getByText('gear_changed')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'View detail' })).toHaveLength(2);
+    for (const button of screen.getAllByRole('button', { name: 'View detail' })) {
+      expect(button).toHaveAttribute('aria-expanded', 'false');
+      expect(button).toHaveAttribute('aria-controls', screen.getByRole('region', { name: 'Transition detail' }).id);
+      expect(button).toHaveClass('min-h-11', 'min-w-11');
+    }
   });
 
   it('shows the range-aware empty copy across sections when there are no transitions', () => {
@@ -369,6 +410,7 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
     expect(screen.getAllByText('Select a transition to inspect its snapshot').length).toBeGreaterThan(0);
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+    expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-expanded', 'true');
 
     expect(screen.getByText('Transition detail')).toBeInTheDocument();
     // Transition ID field (id=42) is unique to the detail panel.
@@ -387,12 +429,18 @@ describe('StateMachineDebuggerPage — transition detail panel', () => {
 
     renderPage();
 
+    const detailRegion = screen.getByRole('region', { name: 'Transition detail' });
+    const detailId = detailRegion.id;
     // Re-query the toggle each time: selecting a row re-memoises the column
     // defs (selectedId is a dep), which replaces the button node.
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
     expect(screen.getByText('Transition detail')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-controls', detailId);
+    expect(detailRegion).toHaveTextContent('5');
 
     fireEvent.click(screen.getByRole('button', { name: 'View detail' }));
+    expect(screen.getByRole('button', { name: 'View detail' })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('region', { name: 'Transition detail' })).toBe(detailRegion);
     expect(screen.getByText('Transition detail')).toBeInTheDocument();
     expect(screen.getAllByText('Select a transition to inspect its snapshot').length).toBeGreaterThan(0);
   });
@@ -467,6 +515,26 @@ describe('StateMachineDebuggerPage — share permalink', () => {
 
     await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
     expect(String(writeText.mock.calls[0][0])).toContain('http');
+  });
+
+  it('copies the supported calendar analysis scope with vehicle and selected evidence', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+    mockStore.transitions = [makeTransition({ id: 42, ts: '2026-03-08T09:00:00Z' })];
+    mockStore.total = 1;
+    renderPage(['/system/fsm?selected=42&at=2026-03-08T09:00:00Z&from=2026-03-08&to=2026-03-08&time_scope=custom']);
+    fireEvent.click(screen.getByRole('button', { name: 'Share permalink' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const url = new URL(String(writeText.mock.calls[0][0]));
+    expect(url.pathname).toBe('/system/fsm');
+    expect(url.searchParams.get('vehicle_id')).toBe('1');
+    expect(url.searchParams.get('selected')).toBe('42');
+    expect(url.searchParams.get('at')).toBe('2026-03-08T09:00:00Z');
+    expect(url.searchParams.get('from')).toBe('2026-03-08');
+    expect(url.searchParams.get('to')).toBe('2026-03-08');
+    expect(url.searchParams.get('time_scope')).toBe('custom');
+    expect(mockStore.timelineProps?.hours).toBe(23);
+    expect(screen.getByText('42')).toBeInTheDocument();
   });
 });
 
