@@ -68,7 +68,7 @@ export function DrainEventDirectory({ analysis, state, formatTemperature }: Prop
       filterValueLabel: (_, event) => sentry(event),
       header: t('sleep.eventDirectory.sentry', 'Sentry'),
       render: event => (
-        <Badge variant={event.sentryMode ? 'warning' : 'info'} size="sm">
+        <Badge variant="neutral" size="sm">
           {event.sentryMode ? <Eye className="h-3 w-3" aria-hidden="true" /> : <Moon className="h-3 w-3" aria-hidden="true" />}
           {sentry(event)}
         </Badge>

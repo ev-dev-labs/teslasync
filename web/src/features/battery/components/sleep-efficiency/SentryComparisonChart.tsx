@@ -22,6 +22,7 @@ import { EmptyState } from '@/components/feedback';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 interface SentryDatum extends ChartDataRow {
   mode: string;
@@ -37,6 +38,7 @@ export function SentryComparisonChart({
 }: SleepEfficiencySectionProps) {
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const available = state.vehicleSelected && state.isResolved
     && analysis.source.hasResponse && analysis.sentry.comparisonAvailable;
   const data = useMemo<SentryDatum[]>(
@@ -154,7 +156,7 @@ export function SentryComparisonChart({
                     'sleep.sentryChart.drainRateShort',
                     'Drain rate (%/hr)',
                   )}
-                  fill="var(--chart-3)"
+                  fill={palette[2]}
                   radius={[4, 4, 0, 0]}
                   hide={hiddenSeries?.isHidden('drainRate')}
                 />
@@ -165,7 +167,7 @@ export function SentryComparisonChart({
                     'sleep.sentryChart.batteryLostShort',
                     'Battery lost (%)',
                   )}
-                  fill="var(--chart-4)"
+                  fill={palette[3]}
                   radius={[4, 4, 0, 0]}
                   hide={hiddenSeries?.isHidden('batteryLost')}
                 />

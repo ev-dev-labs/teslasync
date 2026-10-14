@@ -15,6 +15,8 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 
 import { ToastProvider } from '@/components/feedback';
 import type { SleepEfficiencyData } from '@/types/energy';
+import { deriveDataState } from '@/api/dataState';
+import type { AppSettings } from '@/api/types';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -50,6 +52,45 @@ vi.mock('react-i18next', () => ({
 
 const unitState = vi.hoisted(() => ({ fahrenheit: false }));
 const widgetState = vi.hoisted(() => ({ failDestination: false }));
+const chartPreference = vi.hoisted(() => ({ palette: 'cb_safe' }));
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isLoading: false, isFetching: false, isError: false }),
+  useCreateAnnotation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutateAsync: vi.fn(), isPending: false }),
+}));
+vi.mock('@/hooks/useChartPalette', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useChartPalette')>();
+  return {
+    ...actual,
+    useChartPalette: () => actual.resolveChartPalette(chartPreference.palette),
+  };
+});
+
+// Keep the real frame/legend state while making series observable without layout.
+vi.mock('@/components/charts', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/charts')>();
+  return {
+    ...actual,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    BarChart: ({ children, data }: { children?: ReactNode; data?: unknown }) =>
+      <div data-testid="sleep-chart-bars" data-rows={JSON.stringify(data)}>{children}</div>,
+    Bar: ({ dataKey, fill, hide, yAxisId }: {
+      dataKey: string; fill?: string; hide?: boolean; yAxisId?: string;
+    }) => <div data-testid={`sleep-series-${dataKey}`} data-fill={fill} data-hidden={String(hide)} data-axis={yAxisId} />,
+    XAxis: () => null,
+    YAxis: () => null,
+    Tooltip: () => null,
+    ChartLegend: () => null,
+    chartGrid: null,
+  };
+});
+const pricingFixture = vi.hoisted(() => ({
+  symbol: '$' as string | null | undefined,
+  available: true,
+  error: null as Error | null,
+  paused: false,
+  retry: vi.fn(),
+}));
 
 vi.mock('../components/sleep-efficiency', async (importActual) => {
   const actual = await importActual<typeof import('../components/sleep-efficiency')>();
@@ -93,10 +134,19 @@ vi.mock('@/hooks/useUnits', () => ({
 
 vi.mock('@/hooks/useFormatting', () => ({
   useFormatting: () => ({
+    pricingState: deriveDataState({
+      data: pricingFixture.available
+        ? { currency_symbol: pricingFixture.symbol } as AppSettings
+        : undefined,
+      isError: pricingFixture.error != null,
+      error: pricingFixture.error,
+      fetchStatus: pricingFixture.paused ? 'paused' : 'idle',
+      refetch: pricingFixture.retry,
+    }),
     costPerKwh: 0.12,
     currencySymbol: '$',
     formatEnergyCost: (value: number) => `$${value.toFixed(2)}`,
-    formatCurrency: (value: number) => `$${value.toFixed(2)}`,
+    formatCurrency: (value: number) => `${pricingFixture.symbol}${value.toFixed(2)}`,
     costPerDistanceUnit: () => null,
     estimateGasCost: () => null,
   }),
@@ -130,6 +180,7 @@ if (typeof window.matchMedia !== 'function') {
 import { useSleepEfficiency } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import SleepEfficiencyPage from './SleepEfficiencyPage';
+import { resolveChartPalette } from '@/hooks/useChartPalette';
 
 it('offers keyboard-accessible transition interpretation help without duration evidence', () => {
   mockSleep.mockReturnValue(queryResult({ data: transitionOnlyData() }));
@@ -153,6 +204,7 @@ function queryResult(
     isFetching: boolean;
     isError: boolean;
     isSuccess: boolean;
+    dataUpdatedAt: number;
     fetchStatus: 'fetching' | 'paused' | 'idle';
     error: Error | null;
     refetch: ReturnType<typeof vi.fn>;
@@ -167,7 +219,7 @@ function queryResult(
     isPending: false,
     isStale: false,
     error: null,
-    dataUpdatedAt: 1,
+    dataUpdatedAt: Date.now(),
     refetch: vi.fn(),
     ...overrides,
   };
@@ -234,8 +286,8 @@ function fullyPopulatedData(): SleepEfficiencyData {
     recent_events: [
       {
         id: 10,
-        start_date: '2026-08-06T01:00:00Z',
-        end_date: '2026-08-06T05:00:00Z',
+        start_date: '2026-07-16T01:00:00Z',
+        end_date: '2026-07-16T05:00:00Z',
         duration_hours: 4,
         battery_lost: 2,
         drain_rate: 0.5,
@@ -323,6 +375,11 @@ beforeEach(() => {
   localStorage.clear();
   unitState.fahrenheit = false;
   widgetState.failDestination = false;
+  chartPreference.palette = 'cb_safe';
+  pricingFixture.symbol = '$';
+  pricingFixture.available = true;
+  pricingFixture.error = null;
+  pricingFixture.paused = false;
   vi.spyOn(Date, 'now').mockReturnValue(
     Date.parse('2026-08-08T12:00:00Z'),
   );
@@ -337,6 +394,117 @@ afterEach(() => {
 });
 
 describe('SleepEfficiencyPage persistent workspace', () => {
+  it('updates restrained palette presentation without resetting saved IDs, hidden keys, or raw series', () => {
+    const data = fullyPopulatedData();
+    mockSleep.mockReturnValue(queryResult({ data }));
+    const original = structuredClone(data);
+    const { rerenderPage } = renderPage([
+      '/sleep-efficiency?from=2026-06-17&to=2026-07-16&hidden_sleep-efficiency-sentry-comparison=drainRate',
+    ]);
+    const dwell = within(screen.getByTestId('sleep-efficiency-dwell-distribution'));
+    const sentry = within(screen.getByTestId('sleep-efficiency-sentry-comparison'));
+    const dwellRows = dwell.getByTestId('sleep-chart-bars').getAttribute('data-rows');
+    const sentryRows = sentry.getByTestId('sleep-chart-bars').getAttribute('data-rows');
+    expect(JSON.parse(dwellRows ?? '[]')).toEqual([
+      { state: 'Asleep', minutes: 90, share: 75 },
+      { state: 'Online', minutes: 30, share: 25 },
+      { state: 'mystery', minutes: 0, share: 0 },
+    ]);
+    expect(JSON.parse(sentryRows ?? '[]')).toEqual([
+      { mode: 'Sentry on', count: 4, drainRate: 0.1, batteryLost: 4, durationHours: 5 },
+      { mode: 'Sentry off', count: 5, drainRate: 0.025, batteryLost: 1, durationHours: 6 },
+    ]);
+    for (const savedId of ['cb_safe', 'neon', 'cb_safe']) {
+      chartPreference.palette = savedId;
+      rerenderPage();
+      const palette = resolveChartPalette(savedId);
+      expect(chartPreference.palette).toBe(savedId);
+      expect(dwell.getByTestId('sleep-series-minutes')).toHaveAttribute('data-fill', palette[3]);
+      expect(sentry.getByTestId('sleep-series-drainRate')).toHaveAttribute('data-fill', palette[2]);
+      expect(sentry.getByTestId('sleep-series-batteryLost')).toHaveAttribute('data-fill', palette[3]);
+      expect(sentry.getByTestId('sleep-series-drainRate')).toHaveAttribute('data-hidden', 'true');
+      expect(sentry.getByTestId('sleep-series-batteryLost')).toHaveAttribute('data-hidden', 'false');
+      expect(sentry.getByTestId('sleep-series-drainRate')).toHaveAttribute('data-axis', 'rate');
+      expect(sentry.getByTestId('sleep-series-batteryLost')).toHaveAttribute('data-axis', 'dose');
+      expect(dwell.getByTestId('sleep-chart-bars')).toHaveAttribute('data-rows', dwellRows);
+      expect(sentry.getByTestId('sleep-chart-bars')).toHaveAttribute('data-rows', sentryRows);
+      expect(data).toEqual(original);
+    }
+  });
+
+  it.each([undefined, null, '', '   '])('withholds missing currency identity (%s) without erasing numeric context', (symbol) => {
+    pricingFixture.symbol = symbol;
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+    const projection = within(screen.getByTestId('sleep-efficiency-sentry-projection'));
+    expect(projection.getByText('0.12 (Currency: Unavailable)/kWh')).toBeInTheDocument();
+    expect(projection.getByText('6.57 (Currency: Unavailable)')).toBeInTheDocument();
+    expect(projection.getByText('54.75 kWh')).toBeInTheDocument();
+    expect(screen.queryByText('$6.57')).not.toBeInTheDocument();
+  });
+
+  it.each(['loading', 'failed', 'paused'])('does not use default currency when settings are %s', (status) => {
+    pricingFixture.available = false;
+    pricingFixture.error = status === 'failed' ? new Error('settings failed') : null;
+    pricingFixture.paused = status === 'paused';
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+    expect(screen.getByText('6.57 (Currency: Unavailable)')).toBeInTheDocument();
+    expect(screen.getByText('4 on · 5 off')).toBeInTheDocument();
+    expect(screen.queryByText('$6.57')).not.toBeInTheDocument();
+  });
+
+  it.each(['failed', 'paused'])('retains the saved currency and discloses %s settings independently', (status) => {
+    pricingFixture.symbol = '€';
+    pricingFixture.error = status === 'failed' ? new Error('settings refresh failed') : null;
+    pricingFixture.paused = status === 'paused';
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    renderPage();
+    expect(screen.getByText('€6.57')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toHaveTextContent('Settings may be out of date');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    expect(pricingFixture.retry).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it.each([null, undefined, NaN, Infinity, -Infinity, -0.12])('keeps invalid or missing sleep price (%s) distinct from zero', (price) => {
+    const data = fullyPopulatedData();
+    data.base_cost_per_kwh = price;
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+    const projection = within(screen.getByTestId('sleep-efficiency-sentry-projection'));
+    expect(projection.queryByText('$0.00/kWh')).not.toBeInTheDocument();
+    expect(projection.queryByText('$0.00')).not.toBeInTheDocument();
+    expect(projection.getAllByText('—').length).toBeGreaterThanOrEqual(2);
+    expect(projection.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it.each([true, false])('preserves measured zero price and signed fractional temperature with settings available=%s', (available) => {
+    pricingFixture.available = available;
+    const data = fullyPopulatedData();
+    data.base_cost_per_kwh = 0;
+    data.recent_events![0].outside_temp = -2.75;
+    mockSleep.mockReturnValue(queryResult({ data }));
+    renderPage();
+    expect(screen.getByText(available ? '$0.00/kWh' : '0.00 (Currency: Unavailable)/kWh')).toBeInTheDocument();
+    expect(screen.getByText(available ? '$0.00' : '0.00 (Currency: Unavailable)')).toBeInTheDocument();
+    expect(screen.getByText('-2.75 °C')).toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
+  it('restores currency identity when existing settings recover without refetching sleep', () => {
+    pricingFixture.available = false;
+    mockSleep.mockReturnValue(queryResult({ data: fullyPopulatedData() }));
+    const page = renderPage();
+    expect(screen.getByText('6.57 (Currency: Unavailable)')).toBeInTheDocument();
+    pricingFixture.available = true;
+    pricingFixture.symbol = '£';
+    page.rerenderPage();
+    expect(screen.getByText('£6.57')).toBeInTheDocument();
+    expect(screen.queryByText('6.57 (Currency: Unavailable)')).not.toBeInTheDocument();
+    expect(screen.getByText('54.75 kWh')).toBeInTheDocument();
+  });
+
   it('keeps the scientific matrix columns fixed', () => {
     renderPage();
     const matrix = screen.getByTestId('sleep-efficiency-availability-matrix');
@@ -542,7 +710,68 @@ describe('SleepEfficiencyPage persistent workspace', () => {
     expect(screen.queryByText('20.00 °C')).not.toBeInTheDocument();
   });
 
-  it('freezes the analysis clock once for future-event classification', () => {
+  it('keeps historical recency and its as-of scope stable across refreshes and remounts', () => {
+    const data = fullyPopulatedData();
+    mockSleep.mockReturnValue(queryResult({ data }));
+    const page = renderPage();
+    const assertHistoricalScope = () => {
+      expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent(
+        'As of 2026-07-16T23:59:59.999Z',
+      );
+      const directory = within(screen.getByTestId('sleep-efficiency-event-directory'));
+      expect(directory.getByText('Last 24 hours')).toBeInTheDocument();
+      expect(directory.getByText('20.00 °C')).toBeInTheDocument();
+      expect(directory.queryByText('Older')).not.toBeInTheDocument();
+    };
+    assertHistoricalScope();
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-09-08T12:00:00Z'));
+    mockSleep.mockReturnValue(queryResult({ data: { ...data } }));
+    page.rerenderPage();
+    assertHistoricalScope();
+    page.unmount();
+    renderPage();
+    assertHistoricalScope();
+  });
+
+  it('anchors current-window analysis to accepted response time, including delayed loads and refreshes', () => {
+    const data = fullyPopulatedData();
+    data.recent_events = [{
+      ...data.recent_events![0],
+      start_date: '2026-08-08T13:00:00Z',
+      end_date: '2026-08-08T14:00:00Z',
+      duration_hours: 1,
+      drain_rate: 2,
+    }];
+    mockSleep.mockReturnValue(queryResult({ data: undefined, isLoading: true }));
+    const page = renderPage(['/sleep-efficiency?from=2026-08-08&to=2026-08-08']);
+    expect(screen.queryByTestId('sleep-analysis-as-of')).not.toBeInTheDocument();
+
+    const acceptedAt = Date.parse('2026-08-08T15:00:00Z');
+    mockSleep.mockReturnValue(queryResult({ data, dataUpdatedAt: acceptedAt }));
+    page.rerenderPage();
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T15:00:00.000Z');
+    expect(screen.getByText('20.00 °C')).toBeInTheDocument();
+
+    vi.mocked(Date.now).mockReturnValue(Date.parse('2026-08-10T12:00:00Z'));
+    mockSleep.mockReturnValue(queryResult({
+      data,
+      dataUpdatedAt: acceptedAt,
+      isError: true,
+      error: new Error('refresh failed'),
+    }));
+    page.rerenderPage();
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T15:00:00.000Z');
+    expect(within(screen.getByTestId('sleep-efficiency-event-directory')).getByText('Last 24 hours')).toBeInTheDocument();
+
+    mockSleep.mockReturnValue(queryResult({
+      data,
+      dataUpdatedAt: Date.parse('2026-08-08T16:00:00Z'),
+    }));
+    page.rerenderPage();
+    expect(screen.getByTestId('sleep-analysis-as-of')).toHaveTextContent('2026-08-08T16:00:00.000Z');
+  });
+
+  it('caps future-event classification at the historical window even for a newer response', () => {
     let wallNow = Date.parse('2026-08-08T12:00:00Z');
     vi.mocked(Date.now).mockImplementation(() => wallNow);
     const futureData = fullyPopulatedData();

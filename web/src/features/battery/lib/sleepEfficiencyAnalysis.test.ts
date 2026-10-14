@@ -45,6 +45,29 @@ function analyze(
 }
 
 describe('sleepEfficiencyAnalysis state accounting', () => {
+  it('preserves all chart evidence and source order without attaching presentation colors', () => {
+    const source: SleepEfficiencyData = {
+      state_distribution: [
+        { state: 'online', count: 0, total_minutes: 0 },
+        { state: 'mystery_mode', count: 1, total_minutes: 15 },
+        { state: 'asleep', count: 4, total_minutes: 45 },
+      ],
+      sentry_comparison: [
+        { sentry_mode: false, count: 2, avg_drain_rate: -0.125, avg_battery_lost: -0.5, avg_duration_hours: 4 },
+        { sentry_mode: true, count: 3, avg_drain_rate: 0, avg_battery_lost: 0, avg_duration_hours: 2 },
+      ],
+    };
+    const original = structuredClone(source);
+    const result = analyze(source);
+    expect(result.transitions.states.map(row => [row.state, row.count, row.totalMinutes]))
+      .toEqual([['online', 0, 0], ['mystery_mode', 1, 15], ['asleep', 4, 45]]);
+    expect(result.sentry.comparisonAvailable).toBe(true);
+    expect(result.sentry.off).toMatchObject({ count: 2, avgDrainRate: -0.125, avgBatteryLost: -0.5, avgDurationHours: 4 });
+    expect(result.sentry.on).toMatchObject({ count: 3, avgDrainRate: 0, avgBatteryLost: 0, avgDurationHours: 2 });
+    expect(result.transitions.states.every(row => !('color' in row))).toBe(true);
+    expect(source).toEqual(original);
+  });
+
   it('derives evidence support independently of requested scope and successful empty responses', () => {
     const missing = analyze(undefined);
     expect(missing.range.status).toBe('valid');

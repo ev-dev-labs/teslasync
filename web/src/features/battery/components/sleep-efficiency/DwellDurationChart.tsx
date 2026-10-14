@@ -22,6 +22,7 @@ import { sleepStateLabel } from './labels';
 import { SleepEfficiencySectionBody } from './SleepEfficiencySectionBody';
 import type { SleepEfficiencySectionProps } from './types';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { useChartPalette } from '@/hooks/useChartPalette';
 
 interface DwellDatum extends ChartDataRow {
   state: string;
@@ -35,6 +36,7 @@ export function DwellDurationChart({
 }: SleepEfficiencySectionProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const available = state.vehicleSelected && state.isResolved
     && analysis.source.hasResponse && analysis.dwell.available;
   const emptyMessage = !state.vehicleSelected
@@ -137,7 +139,7 @@ export function DwellDurationChart({
                 <Bar
                   dataKey="minutes"
                   name={t('sleep.dwellChart.minutes', 'Dwell minutes')}
-                  fill="var(--chart-4)"
+                  fill={palette[3]}
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

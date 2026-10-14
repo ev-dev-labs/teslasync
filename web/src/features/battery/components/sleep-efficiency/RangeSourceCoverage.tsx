@@ -188,7 +188,7 @@ export function RangeSourceCoverage({
               icon={<CalendarRange className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.requested', 'Requested UTC dates')}
               value={requestedWindow}
-              color="cyan"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.rangeStatus',
                 'Range status: {{status}}',
@@ -206,7 +206,7 @@ export function RangeSourceCoverage({
                   ? fmtInt(analysis.range.inclusiveDays)
                   : '—'
               }
-              color="blue"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.utcSafe',
                 'Computed from UTC calendar dates',
@@ -223,7 +223,7 @@ export function RangeSourceCoverage({
                   ? fmtInt(analysis.source.backendPeriodDays)
                   : '—'
               }
-              color="purple"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.backendEcho',
                 'Response coverage field',
@@ -237,7 +237,7 @@ export function RangeSourceCoverage({
                   ? fmtInt(analysis.source.vehicleId)
                   : '—'
               }
-              color="green"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.responseIdentity',
                 'Sanitized response identity',
@@ -247,7 +247,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.stateCap', 'State directory cap')}
               value={fmtInt(stateAccounting.directoryCap)}
-              color="amber"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.omitted',
                 '{{count}} valid rows omitted from display',
@@ -258,7 +258,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.eventCap', 'Event directory cap')}
               value={fmtInt(eventAccounting.directoryCap)}
-              color="amber"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.omitted',
                 '{{count}} valid rows omitted from display',
@@ -269,7 +269,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.clock', 'Frozen analysis clock')}
               value={analysis.source.frozenNowIso ?? '—'}
-              color="red"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.clockPurpose',
                 'Used for future and recency classification',
@@ -279,7 +279,7 @@ export function RangeSourceCoverage({
               icon={<Database className="h-4 w-4" aria-hidden="true" />}
               label={t('sleep.coverage.summaryScope', 'Summary scope')}
               value={t('sleep.coverage.allValidRows', 'All valid rows')}
-              color="cyan"
+              color="neutral"
               subtitle={t(
                 'sleep.coverage.capDoesNotAffect',
                 'Directory caps do not affect summaries',
