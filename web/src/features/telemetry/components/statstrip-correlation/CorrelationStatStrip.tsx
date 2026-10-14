@@ -26,7 +26,8 @@ export function CorrelationStatStrip({ result, leadLabel, loading, retained, err
       label: t('signalCorrelation.bestR', 'Peak correlation'),
       description: t('help.signalCorrelation.bestR', 'An ordinary overlay chart only ever shows the zero-lag correlation, which misses every relationship with a delay in it. Sweeping the lag finds the shift at which the two signals line up best, and the difference between the peak and the zero-lag value is exactly the information a static chart throws away.'),
       context: t('signalCorrelation.zeroLag', 'at zero lag: {{r}}', {
-        r: result == null ? '—' : fmtScientificNumber(result.zeroLagR, 3),
+        r: result?.zeroLagR == null || !Number.isFinite(result.zeroLagR)
+          ? '—' : fmtScientificNumber(result.zeroLagR, 3),
       }) },
     { metricId: 'duration', occurrenceId: 'best-lag', rawValue: result?.bestLagS,
       display: { units: { duration: 's' }, precision: 0 },

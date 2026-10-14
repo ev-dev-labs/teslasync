@@ -42,6 +42,47 @@ function setup(overrides: Partial<Parameters<typeof CorrelationStatStrip>[0]> = 
 }
 
 describe('Correlation canonical summary preservation', () => {
+  it.each([
+    { zeroLagR: null, zeroLagReason: 'insufficient' as const },
+    { zeroLagR: null, zeroLagReason: 'invalid' as const },
+    { zeroLagR: Number.NaN, zeroLagReason: 'invalid' as const },
+    { zeroLagR: Number.POSITIVE_INFINITY, zeroLagReason: 'invalid' as const },
+  ])('shows an unknown zero-lag marker without losing the signed peak ($zeroLagReason, $zeroLagR)', unavailable => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(4);
+    const { container } = setup({ result: { ...result, ...unavailable } });
+    const tiles = [...container.querySelectorAll('[data-operational-metric]')];
+    expect(tiles[0]).toHaveTextContent('at zero lag: —');
+    expect(tiles[0]).not.toHaveTextContent('at zero lag: 0');
+    expect(tiles[0]?.querySelector('[data-operational-value]')).toHaveTextContent('-0,8123');
+    expect(tiles[1]).toHaveTextContent('-120 s');
+    expect(tiles[1]).toHaveTextContent('Cabin temperature leads');
+  });
+
+  it.each([0, 0.123456, -0.123456])('renders valid zero-lag coefficients without replacing them with unknown (%s)', zeroLagR => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(4);
+    const { container } = setup({ result: { ...result, zeroLagR, zeroLagReason: null } });
+    const peak = container.querySelector('[data-operational-metric="peak-r"]');
+    expect(peak).toHaveTextContent(`at zero lag: ${zeroLagR === 0 ? '0' : zeroLagR > 0 ? '0,1235' : '-0,1235'}`);
+    expect(peak).not.toHaveTextContent('at zero lag: —');
+  });
+
+  it('preserves a positive fractional peak and signal A lead orientation', () => {
+    setGlobalLocale('de-DE');
+    setGlobalPrecision(4);
+    const { container } = setup({
+      result: { ...result, bestR: 0.812345, bestLagS: 120, lead: 'a' },
+      leadLabel: 'HVAC power leads',
+    });
+    expect(container.querySelector('[data-operational-metric="peak-r"] [data-operational-value]'))
+      .toHaveTextContent('0,8123');
+    expect(container.querySelector('[data-operational-metric="best-lag"]'))
+      .toHaveTextContent('120 s');
+    expect(container.querySelector('[data-operational-metric="best-lag"]'))
+      .toHaveTextContent('HVAC power leads');
+  });
+
   it('renders the actual OperationalBrief with four evidence metrics and original overlapping-history scope', () => {
     setGlobalLocale('de-DE');
     setGlobalPrecision(4);

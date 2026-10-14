@@ -42,7 +42,7 @@ export interface ResampledSeries {
   v: Array<number | null>;
   /** Grid step, ms. */
   stepMs: number;
-  /** Samples actually filled, vs. gaps. */
+  /** This signal's filled grid slots vs. stale gaps, before differencing or lag pairing. */
   filled: number;
   gaps: number;
 }
@@ -58,8 +58,9 @@ export interface LagPoint {
 export interface CorrelationResult {
   /** Full correlogram, ascending by lag. */
   correlogram: LagPoint[];
-  /** Correlation at zero lag — what a naive overlay chart shows. */
-  zeroLagR: number;
+  /** Correlation at zero lag, or null when that lag has no usable estimate. */
+  zeroLagR: number | null;
+  zeroLagReason?: 'insufficient' | 'invalid' | null;
   /** The lag with the largest |r|. */
   bestLagS: number;
   bestR: number;
@@ -72,7 +73,9 @@ export interface CorrelationResult {
   significant: boolean;
   /** Which signal moves first. */
   lead: 'a' | 'b' | 'simultaneous' | 'none';
+  /** Independent A coverage on the shared overlap grid; not a paired sample count. */
   seriesA: ResampledSeries;
+  /** Independent B coverage on the same grid; never inferred from A coverage. */
   seriesB: ResampledSeries;
   overlapStartMs: number | null;
   overlapEndMs: number | null;
@@ -90,6 +93,10 @@ export interface CorrelationOptions {
   /** Minimum overlapping samples before a lag is reported at all. */
   minOverlap?: number;
 }
+
+export type CorrelationEvidence =
+  | { result: CorrelationResult; reason: null }
+  | { result: null; reason: 'empty' | 'nonnumeric' | 'insufficient' | 'disjoint' };
 
 const DEFAULTS = {
   stepS: 60,
@@ -222,23 +229,27 @@ function firstDifference(v: ReadonlyArray<number | null>): Array<number | null> 
   return out;
 }
 
-export function crossCorrelate(
+/** A missing calculation is not evidence that the reporting windows are disjoint. */
+export function analyzeCorrelation(
   a: readonly CorrelatableSample[],
   b: readonly CorrelatableSample[],
   options: CorrelationOptions = {},
-): CorrelationResult | null {
+): CorrelationEvidence {
   const opts = { ...DEFAULTS, ...options };
   const stepMs = opts.stepS * 1000;
   const maxStaleMs = opts.maxStaleS * 1000;
 
   const pa = toNumericSeries(a);
   const pb = toNumericSeries(b);
-  if (pa.length < 2 || pb.length < 2) return null;
+  if (a.length === 0 || b.length === 0) return { result: null, reason: 'empty' };
+  if (pa.length === 0 || pb.length === 0) return { result: null, reason: 'nonnumeric' };
+  if (pa.length < 2 || pb.length < 2) return { result: null, reason: 'insufficient' };
 
   // Only the window where both signals were actually reporting can be used.
   const startMs = Math.max(pa[0]!.ms, pb[0]!.ms);
   const endMs = Math.min(pa[pa.length - 1]!.ms, pb[pb.length - 1]!.ms);
-  if (endMs <= startMs) return null;
+  if (endMs < startMs) return { result: null, reason: 'disjoint' };
+  if (endMs === startMs) return { result: null, reason: 'insufficient' };
 
   const seriesA = resample(pa, startMs, endMs, stepMs, maxStaleMs);
   const seriesB = resample(pb, startMs, endMs, stepMs, maxStaleMs);
@@ -247,15 +258,15 @@ export function crossCorrelate(
   const vb = opts.detrend ? firstDifference(seriesB.v) : seriesB.v;
 
   const maxOffset = Math.min(Math.floor(opts.maxLagS / opts.stepS), va.length - 1);
-  if (maxOffset < 0) return null;
+  if (maxOffset < 0) return { result: null, reason: 'insufficient' };
 
   const correlogram: LagPoint[] = [];
   for (let offset = -maxOffset; offset <= maxOffset; offset++) {
     const { r, n } = pearson(va, vb, offset);
-    if (n < opts.minOverlap) continue;
+    if (n < opts.minOverlap || !Number.isFinite(r)) continue;
     correlogram.push({ lagS: offset * opts.stepS, r: Math.round(r * 10000) / 10000, n });
   }
-  if (correlogram.length === 0) return null;
+  if (correlogram.length === 0) return { result: null, reason: 'insufficient' };
 
   const best = correlogram.reduce((acc, p) => {
     const delta = Math.abs(p.r) - Math.abs(acc.r);
@@ -268,6 +279,8 @@ export function crossCorrelate(
     return acc;
   });
   const zero = correlogram.find((p) => p.lagS === 0);
+  const zeroLagReason = zero != null ? null
+    : pearson(va, vb, 0).n < opts.minOverlap ? 'insufficient' : 'invalid';
 
   const rhoA = lag1Autocorrelation(va);
   const rhoB = lag1Autocorrelation(vb);
@@ -289,9 +302,10 @@ export function crossCorrelate(
     else lead = 'simultaneous';
   }
 
-  return {
+  const result: CorrelationResult = {
     correlogram,
-    zeroLagR: zero?.r ?? 0,
+    zeroLagR: zero?.r ?? null,
+    zeroLagReason,
     bestLagS: best.lagS,
     bestR: best.r,
     bestN: best.n,
@@ -304,4 +318,13 @@ export function crossCorrelate(
     overlapStartMs: startMs,
     overlapEndMs: endMs,
   };
+  return { result, reason: null };
+}
+
+export function crossCorrelate(
+  a: readonly CorrelatableSample[],
+  b: readonly CorrelatableSample[],
+  options: CorrelationOptions = {},
+): CorrelationResult | null {
+  return analyzeCorrelation(a, b, options).result;
 }
