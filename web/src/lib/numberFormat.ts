@@ -115,10 +115,27 @@ export function fmtPercent(v: unknown, decimals?: number): string {
   return `${fmtNumber(v, decimals)}%`
 }
 
-/** Keep diagnostic detail (e.g. millivolts or coordinates) without reducing the user's chosen precision. */
+/**
+ * Keep diagnostic detail without reducing the user's chosen precision.
+ * Use scientific notation only when fixed digits would erase a nonzero measurement.
+ */
 export function fmtScientificNumber(v: unknown, minimumDecimals: number, locale?: string): string {
   if (!isFiniteNumber(v)) return '—'
-  return fmtNumber(v, Math.max(_globalPrecision, toFractionDigits(minimumDecimals)), locale)
+  const d = Math.max(_globalPrecision, toFractionDigits(minimumDecimals))
+  if (v === 0 || fmtNumber(Math.abs(v), d, locale) !== fmtNumber(0, d, locale)) {
+    return fmtNumber(v, d, locale)
+  }
+  const options: Intl.NumberFormatOptions = {
+    notation: 'scientific',
+    minimumFractionDigits: d,
+    maximumFractionDigits: d,
+  }
+  try {
+    return v.toLocaleString(locale ?? _globalLocale, options)
+  } catch {
+    // Match fmtNumber's recovery for an invalid locale tag.
+    return v.toLocaleString('en-US', options)
+  }
 }
 
 /** Format as integer with locale separators: fmtInt(12345.6) → "12,346" */

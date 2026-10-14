@@ -8,6 +8,7 @@ import {
   safeNumber,
   isFiniteNumber,
   fmtNumber,
+  fmtScientificNumber,
   fmtWithUnit,
   fmtPercent,
   fmtInt,
@@ -176,6 +177,68 @@ describe('numberFormat — fmtNumber', () => {
     expect(fmtNumber(5, 150).split('.')[1]).toHaveLength(20)
     // Negative precision clamps to 0 rather than throwing.
     expect(fmtNumber(5.4, -3)).toBe('5')
+  })
+})
+
+describe('numberFormat — fmtScientificNumber', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity, '0', '', false, {}, []])(
+    'keeps missing or invalid input %j distinct from measured zero',
+    value => {
+      expect(fmtScientificNumber(value, 3)).toBe('—')
+    },
+  )
+
+  it('retains fixed formatting for measured zero and valid signed values', () => {
+    expect(fmtScientificNumber(0, 3)).toBe('0.000')
+    expect(fmtScientificNumber(-0, 3)).toBe('-0.000')
+    expect(fmtScientificNumber(1234.5678, 3)).toBe('1,234.568')
+    expect(fmtScientificNumber(-1234.5678, 3)).toBe('-1,234.568')
+    expect(fmtScientificNumber(0.1256, 3)).toBe('0.126')
+    expect(fmtScientificNumber(-0.1256, 3)).toBe('-0.126')
+  })
+
+  it('uses scientific notation for signed fractions that would round to zero', () => {
+    expect(fmtScientificNumber(0.000012345, 3)).toBe('1.235E-5')
+    expect(fmtScientificNumber(-0.000012345, 3)).toBe('-1.235E-5')
+    expect(fmtScientificNumber(Number.MIN_VALUE, 3)).toBe('5.000E-324')
+    expect(fmtScientificNumber(-Number.MIN_VALUE, 3)).toBe('-5.000E-324')
+  })
+
+  it('switches only below the locale formatter rounding boundary', () => {
+    expect(fmtScientificNumber(0.0005, 3)).toBe('0.001')
+    expect(fmtScientificNumber(-0.0005, 3)).toBe('-0.001')
+    expect(fmtScientificNumber(0.0004999, 3)).toBe('4.999E-4')
+    expect(fmtScientificNumber(-0.0004999, 3)).toBe('-4.999E-4')
+  })
+
+  it('honours global precision in fixed and scientific notation', () => {
+    setGlobalPrecision(5)
+    expect(fmtScientificNumber(0.000012345, 3)).toBe('0.00001')
+    expect(fmtScientificNumber(0.0000001234567, 3)).toBe('1.23457E-7')
+    setGlobalPrecision(0)
+    expect(fmtScientificNumber(0.125, 0)).toBe('1E-1')
+    expect(fmtScientificNumber(0, 0)).toBe('0')
+  })
+
+  it('uses the selected locale and honours a per-call locale override', () => {
+    setGlobalLocale('de-DE')
+    expect(fmtScientificNumber(1234.5, 3)).toBe('1.234,500')
+    expect(fmtScientificNumber(-0.000012345, 3)).toBe('-1,235E-5')
+    expect(fmtScientificNumber(0.000012345, 3, 'en-US')).toBe('1.235E-5')
+  })
+
+  it('falls back to en-US for invalid global and per-call locales', () => {
+    setGlobalLocale('xx_BAD_TAG!!')
+    expect(fmtScientificNumber(0.000012345, 3)).toBe('1.235E-5')
+    expect(fmtScientificNumber(-0.000012345, 3, 'xx_BAD_TAG!!')).toBe('-1.235E-5')
+  })
+
+  it('clamps diagnostic precision and handles non-finite requests', () => {
+    expect(fmtScientificNumber(0.000012345, NaN)).toBe('1.23E-5')
+    expect(fmtScientificNumber(0.000012345, Infinity)).toBe('1.23E-5')
+    expect(fmtScientificNumber(0.000012345, -Infinity)).toBe('1.23E-5')
+    expect(fmtScientificNumber(0.000012345, -5)).toBe('1.23E-5')
+    expect(fmtScientificNumber(1e-30, 150)).toBe('1.00000000000000000000E-30')
   })
 })
 
