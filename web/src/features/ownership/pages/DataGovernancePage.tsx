@@ -14,9 +14,9 @@ import { FadeIn } from '@/components/motion';
 import { Badge, Button, ConfirmDialog, DataTable, Icon, Input, Select, Text, Toggle } from '@/components/ui';
 import type { Column, MobileDataTablePresentation } from '@/components/ui';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
-import { formatDateTime } from '@/lib/dateFormat';
 import { typography } from '@/lib/tokens';
 import type {
   DatasetInventory,
@@ -32,6 +32,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 export default function DataGovernancePage() {
   const { fmtInt, fmtNumber } = useNumberFormatting();
+  const { formatDateTime } = useDateFormat();
   const { t } = useTranslation();
   const [formOpen, setFormOpen] = useState(false);
   const [runPage, setRunPage] = useState(1);
@@ -68,6 +69,7 @@ export default function DataGovernancePage() {
       ),
       variant: 'danger',
       confirmLabel: t('common.delete', 'Delete'),
+      cancelLabel: t('common.cancel', 'Cancel'),
     });
     if (ok) remove.mutate(row.id);
   };
@@ -81,6 +83,23 @@ export default function DataGovernancePage() {
   const canSimulate = selected.length > 0 || policies.length > 0;
   const runTotal = runsQuery.data?.total;
   const hasRunTotal = runTotal != null && Number.isSafeInteger(runTotal) && runTotal >= 0;
+  const simulationEnabled = simulate.isPending || simulate.data != null || simulate.error != null;
+
+  const warningLabel = (warning: string) => {
+    switch (warning) {
+      case 'A legal hold is active, so nothing would be removed even if execution were enabled.':
+        return t('ownership.governance.warning.legalHold', 'A legal hold is active, so nothing would be removed even if execution were enabled.');
+      case 'More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.':
+        return t('ownership.governance.warning.highExpiry', 'More than half the dataset would age out under this policy; consider a longer retention or a downsample tier.');
+      case 'Nothing is old enough to be affected by this policy yet.':
+        return t('ownership.governance.warning.noAffectedRows', 'Nothing is old enough to be affected by this policy yet.');
+      default:
+        return warning;
+    }
+  };
+  const runModeLabel = (mode: string) => mode === 'dry_run'
+    ? t('ownership.governance.run.dryRun', 'dry run')
+    : mode;
 
   useEffect(() => {
     if (formOpen) {
@@ -409,7 +428,7 @@ export default function DataGovernancePage() {
           ) : null}
           {(row.warnings ?? []).map((warning) => (
             <Badge key={warning} variant="warning">
-              {warning.replace(/_/g, ' ')}
+              {warningLabel(warning)}
             </Badge>
           ))}
           {!row.blocked_by_legal_hold && (row.warnings ?? []).length === 0 ? (
@@ -441,7 +460,7 @@ export default function DataGovernancePage() {
     {
       key: 'mode',
       header: t('ownership.governance.run.mode', 'Mode'),
-      render: (row) => <Badge variant="info">{row.mode.replace(/_/g, ' ')}</Badge>,
+      render: (row) => <Badge variant="info">{runModeLabel(row.mode)}</Badge>,
     },
     {
       key: 'expiring',
@@ -501,7 +520,7 @@ export default function DataGovernancePage() {
     displayValue: (row, key) => {
       const values: Record<string, string> = {
         dataset: row.dataset, bytes: formatBytes(row.bytes_reclaimable),
-        executed: formatDateTime(row.executed_at), mode: row.mode.replace(/_/g, ' '),
+        executed: formatDateTime(row.executed_at), mode: runModeLabel(row.mode),
       };
       return values[key];
     },
@@ -533,11 +552,11 @@ export default function DataGovernancePage() {
     >
       <AlertBanner
         variant="warning"
-        title={t('ownership.governance.notice.title', 'Plan only — nothing is ever deleted here')}
+        title={t('ownership.governance.notice.datasetTitle', 'Plan only — dataset rows are not deleted here')}
       >
         {t(
-          'ownership.governance.notice.body',
-          'Every run on this page is a read-only dry run. TeslaSync computes what a policy would remove and records the plan in the ledger; it never issues a delete. Enforcement remains a deliberate, separate operator action outside this screen.',
+          'ownership.governance.notice.policyWritesBody',
+          'Saving or removing a retention policy changes the stored policy. Running a simulation records a dry-run plan in the ledger, but does not delete or downsample dataset rows. Dataset enforcement is not performed on this screen.',
         )}
       </AlertBanner>
       {!canSimulate && (
@@ -747,7 +766,7 @@ export default function DataGovernancePage() {
         <OwnershipPanel
           title={t('ownership.governance.impact.title', 'Dry-run impact')}
           source={simulate}
-          sourceEnabled={simulate.isPending || simulate.data != null || simulate.error != null}
+          sourceEnabled={simulationEnabled}
           description={t(
             'ownership.governance.impact.subtitle',
             'Fidelity loss is the share of analytical resolution the plan would remove — not the share of rows.',
@@ -840,21 +859,39 @@ export default function DataGovernancePage() {
       </FadeIn>
 
       <FadeIn delay={0.25}>
-        <EvidencePanel
-          source={overviewQuery}
-          quality={overview?.quality}
-          evidence={overview?.evidence}
-          unsupported={[
-            t(
-              'ownership.governance.unsupported.delete',
-              'Actually deleting rows — this screen is deliberately read-only',
-            ),
-            t(
-              'ownership.governance.unsupported.index',
-              'Index and TOAST overhead attribution below table granularity',
-            ),
-          ]}
-        />
+        <div className="space-y-6">
+          <section aria-label={t('ownership.governance.summary.title', 'Storage posture')}>
+            <Text as="p" variant="label" className="mb-3">
+              {t('ownership.governance.brief.title', 'Governed storage and policy coverage')}
+            </Text>
+            <EvidencePanel
+              source={overviewQuery}
+              quality={overview?.quality}
+              evidence={overview?.evidence}
+              unsupported={[
+                t(
+                  'ownership.governance.unsupported.datasetDeletion',
+                  'Deleting or downsampling dataset rows — policy changes and recorded plans do not enforce retention',
+                ),
+                t(
+                  'ownership.governance.unsupported.index',
+                  'Index and TOAST overhead attribution below table granularity',
+                ),
+              ]}
+            />
+          </section>
+          <section aria-label={t('ownership.governance.impact.title', 'Dry-run impact')}>
+            <Text as="p" variant="label" className="mb-3">
+              {t('ownership.governance.impactBrief.title', 'Computed dry-run totals')}
+            </Text>
+            <EvidencePanel
+              source={simulate}
+              sourceEnabled={simulationEnabled}
+              quality={simulate.data?.quality}
+              evidence={simulate.data?.evidence}
+            />
+          </section>
+        </div>
       </FadeIn>
       {dialogProps && <ConfirmDialog {...dialogProps} />}
     </PageLayout>
