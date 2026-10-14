@@ -71,13 +71,15 @@ export function ArchetypeSectionBody({
       'archetypes.states.pendingPassive',
       'Drive-history availability has not resolved.',
     );
-  } else if (requirement !== 'resolved') {
-    if (requirement === 'eligible' && summary.analyzedDrives === 0) {
+  } else if (requirement === 'eligible') {
+    if (summary.analyzedDrives === 0) {
       passiveMessage = t(
         'archetypes.states.noEligiblePassive',
         'No returned drive passed every ID, timestamp, distance, energy, and speed eligibility gate.',
       );
-    } else if (summary.status === 'insufficient_drives') {
+    }
+  } else if (requirement === 'clustered' || requirement === 'directory') {
+    if (summary.status === 'insufficient_drives') {
       passiveMessage = t(
         'archetypes.states.insufficientDrivesPassive',
         '{{eligible}} eligible drives are available; at least {{required}} are required before clustering.',

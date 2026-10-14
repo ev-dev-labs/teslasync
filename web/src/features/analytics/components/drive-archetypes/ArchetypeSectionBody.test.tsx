@@ -1,9 +1,26 @@
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
+import type { Drive } from '@/types/driving';
 import { summarizeArchetypes, type ArchetypeSummary } from '../../lib/driveArchetypes';
 import { ArchetypeSectionBody } from './ArchetypeSectionBody';
 import type { ArchetypeQueryState, ArchetypeSectionRequirement } from './types';
+
+function eligibleDrives(count: number, varied = false): Drive[] {
+  return Array.from({ length: count }, (_, index) => {
+    const distanceM = varied && index % 2 === 1 ? 140_000 : 12_000;
+    return {
+      id: index + 1, vehicleId: 1, startTs: '2026-03-02T08:00:00Z', endTs: null,
+      durationS: 1_200, distanceM, energyUsedWh: distanceM * 0.18,
+      avgSpeedMps: varied && index % 2 === 1 ? 28 : 8,
+      outsideTempAvgC: 15, startAddress: null, endAddress: null,
+      startLat: null, startLon: null, endLat: null, endLon: null,
+      startBatteryPct: null, endBatteryPct: null, regenEnergyWh: null,
+      maxSpeedMps: null, avgPowerW: null, insideTempAvgC: null,
+      score: null, endedStatus: null, createdAt: '', updatedAt: '',
+    };
+  });
+}
 
 function state(overrides: Partial<ArchetypeQueryState> = {}): ArchetypeQueryState {
   return {
@@ -51,6 +68,48 @@ describe('ArchetypeSectionBody canonical source preservation', () => {
     show(state(), 'clustered', summary);
     expect(screen.getByText(message)).toBeInTheDocument();
     expect(screen.queryByText('Exact returned accounting')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [1, 'insufficient_drives'],
+    [20, 'insufficient_variation'],
+  ] as const)('renders eligible-only evidence for %i constant-feature drives despite %s', (count, status) => {
+    const summary = summarizeArchetypes(eligibleDrives(count), { timeZone: 'UTC' });
+    expect(summary.analyzedDrives).toBe(count);
+    expect(summary.status).toBe(status);
+    show(state(), 'eligible', summary);
+    expect(screen.getByText('Exact returned accounting')).toBeInTheDocument();
+    expect(screen.queryByText(/required before clustering|no standardized feature dimension varies/)).not.toBeInTheDocument();
+  });
+
+  it.each(['clustered', 'directory'] as const)('still withholds %s evidence below the floor and for constant features', (requirement) => {
+    const { unmount } = show(
+      state(), requirement, summarizeArchetypes(eligibleDrives(1), { timeZone: 'UTC' }),
+    );
+    expect(screen.getByText(/at least 20 are required before clustering/)).toBeInTheDocument();
+    expect(screen.queryByText('Exact returned accounting')).not.toBeInTheDocument();
+    unmount();
+    show(state(), requirement, summarizeArchetypes(eligibleDrives(20), { timeZone: 'UTC' }));
+    expect(screen.getByText(/no standardized feature dimension varies/)).toBeInTheDocument();
+    expect(screen.queryByText('Exact returned accounting')).not.toBeInTheDocument();
+  });
+
+  it('renders eligible-only evidence even when a varied input cannot realize a partition', () => {
+    const summary = summarizeArchetypes(eligibleDrives(20, true), {
+      timeZone: 'UTC', minK: 3, maxK: 3,
+    });
+    expect(summary.status).toBe('insufficient_partition');
+    expect(summary.analyzedDrives).toBe(20);
+    show(state(), 'eligible', summary);
+    expect(screen.getByText('Exact returned accounting')).toBeInTheDocument();
+  });
+
+  it.each(['resolved', 'eligible', 'clustered', 'directory'] as const)('preserves populated %s content', (requirement) => {
+    const summary = summarizeArchetypes(eligibleDrives(20, true), { timeZone: 'UTC' });
+    expect(summary.status).toBe('clustered');
+    expect(summary.directory.items.length).toBeGreaterThan(0);
+    show(state(), requirement, summary);
+    expect(screen.getByText('Exact returned accounting')).toBeInTheDocument();
   });
 
   it('keeps a missing directory distinct from insufficient input', () => {
