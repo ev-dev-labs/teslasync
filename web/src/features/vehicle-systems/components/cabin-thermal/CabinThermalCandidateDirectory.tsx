@@ -31,6 +31,7 @@ export function CabinThermalCandidateDirectory({
   const { fmtInt } = useNumberFormatting();
   const { t } = useTranslation();
   const directory = summary.candidateDirectory;
+  const resolved = state.vehicleSelected && state.isResolved && !state.error;
 
   return (
     <section data-testid="cabin-thermal-candidate-directory">
@@ -42,7 +43,7 @@ export function CabinThermalCandidateDirectory({
           )}
         </Text>
         <Text as="p" variant="caption" className="mb-4">
-          {t(
+          {resolved ? t(
             'cabinThermal.directory.cap',
             'Showing {{shown}} of {{total}} candidates; {{omitted}} omitted by the {{cap}}-window display cap.',
             {
@@ -51,6 +52,9 @@ export function CabinThermalCandidateDirectory({
               omitted: fmtInt(directory.omitted),
               cap: fmtInt(directory.cap),
             },
+          ) : t(
+            'cabinThermal.states.pendingPassive',
+            'Climate-history availability has not resolved.',
           )}
         </Text>
         <CabinThermalSectionBody summary={summary} state={state} requirement="candidates">
