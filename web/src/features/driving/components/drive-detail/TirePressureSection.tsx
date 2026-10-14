@@ -103,6 +103,8 @@ export function TirePressureSection({ chartData, stats }: TirePressureSectionPro
         size="standard"
         toolbar
         exportable
+        empty={!stats.hasTirePressure}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {stats.hasTirePressure ? (
           <>

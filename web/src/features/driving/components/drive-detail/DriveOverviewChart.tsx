@@ -59,6 +59,8 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
         size="standard"
         toolbar
         exportable
+        empty={!hasChart}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {({ hiddenSeries }) => (
           hasChart ? (

@@ -43,6 +43,8 @@ export function SpeedHistogramChart({ speedHistData }: SpeedHistogramChartProps)
         mobileHeight={220}
         toolbar
         exportable
+        empty={buckets.length === 0}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {buckets.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">

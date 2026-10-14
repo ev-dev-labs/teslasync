@@ -37,6 +37,7 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
   const elevGain = stats?.elevGain ?? 0;
   const elevLoss = stats?.elevLoss ?? 0;
   const elevNet = elevGain - elevLoss;
+  const hasChart = points.filter((point) => point.elevation != null).length > 1;
 
   return (
     <FadeIn className="space-y-3">
@@ -56,9 +57,11 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
         mobileHeight={220}
         toolbar
         exportable
+        empty={!hasChart}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {({ hiddenSeries }) => (
-          points.filter((point) => point.elevation != null).length > 1 ? (
+          hasChart ? (
             <>
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
@@ -73,8 +76,8 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
                 <ChartLegend />
-                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
-                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
+                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke={chartTokens.series[1]} fill={chartTokens.series[1]} fillOpacity={0.08} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
+                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke={chartTokens.series[4]} strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
                 {syncedX != null && (
                   <ReferenceLine
                     yAxisId="elev"

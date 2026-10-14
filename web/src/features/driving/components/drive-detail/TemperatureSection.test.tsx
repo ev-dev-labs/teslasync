@@ -360,6 +360,19 @@ describe('TemperatureSection — fan tile', () => {
 });
 
 describe('TemperatureSection — empty state', () => {
+  it('suppresses image export using the sample-count and temperature eligibility', () => {
+    const { container, unmount } = renderSection({ stats: { hasAnyTemp: false } });
+    expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    unmount();
+    const single = renderSection({ chartData: [makePoint({ outsideTemp: 15 })] });
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    single.unmount();
+    renderSection();
+    expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /CSV/i })).not.toBeInTheDocument();
+  });
+
   it('collapses to the translated placeholder when there is no temperature at all', () => {
     renderSection({ stats: { hasAnyTemp: false, avgOutsideTemp: null, avgInsideTemp: null } });
 

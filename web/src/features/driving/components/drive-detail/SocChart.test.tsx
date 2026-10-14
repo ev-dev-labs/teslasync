@@ -71,16 +71,18 @@ vi.mock('@/components/charts', () => ({
     title,
     ariaLabel,
     height,
+    empty,
     className,
     children,
   }: {
     title?: string;
     ariaLabel?: string;
     height?: number;
+    empty?: boolean;
     className?: string;
     children?: ReactNode;
   }) => (
-    <section data-testid="chart-container" data-height={String(height ?? '')} className={className}>
+    <section data-testid="chart-container" data-height={String(height ?? '')} data-empty={String(empty)} className={className}>
       <h3>{title}</h3>
       {/* Mirror the real container: a labelled img region wrapping the body. */}
       <div role="img" aria-label={ariaLabel}>
@@ -230,6 +232,14 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('SocChart — ready state', () => {
+  it('requires two SOC readings for the shared ready state, including real zeroes', () => {
+    const { rerender } = render(<SocChart chartData={[point({ battery: null }), point({ battery: 0 })]} />);
+    expect(screen.getByTestId('chart-container')).toHaveAttribute('data-empty', 'true');
+    rerender(<SocChart chartData={[point({ battery: 0 }), point({ battery: 0 })]} />);
+    expect(screen.getByTestId('chart-container')).toHaveAttribute('data-empty', 'false');
+    expect(screen.queryByText('No telemetry data available')).not.toBeInTheDocument();
+  });
+
   it('renders the titled, labelled chart figure at the fixed 220px drive-detail height', () => {
     render(<SocChart chartData={twoSamples()} />);
 

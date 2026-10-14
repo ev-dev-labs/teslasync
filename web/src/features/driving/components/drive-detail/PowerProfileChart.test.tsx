@@ -28,6 +28,16 @@ function show(points: ChartDataPoint[]) {
 const value = (label: string) => within(screen.getByRole('rowheader', { name: label }).closest('tr')!).getByRole('cell').textContent;
 
 describe('Observed power evidence', () => {
+  it('suppresses image export until two finite power observations are available', () => {
+    const { container, unmount } = show([pointFixture({ power: 0 }), pointFixture({ power: NaN })]);
+    expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    unmount();
+    show([pointFixture({ power: 0 }), pointFixture({ power: 0 })]);
+    expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /CSV/i })).not.toBeInTheDocument();
+  });
+
   it('keeps the chart title, signed-zero reference and synchronized context', () => {
     show([pointFixture(), pointFixture({ power: -20 })]);
     expect(screen.getByRole('heading', { name: 'Power profile' })).toBeInTheDocument();

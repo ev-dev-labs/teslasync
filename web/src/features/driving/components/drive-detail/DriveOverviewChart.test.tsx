@@ -106,6 +106,13 @@ function renderChart(
 }
 
 describe('DriveOverviewChart', () => {
+  it.each([{ points: [] }, { points: [point()] }])('suppresses image export for an ineligible overview ($points.length samples)', ({ points }) => {
+    const { container } = renderChart(points);
+    expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /CSV/i })).not.toBeInTheDocument();
+  });
+
   it('always renders the titled, screen-reader-labelled chart figure', () => {
     renderChart([point({ speed: 10 }), point({ speed: 20 })]);
     expect(screen.getByRole('heading', { name: 'Drive overview' })).toBeInTheDocument();

@@ -75,6 +75,9 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
         size="standard"
         toolbar
         exportable
+        empty={!hasChart}
+        emptyIcon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
+        emptyMessage={t('driveDetail.noTemperatureData', 'No temperature telemetry is available for this drive.')}
         chartKey="drive-detail-temperature"
       >
         {hasChart ? (

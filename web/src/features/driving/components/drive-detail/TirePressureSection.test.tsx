@@ -151,6 +151,16 @@ function renderSection(
 }
 
 describe('TirePressureSection', () => {
+  it('suppresses image export according to the same pressure flag as the chart body', () => {
+    const { container, unmount } = renderSection(fullPressure, driveStats({ hasTirePressure: false }));
+    expect(container.querySelector('[data-chart-state]')).toHaveAttribute('data-chart-state', 'empty');
+    expect(screen.queryByRole('button', { name: 'Export chart' })).not.toBeInTheDocument();
+    unmount();
+    renderSection(fullPressure, driveStats({ hasTirePressure: true }));
+    expect(screen.getByRole('button', { name: 'Export chart' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /CSV/i })).not.toBeInTheDocument();
+  });
+
   it('always renders the titled, screen-reader-labelled chart figure', () => {
     renderSection(fullPressure, driveStats({ hasTirePressure: true }));
     expect(
@@ -170,12 +180,10 @@ describe('TirePressureSection', () => {
     expect(screen.getByText('No telemetry data available')).toBeInTheDocument();
     expect(screen.getByRole('rowheader', { name: 'Front left' })).toBeInTheDocument();
     expect(screen.getByRole('rowheader', { name: 'Rear right' })).toBeInTheDocument();
-    // The figure keeps its accessible name even in the empty state.
-    expect(
-      screen.getByRole('img', {
-        name: /front and rear tire pressure lines over the drive timeline/i,
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent('No telemetry data available');
+    expect(screen.queryByRole('img', {
+      name: /front and rear tire pressure lines over the drive timeline/i,
+    })).not.toBeInTheDocument();
   });
 
   it('renders all four per-wheel summary tiles when tire pressure is present', () => {

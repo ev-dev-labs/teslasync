@@ -67,6 +67,7 @@ vi.mock('@/components/charts', () => {
       title,
       ariaLabel,
       height,
+      empty,
       className,
       data,
       dataColumns,
@@ -75,6 +76,7 @@ vi.mock('@/components/charts', () => {
       title?: string;
       ariaLabel?: string;
       height?: number;
+      empty?: boolean;
       className?: string;
       data?: ReadonlyArray<Record<string, unknown>>;
       dataColumns?: ReadonlyArray<{ key: string; label: string }>;
@@ -83,6 +85,7 @@ vi.mock('@/components/charts', () => {
       <section
         aria-label="chart-container"
         data-height={String(height ?? '')}
+        data-empty={String(empty)}
         data-json={JSON.stringify(data ?? [])}
         data-columns={JSON.stringify(dataColumns ?? [])}
         className={className}
@@ -147,6 +150,13 @@ function readTableRows(): Array<Record<string, unknown>> {
 // ── 1. Panel chrome ──────────────────────────────────────────────────────────
 
 describe('SpeedHistogramChart — panel chrome', () => {
+  it('forwards bucket eligibility to the shared empty state', () => {
+    const { rerender } = render(<SpeedHistogramChart speedHistData={[]} />);
+    expect(screen.getByLabelText('chart-container')).toHaveAttribute('data-empty', 'true');
+    rerender(<SpeedHistogramChart speedHistData={BUCKETS} />);
+    expect(screen.getByLabelText('chart-container')).toHaveAttribute('data-empty', 'false');
+  });
+
   it('frames the panel with the i18n title', () => {
     render(<SpeedHistogramChart speedHistData={BUCKETS} />);
 

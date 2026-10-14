@@ -38,6 +38,8 @@ export function SocChart({ chartData }: SocChartProps) {
         mobileHeight={220}
         toolbar
         exportable
+        empty={!hasSeries}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {hasSeries ? (
           <ResponsiveContainer width="100%" height="100%">

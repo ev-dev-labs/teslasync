@@ -94,12 +94,14 @@ vi.mock('@/components/charts', () => {
       title,
       ariaLabel,
       height,
+      empty,
       className,
       children,
     }: {
       title?: string;
       ariaLabel?: string;
       height?: number;
+      empty?: boolean;
       className?: string;
       children?: ReactNode | ((context: {
         hiddenSeries: { isHidden: (key: string) => boolean };
@@ -112,6 +114,7 @@ vi.mock('@/components/charts', () => {
         <section
           aria-label="chart-container"
           data-height={String(height ?? '')}
+          data-empty={String(empty)}
           className={className}
         >
           <h3>{title}</h3>
@@ -149,12 +152,14 @@ vi.mock('@/components/charts', () => {
         {children}
       </div>
     ),
-    Area: (p: { dataKey?: string; name?: string; stroke?: string; yAxisId?: string }) => (
+    Area: (p: { dataKey?: string; name?: string; stroke?: string; fill?: string; fillOpacity?: number; yAxisId?: string }) => (
       <span
         data-testid="area"
         data-key={String(p.dataKey ?? '')}
         data-name={String(p.name ?? '')}
         data-stroke={String(p.stroke ?? '')}
+        data-fill={String(p.fill ?? '')}
+        data-fill-opacity={String(p.fillOpacity ?? '')}
         data-yaxis={String(p.yAxisId ?? '')}
       />
     ),
@@ -270,6 +275,14 @@ beforeEach(() => {
 // ── 1. Panel chrome ──────────────────────────────────────────────────────────
 
 describe('ElevationChart — panel chrome', () => {
+  it('requires two elevation readings for the shared ready state, including sea level', () => {
+    const { rerender } = renderChart([makePoint({ elevation: null }), makePoint({ elevation: 0 })]);
+    expect(screen.getByLabelText('chart-container')).toHaveAttribute('data-empty', 'true');
+    rerender(<ElevationChart chartData={[makePoint({ elevation: 0 }), makePoint({ elevation: 0 })]} stats={makeStats()} />);
+    expect(screen.getByLabelText('chart-container')).toHaveAttribute('data-empty', 'false');
+    expect(screen.queryByText('No telemetry data available')).not.toBeInTheDocument();
+  });
+
   it('frames the panel with the i18n title', () => {
     renderChart();
 
@@ -303,7 +316,7 @@ describe('ElevationChart — populated trace', () => {
     const area = screen.getByTestId('area');
     expect(area).toHaveAttribute('data-key', 'elevation');
     expect(area).toHaveAttribute('data-yaxis', 'elev');
-    expect(area).toHaveAttribute('data-stroke', '#10b981');
+    expect(area).toHaveAttribute('data-stroke', chartTokens.series[1]);
     expect(area).toHaveAttribute('data-name', 'Elevation (m)');
   });
 
@@ -313,7 +326,17 @@ describe('ElevationChart — populated trace', () => {
     const line = screen.getByTestId('line');
     expect(line).toHaveAttribute('data-key', 'speed');
     expect(line).toHaveAttribute('data-yaxis', 'speed');
-    expect(line).toHaveAttribute('data-stroke', '#a855f7');
+    expect(line).toHaveAttribute('data-stroke', chartTokens.series[4]);
+  });
+
+  it('uses the restrained elevation series fill at no more than eight percent opacity', () => {
+    renderChart();
+
+    const area = screen.getByTestId('area');
+    expect(area).toHaveAttribute('data-fill', chartTokens.series[1]);
+    expect(area).toHaveAttribute('data-fill-opacity', '0.08');
+    expect(Number(area.getAttribute('data-fill-opacity'))).toBeLessThanOrEqual(0.08);
+    expect(readChartRows()).toEqual(POINTS);
   });
 
   it('labels the speed line with the active (metric) speed-unit preference', () => {

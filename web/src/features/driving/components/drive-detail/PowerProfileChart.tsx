@@ -51,6 +51,8 @@ export function PowerProfileChart({ chartData, drive }: PowerProfileChartProps) 
         size="standard"
         toolbar
         exportable
+        empty={!hasChart}
+        emptyMessage={t('driveDetail.noChartData', 'No telemetry data available')}
       >
         {hasChart ? (
           <ResponsiveContainer width="100%" height="100%">
