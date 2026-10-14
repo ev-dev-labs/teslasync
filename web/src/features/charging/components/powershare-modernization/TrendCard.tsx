@@ -5,6 +5,7 @@ import {
   ChartTooltip, ChartGradient, chartGrid, axisTickSm, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import type { TrendPoint } from '../powershare';
 
 interface TrendCardProps {
@@ -21,8 +22,11 @@ const ACTIVE_DOT = { r: 4 };
 export function TrendCard({ kind, points, isLoading, error, onRetry }: TrendCardProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const { formatTime } = useDateFormat();
   const power = kind === 'power';
-  const data = points ?? [];
+  const data = (points ?? []).map(point => ({ ...point, label: formatTime(point.ts) }));
+  // Evidence keeps the original offset and precision, independent of display preferences.
+  const rows = data.map(({ ts, value }) => ({ label: ts || '—', value }));
   const color = palette[power ? 0 : 1];
   const title = power
     ? t('powershare.powerTrend.title', 'Output Power Trend')
@@ -37,8 +41,8 @@ export function TrendCard({ kind, points, isLoading, error, onRetry }: TrendCard
       ariaLabel={power
         ? t('powershare.powerTrend.ariaLabel', 'Output power trend chart')
         : t('powershare.hoursTrend.ariaLabel', 'Estimated remaining runtime trend')}
-      data={data.map(({ label: time, value }) => ({ label: time, value }))}
-      exportData={data.map(({ label: time, value }) => ({ label: time, value }))}
+      data={rows}
+      exportData={rows}
       exportable
       fullscreen
       dataColumns={[
