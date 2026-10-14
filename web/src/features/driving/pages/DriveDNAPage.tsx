@@ -32,6 +32,12 @@ import {
 } from '../components/drive-dna';
 import { buildDriveDnaModel } from '../lib/driveDNA';
 import { DriveDnaEvidenceBrief } from '../components/operationalbrief-a-m/DriveDnaEvidenceBrief';
+import { DynamicsPausedNotice } from '../components/driving-dynamics-modernization/DynamicsPausedNotice';
+
+type DriveDnaSourceState = DriveDnaSectionState & {
+  list: DriveDnaSectionState['list'] & { isRefreshBlocked: boolean };
+  telemetry: DriveDnaSectionState['telemetry'] & { isRefreshBlocked: boolean };
+};
 
 const DRIVE_HISTORY_LIMIT = 1_000;
 const HERO_COLUMNS = { default: 1, xl: 3 } as const;
@@ -94,14 +100,16 @@ export default function DriveDNAPage() {
         date: formatDateTime(activeDrive.startTs, { tz: timezone }),
       })
     : t('driveDna.title', 'Drive DNA');
-  const state = useMemo<DriveDnaSectionState>(
+  const state = useMemo<DriveDnaSourceState>(
     () => ({
       vehicleSelected: vehicleId != null,
       hasDrive: activeDrive != null,
       list: {
         isLoading:
           vehicleId != null &&
-          drivesState.status === 'initial',
+          drivesState.status === 'initial' &&
+          !drivesState.isRefreshBlocked,
+        isRefreshBlocked: vehicleId != null && drivesState.isRefreshBlocked,
         isResolved: listIsResolved,
         error:
           drivesState.fatalError,
@@ -112,7 +120,9 @@ export default function DriveDNAPage() {
       telemetry: {
         isLoading:
           activeId !== '' &&
-          telemetryState.status === 'initial',
+          telemetryState.status === 'initial' &&
+          !telemetryState.isRefreshBlocked,
+        isRefreshBlocked: activeId !== '' && telemetryState.isRefreshBlocked,
         isResolved: telemetryIsResolved,
         error:
           telemetryState.fatalError,
@@ -134,7 +144,9 @@ export default function DriveDNAPage() {
     ],
   );
   const selectorPlaceholder = drivesState.status === 'initial'
-    ? t('driveDna.selector.loading', 'Loading drives…')
+    ? drivesState.isRefreshBlocked
+      ? t('dataSources.status.paused', 'Refresh paused')
+      : t('driveDna.selector.loading', 'Loading drives…')
     : drivesState.fatalError
       ? t('driveDna.selector.error', 'Drive list unavailable')
       : t('driveDna.selector.empty', 'No drives available');
@@ -142,7 +154,11 @@ export default function DriveDNAPage() {
   return (
     <PageLayout
       title={t('driveDna.title', 'Drive DNA')}
-      query={[drivesQuery, telemetryQuery]}
+      query={[
+        ...(vehicleIdStr ? [drivesQuery] : []),
+        ...(activeId ? [telemetryQuery] : []),
+      ]}
+      busy={state.list.isLoading || state.telemetry.isLoading}
       subtitle={t(
         'driveDna.subtitle',
         'Deterministic artwork and sampled evidence from one selected drive’s telemetry emissions',
@@ -172,10 +188,16 @@ export default function DriveDNAPage() {
         </div>
       }
     >
-      {drivesState.isRefreshBlocked && (
+      {state.list.isRefreshBlocked && (
+        <DynamicsPausedNotice state={drivesState} label={t('driveDna.selector.aria', 'Choose a drive')} />
+      )}
+      {state.telemetry.isRefreshBlocked && (
+        <DynamicsPausedNotice state={telemetryState} label={driveLabel} />
+      )}
+      {state.list.isRefreshBlocked && (
         <StaleRefreshWarning state={drivesState} label={t('driveDna.selector.aria', 'Choose a drive')} />
       )}
-      {telemetryState.isRefreshBlocked && (
+      {state.telemetry.isRefreshBlocked && (
         <StaleRefreshWarning state={telemetryState} label={driveLabel} />
       )}
       <FadeIn>
