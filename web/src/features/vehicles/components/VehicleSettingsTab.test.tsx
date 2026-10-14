@@ -16,8 +16,8 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
@@ -52,6 +52,7 @@ vi.mock('react-i18next', async () => {
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
+import { vehicleSettingsKeys } from '@/api/hooks/useVehicleSettings'
 import VehicleSettingsTab from './VehicleSettingsTab'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
@@ -63,7 +64,7 @@ function renderTab(vehicleId = 42) {
       mutations: { retry: false },
     },
   })
-  return render(
+  const view = render(
     <MemoryRouter>
       <QueryClientProvider client={qc}>
         <ToastProvider>
@@ -72,6 +73,7 @@ function renderTab(vehicleId = 42) {
       </QueryClientProvider>
     </MemoryRouter>,
   )
+  return { ...view, qc }
 }
 
 interface SettingPayloadShape {
@@ -115,10 +117,74 @@ describe('VehicleSettingsTab — loading + error states', () => {
     mockedRequest.mockRejectedValue(new Error('boom'))
     renderTab()
     expect(await screen.findByTestId('vehicle-settings-error')).toBeInTheDocument()
+    expect(screen.queryByTestId('vehicle-settings-rows')).not.toBeInTheDocument()
+  })
+
+  it('keeps unresolved paused queries distinct from successful empty settings', async () => {
+    onlineManager.setOnline(false)
+    mockedRequest.mockResolvedValue(DEFAULT_PAYLOAD)
+    try {
+      renderTab()
+      expect(await screen.findByText('Refresh paused')).toBeInTheDocument()
+      expect(screen.getByTestId('vehicle-settings-loading')).toBeInTheDocument()
+      expect(screen.queryByTestId('vehicle-settings-rows')).not.toBeInTheDocument()
+      expect(screen.queryByTestId('vehicle-settings-error')).not.toBeInTheDocument()
+      expect(mockedRequest).not.toHaveBeenCalled()
+      act(() => onlineManager.setOnline(true))
+      expect(await screen.findByTestId('vehicle-settings-rows')).toBeInTheDocument()
+    } finally {
+      onlineManager.setOnline(true)
+    }
+  })
+
+  it('retains edited rows through refresh failure, retry and recovery', async () => {
+    let recover!: (value: typeof DEFAULT_PAYLOAD) => void
+    mockedRequest
+      .mockResolvedValueOnce(DEFAULT_PAYLOAD)
+      .mockRejectedValueOnce(new Error('refresh failed'))
+      .mockImplementationOnce(() => new Promise((resolve) => { recover = resolve }))
+    const { qc } = renderTab()
+    const input = await screen.findByTestId('vehicle-settings-input-nickname')
+    fireEvent.change(input, { target: { value: 'Unsaved nickname' } })
+    await act(async () => {
+      await qc.refetchQueries({ queryKey: vehicleSettingsKeys.detail(42) })
+    })
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.queryByTestId('vehicle-settings-error')).not.toBeInTheDocument()
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toBe(input)
+    expect(input).toHaveValue('Unsaved nickname')
+    expect(screen.getByTestId('vehicle-settings-save-nickname')).toBeEnabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(3))
+    expect(input).toHaveValue('Unsaved nickname')
+    expect(screen.queryByTestId('vehicle-settings-loading')).not.toBeInTheDocument()
+    await act(async () => { recover(DEFAULT_PAYLOAD) })
+    await waitFor(() => expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument())
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toBe(input)
+    expect(input).toHaveValue('Unsaved nickname')
   })
 })
 
 describe('VehicleSettingsTab — row rendering', () => {
+  it('renders all editable default rows after a successful empty response', async () => {
+    mockedRequest.mockResolvedValue(makePayload([]))
+    renderTab()
+    expect(await screen.findByTestId('vehicle-settings-rows')).toBeInTheDocument()
+    expect(screen.getAllByRole('listitem')).toHaveLength(6)
+    expect(screen.getAllByTestId('vehicle-settings-source-default')).toHaveLength(6)
+    expect(screen.getByTestId('vehicle-settings-input-nickname')).toHaveValue('')
+    expect(screen.queryByTestId('vehicle-settings-loading')).not.toBeInTheDocument()
+  })
+
+  it('preserves a successful zero value instead of treating it as missing', async () => {
+    mockedRequest.mockResolvedValue(makePayload([
+      { key: 'charge_cost_tariff_id', value: 0, source: 'override' },
+    ]))
+    renderTab()
+    expect(await screen.findByTestId('vehicle-settings-input-charge_cost_tariff_id')).toHaveValue('0')
+    expect(screen.getByTestId('vehicle-settings-reset-charge_cost_tariff_id')).toBeEnabled()
+  })
+
   it('renders one row per supported key with the correct source pill', async () => {
     mockedRequest.mockImplementation(async (path: string) => {
       if (path === '/vehicles/42/settings') return DEFAULT_PAYLOAD

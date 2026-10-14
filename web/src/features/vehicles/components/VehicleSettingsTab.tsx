@@ -15,15 +15,16 @@
  * converts the value to RFC3339 (with seconds) before invoking
  * useUpsertVehicleSetting.
  *
- * The section short-circuits to a small skeleton + EmptyState while
- * loading or on error so it never blocks the rest of the page.
+ * Initial failures replace rows; refresh failures keep rows and drafts
+ * mounted beside the shared trust warning and retry.
  */
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 
 import { Badge, Button, GlassPanel, Input, Select, type SelectOption } from '@/components/ui'
 import { Heading, Text } from '@/components/ui'
-import { Skeleton, ErrorDisplay } from '@/components/feedback'
+import { Skeleton, ErrorDisplay, StaleRefreshWarning } from '@/components/feedback'
+import { useDataState } from '@/hooks/useDataState'
 
 import {
   findEffectiveSetting,
@@ -123,7 +124,9 @@ export interface VehicleSettingsTabProps {
 
 export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProps) {
   const { t } = useTranslation()
-  const { data, isLoading, isError, refetch } = useVehicleSettings(vehicleId)
+  const query = useVehicleSettings(vehicleId)
+  const { data, refetch } = query
+  const trust = useDataState(query)
 
   return (
     <GlassPanel className="p-6" data-testid="vehicle-settings-section">
@@ -137,24 +140,31 @@ export default function VehicleSettingsTab({ vehicleId }: VehicleSettingsTabProp
         </Text>
       </div>
 
-      {isLoading ? (
-        <div data-testid="vehicle-settings-loading" className="space-y-3">
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
-          <Skeleton className="h-12 rounded-lg" />
-        </div>
-      ) : isError ? (
+      <StaleRefreshWarning state={trust} label={t('vehicleSettings.title', 'Per-vehicle settings')} />
+      {trust.fatalError ? (
         <div data-testid="vehicle-settings-error">
           <ErrorDisplay
-            error={new Error(t('vehicleSettings.error', 'Could not load vehicle settings.'))}
+            error={trust.fatalError}
+            message={t('vehicleSettings.error', 'Could not load vehicle settings.')}
             onRetry={() => {
               void refetch()
             }}
             compact
           />
         </div>
+      ) : !trust.hasData ? (
+        <div data-testid="vehicle-settings-loading" className="space-y-3">
+          {trust.isRefreshBlocked ? (
+            <Text role="status" variant="bodySm">
+              {t('dataSources.status.paused', 'Refresh paused')}
+            </Text>
+          ) : null}
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+          <Skeleton className="h-12 rounded-lg" />
+        </div>
       ) : (
-        <ul className="divide-y divide-white/5" data-testid="vehicle-settings-rows">
+        <ul className="divide-y divide-[var(--border-subtle)]" data-testid="vehicle-settings-rows">
           {VEHICLE_SETTING_DESCRIPTORS.map((desc) => {
             const effective = findEffectiveSetting(data, desc.key)
             return (
