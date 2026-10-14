@@ -134,6 +134,7 @@ export default function FirmwareCanaryPage() {
 
       <FadeIn delay={0.05}>
         <EvidencePanel
+          query={query}
           quality={latest?.window_quality}
           evidence={latest?.evidence}
           limitations={latest?.limitations}
