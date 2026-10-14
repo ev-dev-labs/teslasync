@@ -7,9 +7,8 @@
 // (decreasing widths to mimic prose) underneath an animated
 // "Helix is thinking" label with bouncing dots. Both halves use
 // existing tailwind animation tokens (`shimmer`, `pulse`,
-// `pulse-slow`) so no new keyframes are introduced. The cyan tint
-// matches the AI badge so the visual language is consistent across
-// every AI surface.
+// `pulse-slow`) so no new keyframes are introduced. Neutral text and
+// skeleton roles follow the current theme without fixed accent paints.
 //
 // The component is reduced-motion-aware: when the user has
 // `prefers-reduced-motion`, the dots stop bouncing and the lines
@@ -55,27 +54,27 @@ export function AIThinkingIndicator({
       role="status"
       aria-live="polite"
     >
-      <div className="flex items-center gap-2 text-sm text-cyan-300/90">
+      <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
         <HelixMark
-          className="h-4 w-4 text-cyan-300 motion-safe:animate-pulse"
+          className="h-4 w-4 motion-safe:animate-pulse"
           aria-hidden="true"
         />
         <span className="font-medium">{text}</span>
         <span className="inline-flex items-end gap-1" aria-hidden="true">
-          <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.3s] inline-block h-1 w-1 rounded-full bg-cyan-300" />
-          <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.15s] inline-block h-1 w-1 rounded-full bg-cyan-300" />
-          <span className="motion-safe:animate-bounce inline-block h-1 w-1 rounded-full bg-cyan-300" />
+          <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.3s] inline-block h-1 w-1 rounded-full bg-current" />
+          <span className="motion-safe:animate-bounce motion-safe:[animation-delay:-0.15s] inline-block h-1 w-1 rounded-full bg-current" />
+          <span className="motion-safe:animate-bounce inline-block h-1 w-1 rounded-full bg-current" />
         </span>
       </div>
       <div className="flex flex-col gap-2" aria-hidden="true">
         <div
-          className="h-3 w-full rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_0%,rgba(0,240,255,0.10)_50%,rgba(255,255,255,0.04)_100%)] bg-[length:200%_100%]"
+          className="h-3 w-full rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)] bg-[length:200%_100%]"
         />
         <div
-          className="h-3 w-11/12 rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_0%,rgba(0,240,255,0.10)_50%,rgba(255,255,255,0.04)_100%)] bg-[length:200%_100%] [animation-delay:0.3s]"
+          className="h-3 w-11/12 rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)] bg-[length:200%_100%] [animation-delay:0.3s]"
         />
         <div
-          className="h-3 w-9/12 rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,rgba(255,255,255,0.04)_0%,rgba(0,240,255,0.10)_50%,rgba(255,255,255,0.04)_100%)] bg-[length:200%_100%] [animation-delay:0.6s]"
+          className="h-3 w-9/12 rounded-md motion-safe:animate-shimmer bg-[linear-gradient(90deg,var(--skeleton-bg)_0%,var(--border-strong)_50%,var(--skeleton-bg)_100%)] bg-[length:200%_100%] [animation-delay:0.6s]"
         />
       </div>
     </div>
