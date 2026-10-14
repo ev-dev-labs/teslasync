@@ -33785,7 +33785,14 @@
         "subtitle": "Windows must be ordered, non-overlapping, at least 24 hours, and already observed.",
         "title": "Create windowed experiment",
         "treatmentEnd": "Treatment end",
-        "treatmentStart": "Treatment start"
+        "treatmentStart": "Treatment start",
+        "validation": {
+          "invalidDate": "Enter a valid date and time.",
+          "duration": "Each window must last from 24 hours to 365 days.",
+          "overlap": "Treatment start must be at or after baseline end.",
+          "future": "Treatment end must not be more than 1 minute in the future."
+        },
+        "windowHint": "Windows must be ordered and non-overlapping, last from 24 hours to 365 days, and already be observed (up to 1 minute of clock tolerance)."
       },
       "history": {
         "empty": "No causal experiments have been recorded.",
@@ -33978,6 +33985,7 @@
       "form": {
         "auxiliary": "Auxiliary load (canonical SI, optional)",
         "departure": "Departure",
+        "departureZone": "Enter departure in your browser time zone ({{timeZone}}). Display time zone preferences do not change this entry.",
         "distance": "Route distance (canonical SI)",
         "reserve": "Reserve target (%)",
         "run": "Run confirmed readiness assessment",
