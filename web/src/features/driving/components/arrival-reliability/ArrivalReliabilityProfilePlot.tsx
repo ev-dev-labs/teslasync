@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
   axisTick,
+  useChartHiddenSeries,
 } from '@/components/charts';
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
 
@@ -36,7 +37,7 @@ interface ArrivalReliabilityProfilePlotProps {
   allowanceName: string;
   samplesName: string;
   locale: string;
-  /** Passed from parent for backwards-compatibility; context state from chartKey takes precedence. */
+  /** Parent profile controller; the nearest chart context takes precedence. */
   hiddenSeries?: HiddenSeriesState | null;
   /** Accessible label; falls back to a translated default. */
   ariaLabel?: string;
@@ -53,6 +54,7 @@ export function ArrivalReliabilityProfilePlot({
 }: ArrivalReliabilityProfilePlotProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const profileSeries = useChartHiddenSeries() ?? externalHiddenSeries ?? null;
 
   const effectiveAriaLabel =
     ariaLabel ??
@@ -81,14 +83,15 @@ export function ArrivalReliabilityProfilePlot({
 
   return (
     <EmbeddedChart
-      chartKey="arrival-reliability-profile"
+      // The old hidden_arrival-reliability-profile URL key is retained but ignored:
+      // each outer profile owns its canonical key, without migrating shared flags.
       title={t('arrivalReliability.profileTitle', 'Arrival Reliability Profile')}
       ariaLabel={effectiveAriaLabel}
       data={rows}
       dataColumns={dataColumns}
     >
-      {({ hiddenSeries: contextSeries }) => {
-        const hs = contextSeries ?? externalHiddenSeries ?? null;
+      {() => {
+        const hs = profileSeries;
         return (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={rows}>
@@ -126,7 +129,11 @@ export function ArrivalReliabilityProfilePlot({
                   />
                 }
               />
-              <ChartLegend verticalAlign="top" align="right" />
+              <ChartLegend
+                state={hs ?? undefined}
+                verticalAlign="top"
+                align="right"
+              />
               <Bar
                 yAxisId="count"
                 dataKey="samples"
