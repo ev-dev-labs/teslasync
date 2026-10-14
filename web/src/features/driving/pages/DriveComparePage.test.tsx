@@ -1,10 +1,11 @@
 import type { ChangeEvent, ReactNode } from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
 import type { DriveDetail } from '@/types/driving';
 import { formatDateShort, formatDateTime, formatTime } from '@/lib/dateFormat';
+import { setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import { DriveIdentityCard } from '../components/drive-compare/DriveIdentityCard';
 import { HeadToHeadGrid } from '../components/drive-compare/HeadToHeadGrid';
 import { compareDrives } from '../lib/driveCompare';
@@ -33,13 +34,6 @@ vi.mock('@/hooks/useSettings', () => ({
 
 vi.mock('@/lib/timezone', () => ({
   useTimezone: () => timezoneMock(),
-}));
-
-vi.mock('@/hooks/useNumberFormatting', () => ({
-  useNumberFormatting: () => ({
-    fmtNumber: (value: number) => String(value),
-    fmtPercent: (value: number) => `${value}%`,
-  }),
 }));
 
 vi.mock('react-i18next', () => ({
@@ -254,6 +248,8 @@ const SECTION_IDS = [
 
 beforeEach(() => {
   vi.clearAllMocks();
+  setGlobalLocale('en-US');
+  setGlobalPrecision(2);
   settingsMock.mockReturnValue({ settings: { tz_display_default: 'user' }, locale: 'en-US' });
   timezoneMock.mockReturnValue('UTC');
   selectedVehicleMock.mockReturnValue({ vehicleId: 42 });
@@ -263,6 +259,47 @@ beforeEach(() => {
 });
 
 describe('DriveComparePage', () => {
+  it.each([
+    { name: 'missing endpoints', start: undefined, end: null, expected: '— → —' },
+    { name: 'invalid endpoints', start: NaN, end: Infinity, expected: '— → —' },
+    { name: 'invalid start with measured zero', start: -Infinity, end: 0, expected: '— → 0.00%' },
+    { name: 'invalid end with measured zero', start: 0, end: NaN, expected: '0.00% → —' },
+    { name: 'missing start with known end', start: null, end: 70.5, expected: '— → 70.50%' },
+    { name: 'measured zero with missing end', start: 0, end: undefined, expected: '0.00% → —' },
+    { name: 'both measured zero endpoints', start: 0, end: 0, expected: '0.00% → 0.00%' },
+    { name: 'signed fractional endpoints', start: -1.25, end: 2.75, expected: '-1.25% → 2.75%' },
+    { name: 'decreasing fractional endpoints', start: 80.125, end: 70.625, expected: '80.13% → 70.63%' },
+  ])('preserves battery endpoint identity and direction for $name', ({ start, end, expected }) => {
+    const drive = { ...driveA };
+    Reflect.set(drive, 'startBatteryPct', start);
+    Reflect.set(drive, 'endBatteryPct', end);
+    render(<DriveIdentityCard side="a" drive={drive} state={{
+      isLoading: false, error: null, emptyMessage: null, onRetry: vi.fn(),
+    }} />);
+
+    const battery = within(screen.getByTestId('drive-compare-identity-a')).getByText('Battery').parentElement;
+    expect(battery).toHaveTextContent(expected);
+    expect(drive.startBatteryPct).toBe(start);
+    expect(drive.endBatteryPct).toBe(end);
+  });
+
+  it('updates both battery endpoints with number formatting preferences without changing source measurements', () => {
+    const drive = { ...driveB, startBatteryPct: 80.125, endBatteryPct: -0.625 };
+    render(<DriveIdentityCard side="b" drive={drive} state={{
+      isLoading: false, error: null, emptyMessage: null, onRetry: vi.fn(),
+    }} />);
+    const battery = within(screen.getByTestId('drive-compare-identity-b')).getByText('Battery').parentElement;
+    expect(battery).toHaveTextContent('80.13% → -0.63%');
+
+    act(() => {
+      setGlobalLocale('de-DE');
+      setGlobalPrecision(3);
+    });
+    expect(battery).toHaveTextContent('80,125% → -0,625%');
+    expect(drive.startBatteryPct).toBe(80.125);
+    expect(drive.endBatteryPct).toBe(-0.625);
+  });
+
   it('refreshes memoized option dates on locale and timezone changes without changing either selection or timestamps', () => {
     const lateDrive = { ...driveA, startTs: '2026-08-01T00:30:00Z' };
     useDrivesMock.mockReturnValue(query({ data: [lateDrive, driveB] }));

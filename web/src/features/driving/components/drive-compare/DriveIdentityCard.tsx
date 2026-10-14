@@ -5,7 +5,8 @@ import { RouteDisplay } from '@/components/data-display';
 import { GlassPanel, Badge, MetricLabel, MetricValue, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { cn } from '@/lib/cn';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 
 import { CompareSectionBody, type CompareSectionState } from './CompareSectionBody';
@@ -20,13 +21,13 @@ export function DriveIdentityCard({ side, drive, state }: DriveIdentityCardProps
   const { t } = useTranslation();
   const { formatDistance, formatDuration, formatTemperature } = useUnits();
   const { formatDateTime, formatTime } = useDateFormat();
+  const { fmtPercent } = useNumberFormatting();
   const sideLabel = side === 'a'
     ? t('driveCompare.driveA', 'Drive A')
     : t('driveCompare.driveB', 'Drive B');
 
-  const battery = drive && (drive.startBatteryPct != null || drive.endBatteryPct != null)
-    ? `${drive.startBatteryPct != null ? `${drive.startBatteryPct}%` : '—'} → ${drive.endBatteryPct != null ? `${drive.endBatteryPct}%` : '—'}`
-    : '—';
+  const batteryEndpoint = (value: unknown) => isFiniteNumber(value) ? fmtPercent(value) : '—';
+  const battery = `${batteryEndpoint(drive?.startBatteryPct)} → ${batteryEndpoint(drive?.endBatteryPct)}`;
   const status = drive?.live
     ? t('driveCompare.identity.inProgress', 'In progress')
     : drive?.endTs
@@ -50,10 +51,7 @@ export function DriveIdentityCard({ side, drive, state }: DriveIdentityCardProps
 
   return (
     <GlassPanel
-      className={cn(
-        'p-5',
-        side === 'a' ? 'border-cyan-400/20' : 'border-purple-400/20',
-      )}
+      className="border-[var(--border-subtle)] p-5"
       data-testid={`drive-compare-identity-${side}`}
     >
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -61,10 +59,7 @@ export function DriveIdentityCard({ side, drive, state }: DriveIdentityCardProps
           <CalendarClock className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t('driveCompare.identity.title', 'Drive {{side}} context', { side: side.toUpperCase() })}
         </PanelTitle>
-        <Badge
-          variant="info"
-          className={cn(side === 'b' && 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200')}
-        >
+        <Badge variant="neutral">
           {sideLabel}
         </Badge>
       </div>
