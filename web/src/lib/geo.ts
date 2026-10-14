@@ -44,12 +44,11 @@ export interface LatLngLike {
   longitude: number;
 }
 
-/** True iff `(lat, lng)` is finite, non-zero, and within valid global bounds.
- *  `(0, 0)` is rejected — it's the canonical Tesla "GPS not yet fixed"
- *  placeholder and would otherwise drag the map to the Gulf of Guinea. */
-export function isValidLatLng(lat: number, lng: number): boolean {
+/** True iff both coordinates are measured, finite numbers within global bounds.
+ *  Zero is a valid measurement, not evidence that a GPS field is absent. */
+export function isValidLatLng(lat: unknown, lng: unknown): boolean {
+  if (typeof lat !== 'number' || typeof lng !== 'number') return false;
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
-  if (lat === 0 && lng === 0) return false;
   if (lat < -90 || lat > 90) return false;
   if (lng < -180 || lng > 180) return false;
   return true;
