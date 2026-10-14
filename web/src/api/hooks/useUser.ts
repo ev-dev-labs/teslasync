@@ -215,7 +215,7 @@ export function useRefreshTeslaProfile() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: () =>
-      request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST' }),
+      request<TeslaProfileEnvelope>('/tesla/user/profile/refresh', { method: 'POST', requiresLiveMode: true }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: userKeys.teslaProfile });
       success('toast.user.teslaProfile.success', 'Tesla profile refreshed');
