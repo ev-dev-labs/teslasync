@@ -1,0 +1,823 @@
+{
+  "item": "phase6-qa-vehicles-digital-twin",
+  "attempt": 1,
+  "phase": 6,
+  "status": "SOURCE_QA_REPORTED_NOT_PAGE_PASS",
+  "page": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+  "routes": [
+    "/digital-twin"
+  ],
+  "generatedAt": "2026-10-14T01:43:46.908651Z",
+  "deadline": {
+    "returnBy": "2026-10-14T01:44:50.678Z",
+    "reservation": "2026-10-14T01:24:50.678Z",
+    "hardBy": "2026-10-14T01:49:50.678Z",
+    "rule": "Earlier reservation applied/no reset",
+    "actualFirstCommand": "2026-10-14T01:27:49.79029Z"
+  },
+  "writable": [
+    "docs/frontend-audits/phase6-qa-vehicles-digital-twin.json",
+    "web/logs/phase6-qa-vehicles-digital-twin.log"
+  ],
+  "sourceTestsCatalogGitWrites": 0,
+  "confirmedIssueCount": 12,
+  "confirmedIssues": [
+    {
+      "line": 82,
+      "related": "85-88,156-160,181-182;vehicleState.ts174-175,186-200",
+      "fix": "Existing trusted status and nullable activity, explicit false/zero distinct from absent.",
+      "rule": "unknown-activity",
+      "mechanism": "Missing activity defaults false; badge falls back Offline and activity Parked; security-only rows say Driving No/Charging No without observation.",
+      "repro": "NOT EXECUTED source recipe: selected7/all queries null -> unavailable summary yet Offline/Parked. Security-only without activity -> No rows.",
+      "id": "DT-01",
+      "need": "N1",
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "severity": "high"
+    },
+    {
+      "line": 67,
+      "related": "72,82-89,232-237;useVehicles.ts148-150,181-190,228-252,1018-1038",
+      "fix": "Reuse deriveTrustedVehicleStatus and source observation trust; qualify retained/unverified without guessing backend fields.",
+      "rule": "measurement-freshness",
+      "mechanism": "Page discards observedAt/freshness/verifiedFields and assigns live provenance; recent HTTP success can label old/unverified measurements ready/Driving/Charging. Retained security/charging object presence also promotes Online.",
+      "repro": "NOT EXECUTED: all successful objects/recent dataUpdatedAt; state speed20/freshness stale/old observedAt/live false/verifiedFields[] -> driving and ready.",
+      "id": "DT-02",
+      "need": "N1",
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "severity": "high"
+    },
+    {
+      "line": 60,
+      "related": "61,251-261;useSelectedVehicle.ts48-49,162-166",
+      "fix": "Fleet DataState fatal/retry versus authoritative empty, preserve retained selection.",
+      "rule": "fleet-fatal-as-empty",
+      "mechanism": "Fleet isLoading only consumed. Initial fleet error/no retained -> vehicle null/No vehicles found/Add a vehicle; no fleet fatal or retry, ID0 downstream disabled.",
+      "repro": "NOT EXECUTED: fleet data undefined/isLoading false/isError true/error; selected null -> no-vehicle JSX.",
+      "id": "DT-03",
+      "need": "N2",
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "severity": "high"
+    },
+    {
+      "line": 63,
+      "related": "64-68,75,250,275,281,289-291;useVehicles.ts264-285,443-449,473-479",
+      "fix": "Separate/qualify supported temporal sources; no invented historical latest endpoints or second range picker.",
+      "rule": "mixed-temporal-provenance",
+      "mechanism": "Vehicle state honors URL as_of/disables poll; security/charging latest ignore it/poll5000ms. Merged page marks all live/Real-time/Latest signals; generic timestamps differ does not disclose historical/current mixture.",
+      "repro": "NOT EXECUTED: /digital-twin?vehicle_id=7&as_of=2026-10-12T12:00:00Z; only state URL/key includes as_of; historical state/current siblings merge.",
+      "id": "DT-04",
+      "need": "N3",
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "severity": "high"
+    },
+    {
+      "line": 198,
+      "related": "191-200,225-226;api/types.ts2197-2198",
+      "fix": "Canonical watts >0 only; no conversion/legacy fallback; preserve zero/negative signs and add power-only regression.",
+      "rule": "canonical-si-field",
+      "mechanism": "Predicate reads charger_power_kw instead of canonical charger_power_w watts. Positive watts alone ignored.",
+      "repro": "NOT EXECUTED: buildTwinState(null,null,charging fixture charging_state null/charger_power_w11000) -> false charging; canonical field never read.",
+      "id": "DT-05",
+      "need": "N4",
+      "file": "web/src/lib/vehicleState.ts",
+      "severity": "high"
+    },
+    {
+      "line": 245,
+      "related": "DigitalTwinPage.tsx283-294,314-316;useVehicles.ts148-150",
+      "fix": "Source-specific observation identity/time and retained age; never fabricate whole-twin freshness from fetch success.",
+      "rule": "observation-timestamp",
+      "mechanism": "lastUpdated only security.created_at, not security.ts/vehicle observedAt/charging.ts; captions unqualified Signal timestamp/Last updated. Other timestamped sources alone lack timestamp.",
+      "repro": "NOT EXECUTED: differing security created_at/ts and later siblings -> captions creation string. Security null/timestamped siblings -> unknown.",
+      "id": "DT-06",
+      "need": "N3",
+      "file": "web/src/lib/vehicleState.ts",
+      "severity": "medium"
+    },
+    {
+      "line": 198,
+      "related": "232-237,264-266,376-383;StaleRefreshWarning.tsx57-58",
+      "fix": "Keep neighbors, identify/recover failed/missing/paused sources independently.",
+      "rule": "partial-source-fatal-suppression",
+      "mechanism": "Any usable neighbor discards all combined fatal errors; stale warnings hide initial failure/no retained. Failed state/charging with security present gets generic Mixed availability but no source reason/individual Retry; retry-all only in suppressed error branch.",
+      "repro": "NOT EXECUTED: healthy security; state/charging undefined/errors/no retained -> combinedError undefined/warnings null/merged panel ready without failed-source Retry.",
+      "id": "DT-07",
+      "need": "N1",
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "severity": "high"
+    },
+    {
+      "line": 1081,
+      "related": "275,1116,1147,1160",
+      "fix": "Existing t/common/digitalTwin keys; parent exact missing-key requests only; no redo completed body localization.",
+      "rule": "hardcoded-string",
+      "repro": "NOT EXECUTED: non-English interactive port/sentry/lock states; follow literal tooltip paths. Existing localized six-hotspot tests do not cover these residuals.",
+      "mechanism": "Three untranslated rendering surfaces: charge-port hotspot Charge port/Charging/Open/Closed/Unknown; Sentry mode active tooltip; Locked/Unlocked tooltip. Localized aria/inspection does not translate visible body.",
+      "occurrenceCount": 3,
+      "id": "DT-08",
+      "need": "N5",
+      "file": "web/src/components/vehicles/VehicleTwin.tsx",
+      "severity": "medium"
+    },
+    {
+      "line": 327,
+      "related": "132,383;StatusBadge.tsx16,38,60",
+      "fix": "Adopt existing label={statusText}; preserve FSM key; no shared API expansion.",
+      "rule": "hardcoded-string",
+      "repro": "NOT EXECUTED: translated charging summary but badgeStatus charging/missing label -> two raw charging labels.",
+      "mechanism": "Translated statusText exists; both StatusBadge calls omit existing label prop and render canonical English status fallback.",
+      "occurrenceCount": 2,
+      "id": "DT-09",
+      "need": "N6",
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "severity": "medium"
+    },
+    {
+      "line": 941,
+      "related": "DigitalTwinPage.tsx309;VehicleTwin.tsx26,1042-1061,1437,1622-1623",
+      "fix": "Source-driven measured overlays; bound/qualify cosmetic entry without fake telemetry, preserve real light feedback.",
+      "rule": "artificial-state-illumination",
+      "mechanism": "Page always driveIn; animateEntry=driveIn&&!reduce never resets. Passed to head/taillights, it forces emissions despite measured headlights false/null. Finite1.35s root transition does not terminate boolean predicate; artistic light state unqualified.",
+      "repro": "NOT EXECUTED: headlights false/driving false/hazards false/turn off/driveIn true/reduce false -> emission JSX persists despite details Off.",
+      "id": "DT-10",
+      "need": "N7",
+      "file": "web/src/components/vehicles/VehicleTwin.tsx",
+      "severity": "high"
+    },
+    {
+      "line": 83,
+      "related": "55;KVList.tsx45-48,63-64,76-85;DigitalTwinPage.tsx350-395",
+      "fix": "Existing responsive/stacked/wrap KVList adoption, retain19 rows/actions; native check later.",
+      "rule": "missing-responsive-detail-strategy",
+      "mechanism": "Four cards default inner KVList columns2 without existing responsive/stacked/wrap API; grid-cols2/nonwrapping inline flex persists despite outer stacking.",
+      "repro": "NOT EXECUTED: narrow card/long translated values/200% text retains2 inner columns. Actual overflow NOT proven.",
+      "id": "DT-11",
+      "need": "N8",
+      "file": "web/src/features/vehicles/components/TwinDetailPanel.tsx",
+      "severity": "medium"
+    },
+    {
+      "line": 989,
+      "related": "1038,1435-1437;ambient.ts46-54,66-68,84-92;useMotionPreference.ts44-48",
+      "fix": "Thread accepted derived reduce into these existing feedback paths, static low-bandwidth identity; no new engine/helper.",
+      "rule": "low-bandwidth-motion-disconnect",
+      "mechanism": "Root reduce includes lowBandwidth; leaf turn/hazard ambientFrames/ambientLoop inspect only OS matchMedia. LowBandwidth true/OS false retains0.8s Infinity loops.",
+      "repro": "NOT EXECUTED: lowBandwidth on/OS reduce false/hazards active -> root reduce true but leaf returns original loop.",
+      "id": "DT-12",
+      "need": "N9",
+      "file": "web/src/components/vehicles/VehicleTwin.tsx",
+      "severity": "medium"
+    }
+  ],
+  "candidateCount": 5,
+  "candidates": [
+    {
+      "hypothesis": "Actual overflow/clipping/focus overlap/touch targets unproved. Outside19-item rail declares44px equivalents; small SVG hotspots alone do not prove WCAG failure.",
+      "fileLines": "DigitalTwinPage303,350;TwinDetailPanel83;VehicleTwin298-301,1143-1162,1636-1645",
+      "category": "native/mobile",
+      "status": "NOTRUN",
+      "proofNeeded": "All10 mission widths/narrow containers/long translations/RTL/200% geometry",
+      "id": "C1"
+    },
+    {
+      "hypothesis": "Keyboard/tooltip focus/clipping, Review drawer trap/restore, screen reader, forced-colors/composed contrast and announcement burden not exercised; existing source fixes not current native acceptance.",
+      "fileLines": "VehicleTwin1523-1524,1635-1646;VehiclePaintPicker44-126;DigitalTwinPage272-296",
+      "id": "C2",
+      "category": "native/a11y",
+      "status": "NOTRUN"
+    },
+    {
+      "hypothesis": "Locale/timezone/precision declarations exist but saved roundtrip/relative-versus-absolute intent and time-only day/zone clarity unproved. No evidenced explicit saved12/24h/date-pattern option; do not invent a regression.",
+      "fileLines": "DigitalTwinPage56,283-294,314-316;useDateFormat74-86;dateFormat96-116;useUnits126-151",
+      "id": "C3",
+      "category": "saved-preferences",
+      "status": "UNPROVED/NOTRUN"
+    },
+    {
+      "hypothesis": "photoState not reset on paint/model changes; failed branch removes img, ready can precede replacement load. Intended recovery requirement and visible effect require covering fixture/native repro; no compositor requests here.",
+      "fileLines": "VehicleTwin1466-1468,1529-1541",
+      "id": "C4",
+      "category": "photo-lifecycle",
+      "status": "UNPROVED/NOTRUN"
+    },
+    {
+      "hypothesis": "Model3/S/X selection shares ModelY-documented calibration/fallback body; actual alignment and adequacy of modeled/custom-paint qualifiers unproved. Studio/SVG artwork is not measured photo or simulation forecast.",
+      "fileLines": "teslaCompositor28-34,49-61,72-99;VehicleTwin30-33,1482-1491;useVehiclePaint13-28",
+      "id": "C5",
+      "category": "artwork-model-provenance",
+      "status": "UNPROVED/NOTRUN"
+    }
+  ],
+  "needCount": 9,
+  "needs": [
+    {
+      "files": [
+        "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+        "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx",
+        "web/src/lib/vehicleState.ts",
+        "web/src/lib/vehicleState.test.ts"
+      ],
+      "findings": [
+        "DT-01",
+        "DT-02",
+        "DT-07"
+      ],
+      "id": "N1",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "One query/measurement trust consumer root, unknown/stale/unverified and individual failed-partial recovery"
+    },
+    {
+      "files": [
+        "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+        "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx"
+      ],
+      "findings": [
+        "DT-03"
+      ],
+      "id": "N2",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Fleet fatal versus authoritative empty/retained recovery"
+    },
+    {
+      "files": [
+        "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+        "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx",
+        "web/src/lib/vehicleState.ts",
+        "web/src/lib/vehicleState.test.ts"
+      ],
+      "findings": [
+        "DT-04",
+        "DT-06"
+      ],
+      "id": "N3",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "One temporal provenance and source-observation timestamp/qualifier root; no guessed backend historical support"
+    },
+    {
+      "files": [
+        "web/src/lib/vehicleState.ts",
+        "web/src/lib/vehicleState.test.ts"
+      ],
+      "findings": [
+        "DT-05"
+      ],
+      "id": "N4",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Canonical watts/null charging-state predicate regression"
+    },
+    {
+      "files": [
+        "web/src/components/vehicles/VehicleTwin.tsx",
+        "web/src/components/vehicles/__tests__/VehicleTwin.test.tsx"
+      ],
+      "findings": [
+        "DT-08"
+      ],
+      "id": "N5",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Only3 residual port/security tooltip localization paths; parent exact missing-key catalog requests"
+    },
+    {
+      "files": [
+        "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+        "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx"
+      ],
+      "findings": [
+        "DT-09"
+      ],
+      "id": "N6",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Adopt existing StatusBadge label at2 page calls, no shared API expansion"
+    },
+    {
+      "files": [
+        "web/src/components/vehicles/VehicleTwin.tsx",
+        "web/src/components/vehicles/__tests__/VehicleTwin.test.tsx"
+      ],
+      "findings": [
+        "DT-10"
+      ],
+      "id": "N7",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Separate persistent unmeasured entry-light art from observation"
+    },
+    {
+      "files": [
+        "web/src/features/vehicles/components/TwinDetailPanel.tsx",
+        "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx"
+      ],
+      "findings": [
+        "DT-11"
+      ],
+      "id": "N8",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Existing responsive KVList adoption, no shared redesign"
+    },
+    {
+      "files": [
+        "web/src/components/vehicles/VehicleTwin.tsx",
+        "web/src/components/vehicles/__tests__/VehicleTwin.test.tsx"
+      ],
+      "findings": [
+        "DT-12"
+      ],
+      "id": "N9",
+      "queueDisposition": "New narrow residual need; no active intersecting source fix found; parent must serialize overlapping paths, not remigrate accepted item",
+      "objective": "Use existing root reduce for actual turn/hazard feedback"
+    }
+  ],
+  "counting": "12 distinct confirmed source mechanisms; hardcoded2 mechanisms cover5 rendering sites; candidates and repeated citations not extra findings. Conditional recipes not executed.",
+  "countsByRule": {
+    "artificial-state-illumination": 1,
+    "partial-source-fatal-suppression": 1,
+    "measurement-freshness": 1,
+    "fleet-fatal-as-empty": 1,
+    "mixed-temporal-provenance": 1,
+    "unknown-activity": 1,
+    "missing-responsive-detail-strategy": 1,
+    "canonical-si-field": 1,
+    "hardcoded-string": 2,
+    "low-bandwidth-motion-disconnect": 1,
+    "observation-timestamp": 1
+  },
+  "pins": [
+    {
+      "unchanged": true,
+      "file": "web/src/api/dataState.ts",
+      "before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "algorithm": "SHA-256",
+      "after": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/api/hooks/useVehicles.ts",
+      "before": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "algorithm": "SHA-256",
+      "after": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/api/types.ts",
+      "before": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "algorithm": "SHA-256",
+      "after": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/data-display/KVList.tsx",
+      "before": "E25F2CADCAEA2B802167668CB8D635C36FF89F8365E77BFF00C79FED783E442B",
+      "algorithm": "SHA-256",
+      "after": "E25F2CADCAEA2B802167668CB8D635C36FF89F8365E77BFF00C79FED783E442B"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/data-display/StatusBadge.tsx",
+      "before": "65FDEC9C0110CBE34F9BB688AD3F5F8F4EA3EDD97244809893510E9CDBC6FC29",
+      "algorithm": "SHA-256",
+      "after": "65FDEC9C0110CBE34F9BB688AD3F5F8F4EA3EDD97244809893510E9CDBC6FC29"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "before": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9",
+      "algorithm": "SHA-256",
+      "after": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "algorithm": "SHA-256",
+      "after": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/motion/ambient.ts",
+      "before": "8602E1DBA0B68591B2623D6B8C3E583BDD2EE47ED9E5A83F405E9B5F278DA46D",
+      "algorithm": "SHA-256",
+      "after": "8602E1DBA0B68591B2623D6B8C3E583BDD2EE47ED9E5A83F405E9B5F278DA46D"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/vehicles/__tests__/VehiclePaintPicker.test.tsx",
+      "before": "9A936476E377321B9B8F0200DC19B7259EA1F7D59E07223ECF17A965C2D99F63",
+      "algorithm": "SHA-256",
+      "after": "9A936476E377321B9B8F0200DC19B7259EA1F7D59E07223ECF17A965C2D99F63"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/vehicles/__tests__/VehicleTwin.test.tsx",
+      "before": "775909E5AE41BA1FB8DFAEC1785F7126462515C10CA12525A95D274AE35F4169",
+      "algorithm": "SHA-256",
+      "after": "775909E5AE41BA1FB8DFAEC1785F7126462515C10CA12525A95D274AE35F4169"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/vehicles/VehiclePaintPicker.tsx",
+      "before": "50A138AFEDB421885E76B24CB0246126B4DEE7AB1E53E3A1BBF6544BB224D7B6",
+      "algorithm": "SHA-256",
+      "after": "50A138AFEDB421885E76B24CB0246126B4DEE7AB1E53E3A1BBF6544BB224D7B6"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/components/vehicles/VehicleTwin.tsx",
+      "before": "A2416837B1DED1CF17928677D4AF2ACFC3ACFF835B48C2D496AED4C42397CB39",
+      "algorithm": "SHA-256",
+      "after": "A2416837B1DED1CF17928677D4AF2ACFC3ACFF835B48C2D496AED4C42397CB39"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/features/vehicles/components/TwinDetailPanel.tsx",
+      "before": "917A62391234BAFA25AE4E0BAAB487065A456600F1889D20D99B83310570C206",
+      "algorithm": "SHA-256",
+      "after": "917A62391234BAFA25AE4E0BAAB487065A456600F1889D20D99B83310570C206"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx",
+      "before": "E429EED7674835E6FC8536818615C166E165894547A4858CA50C3B2F5D743D98",
+      "algorithm": "SHA-256",
+      "after": "E429EED7674835E6FC8536818615C166E165894547A4858CA50C3B2F5D743D98"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+      "before": "8EB5BE291864D03E273ED577291C98D2EBB9A075DCFAD23C04024BA44CB72FA4",
+      "algorithm": "SHA-256",
+      "after": "8EB5BE291864D03E273ED577291C98D2EBB9A075DCFAD23C04024BA44CB72FA4"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useAsOfDate.ts",
+      "before": "DCE9CC82AF1D73AC61F793D0DF69FF124E44FA21D85AFDD0D60D74DDB1AD8C1E",
+      "algorithm": "SHA-256",
+      "after": "DCE9CC82AF1D73AC61F793D0DF69FF124E44FA21D85AFDD0D60D74DDB1AD8C1E"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useDataState.ts",
+      "before": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B",
+      "algorithm": "SHA-256",
+      "after": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useDateFormat.ts",
+      "before": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "algorithm": "SHA-256",
+      "after": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useFormatting.ts",
+      "before": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "algorithm": "SHA-256",
+      "after": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useMotionPreference.ts",
+      "before": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "algorithm": "SHA-256",
+      "after": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "before": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "algorithm": "SHA-256",
+      "after": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "before": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "algorithm": "SHA-256",
+      "after": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useUnits.ts",
+      "before": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "algorithm": "SHA-256",
+      "after": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/hooks/useVehiclePaint.ts",
+      "before": "65782BB32FA50CDEC2AB54CBF4275EFA64AA59BBC7B720FC00D21C266EC4D070",
+      "algorithm": "SHA-256",
+      "after": "65782BB32FA50CDEC2AB54CBF4275EFA64AA59BBC7B720FC00D21C266EC4D070"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/lib/dateFormat.ts",
+      "before": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "algorithm": "SHA-256",
+      "after": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/lib/teslaCompositor.ts",
+      "before": "BDB8BC47D92F7137745B1A7E09470537892FE437F91A7A61382BB5B4E5215115",
+      "algorithm": "SHA-256",
+      "after": "BDB8BC47D92F7137745B1A7E09470537892FE437F91A7A61382BB5B4E5215115"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/lib/vehicleState.test.ts",
+      "before": "83244926802EC4F3A0AD579E253BB9039CC7C6AA7987D59E19FB11B245B40EE6",
+      "algorithm": "SHA-256",
+      "after": "83244926802EC4F3A0AD579E253BB9039CC7C6AA7987D59E19FB11B245B40EE6"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/lib/vehicleState.ts",
+      "before": "D9871DB25BFD0EE5E278C6E2404283A69BFFB8746F95F3B474BD87A5800CAB1E",
+      "algorithm": "SHA-256",
+      "after": "D9871DB25BFD0EE5E278C6E2404283A69BFFB8746F95F3B474BD87A5800CAB1E"
+    },
+    {
+      "unchanged": true,
+      "file": "web/src/lib/workspaceScope.ts",
+      "before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "algorithm": "SHA-256",
+      "after": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    }
+  ],
+  "pinCount": 29,
+  "pinDriftCount": 0,
+  "authority": {
+    "orchestrator": "docs/orchestrator-loop.md FULLY read/sole authority; earlier root playbooks superseded",
+    "inventory": "Existing DigitalTwin row and full audit-page-230 read, no replacement inventory",
+    "queue": "Exact attempt1 row69 then70, report/log only; accepted source337c3653e9482752e4342f0c604270cdce73acc4. Prior external startup1/0executed/22declared is historical, not new behavioral/type/native proof",
+    "mission": "Preservation/state/SI/preferences/responsive/a11y and43-45 acceptance read",
+    "instructions": [
+      ".github/copilot-instructions.md",
+      ".github/instructions/react-frontend.instructions.md",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md",
+      "docs/frontend-worker-conventions.md"
+    ],
+    "design": "Relevant MDC002,025-026,031-033,040-046,060-070 read",
+    "handoff": "Current2026-10-14 recovery/Phase6 conventions read; closed phases not repeated"
+  },
+  "queueDedup": {
+    "openMatchingSourceClaims": 0,
+    "ownReportClaimOnly": true,
+    "alreadyRepairedNotFindings": "Native hotspot Button/group/19-item rail;44px roving paint radios/RTL/reset; optional StatusBadge label; static reflections and charge/sentry decoration; neutral page heading icons",
+    "activeAmbientMotionClaims": 0,
+    "serialization": "N1/N2/N3/N6 share page;N1/N3/N4 adapter;N5/N7/N9 twin;N8 page fixture.9needs not9 parallel writers",
+    "doNotRedispatch": [
+      "phase5-page-vehicles-digital-twin",
+      "phase3-vehicle-paint-picker",
+      "phase3-vehicle-twin-hotspot-localization",
+      "phase3-vehicle-twin-scene-inspection-semantics",
+      "phase3-vehicle-twin-static-reflections"
+    ],
+    "queueEdits": 0
+  },
+  "dataSources": [
+    {
+      "hook": "useSelectedVehicle/useVehicles",
+      "evidence": "useVehicles73-79/useSelectedVehicle",
+      "behavior": "Shared header/URL/store/fleet precedence; signal, no local picker",
+      "endpoint": "GET /vehicles"
+    },
+    {
+      "hook": "useVehicleState",
+      "evidence": "useVehicles260-289",
+      "behavior": "Positive-ID enabled/signal/queryPolicy; historical key and pollfalse; observedAt/freshness/verifiedFields preserved by hook",
+      "endpoint": "GET /vehicles/{id}/state optional as_of"
+    },
+    {
+      "hook": "useSecurityLatest",
+      "evidence": "useVehicles443-449",
+      "behavior": "Positive ID/signal/5000ms; latest no as_of",
+      "endpoint": "GET /security/latest?vehicle_id={id}"
+    },
+    {
+      "hook": "useChargingTelemetryLatest",
+      "evidence": "useVehicles473-479/types2197-2198",
+      "behavior": "Positive ID/signal/5000ms; canonical watts/latest no as_of",
+      "endpoint": "GET /charging-telemetry/latest?vehicle_id={id}"
+    },
+    {
+      "hook": "buildTwinState",
+      "evidence": "vehicleState218-245",
+      "behavior": "Existing nullable security/window/door parser/lock-sentry priority; documented activity/timestamp/SI gaps"
+    },
+    {
+      "hook": "useVehiclePaint/buildCompositorUrl",
+      "requests": "No compositor or other request made",
+      "behavior": "Browser-local inferred/fallback/custom paint; generated studio/SVG artwork, no simulation forecast/real photo/actuator mutation"
+    }
+  ],
+  "preservation": {
+    "combinedLines": 491,
+    "majorSections": 3,
+    "summaryMetrics": 6,
+    "actions": [
+      "Header-selected vehicle/URL reconciliation",
+      "Review details/close/Escape via existing shared owner",
+      "Inspect19-state rail/hotspots",
+      "Five browser-local paint choices/conditional reset/select-inferred clears/same-cross-tab synchronization",
+      "Security-only retry per3panels/merged retry-all fatal",
+      "Three stale-source refresh actions"
+    ],
+    "data": "All component fields preserved;4text+2count metrics. Entirely unknown doors/windows raw null; known closed/false real0 with known denominator. Unknown lock/sentry/port dash. No dimensional display fields to convert. Raw SI/signs unchanged; no abs/sign inversion. DT05 watt-field defect remains.",
+    "sections": [
+      "Overview269:6 raw text/count metrics, known denominators/explanations/provenance/Review",
+      "Live overview302:interactive art/timestamp/status/chips/paint",
+      "Component state349:Doors6/Windows4/Security6/Lights3 independent panel branches"
+    ],
+    "historicalPageLines": 403,
+    "detailRows": 19,
+    "detailPanels": 4,
+    "featureSupportLines": 88,
+    "pageLines": 403
+  },
+  "states": {
+    "fatal": "Security-only fatal/retry and all-empty combined fatal/retry present; fleet gapDT03/partial source gapDT07",
+    "unknownZero": "Known-state denominators and real0vsnull present except incorrect activity defaultsDT01",
+    "retained": "DataState/stale warnings retain values/individual refetch; summary stale label; not runtime PASS",
+    "paused": "Retained fetchStatus paused ->stale/isRefreshBlocked/data-refresh-blocked, does not prove device offline; initial paused no retained stays initial/no-data",
+    "empty": "Per-source shells/EmptyState; no null gate deleting data sections. Fleet empty/loading scaffolding guards are acceptable",
+    "loading": "Fleet shell loading and4independent132px skeletons; busy summary suppresses values; partial loading ceases once any source arrives"
+  },
+  "headerScope": {
+    "range": "Route absent RANGE_ENABLED_PATHS/latest snapshot surface; no server historical list/aggregate needing start/end bounds, no invented range violation",
+    "vehicle": "Existing workspaceScope enables /digital-twin vehicle control; useSelectedVehicle precedence, no second picker",
+    "backend": "Actual bounds/auth/historical availability/freshness/payload/units NOTRUN",
+    "asOf": "URL as_of still affects state only:DT04, not missing header range"
+  },
+  "preferences": {
+    "date": "useDateFormat74-86 reads locale/validated timezone mode, delegates Intl; captions time-only. Relative/absolute intent and day-zone clarityC3 unproved; no invented explicit12/24h setting",
+    "tests": "Page fixtures stub en-US/km/C/bar/precision1/MOCK_TIME, no broad saved-preference proof",
+    "unitsPrecisionLocale": "useOperationalMetrics->useUnits effective units/locale/precision; integer counts retain integer semantics; no converted cache or preference writes",
+    "theme": "Saved IDs/modes untouched; actual custom/forced-color contrast NOTRUN",
+    "paint": "teslasync:vehicle:{id}:paint/browser-local inference/reset/sync unchanged, cosmetic not live measurement"
+  },
+  "responsive": {
+    "declared": "Hero1->xl3/twin span2; details1->md2->2xl4; measured max-w-full twin; wrapping19-item rail/44px paint radio. Inner KV no responsive API DT11",
+    "native": "All320/375/390/430/768/1024/1280/1440/1920/2560/RTL/200%/long/narrow allocated NOTRUN"
+  },
+  "accessibility": {
+    "declared": "Semantic headers/sections/definition rows; decorative icons aria-hidden; text+color; named loading; group/image descriptions; external localized rail and roving paint radio; source not acceptance",
+    "native": "Keyboard/assistive tech/focus/tooltip/drawer restore/contrast/forced-colors/touch/reduced-motion/device NOTRUN"
+  },
+  "engineeringChecks": {
+    "rawHtml": "Case-sensitive0; earlier4case-insensitive hits were shared Button",
+    "backendRules": "Go audit N/A frontend scope",
+    "staticInline": "Corrected static inline var grep0; dynamic geometry/lookup/paint/ternaries accepted; SVG fill/stroke vars not static style",
+    "pageContainer": "PageLayout resolves PageContainer, acceptable",
+    "directLibrary": "Four render module grep0; shared motion wrapper/type imports are context, not page bypass",
+    "camelcase": "Corrected case-sensitive0; earlier hook2hits were case-insensitivity false positives",
+    "doublePrefix": "Four module0/no hook prefix matches",
+    "scope": "Four render modules/page,TwinDetailPanel,VehicleTwin,PaintPicker plus hook URL grep; other supports reviewed cited contracts, not all-tree clean",
+    "oldApi": "Four module0",
+    "fetchEffect": "Only ResizeObserver setup/local paint persistence effects, no data fetch",
+    "hardcoded": "Broad8candidate lines included5translated labels; residual3shared+2badge surfaces in2findings",
+    "hiddenSection": "Candidate0; four shells read; optional captions/reset not missing sections"
+  },
+  "tests": {
+    "discovered": null,
+    "declarationSites": 70,
+    "skipped": 0,
+    "status": "NOTRUN: report-only/no source changes; conventions prohibit unchanged fixture reruns; only report/log writable, no custom helpers/runner writes/guard bypass",
+    "executed": 0,
+    "passed": 0,
+    "files": [
+      {
+        "file": "DigitalTwinPage.test.tsx",
+        "declarationSites": 20,
+        "expandedDeclaredCases": 22
+      },
+      {
+        "file": "VehicleTwin.test.tsx",
+        "declarationSites": 18,
+        "expandedDeclaredCases": 29
+      },
+      {
+        "file": "VehiclePaintPicker.test.tsx",
+        "declarationSites": 9,
+        "expandedDeclaredCases": 9
+      },
+      {
+        "file": "vehicleState.test.ts",
+        "declarationSites": 23,
+        "expandedDeclaredCases": 23
+      }
+    ],
+    "qualifier": "83static declared cases are NOT83discovered. No runner launched, zero execution/pass/fail is NOT a green run.",
+    "coverageRead": "Full sections/ready/loading/fatal retry/empty/fleet guard/retained/Review/raw0vsunknown/icons; sharedlocalized6hotspots/19rail/paintkeyboard/persistence/photoSVG/motion; adapter parses. Fixtures encode empty->offline/false and omit power-only/stale metadata/as_of/partial fatal/residual localization regressions",
+    "expandedDeclaredCases": 83,
+    "failed": 0
+  },
+  "commands": {
+    "numericFailures": [
+      {
+        "exit": 1,
+        "error": "Invalid regex trailing backslash; remaining planned search/hash did not run",
+        "shell": "1123"
+      },
+      {
+        "exit": 1,
+        "error": "PowerShell quote parser failure/no command execution/no output",
+        "shell": "1290"
+      },
+      {
+        "operationFailures": 2,
+        "exit": 0,
+        "error": "Add-Content sharing violations under transcript; false Preserved print corrected by actual1407copy164239+599228rawcharacters",
+        "shell": "1387"
+      },
+      {
+        "exit": 1,
+        "error": "OS206long command prevented process launch/no execution",
+        "shell": "1466"
+      },
+      {
+        "exit": 1,
+        "error": "ConvertTo-Json -Depth20 parameter typo/no report write; actual29pins unchanged",
+        "shell": "1488"
+      },
+      {
+        "error": "Nonexistent PSCustomObject property assignment; failed finalization preserved and corrected",
+        "exit": 1,
+        "shell": "1557"
+      }
+    ],
+    "success": "Other listed completed check calls exit0; raw candidates not quality acceptance. Initial git status READONLY; no later Git writes",
+    "receipt": "Raw authorized log plus tool transcripts; discovery IDs1071,1072,1095,1148,1166,1194; logged checks1217,1247,1259,1272,1301,1313,1345,1387,1407,1488 and final artifact/readback",
+    "preTranscriptRaw": "Two prior actual raw tool output files copied to log with transcript closed in1407; no >,>>orTee used"
+  },
+  "evidenceLimits": {
+    "confirmed": "Exact source predicate/cited line/recipe, not native pixels/telemetry/behavior execution",
+    "method": "Read-only source/direct supports/tests and native PowerShell grep/hash/line/doc/queue reads; no helper files/tools",
+    "noPageNativePass": true,
+    "noSourceRemigration": true,
+    "NOTRUN": [
+      "All tests/Vitest",
+      "npx tsc --noEmit/global or scoped typing",
+      "Full/scoped lint/official audits/build/full suites/phase gates",
+      "Servers/listeners/browser/screenshots/DOM/keyboard/native/mobile/a11y/device",
+      "API/compositor/auth/live backend/mutations",
+      "Global catalog/reference/inventory/phase completion"
+    ]
+  },
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "migration-queue.md",
+    "docs/frontend-audits/audit-page-230.json",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    "web/package.json",
+    "agent-loop-playbook.md (superseded)",
+    "shared-library-loop.md (superseded)",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/useVehicles.ts",
+    "web/src/api/types.ts",
+    "web/src/components/data-display/KVList.tsx",
+    "web/src/components/data-display/StatusBadge.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/motion/ambient.ts",
+    "web/src/components/vehicles/__tests__/VehiclePaintPicker.test.tsx",
+    "web/src/components/vehicles/__tests__/VehicleTwin.test.tsx",
+    "web/src/components/vehicles/VehiclePaintPicker.tsx",
+    "web/src/components/vehicles/VehicleTwin.tsx",
+    "web/src/features/vehicles/components/TwinDetailPanel.tsx",
+    "web/src/features/vehicles/pages/DigitalTwinPage.test.tsx",
+    "web/src/features/vehicles/pages/DigitalTwinPage.tsx",
+    "web/src/hooks/useAsOfDate.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useMotionPreference.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useVehiclePaint.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/teslaCompositor.ts",
+    "web/src/lib/vehicleState.test.ts",
+    "web/src/lib/vehicleState.ts",
+    "web/src/lib/workspaceScope.ts"
+  ],
+  "priority": "Trust/temporal/fatal recovery and watts first; residual localization/artistic light separation/responsive details/low-bandwidth leaves next. Native acceptance only under future authorization",
+  "finalVerification": {
+    "acceptance": "Source QA only, no page/native PASS",
+    "receipt": "authorized log",
+    "status": "VERIFIED: actual final JSON parse and29 unchanged source-test pins",
+    "verifiedAt": "2026-10-14T01:44:20.0901600Z",
+    "release": "Explicit report/log/commands release; no task server/helper remains; no page/native PASS"
+  }
+}
