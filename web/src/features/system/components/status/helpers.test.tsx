@@ -120,11 +120,21 @@ describe('formatUptime', () => {
     expect(formatUptime(90.9)).toBe('1m')
   })
 
-  it('clamps negative and non-finite input to 0m (no "NaNm" / "-1d")', () => {
-    expect(formatUptime(-500)).toBe('0m')
-    expect(formatUptime(Number.NaN)).toBe('0m')
-    expect(formatUptime(Infinity)).toBe('0m')
-    expect(formatUptime(undefined as unknown as number)).toBe('0m')
+  it.each([null, undefined, -500, -0.1, Number.NaN, Infinity, -Infinity])(
+    'renders unknown rather than measured zero for invalid uptime %s',
+    (seconds) => {
+      expect(formatUptime(seconds)).toBe('—')
+    },
+  )
+
+  it('retains raw-second semantics at minute, hour, and day boundaries', () => {
+    expect(formatUptime(0.9)).toBe('0m')
+    expect(formatUptime(59.9)).toBe('0m')
+    expect(formatUptime(60)).toBe('1m')
+    expect(formatUptime(3599.9)).toBe('59m')
+    expect(formatUptime(3600)).toBe('1h 0m')
+    expect(formatUptime(86399.9)).toBe('23h 59m')
+    expect(formatUptime(86400)).toBe('1d 0h 0m')
   })
 })
 

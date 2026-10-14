@@ -1,5 +1,6 @@
 import { CheckCircle, AlertTriangle, XCircle } from 'lucide-react';
 import { fmtNumber } from '@/lib/numberFormat';
+import { formatDurationSecondsAsMinutes } from '@/lib/dateFormat';
 
 export function getStatusColor(status: string): string {
   switch ((status ?? '').toLowerCase()) {
@@ -44,10 +45,11 @@ export function getStatusIcon(status: string): JSX.Element {
   }
 }
 
-export function formatUptime(seconds: number): string {
-  // Uptime is never negative; guard non-finite / negative input (missing or
-  // clock-skewed API values) so we render "0m" instead of "NaNm" / "-1d …".
-  const total = Number.isFinite(seconds) && seconds > 0 ? Math.floor(seconds) : 0;
+export function formatUptime(seconds: number | null | undefined): string {
+  if (typeof seconds !== 'number' || !Number.isFinite(seconds) || seconds < 0) {
+    return formatDurationSecondsAsMinutes(seconds);
+  }
+  const total = Math.floor(seconds);
   const days = Math.floor(total / 86400);
   const hours = Math.floor((total % 86400) / 3600);
   const mins = Math.floor((total % 3600) / 60);
