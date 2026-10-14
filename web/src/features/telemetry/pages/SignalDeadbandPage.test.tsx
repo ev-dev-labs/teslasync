@@ -1,4 +1,5 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, renderHook, screen, waitFor } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
@@ -6,6 +7,7 @@ import type { SignalHistoryResponse } from '@/types/telemetry';
 import type { ChartContainerProps } from '@/components/charts';
 import type { StatMetric } from '@/components/data-display';
 import { analyzeSignalDeadband } from '../lib/signalDeadband';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 
 interface Query<T> extends DataStateSource<T> {
   refetch: ReturnType<typeof vi.fn>;
@@ -17,6 +19,11 @@ const state = vi.hoisted(() => ({
   catalog: {} as Query<string[]>,
   history: {} as Query<SignalHistoryResponse>,
   historyHook: vi.fn(),
+  request: vi.fn(),
+  range: {
+    startInstant: '2026-10-11T14:13:12.123Z',
+    endInstantExclusive: '2026-10-12T14:13:12.123Z',
+  },
   chart: null as ChartContainerProps | null,
   briefs: {} as Record<string, BriefProps>,
   series: [] as Array<{ dataKey: string; type: string; strokeWidth: number }>,
@@ -35,6 +42,8 @@ vi.mock('react-i18next', () => ({
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: state.vehicleId }) }));
+vi.mock('@/hooks/useRangeState', () => ({ useRangeState: () => state.range }));
+vi.mock('@/api/client', () => ({ request: state.request }));
 vi.mock('@/hooks/useNumberFormatting', () => ({
   useNumberFormatting: () => ({
     fmtScientificNumber: (value: unknown) => `scientific:${value}`,
@@ -135,6 +144,11 @@ beforeEach(() => {
   state.catalog = query(['Speed', 'Gear', 'A/raw signal']);
   state.history = query<SignalHistoryResponse>();
   state.historyHook.mockClear();
+  state.request.mockReset();
+  state.range = {
+    startInstant: '2026-10-11T14:13:12.123Z',
+    endInstantExclusive: '2026-10-12T14:13:12.123Z',
+  };
   state.chart = null;
   state.briefs = {};
   state.series = [];
@@ -161,9 +175,9 @@ describe('SignalDeadbandPage evidence preservation', () => {
     expect(screen.getAllByRole('option').map((option) => option.getAttribute('value')))
       .toEqual(['', 'Speed', 'Gear', 'A/raw signal']);
     choose('A/raw signal');
-    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'A/raw signal', 24);
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'A/raw signal', 24, state.range);
     choose('');
-    expect(state.historyHook).toHaveBeenLastCalledWith(4, '', 24);
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, '', 24, state.range);
   });
 
   it('describes an empty catalog without inventing missing recorded telemetry', () => {
@@ -286,6 +300,125 @@ describe('SignalDeadbandPage evidence preservation', () => {
     state.vehicleId = null;
     render(<SignalDeadbandPage />);
     expect(screen.getByText('No vehicle selected')).toBeInTheDocument();
-    expect(state.historyHook).toHaveBeenCalledWith(0, '', 24);
+    expect(state.historyHook).toHaveBeenCalledWith(0, '', 24, state.range);
+  });
+
+  it('updates both analysis summaries and the typed hook for a custom non-UTC DST range', () => {
+    state.history = query(history([0, 0, 1]));
+    const view = render(<SignalDeadbandPage />);
+    choose();
+    state.range = calendarRangeToInstants({
+      startDate: '2026-03-08', endDate: '2026-03-08', timezone: 'America/Los_Angeles',
+    });
+    view.rerender(<SignalDeadbandPage />);
+    expect(state.range).toMatchObject({
+      startInstant: '2026-03-08T08:00:00.000Z',
+      endInstantExclusive: '2026-03-09T07:00:00.000Z',
+    });
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'Speed', 23, state.range);
+    for (const id of ['signal-deadband-summary', 'signal-deadband-retention-summary']) {
+      expect(state.briefs[id]?.scope).toBe('23h requested · Speed');
+    }
+    assertSections();
+  });
+
+  it('passes the precise moving 24-hour window through without calendar-day rounding', () => {
+    const view = render(<SignalDeadbandPage />);
+    choose();
+    state.range = {
+      startInstant: '2026-10-11T14:14:12.123Z',
+      endInstantExclusive: '2026-10-12T14:14:12.123Z',
+    };
+    view.rerender(<SignalDeadbandPage />);
+    expect(state.historyHook).toHaveBeenLastCalledWith(4, 'Speed', 24, state.range);
+    expect(state.briefs['signal-deadband-summary']?.scope).toBe('24h requested · Speed');
+  });
+});
+
+describe('deadband history transport', () => {
+  function setup() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    return { client, wrapper };
+  }
+
+  it('preserves raw kinds, polling and cache identity while translating the exact exclusive upper bound', async () => {
+    const { useSignalHistory, telemetryKeys } = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
+      '@/api/hooks/useTelemetry',
+    );
+    const response = history([0, 0, 1]);
+    response.data.push({ ...response.data[0]!, kind: 'ValueKindBool', value: true });
+    state.request.mockResolvedValue(response);
+    const { client, wrapper } = setup();
+    const { result, rerender, unmount } = renderHook(
+      ({ window }) => useSignalHistory(4, 'A/raw signal', 24, window),
+      { wrapper, initialProps: { window: state.range } },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(response);
+    const params = new URL(state.request.mock.calls[0]![0], 'http://localhost').searchParams;
+    expect(params.get('from')).toBe(state.range.startInstant);
+    expect(params.get('to')).toBe('2026-10-12T14:13:12.122999Z');
+    expect(params.has('hours')).toBe(false);
+    expect(state.request.mock.calls[0]![0]).toContain('/signals/4/A%2Fraw%20signal/history?');
+    expect(state.request.mock.calls[0]![1].signal).toBeInstanceOf(AbortSignal);
+    const firstKey = telemetryKeys.signalHistory(4, 'A/raw signal', 24,
+      state.range.startInstant, state.range.endInstantExclusive);
+    const cached = client.getQueryCache().find({ queryKey: firstKey });
+    expect(cached?.options).toMatchObject({ refetchInterval: 30_000 });
+    const next = { ...state.range, endInstantExclusive: '2026-10-13T00:00:00.000Z' };
+    rerender({ window: next });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2));
+    expect(new URL(state.request.mock.calls[1]![0], 'http://localhost').searchParams.get('to'))
+      .toBe('2026-10-12T23:59:59.999999Z');
+    rerender({ window: { ...next, startInstant: '2026-10-11T07:00:00.000Z' } });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(3));
+    expect(client.getQueryCache().getAll()).toHaveLength(3);
+    expect(client.getQueryData(firstKey)).toEqual(response);
+    unmount();
+    client.clear();
+  });
+
+  it('keeps the existing unbounded 24-hour query key and request', async () => {
+    const { useSignalHistory, telemetryKeys } = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
+      '@/api/hooks/useTelemetry',
+    );
+    state.request.mockResolvedValue(history([]));
+    const { client, wrapper } = setup();
+    const { result, unmount } = renderHook(() => useSignalHistory(4, 'Speed', 24), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(state.request.mock.calls[0]![0]).toBe('/signals/4/Speed/history?hours=24');
+    expect(telemetryKeys.signalHistory(4, 'Speed', 24)).toEqual(['signal-history', 4, 'Speed', 24]);
+    unmount();
+    client.clear();
+  });
+
+  it('cancels obsolete windows and disables queries without a vehicle or signal', async () => {
+    const { useSignalHistory } = await vi.importActual<typeof import('@/api/hooks/useTelemetry')>(
+      '@/api/hooks/useTelemetry',
+    );
+    state.request.mockImplementation(() => new Promise<SignalHistoryResponse>(() => {}));
+    const { client, wrapper } = setup();
+    const { rerender, unmount } = renderHook(
+      ({ vehicle, signal, window }) => useSignalHistory(vehicle, signal, 24, window),
+      { wrapper, initialProps: { vehicle: 0, signal: '', window: state.range } },
+    );
+    expect(state.request).not.toHaveBeenCalled();
+    rerender({ vehicle: 4, signal: '', window: state.range });
+    expect(state.request).not.toHaveBeenCalled();
+    rerender({ vehicle: 4, signal: 'Speed', window: state.range });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(1));
+    const firstAbort = state.request.mock.calls[0]![1].signal as AbortSignal;
+    rerender({ vehicle: 4, signal: 'Speed', window: {
+      ...state.range, endInstantExclusive: '2026-10-13T14:13:12.123Z',
+    } });
+    await waitFor(() => expect(state.request).toHaveBeenCalledTimes(2));
+    expect(firstAbort.aborted).toBe(true);
+    const secondAbort = state.request.mock.calls[1]![1].signal as AbortSignal;
+    unmount();
+    expect(secondAbort.aborted).toBe(true);
+    client.clear();
   });
 });

@@ -27,6 +27,52 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns the deadband range and vehicle on its normalized route', () => {
+    for (const path of ['/signal-deadband', '/signal-deadband/', '/signal-deadband?from=2026-10-10', '/signal-deadband#chart', 'signal-deadband']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/signal-deadband')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+  it('owns the change-point range and vehicle on the actual normalized route', () => {
+    for (const path of [
+      '/signal-change-points',
+      '/signal-change-points/',
+      '/signal-change-points?from=2026-10-10&to=2026-10-13',
+      '/signal-change-points#timeline',
+      'signal-change-points',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/signal-change-points')).toEqual(['24h', '7d', '30d', '90d']);
+  });
+
+  it('keeps Tesla API usage fleet-wide without overriding its independent UTC history range', () => {
+    for (const path of [
+      '/tesla-api-usage',
+      '/tesla-api-usage/',
+      '/tesla-api-usage?vehicle_id=42&from=2026-01-01',
+      '/tesla-api-usage#history',
+      'tesla-api-usage',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/drives')).toEqual({ range: true, vehicle: true });
+  });
+
+  it('keeps the SQL composing workspace free of misleading vehicle and range controls', () => {
+    for (const path of [
+      '/power/sql',
+      '/power/sql/',
+      '/power/sql?vehicle_id=42',
+      '/power/sql#editor',
+      'power/sql',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    expect(getWorkspaceRouteScope('/drives')).toEqual({ range: true, vehicle: true });
+    expect(getWorkspaceRouteScope('/vehicles/42')).toEqual({ range: false, vehicle: true });
+  });
+
   it('owns the Explorer range and vehicle on its actual route', () => {
     for (const path of ['/explorer', '/explorer/', '/explorer?from=2026-01-01', '/explorer#methodology']) {
       expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
@@ -65,6 +111,21 @@ describe('getWorkspaceRouteScope', () => {
     }
     for (const path of ['/projected-range', '/analytics/range']) {
       expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: true });
+    }
+  });
+
+  it('keeps whole-home energy orchestration fleet-wide without misleading workspace filters', () => {
+    for (const path of [
+      '/energy-orchestrator',
+      '/energy-orchestrator/',
+      '/energy-orchestrator?vehicle_id=42',
+      '/energy-orchestrator#plan',
+      'energy-orchestrator',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: false, vehicle: false });
+    }
+    for (const path of ['/energy', '/energy-flow']) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
     }
   });
 

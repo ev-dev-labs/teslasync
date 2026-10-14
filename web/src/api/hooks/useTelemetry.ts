@@ -13,9 +13,14 @@ export const telemetryKeys = {
   signals: (vehicleId: number) => ['signals', vehicleId] as const,
   liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
   signalStats: (vehicleId: number) => ['signal-stats', vehicleId] as const,
-  signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
-  signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
-    ['signal-analysis-history', vehicleId, signal, hours, limit] as const,
+  signalHistory: (vehicleId: number, signal: string, hours: number, from?: string, to?: string) =>
+    from === undefined && to === undefined
+      ? ['signal-history', vehicleId, signal, hours] as const
+      : ['signal-history', vehicleId, signal, hours, from, to] as const,
+  signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number, from?: string, to?: string) =>
+    from === undefined && to === undefined
+      ? ['signal-analysis-history', vehicleId, signal, hours, limit] as const
+      : ['signal-analysis-history', vehicleId, signal, hours, limit, from, to] as const,
   signalEvidenceHistory: (vehicleId: number, signal: string, hours: number, limit: number, from?: string, to?: string) =>
     from === undefined && to === undefined
       ? ['signal-evidence-history', vehicleId, signal, hours, limit] as const
@@ -182,15 +187,34 @@ export function useSignalStats(vehicleId: number) {
   });
 }
 
-export function useSignalHistory(vehicleId: number, signal: string, hours: number) {
+export function useSignalHistory(
+  vehicleId: number,
+  signal: string,
+  hours: number,
+  window?: SignalEvidenceWindow,
+) {
   return useQuery({
-    queryKey: telemetryKeys.signalHistory(vehicleId, signal, hours),
+    queryKey: telemetryKeys.signalHistory(
+      vehicleId, signal, hours, window?.startInstant, window?.endInstantExclusive,
+    ),
     // Rename the query context's AbortSignal so it does NOT shadow the outer
     // `signal` (the signal NAME). Destructuring `{ signal }` here would
     // stringify the AbortSignal into the URL path segment
     // (`/signals/1/[object AbortSignal]/history`) and drop the name entirely.
-    queryFn: ({ signal: abortSignal }) =>
-      request<SignalHistoryResponse>(`/signals/${vehicleId}/${signal}/history?hours=${hours}`, { signal: abortSignal }),
+    queryFn: ({ signal: abortSignal }) => {
+      // Workspace instants have millisecond precision; BETWEEN includes its
+      // end, so retain the final PostgreSQL microsecond before the boundary.
+      let range = `hours=${hours}`;
+      if (window) {
+        const inclusiveEnd = new Date(Date.parse(window.endInstantExclusive) - 1)
+          .toISOString().replace('Z', '999Z');
+        range = `from=${encodeURIComponent(window.startInstant)}&to=${encodeURIComponent(inclusiveEnd)}`;
+      }
+      return request<SignalHistoryResponse>(
+        `/signals/${vehicleId}/${encodeURIComponent(signal)}/history?${range}`,
+        { signal: abortSignal },
+      );
+    },
     enabled: vehicleId > 0 && !!signal,
     refetchInterval: INTERVALS.STANDARD,
   });
@@ -199,12 +223,14 @@ export function useSignalHistory(vehicleId: number, signal: string, hours: numbe
 /**
  * Fetches the backend's largest supported signal window for statistical
  * analysis without expanding ordinary sparkline/history queries.
+ * An explicit workspace window takes precedence over the relative hours.
  */
 export function useSignalAnalysisHistory(
   vehicleId: number,
   signalName: string,
   hours: number,
   limit = 10_000,
+  window?: SignalEvidenceWindow,
 ) {
   const boundedHours = Number.isFinite(hours)
     ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
@@ -218,10 +244,14 @@ export function useSignalAnalysisHistory(
       signalName,
       boundedHours,
       boundedLimit,
+      window?.startInstant,
+      window?.endInstantExclusive,
     ),
     queryFn: ({ signal }) =>
       request<SignalHistoryResponse>(
-        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+        `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?${window
+          ? `from=${encodeURIComponent(window.startInstant)}&to=${encodeURIComponent(window.endInstantExclusive)}`
+          : `hours=${boundedHours}`}&limit=${boundedLimit}`,
         { signal },
       ),
     enabled: vehicleId > 0 && signalName.length > 0,

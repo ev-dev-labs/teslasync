@@ -18,14 +18,13 @@ import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSel
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRangeState } from '@/hooks/useRangeState';
 
 import { chartTokens, typography } from '@/lib/tokens';
 import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 
 import { analyzeSignalDeadband } from '../lib/signalDeadband';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-
-const HISTORY_HOURS = 24;
 
 export default function SignalDeadbandPage() {
   const { fmtScientificNumber, fmtPercent, fmtInt } = useNumberFormatting();
@@ -34,8 +33,10 @@ export default function SignalDeadbandPage() {
   const { vehicleId } = useSelectedVehicle();
   const id = vehicleId ?? 0;
   const [signal, setSignal] = useState('');
+  const { startInstant, endInstantExclusive } = useRangeState({ defaultPresetId: '24h' });
+  const historyHours = (Date.parse(endInstantExclusive) - Date.parse(startInstant)) / 3_600_000;
   const signalsQuery = useSignals(id);
-  const historyQuery = useSignalHistory(id, signal, HISTORY_HOURS);
+  const historyQuery = useSignalHistory(id, signal, historyHours, { startInstant, endInstantExclusive });
   const catalogState = useDataState(signalsQuery);
   const historyState = useDataState(historyQuery, {
     provenance: 'historical',
@@ -186,7 +187,7 @@ export default function SignalDeadbandPage() {
           metrics={metrics} testId="signal-deadband-summary" loading={historyLoading}
           unavailable={historyError} unknown={!signalChosen || analysis == null} sourceStatus={historyState.status}
           retained={historyHasData && (historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null)}
-          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal: signal || '—' })}
+          scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: historyHours, signal: signal || '—' })}
           sourceBounds={signal ? [{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }] : []}
           provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
           description={t('telemetry.brief.analysisBounds', 'Analysis covers returned numeric samples, not guaranteed full-window coverage. Exact bounds remain unknown when not supplied by the source.')} />
@@ -258,7 +259,7 @@ export default function SignalDeadbandPage() {
             <TelemetrySummaryBrief title={t('signalDeadband.recommendation.title', 'Retention audit')}
               metrics={auditMetrics} testId="signal-deadband-retention-summary" sourceStatus={historyState.status}
               retained={historyState.isRefreshing || historyState.status === 'stale' || historyState.refreshError != null}
-              scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: HISTORY_HOURS, signal })}
+              scope={t('telemetry.brief.historyWindow', '{{hours}}h requested · {{signal}}', { hours: historyHours, signal })}
               sourceBounds={[{ signal, from: historyQuery.data?.from, to: historyQuery.data?.to }]}
               provenance={t('telemetry.brief.historyProvenance', 'Selected signal history; numeric samples only')}
               description={t('signalDeadband.curve.subtitle', 'Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas')} />
