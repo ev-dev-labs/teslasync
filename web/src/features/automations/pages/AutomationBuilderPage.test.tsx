@@ -16,9 +16,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import '../../../i18n';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { __resetEditLeasesForTests } from '@/hooks/useEditLease';
@@ -263,9 +263,15 @@ import AutomationBuilderPage, {
 
 function renderPage(entry = '/automations/new') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  let navigate: ReturnType<typeof useNavigate>;
+  function NavigationControl() {
+    navigate = useNavigate();
+    return null;
+  }
   const tree = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[entry]}>
+        <NavigationControl />
         <ToastProvider>
           <Routes>
             <Route path="/automations" element={<div>AUTOMATIONS_LIST</div>} />
@@ -277,7 +283,11 @@ function renderPage(entry = '/automations/new') {
     </QueryClientProvider>
   );
   const result = render(tree());
-  return { ...result, refresh: () => result.rerender(tree()) };
+  return {
+    ...result,
+    refresh: () => result.rerender(tree()),
+    changeScope: (path: string) => act(() => { navigate(path); }),
+  };
 }
 
 const EDIT_AUTOMATION: AutomationFull = {
@@ -973,5 +983,91 @@ describe('AutomationBuilderPage — new-automation draft autosave', () => {
     const raw = window.localStorage.getItem('teslasync:draft:v1:automation:new');
     expect(raw).not.toBeNull();
     expect(raw).toContain('Draft Me');
+  });
+
+  it('clears storage on matching success without resetting the canonical editor or conflict feedback', async () => {
+    let resolveSave!: (result: { id: number; conflicts: { type: string; message: string }[] }) => void;
+    H.createMutateAsync.mockImplementation(() => new Promise((resolve) => { resolveSave = resolve; }));
+    const { container } = renderPage();
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: '  Saved automation  ' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
+      target: { value: 'trigger_signal' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'add-condition' }));
+    fireEvent.click(screen.getByRole('button', { name: 'add-action' }));
+    fireEvent.click(screen.getByRole('switch'));
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const key = 'teslasync:draft:v1:automation:new';
+    expect(window.localStorage.getItem(key)).toContain('Saved automation');
+    fireEvent.submit(container.querySelector('form')!);
+
+    await act(async () => {
+      resolveSave({ id: 124, conflicts: [{ type: 'overlap', message: 'overlap' }] });
+    });
+    expect(window.localStorage.getItem(key)).toBeNull();
+    expect(screen.getByDisplayValue('Saved automation')).toBeInTheDocument();
+    expect(screen.getByTestId('trigger-configurator')).toHaveTextContent('tc:trigger_signal');
+    expect(screen.getByText('conditions:1')).toBeInTheDocument();
+    expect(screen.getByText('actions:2')).toBeInTheDocument();
+    expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false');
+    expect(screen.getByTestId('conflict-warnings')).toHaveTextContent('conflicts:1');
+    fireEvent.click(screen.getByRole('button', { name: /test run/i }));
+    expect(H.testRunMutate).toHaveBeenCalledWith(124);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    expect(window.localStorage.getItem(key)).toBeNull();
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+  });
+
+  it('retains the form and persisted draft on rejection without successful state transitions', async () => {
+    H.createMutateAsync.mockRejectedValue(new Error('Save rejected'));
+    const { container } = renderPage();
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Keep this draft' } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Trigger type' }), {
+      target: { value: 'trigger_signal' },
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const key = 'teslasync:draft:v1:automation:new';
+    const draft = window.localStorage.getItem(key);
+    await act(async () => { fireEvent.submit(container.querySelector('form')!); });
+    expect(screen.getByText('Save rejected')).toBeInTheDocument();
+    expect(screen.getByDisplayValue('Keep this draft')).toBeInTheDocument();
+    expect(window.localStorage.getItem(key)).toBe(draft);
+    expect(screen.queryByRole('button', { name: /test run/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+  });
+
+  it.each(['success', 'rejection'] as const)('ignores a stale %s after a scope change during a pending save', async (outcome) => {
+    let resolveSave!: (result: { id: number }) => void;
+    let rejectSave!: (error: Error) => void;
+    H.updateMutateAsync.mockImplementation(() => new Promise((resolve, reject) => {
+      resolveSave = resolve;
+      rejectSave = reject;
+    }));
+    H.automationState = { data: EDIT_AUTOMATION, isLoading: false, error: null };
+    const { container, changeScope } = renderPage('/automations/5/edit');
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Pending edit' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const oldKey = 'teslasync:draft:v1:automation:edit:5';
+    const oldDraft = window.localStorage.getItem(oldKey);
+    expect(oldDraft).toContain('Pending edit');
+    fireEvent.submit(container.querySelector('form')!);
+    H.automationState = { data: { ...EDIT_AUTOMATION, id: 7, name: 'Another automation' }, isLoading: false, error: null };
+    changeScope('/automations/7/edit');
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'Current edit' } });
+    await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+    const currentKey = 'teslasync:draft:v1:automation:edit:7';
+    const currentDraft = window.localStorage.getItem(currentKey);
+    expect(currentDraft).toContain('Current edit');
+    await act(async () => {
+      if (outcome === 'success') resolveSave({ id: 5 });
+      else rejectSave(new Error('Stale rejection'));
+    });
+    expect(screen.getByDisplayValue('Current edit')).toBeInTheDocument();
+    expect(window.localStorage.getItem(currentKey)).toBe(currentDraft);
+    expect(window.localStorage.getItem(oldKey)).toBe(oldDraft);
+    expect(screen.queryByText('Stale rejection')).not.toBeInTheDocument();
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /test run/i }));
+    expect(H.testRunMutate).toHaveBeenCalledWith(7);
   });
 });

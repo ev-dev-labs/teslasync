@@ -370,6 +370,17 @@ export default function AutomationBuilderPage() {
       ? `automation:preset:${presetId}`
       : 'automation:new';
 
+  const saveScopeRef = useRef({ key: draftKey });
+  if (saveScopeRef.current.key !== draftKey) {
+    saveScopeRef.current = { key: draftKey };
+  }
+  const saveSequenceRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
   const [hydrated, setHydrated] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [conflicts, setConflicts] = useState<AutomationConflict[]>([]);
@@ -623,11 +634,17 @@ export default function AutomationBuilderPage() {
     }
     setSaveError(null);
 
+    const saveScope = saveScopeRef.current;
+    const saveSequence = ++saveSequenceRef.current;
+    const isCurrentSave = () => mountedRef.current
+      && saveScopeRef.current === saveScope
+      && saveSequenceRef.current === saveSequence;
     try {
       const payload = formToPayload(form);
       const result = isEdit && automationId
         ? await updateMutation.mutateAsync({ id: automationId, input: payload })
         : await createMutation.mutateAsync(payload);
+      if (!isCurrentSave()) return;
       setDirty(false);
       setSavedId(result.id);
       // The save API conflict-checks every create/update: surface its
@@ -639,13 +656,15 @@ export default function AutomationBuilderPage() {
       // Successful save → drop the autosaved draft so a future visit
       // doesn't restore stale work.
       discardDraft();
+      setFormValue(applyDraftToForm(form, payload));
       if (resultConflicts.length === 0) {
         navigate('/automations');
       }
     } catch (error) {
+      if (!isCurrentSave()) return;
       setSaveError(error instanceof Error ? error.message : String(error));
     }
-  }, [automationId, conditionsReady, createMutation, discardDraft, form, isEdit, nameReady, navigate, presetUnavailable, triggerReady, updateMutation, validate]);
+  }, [automationId, conditionsReady, createMutation, discardDraft, form, isEdit, nameReady, navigate, presetUnavailable, setFormValue, triggerReady, updateMutation, validate]);
 
   /**
    * Cancel handler — if the form is dirty, prompt before navigating away.
