@@ -7,6 +7,7 @@ import { Grid, PageLayout } from '@/components/layout';
 import { deriveDataState } from '@/api/dataState';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 
@@ -36,9 +37,13 @@ export default function HvacCyclingPage() {
   usePageTitle(t('hvacCycling.title', 'HVAC cycling'));
 
   const { vehicleId } = useSelectedVehicle();
+  const { startInstant, endInstantExclusive } = useRangeState();
   const { formatDuration } = useUnits();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : '';
-  const climateQuery = useClimateHistory(vehicleIdStr);
+  const climateQuery = useClimateHistory(vehicleIdStr, {
+    start: startInstant,
+    end: endInstantExclusive,
+  });
   const climateSource = deriveDataState(climateQuery, { provenance: 'historical' });
   const hasCachedData =
     vehicleId != null && climateQuery.data !== undefined;

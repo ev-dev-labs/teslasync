@@ -54,6 +54,7 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/energy-flow',
   '/explorer',
   '/fsd',
+  '/hvac-cycling',
   '/locations',
   '/logbook',
   '/media-player',

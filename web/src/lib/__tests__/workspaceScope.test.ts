@@ -27,6 +27,16 @@ const routedPages = [...appSource.matchAll(
 )].map(([, path, name]) => ({ path: `/${path.replace(/^\/+/, '')}`, name }));
 
 describe('getWorkspaceRouteScope', () => {
+  it('owns HVAC cycling range and vehicle on its normalized route', () => {
+    for (const path of [
+      '/hvac-cycling', '/hvac-cycling/',
+      '/hvac-cycling?from=2026-03-08&to=2026-03-08',
+      '/hvac-cycling#methodology', 'hvac-cycling',
+    ]) {
+      expect(getWorkspaceRouteScope(path), path).toEqual({ range: true, vehicle: true });
+    }
+    expect(getWorkspaceQuickRangePresets('/hvac-cycling')).toEqual(['24h', '7d', '30d', '90d']);
+  });
   it('owns battery degradation analysis on the actual route, not the API path', () => {
     for (const path of ['/battery-degradation', '/battery-degradation/',
       '/battery-degradation?from=2024-03-10&to=2024-03-11', '/battery-degradation#history']) {
