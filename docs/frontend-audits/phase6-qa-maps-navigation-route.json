@@ -1,0 +1,593 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-maps-navigation-route",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_FINDINGS_RECORDED",
+  "started_at_utc": "2026-10-14T01:55:01.5000962Z",
+  "clock": {
+    "queue_reservation": "2026-10-14T01:47:59.989Z",
+    "return_deadline": "2026-10-14T02:07:59.989Z",
+    "hard_deadline": "2026-10-14T02:12:59.989Z"
+  },
+  "scope": {
+    "route": "/navigation",
+    "primary": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+    "full_file_reviews": [
+      "NavigationRoutePage.tsx",
+      "NavigationRoutePage.test.tsx",
+      "MapsOperationalBrief.tsx",
+      "MapsOperationalBrief.test.tsx"
+    ],
+    "direct_support_review": "Only directly relevant definitions, not a complete audit of every shared implementation or repository.",
+    "writable_files": [
+      "docs/frontend-audits/phase6-qa-maps-navigation-route.json",
+      "web/logs/phase6-qa-maps-navigation-route.log"
+    ],
+    "code_tests_catalog_git_writes": false,
+    "real_route_destination_device_network_api_browser_requests": false
+  },
+  "authorities_read": {
+    "full": "docs/orchestrator-loop.md",
+    "relevant": "Design contract1-606 (truncated first view recovered280-606),1065-1253; mission1-108,527-635,816-949,1110-1180,1430-1540; inventory exact audit-page-138 row189/1283 and old audit1-145; handoff1-48,2219-2250; exact queue initially63 later127 after parent queue movement; copilot1-210; react-frontend1-EOF; SI-cutover1-EOF; unit-conversion1-EOF (legacy examples superseded by SI canonical); CONTRIBUTING1-200. Read ranges/raw evidence in log/tool transcript. Not a claim to read every unrelated design addendum.",
+    "ancestor_AGENTS": "Absent at root/web/src/features/maps/pages/components ancestors"
+  },
+  "confirmed_findings": [
+    {
+      "id": "NAV-QA-001",
+      "rule": "initial-unresolved-not-empty",
+      "severity": "high",
+      "file": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+      "line": 204,
+      "related_lines": [
+        189,
+        548,
+        674,
+        692,
+        769,
+        783,
+        865,
+        867,
+        908,
+        947,
+        951
+      ],
+      "excerpt": "historyQuery.isLoading && !historyState.hasData",
+      "mechanism": "Initial paused queries have no data, isPending=true,isLoading=false,fetchStatus=paused and no fatalError. All four history panels take established-empty copy; absent latest takes No active route selected. Unresolved fleet with no URL/store ID also enters select-vehicle branch. Shared source notice is correct but does not change contradictory body text.",
+      "source_repro": "NOTRUN branch derivation: selected synthetic positive ID; latest/history data=undefined,error=null,isLoading=false,isPending=true,fetchStatus=paused => No recorded snapshots/no history/no presence/no destinations/no active route without source success. Fleet variant: no URL/store ID, unresolved vehicles.",
+      "fix": "Preserve shells/neighbors; distinguish initial-paused/unknown from confirmed-empty/observed-inactive using existing success/activity/state evidence.",
+      "support": [
+        "api/dataState.ts:184-215",
+        "hooks/useSelectedVehicle.ts:65-75",
+        "feedback/DataSourceNotice.tsx:82-98,264-283"
+      ],
+      "test_gap": "Page query mocks have no fetchStatus/isPending controls; adapter paused tests are not page branch coverage.",
+      "need": "NAV-NEED-PAGE"
+    },
+    {
+      "id": "NAV-QA-002",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+      "line": 239,
+      "related_lines": [
+        61,
+        245,
+        270,
+        278,
+        286,
+        291,
+        601,
+        962
+      ],
+      "excerpt": "time: formatDateTime(s.created_at)",
+      "mechanism": "Unbound pure formatter uses browser locale/timezone. Chart/recent memo dependencies omit effective date formatter; desktop history TimeStamp is settings-aware but mobile summary is browser-default.",
+      "source_repro": "NOTRUN source-flow derivation: same synthetic UTC instant, browser locale/zone differs from saved UTC/vehicle mode; change saved settings with unchanged history => chart/recent/mobile dates remain browser defaults while TimeStamp honors settings.",
+      "fix": "Reuse useDateFormat/effective options with reactive dependencies. Preserve raw instants, business dates and desktop/mobile meaning.",
+      "support": [
+        "lib/dateFormat.ts:31-62",
+        "hooks/useDateFormat.ts:72-100",
+        "data-display/TimeStamp.tsx:43-57"
+      ],
+      "test_gap": "No page timezone/useDateFormat preference-reactivity assertions.",
+      "need": "NAV-NEED-PAGE"
+    },
+    {
+      "id": "NAV-QA-003",
+      "rule": "unknown-not-zero",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+      "line": 322,
+      "related_lines": [
+        219,
+        224,
+        333,
+        514,
+        515,
+        966
+      ],
+      "excerpt": "row.latitude != null && row.latitude !== 0 ? ... : '—'",
+      "mechanism": "History desktop/mobile suppress individual measured zero coordinates while current-location pair predicate accepts one zero coordinate with nonzero partner.",
+      "source_repro": "NOTRUN predicate derivation: synthetic latitude=0,longitude=12 and converse => valid current-location metrics, history coordinate em-dash.",
+      "fix": "Display valid individual zeros; preserve missing distinction/signs/precision and separately documented pair-(0,0) sentinel pending producer evidence.",
+      "test_gap": "Only pair-(0,0) current-location fixture, no equator/prime-meridian history fixture.",
+      "need": "NAV-NEED-PAGE"
+    },
+    {
+      "id": "NAV-QA-004",
+      "rule": "inactive-route-delay-leak",
+      "severity": "medium",
+      "file": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+      "line": 489,
+      "related_lines": [
+        216,
+        500,
+        589,
+        833,
+        845,
+        848
+      ],
+      "excerpt": "const trafficDelaySec = latest?.route_traffic_delay_s",
+      "mechanism": "Route KPI blanks delay for no active destination, hero says Inactive, but dedicated Route traffic delay card displays residual measurement without the same route predicate or retained-route qualification.",
+      "source_repro": "NOTRUN typed-fixture derivation: existing test663 removes only destination_name from baseLatest, leaving delay600. Settled latest => missing KPI/Inactive hero coexist with 600-second warning delay card.",
+      "fix": "Keep card/thresholds but consistently qualify no-current-route/unknown or explicit retained prior-route identity.",
+      "test_gap": "No-route test663-675 ignores dedicated delay card.",
+      "need": "NAV-NEED-PAGE"
+    },
+    {
+      "id": "NAV-QA-005",
+      "rule": "page-local-query-ownership",
+      "severity": "low",
+      "file": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+      "line": 193,
+      "related_lines": [
+        3,
+        64,
+        194,
+        197,
+        198,
+        200
+      ],
+      "excerpt": "useQuery<LocationSnapshot[]>({ ... request(...,{signal}) })",
+      "mechanism": "Page owns history URL/query rather than typed API domain hook (MDC-002). Not fetch-useeffect; current key, AbortSignal, enablement and snake_case are correct.",
+      "source_repro": "NOTRUN structural proof: page imports/declaration193-201 construct history; latest reads use domain hooks.",
+      "fix": "Narrow typed hook and serialized caller wiring; preserve key/enablement/cancellation/inherited retry-stale policy/latest200, no speculative bounds.",
+      "dedup": "Retained audit-page-138 inventory architecture issue, not a new remigration/runtime failure.",
+      "need": "NAV-NEED-HISTORY-HOOK"
+    },
+    {
+      "id": "NAV-QA-006",
+      "rule": "date-preference-bypass",
+      "severity": "medium",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 57,
+      "related_lines": [
+        8,
+        54,
+        56
+      ],
+      "excerpt": "formatDateTime(new Date(state.updatedAt).toISOString())",
+      "mechanism": "Receipt freshness uses browser defaults instead of effective saved locale/timezone in both page briefs/details.",
+      "source_repro": "NOTRUN source-flow derivation: same dataUpdatedAt, saved UTC/vehicle mode differs from browser zone => receipt label remains browser-default. Tests compare against same unbound helper.",
+      "fix": "Existing preference-aware hook at adapter, preserve receipt-vs-observation identity.",
+      "dedup": "Exact phase6-qa-maps-map-overview MAP-QA-005; reuse MAP-NEED-BRIEF-DATE, no second writer/root fix.",
+      "need": "MAP-NEED-BRIEF-DATE"
+    },
+    {
+      "id": "NAV-QA-007",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "line": 61,
+      "excerpt": "`${label}: ${state.provenance}`",
+      "mechanism": "Local UI DataProvenance English enums are displayed unlocalized. OperationalBrief121/260 forwards narrative source; OperationalNarrativeDetails35-42/220-229 and CalculationDetails45-47/97-99 display unchanged. These are UI descriptions, not destination/source identifiers to recase.",
+      "source_repro": "NOTRUN complete display-chain proof: non-English locale, historical source => translated source label plus literal historical in Review details data-sources row.",
+      "fix": "Canonical localized provenance display mapping, preserve raw enum. Merge into same adapter lease as NAV-QA-006; parent owns exact catalog integration.",
+      "need": "MAP-NEED-BRIEF-DATE"
+    }
+  ],
+  "conditional_candidates": [
+    {
+      "id": "NAV-C01",
+      "line": 265,
+      "condition": "Recent destination first response occurrence may not be latest; backend ordering unverified."
+    },
+    {
+      "id": "NAV-C02",
+      "line": 502,
+      "condition": "Independent charging ts/source has no destination match in inspected shape. Page explicitly says independent/no common window; route correlation needs producer evidence."
+    },
+    {
+      "id": "NAV-C03",
+      "line": 169,
+      "condition": "SI aliases m/s,meters,ETA minutes supported by comments/converters/fixtures only; producer units NOTRUN."
+    },
+    {
+      "id": "NAV-C04",
+      "line": 254,
+      "condition": "Invalid/non-finite speed can collapse to zero; coordinate finite checks absent; negative delay success. Producer invalid-value reachability unverified; preserve valid signs."
+    },
+    {
+      "id": "NAV-C05",
+      "line": 238,
+      "condition": "Chart projection omits destination identity/sub-minute precision; multi-route ambiguity conditional, all points retained and history scope explicit."
+    }
+  ],
+  "native_candidates": [
+    {
+      "type": "Responsive ten mission widths/narrow containers/RTL/200%/long destinations",
+      "status": "NOTRUN"
+    },
+    {
+      "type": "Composed dark/light/custom/forced-colors contrast",
+      "status": "NOTRUN"
+    },
+    {
+      "type": "Keyboard/screen-reader chart/table/drawer focus/all-fields mobile details",
+      "status": "NOTRUN"
+    },
+    {
+      "type": "Actual OS reduced-motion/low-bandwidth rendering",
+      "status": "NOTRUN"
+    },
+    {
+      "type": "Safe-fixture scoped cache changes/cancellation/offline/retained/independent retry lifecycle",
+      "status": "NOTRUN"
+    }
+  ],
+  "needs": [
+    {
+      "id": "NAV-NEED-PAGE",
+      "findings": [
+        "NAV-QA-001",
+        "NAV-QA-002",
+        "NAV-QA-003",
+        "NAV-QA-004"
+      ],
+      "proposed_files": [
+        "web/src/features/maps/pages/NavigationRoutePage.tsx",
+        "web/src/features/maps/pages/NavigationRoutePage.test.tsx"
+      ],
+      "instruction": "Parent narrow page/test correction; preserve original assertions/sections/actions."
+    },
+    {
+      "id": "MAP-NEED-BRIEF-DATE",
+      "findings": [
+        "NAV-QA-006",
+        "NAV-QA-007"
+      ],
+      "previous": "phase6-qa-maps-map-overview/MAP-QA-005",
+      "proposed_files": [
+        "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+        "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx"
+      ],
+      "instruction": "Reuse prior exact adapter need; merge enum localization into same lease. Existing date hooks suffice; canonical catalog parent-owned. No overlap with active phase6-fix-relative-future-dates shared dateFormat owner."
+    },
+    {
+      "id": "NAV-NEED-HISTORY-HOOK",
+      "findings": [
+        "NAV-QA-005"
+      ],
+      "proposed_api_owner": "web/src/api/hooks/useVehicles.ts",
+      "instruction": "Retained inventory architecture issue. Parent confirms API/test lease then serialized caller wiring; no overlapping page writer or speculative bounds."
+    }
+  ],
+  "source_coverage": {
+    "section_groups": 6,
+    "panels_briefs": 9,
+    "charts": 2,
+    "series": 5,
+    "tables": 3,
+    "scope": "Header vehicle owner; query keys vehicle-specific; /navigation range=false/vehicle=true in workspaceScope. Intentional latest200, no missing bounds allegation; business dates independent.",
+    "trust": "Fatal no-data gates dependent sources; retained payloads remain. DataSourceNotice has warning/individual retry; Refresh481-485 covers latest/history/charging. No actions invoked.",
+    "units": "Display-only SI conversion; explicit positive-speed mean; ETA minute/second bridge; false/true/missing presence and negative headings/coordinates retained except individual zero defect; producer units conditional.",
+    "mobile_a11y": "Stable IDs/keys; both charts data/dataColumns alternatives; history/recent mobile roles plus allColumns detail; Icon decorative default; Refresh min-h11; FadeIn OS/low-bandwidth branch. Declarations only.",
+    "tests": {
+      "page_ordinary_it": 25,
+      "page_each_tables": 2,
+      "page_parameter_rows": 8,
+      "page_source_cases": 33,
+      "brief_ordinary_it": 7,
+      "brief_each_tables": 3,
+      "brief_parameter_rows": 12,
+      "brief_source_cases": 19,
+      "executed": 0,
+      "discovered": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null,
+      "status": "NOTRUN"
+    }
+  },
+  "historical_disposition": [
+    "Mobile full-detail contracts and chart alternatives now declared; narrow date/zero findings remain, native NOTRUN.",
+    "Hero unknown/loading/error, charging empty normalization/all-source Refresh, shared traffic thresholds and completed Caption mono correction preserved; do not redispatch completed migration/caption objectives."
+  ],
+  "guideline_checks": {
+    "scope": "Page/MapsOperationalBrief exact scans only; direct supports contract review, not global audit",
+    "case_sensitive_grep": {
+      "static_inline_style": 0,
+      "raw_html": 0,
+      "direct_library_import": 0,
+      "old_api_import": 0,
+      "double_prefix": 0,
+      "camelcase_param": 0,
+      "fetch_useeffect": 0,
+      "page_local_useQuery": 1
+    },
+    "manual": "One raw provenance enum display. PageLayout forwards PageContainer. GPS646 conditional alert is not hidden section. Recharts label.style props/computed classes/CHART_COLORS allowed. Test raw table/button and shared vendor/native building blocks exempt.",
+    "correction": "Initial case-insensitive <Button>/vehicle_id false positives corrected with CaseSensitive, raw output retained.",
+    "backend": "N/A"
+  },
+  "NOTRUN": [
+    "fresh tests/passing reruns",
+    "lint",
+    "build",
+    "npx tsc --noEmit/global TypeScript",
+    "preservation/catalog/style helpers or baseline recapture",
+    "servers/installs/subagents",
+    "browser/native/screenshot requests",
+    "actual route/destination/device/API/network requests",
+    "live backend data/units/order verification",
+    "Git staging/commit/branch writes"
+  ],
+  "native_acceptance": "NOTRUN / NOT CLAIMED. Finished source QA is not native/application acceptance.",
+  "check_failures": [
+    {
+      "shell_id": "1775",
+      "exit": 1,
+      "failure": "Preliminary Get-Item absent-artifact probes emitted suppressed missing-path errors; no source operation failed."
+    },
+    {
+      "shell_id": "2162",
+      "exit": 1,
+      "failure": "Tool could not launch large inline report-write command: os error206 filename or extension too long. Split bounded artifact writes instead."
+    },
+    {
+      "shell_id": "2207",
+      "exit": 1,
+      "failure": "ConvertTo-Json -Depth100 invalid parameter; artifact extras corrected with -Depth 100."
+    }
+  ],
+  "raw_evidence": {
+    "log": "web/logs/phase6-qa-maps-navigation-route.log",
+    "limits": "All source-check PowerShell outputs recorded from log creation; oversized preliminary raw outputs preserved verbatim. View and preliminary short status/directory output remain in caller tool transcript. Tool truncation recovered with bounded reads. No check result inferred from memory.",
+    "pin_parser_correction": "Anchored preliminary pin inventory29 missed first lines adjoining COMMAND text. Final parser matches literal PIN BEFORE throughout raw log, deduplicates paths, compares every hash."
+  },
+  "source_test_pins": [
+    {
+      "path": "web/src/features/maps/pages/NavigationRoutePage.tsx",
+      "sha256_before": "1E308654855ADD28138C536BD2795C49EE1985B6B2C14C8F649712703ED89766",
+      "sha256_after": "1E308654855ADD28138C536BD2795C49EE1985B6B2C14C8F649712703ED89766",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/maps/pages/NavigationRoutePage.test.tsx",
+      "sha256_before": "0C1B52997C404A7C1456346EFC8E7846603F174AA4A4BA751D79ED423ED2B7E8",
+      "sha256_after": "0C1B52997C404A7C1456346EFC8E7846603F174AA4A4BA751D79ED423ED2B7E8",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.tsx",
+      "sha256_before": "ED6E0166D7E517333DC30920C5DC8C5DE66F012A175EB3DFB41CE57DAD097ED6",
+      "sha256_after": "ED6E0166D7E517333DC30920C5DC8C5DE66F012A175EB3DFB41CE57DAD097ED6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/maps/components/operationalbrief-all/MapsOperationalBrief.test.tsx",
+      "sha256_before": "040F8069D31C2D4FF52AF8FD62CF411521CA29259AD43D5AB6985FC73890AE7B",
+      "sha256_after": "040F8069D31C2D4FF52AF8FD62CF411521CA29259AD43D5AB6985FC73890AE7B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/dataState.ts",
+      "sha256_before": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "sha256_after": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256_before": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "sha256_after": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256_before": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "sha256_after": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/client.ts",
+      "sha256_before": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "sha256_after": "A9EC99B561C05B73CBBC805F28D770A4E7E132C5CFD8AE8F740E1393311F59A5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useSelectedVehicle.ts",
+      "sha256_before": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "sha256_after": "C52768EA42F3E8DD34399F1372A09EB3F70D6C6CB2DDDBC41790A6D30E7C4AE3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useUnits.ts",
+      "sha256_before": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "sha256_after": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useNumberFormatting.ts",
+      "sha256_before": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "sha256_after": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/dateFormat.ts",
+      "sha256_before": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "sha256_after": "30EEB276813505D3CEE3D0B1DF38A7B13FC97DCE388A0C5B2C3C86C902F62F64",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/unitConversion.ts",
+      "sha256_before": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "sha256_after": "5584045F063774DE76F9DEA32303C3EC3819F9CD47C95B2C467EF2CB87814FCE",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/signalCatalog.ts",
+      "sha256_before": "529445A551714DC2663BA0F9AD5F5A52EE3374AD7758010ECFBE479E32C23BE6",
+      "sha256_after": "529445A551714DC2663BA0F9AD5F5A52EE3374AD7758010ECFBE479E32C23BE6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256_before": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "sha256_after": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256_before": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "sha256_after": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/PageContainer.tsx",
+      "sha256_before": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "sha256_after": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256_before": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "sha256_after": "A9C394D5830620A8606B85CD376ED748C6F30AB0DF70A250ACCBD4A9093FF282",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.tsx",
+      "sha256_before": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "sha256_after": "FE665076A69BA80CA5500CD62ECD2FBA8CCDE216C0A704964D236C01327D0E21",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/charts/EmbeddedChart.tsx",
+      "sha256_before": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "sha256_after": "58C2C8279D0D050B9BD9B9DF556BEDD70713607A196488943D9425774F475721",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256_before": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "sha256_after": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/feedback/DataSourceNotice.tsx",
+      "sha256_before": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "sha256_after": "79B11817E939F044A2C1F6FBFA1617B61A435C8461DC84B99B6014F54059AFC6",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useDateFormat.ts",
+      "sha256_before": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "sha256_after": "97B1B0EBD44436CD8274A4927D0DF4381B112DF1468A22EF6238029675D6A542",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/TimeStamp.tsx",
+      "sha256_before": "3D4FB838CA18B7D4FA1254C9CC328A30C8E26C3D5BC06EB4D2FEC49282DE23FB",
+      "sha256_after": "3D4FB838CA18B7D4FA1254C9CC328A30C8E26C3D5BC06EB4D2FEC49282DE23FB",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useTimeFormatPreference.ts",
+      "sha256_before": "720DB3C19E020A343F8C3DF9A28D869D3A6C119AE5DDC7345DC86F7E4A5C1132",
+      "sha256_after": "720DB3C19E020A343F8C3DF9A28D869D3A6C119AE5DDC7345DC86F7E4A5C1132",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/MobileDataTableAdapter.types.ts",
+      "sha256_before": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "sha256_after": "A5EA6977C603A5AF95150B655B403D36F0970BBD704231703FB136AD9E447A5A",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/OperationalBrief.tsx",
+      "sha256_before": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "sha256_after": "A5C23FD85C5C557A68589728A3C5EA539E7E7FE7E86397B8DED5F9D7D7AB22A7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/motion/FadeIn.tsx",
+      "sha256_before": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "sha256_after": "8624FFF5C039500E35B04DD4A53D3697A7186A92BDC922BB2A8E1F69001DA32F",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useMotionPreference.ts",
+      "sha256_before": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "sha256_after": "C39D22E8A322D39EDFAEC23F3BBFFE1CC35B6AFA02F297E18D617B959043821A",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/charts/ChartContainer.tsx",
+      "sha256_before": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "sha256_after": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/ui/Icon.tsx",
+      "sha256_before": "1AFC4A9B6429A024A5BB979460E9CFEF7FF5CE370F643CF92C10B570714701D5",
+      "sha256_after": "1AFC4A9B6429A024A5BB979460E9CFEF7FF5CE370F643CF92C10B570714701D5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/OperationalNarrativeDetails.tsx",
+      "sha256_before": "42D86533A953D9EE7C25E933FA7200890A420EE31868FA515F01D89B4F0E6FA1",
+      "sha256_after": "42D86533A953D9EE7C25E933FA7200890A420EE31868FA515F01D89B4F0E6FA1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/data-display/CalculationDetails.tsx",
+      "sha256_before": "E9F93EEE62B180C8C25985FE75789CC1CB2A3CF0EEA432CA683D21ADB7EA478E",
+      "sha256_after": "E9F93EEE62B180C8C25985FE75789CC1CB2A3CF0EEA432CA683D21ADB7EA478E",
+      "unchanged": true
+    }
+  ],
+  "checks": [],
+  "summary": {
+    "confirmed_findings": 7,
+    "by_rule": {
+      "unknown-not-zero": 1,
+      "hardcoded-string": 1,
+      "date-preference-bypass": 2,
+      "initial-unresolved-not-empty": 1,
+      "page-local-query-ownership": 1,
+      "inactive-route-delay-leak": 1
+    },
+    "page_findings": 5,
+    "adapter_findings": 2,
+    "cross_report_duplicates": 1,
+    "retained_inventory_findings": 1,
+    "conditional_candidates": 5,
+    "native_candidates": 5,
+    "deduplicated_needs": 3,
+    "pinned_files": 33,
+    "pin_drift": 0
+  },
+  "pin_check": {
+    "pinned_files": 33,
+    "drift": 0,
+    "all_unchanged": true
+  },
+  "final_validation": {
+    "status": "PASS_JSON_PARSE_ITEM_ATTEMPT_COUNTS_PIN_CHECK",
+    "exit": 0,
+    "checked_at_utc": "2026-10-14T02:08:23.4436339Z"
+  },
+  "release": {
+    "source_writes_released": true,
+    "artifact_writes_released": true,
+    "message": "RELEASE both authorized artifacts; no code/test/catalog/Git write. Source QA only; native/application NOTRUN."
+  },
+  "completed_at_utc": "2026-10-14T02:08:23.3997687Z"
+}
