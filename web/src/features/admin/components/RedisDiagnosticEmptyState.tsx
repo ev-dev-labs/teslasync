@@ -10,6 +10,7 @@ import { cn } from '@/lib/cn'
 import { typography } from '@/lib/tokens'
 import { type ApiError } from '@/lib/resilience'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { useNumberFormatting } from '@/hooks/useNumberFormatting'
 import {
   type RedisSignalsMeta,
 } from '@/api/devtools'
@@ -60,6 +61,7 @@ export function RedisDiagnosticEmptyState({
 }: RedisDiagnosticEmptyStateProps) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
+  const { fmtInt } = useNumberFormatting()
 
   // Branch 0.A — Redis cache wiring missing on the API server (503 + specific msg).
   if (
@@ -174,7 +176,7 @@ export function RedisDiagnosticEmptyState({
         body={t(
           'redis.diagnostic.mirrorBroken.body',
           'The in-process L1 store has {{count}} signals for this vehicle but Redis is empty. The async mirror goroutine in HybridLiveSignalStore.UpdateNonBlocking may be timing out or the Redis connection may be saturated. Check pod logs for "live signal store: Redis mirror failed".',
-          { count: meta.l1_signal_count },
+          { count: meta.l1_signal_count, replace: { count: fmtInt(meta.l1_signal_count) } },
         )}
         vehicleId={vehicleId}
         onSelectVehicle={onSelectVehicle}
@@ -280,6 +282,7 @@ function OtherRedisVehicles({
   onSelectVehicle,
 }: Pick<BannerProps, 'onSelectVehicle'> & { vehicleId: number }) {
   const { t } = useTranslation()
+  const { fmtInt } = useNumberFormatting()
   const query = useRedisSignalKeys()
   const source = deriveDataState(query)
   const otherKeys = (source.data?.keys ?? []).filter(
@@ -339,8 +342,8 @@ function OtherRedisVehicles({
                   typography.color.secondary,
                 )}
               >
-                {k.display_name || k.vehicle_vin || `Vehicle ${k.vehicle_id}`}{' '}
-                <Text color="muted">· {k.field_count}</Text>
+                {k.display_name || k.vehicle_vin || t('redis.vehicleFallback', 'Vehicle {{id}}', { id: k.vehicle_id })}{' '}
+                <Text color="muted">· {fmtInt(k.field_count)}</Text>
               </Button>
             ))}
           </div>
@@ -353,6 +356,7 @@ function OtherRedisVehicles({
 function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
   const { t } = useTranslation()
   const { formatDateTime } = useDateFormat()
+  const { fmtInt } = useNumberFormatting()
   return (
     <dl className={cn('grid grid-cols-1 gap-x-4 gap-y-1 sm:grid-cols-2', typography.size.xs, typography.color.secondary)}>
       <Row label={t('redis.diagnostic.meta.mode', 'Live store mode')}>
@@ -363,8 +367,8 @@ function DiagnosticMetaList({ meta }: { meta: RedisSignalsMeta }) {
       <Row label={t('redis.diagnostic.meta.key', 'Redis key')}>
         <Code>{meta.redis_key}</Code>
       </Row>
-      <Row label={t('redis.diagnostic.meta.l1Count', 'L1 signals')}>{meta.l1_signal_count}</Row>
-      <Row label={t('redis.diagnostic.meta.l2Count', 'L2 fields (raw)')}>{meta.redis_field_count}</Row>
+      <Row label={t('redis.diagnostic.meta.l1Count', 'L1 signals')}>{fmtInt(meta.l1_signal_count)}</Row>
+      <Row label={t('redis.diagnostic.meta.l2Count', 'L2 fields (raw)')}>{fmtInt(meta.redis_field_count)}</Row>
       <Row label={t('redis.diagnostic.meta.l1LastSeen', 'L1 last seen')}>
         {meta.l1_last_seen_at ? formatDateTime(meta.l1_last_seen_at) : '—'}
       </Row>

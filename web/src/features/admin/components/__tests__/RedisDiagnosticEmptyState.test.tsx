@@ -15,6 +15,8 @@ import { render, screen, fireEvent, cleanup, within, waitFor, act } from '@testi
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import '@/i18n';
+import i18n from '@/i18n';
+import { getGlobalLocale, setGlobalLocale } from '@/lib/numberFormat';
 
 // Mock the keys hook so we can drive the "other vehicles" section.
 vi.mock('@/api/devtools', async (importOriginal) => {
@@ -33,6 +35,7 @@ import { redisSignalKeys } from '@/api/hooks/useRedisSignals';
 const mockedGetKeys = vi.mocked(getRedisSignalKeys);
 
 const clients: QueryClient[] = [];
+let originalLocale: string;
 
 function makeClient() {
   const client = new QueryClient({
@@ -76,6 +79,7 @@ function baseMeta(overrides: Partial<RedisSignalsMeta> = {}): RedisSignalsMeta {
 
 describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
   beforeEach(() => {
+    originalLocale = getGlobalLocale();
     cleanup();
     mockedGetKeys.mockReset();
     mockedGetKeys.mockResolvedValue({ keys: [], total: 0 });
@@ -83,6 +87,7 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
 
   afterEach(() => {
     cleanup();
+    setGlobalLocale(originalLocale);
     clients.splice(0).forEach((client) => client.clear());
     onlineManager.setOnline(true);
   });
@@ -354,6 +359,71 @@ describe('RedisDiagnosticEmptyState — Phase-45 / Prompt 37', () => {
     fireEvent.click(chip1);
     expect(onSelect).toHaveBeenCalledTimes(1);
     expect(onSelect).toHaveBeenCalledWith(1);
+  });
+
+  it('translates unnamed vehicles and formats counts without changing raw identifiers or populated names', async () => {
+    setGlobalLocale('de-DE');
+    const translate = vi.spyOn(i18n, 't');
+    mockedGetKeys.mockResolvedValue({
+      keys: [
+        { vehicle_id: 12345, field_count: 1234 },
+        { vehicle_id: 23456, field_count: 2345, vehicle_vin: 'VIN23456' },
+        { vehicle_id: 34567, field_count: 3456, vehicle_vin: 'VIN34567', display_name: 'Falcon' },
+      ],
+      total: 3,
+    });
+    const onSelect = vi.fn();
+    const Wrapper = makeWrapper();
+    try {
+      render(
+        <Wrapper>
+          <RedisDiagnosticEmptyState
+            vehicleId={7}
+            meta={baseMeta({ l1_signal_count: 1234 })}
+            onSelectVehicle={onSelect}
+          />
+        </Wrapper>,
+      );
+      const unnamed = await screen.findByTestId('redis-diagnostic-other-12345');
+      expect(unnamed).toHaveTextContent('Vehicle 12345 · 1.234');
+      expect(translate).toHaveBeenCalledWith('redis.vehicleFallback', 'Vehicle {{id}}', { id: 12345 });
+      expect(screen.getByTestId('redis-diagnostic-other-23456')).toHaveTextContent('VIN23456 · 2.345');
+      expect(screen.getByTestId('redis-diagnostic-other-34567')).toHaveTextContent('Falcon · 3.456');
+      expect(screen.getByText(/has 1\.234 signals/)).toBeInTheDocument();
+      expect(screen.getByText('1.234')).toBeInTheDocument();
+      expect(screen.getByText('vehicle:7:signals')).toBeInTheDocument();
+      expect(screen.getByText('TESLA1234567890')).toBeInTheDocument();
+      fireEvent.click(unnamed);
+      expect(onSelect).toHaveBeenCalledWith(12345);
+      act(() => setGlobalLocale('en-US'));
+      expect(unnamed).toHaveTextContent('Vehicle 12345 · 1,234');
+      expect(screen.getByText(/has 1,234 signals/)).toBeInTheDocument();
+    } finally {
+      translate.mockRestore();
+    }
+  });
+
+  it('formats both metadata counts while preserving the Redis key and mode', () => {
+    setGlobalLocale('de-DE');
+    const Wrapper = makeWrapper();
+    render(
+      <Wrapper>
+        <RedisDiagnosticEmptyState
+          vehicleId={12345}
+          meta={baseMeta({
+            live_signal_store_mode: 'local',
+            redis_key: 'vehicle:12345:signals',
+            l1_signal_count: 1234,
+            redis_field_count: 5678,
+          })}
+          onSelectVehicle={() => {}}
+        />
+      </Wrapper>,
+    );
+    expect(screen.getByText('1.234')).toBeInTheDocument();
+    expect(screen.getByText('5.678')).toBeInTheDocument();
+    expect(screen.getByText('vehicle:12345:signals')).toBeInTheDocument();
+    expect(screen.getByText('local')).toBeInTheDocument();
   });
 
   it('hides the "other vehicles" section when the keys endpoint returns empty', () => {
