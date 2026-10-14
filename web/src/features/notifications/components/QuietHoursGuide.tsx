@@ -38,7 +38,7 @@ export function QuietHoursGuide() {
       icon: <Moon className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'notifications.quietHours.guide.stepDefer',
-        'Each window mutes non-critical notifications during a local-time range on the weekdays you pick.',
+        'Each window defers notifications during a local-time range on the weekdays you pick, except for severities you explicitly allow.',
       ),
     },
     {
@@ -46,7 +46,7 @@ export function QuietHoursGuide() {
       icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'notifications.quietHours.guide.stepBypass',
-        'Severities on the "always allow" list still break through, so you never miss a critical alert.',
+        'Only severities on a window\'s "always allow" list bypass that window. Critical alerts bypass it only when Critical is selected. An empty list is valid and defers all severities.',
       ),
     },
     {
@@ -64,7 +64,7 @@ export function QuietHoursGuide() {
       key: 'critical',
       variant: 'danger',
       label: t('notifications.quietHours.guide.severityCritical', 'Critical'),
-      desc: t('notifications.quietHours.guide.severityCriticalDesc', 'Urgent — usually always allowed.'),
+      desc: t('notifications.quietHours.guide.severityCriticalDesc', 'Urgent — bypasses a window only when selected.'),
     },
     {
       key: 'warn',
@@ -89,7 +89,7 @@ export function QuietHoursGuide() {
         <div className="min-w-0">
           <PanelTitle id={titleId}>{t('notifications.quietHours.guide.title', 'How quiet hours work')}</PanelTitle>
           <Text as="p" variant="caption">
-            {t('notifications.quietHours.guide.subtitle', 'Defer non-critical alerts on your own schedule.')}
+            {t('notifications.quietHours.guide.subtitle', 'Choose when to defer alerts and which severities may bypass each window.')}
           </Text>
         </div>
       </div>
