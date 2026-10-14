@@ -173,7 +173,7 @@ function buildThresholds(
     ...[0.25, 0.5, 1, 1.5, 2, 3, 4, 6].map((factor) => noiseScale * factor),
     ...[0.25, 0.5, 0.75, 0.9, 0.95].map((q) => quantile(absoluteDeltas, q)),
   ];
-  return [...new Set(raw.filter((value) => Number.isFinite(value) && value >= 0))]
+  return [...new Set([0, ...raw.filter((value) => Number.isFinite(value) && value >= 0)])]
     .sort((a, b) => a - b);
 }
 
@@ -210,7 +210,9 @@ export function analyzeSignalDeadband(
     (candidate) => candidate.noiseSuppression >= target,
   );
   const recommendationPool = targetCandidates.length > 0 ? targetCandidates : candidates;
-  const recommended = recommendationPool.reduce((best, candidate) => {
+  // Constant observations cannot distinguish positive thresholds, so retain
+  // the baseline rather than infer a production threshold from no variation.
+  const recommended = range === 0 ? candidates[0]! : recommendationPool.reduce((best, candidate) => {
     const delta = score(candidate) - score(best);
     if (delta > 1e-9) return candidate;
     if (Math.abs(delta) <= 1e-9 && candidate.threshold < best.threshold) return candidate;

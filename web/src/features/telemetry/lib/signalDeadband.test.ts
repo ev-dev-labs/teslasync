@@ -91,6 +91,64 @@ describe('simulateDeadband', () => {
 });
 
 describe('analyzeSignalDeadband', () => {
+  it.each([0, 5, -5, 0.125, -0.125, -2e-12])(
+    'keeps the baseline for constant measurements of %s with default options',
+    value => {
+      const result = analyzeSignalDeadband(samples([value, value, value, value]))!;
+      expect(result.sampleCount).toBe(4);
+      expect(result.updateCount).toBe(3);
+      expect(result.unchangedEmissionRatio).toBe(1);
+      expect(result.redundantEmissionRatio).toBe(1);
+      expect(result.noiseScale).toBe(0);
+      expect(result.noiseThreshold).toBe(0);
+      expect(result.candidates).toEqual([{
+        threshold: 0,
+        retainedUpdates: 4,
+        reduction: 0,
+        noiseSuppression: 0,
+        materialRetention: 1,
+        fidelity: 1,
+      }]);
+      expect(result.recommended).toBe(result.candidates[0]);
+    },
+  );
+
+  it.each([0, -5, 0.125])(
+    'does not recommend an arbitrary supplied threshold for constant measurements of %s',
+    value => {
+      const result = analyzeSignalDeadband(samples([value, value, value, value]), {
+        candidateThresholds: [2, 0.5, 1],
+      })!;
+      expect(result.candidates.map(candidate => candidate.threshold)).toEqual([0, 0.5, 1, 2]);
+      const positiveCandidates = result.candidates.slice(1);
+      for (const candidate of positiveCandidates) {
+        expect(candidate).toEqual({
+          threshold: candidate.threshold,
+          retainedUpdates: 1,
+          reduction: 0.75,
+          noiseSuppression: 1,
+          materialRetention: 1,
+          fidelity: 1,
+        });
+      }
+      expect(result.recommended).toBe(result.candidates[0]);
+      expect(result.recommended.threshold).toBe(0);
+    },
+  );
+
+  it('excludes missing and invalid observations rather than treating them as measured zero', () => {
+    const invalidValues = [undefined, null, NaN, Infinity, -Infinity, '', '0', false];
+    const invalidSamples = invalidValues.map((value, index) => ({
+      ts: new Date(ANCHOR + (index + 4) * 1_000).toISOString(),
+      kind: 'ValueKindFloat',
+      value,
+    }));
+    expect(analyzeSignalDeadband(invalidSamples)).toBeNull();
+    const measuredZeros = samples([0, 0, 0, 0]);
+    expect(analyzeSignalDeadband([...measuredZeros, ...invalidSamples]))
+      .toEqual(analyzeSignalDeadband(measuredZeros));
+  });
+
   it.each([1e-100, 1e-12, 1e-7, 1, 1e100])(
     'preserves scale-relative noise, thresholds and simulation results at scale %s',
     scale => {
