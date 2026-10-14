@@ -37,6 +37,8 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 
 const navigateMock = vi.fn()
 
@@ -200,7 +202,7 @@ describe('StatusApiDocsPage — endpoint reference', () => {
     expect(
       within(grid).getByText(/window=24h \| 7d \| 30d \| 90d \| 1y/),
     ).toBeInTheDocument()
-    expect(within(grid).getByText(/active=1 \| limit=N/)).toBeInTheDocument()
+    expect(within(grid).getByText('?active=1&limit=50 | active=true&limit=200')).toBeInTheDocument()
   })
 
   it('gives each icon-only copy control a path-specific accessible name', () => {
@@ -289,13 +291,16 @@ describe('StatusApiDocsPage — navigation & footer', () => {
 })
 
 
-/** Frozen pre-adoption responses: styling must not rewrite the public examples. */
+/** Complete documentation responses; SAD01–03 additions/corrections retain all other sample values. */
 const DOCUMENTED_EXAMPLES = [
 {
           status: 'operational',
           generated_at: '2025-01-15T14:32:11Z',
           version: { build: '1.4.2', go_version: 'go1.22.5', started_at: '2025-01-10T08:00:00Z' },
           counts: { components_total: 8, components_healthy: 8, components_degraded: 0, components_unhealthy: 0 },
+          components: Array.from({ length: 8 }, (_, index) => ({
+            name: `example-component-${index + 1}`, status: 'healthy', consecutive_failures: 0,
+          })),
           resources: { goroutines: 142, uptime_seconds: 458321.4, go_version: 'go1.22.5' },
           incidents: [],
         },
@@ -326,8 +331,10 @@ const DOCUMENTED_EXAMPLES = [
           incidents: [
             {
               id: 17, title: 'MQTT broker reconnect storm', status: 'monitoring', severity: 'minor',
+              description: 'Illustrative incident: MQTT reconnects during TLS certificate rotation.',
               source: 'manual', affected_components: ['mqtt'],
-              started_at: '2025-01-15T13:55:00Z', updated_at: '2025-01-15T14:20:00Z',
+              started_at: '2025-01-15T13:55:00Z', created_at: '2025-01-15T13:55:00Z',
+              updated_at: '2025-01-15T14:20:00Z',
               updates: [
                 { at: '2025-01-15T13:55:00Z', status: 'investigating', message: 'Incident opened.', author: 'operator' },
                 { at: '2025-01-15T14:10:00Z', status: 'identified', message: 'Cause: TLS cert rotation gap.', author: 'operator' },
@@ -336,9 +343,6 @@ const DOCUMENTED_EXAMPLES = [
             },
           ],
         },
-{
-          note: 'event: status\\ndata: <full StatusSnapshot JSON>\\n\\n',
-        }
 ] as const
 
 describe('StatusApiDocsPage — restrained adoption & complete contract retention', () => {
@@ -386,8 +390,115 @@ describe('StatusApiDocsPage — restrained adoption & complete contract retentio
     expect(disclosure).toHaveAttribute('aria-expanded', 'true')
     const response = card.querySelector('pre')
     expect(response).not.toBeNull()
-    expect(JSON.parse(response?.textContent ?? '')).toEqual(DOCUMENTED_EXAMPLES[DOCUMENTED_PATHS.indexOf(path)])
+    if (path === '/api/v1/status/live') {
+      expect(response?.textContent).toBe(
+        `event: status\ndata: ${JSON.stringify(DOCUMENTED_EXAMPLES[0])}\n\nevent: heartbeat\ndata: {"time":"2025-01-15T14:32:36Z"}\n\n`,
+      )
+    } else {
+      expect(JSON.parse(response?.textContent ?? '')).toEqual(DOCUMENTED_EXAMPLES[DOCUMENTED_PATHS.indexOf(path)])
+    }
     fireEvent.click(disclosure)
     expect(disclosure).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  const statusGo = readFileSync(resolve(process.cwd(), '..', 'internal', 'api', 'status', 'v1.go'), 'utf8')
+  const incidentsGo = readFileSync(resolve(process.cwd(), '..', 'internal', 'api', 'status', 'incidents.go'), 'utf8')
+  const incidentRepoGo = readFileSync(resolve(process.cwd(), '..', 'internal', 'database', 'observability', 'status_incidents_repo.go'), 'utf8')
+  const routerGo = readFileSync(resolve(process.cwd(), '..', 'internal', 'api', 'router.go'), 'utf8')
+
+  function requiredGoJSONKeys(source: string, struct: string) {
+    const body = source.match(new RegExp(`type ${struct} struct \\{([\\s\\S]*?)\\n\\}`))?.[1]
+    if (!body) throw new Error(`Missing Go JSON contract: ${struct}`)
+    return [...body.matchAll(/json:"([^",]+)"/g)]
+      .map(match => match[1])
+      .filter(key => key !== '-')
+  }
+
+  function expandedExample(path: string) {
+    const card = within(screen.getByRole('region', { name: 'Endpoints' })).getByText(path).closest('[data-print-card]')
+    if (!(card instanceof HTMLElement)) throw new Error(`Missing endpoint card: ${path}`)
+    fireEvent.click(within(card).getByRole('button', { name: 'Example response' }))
+    const response = card.querySelector('pre')
+    if (!response) throw new Error(`Missing example: ${path}`)
+    return response.textContent ?? ''
+  }
+
+  describe('StatusApiDocsPage — SAD01–03 actual response contracts', () => {
+    it('distinguishes REST JSON from SSE without changing authentication or issuing a request', () => {
+      const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      renderPage()
+
+      const overview = screen.getByRole('region', { name: 'Overview' })
+      expect(within(overview).getByText('application/json (REST); text/event-stream (/status/live)')).toBeInTheDocument()
+      expect(within(overview).getByText(/REST responses use application\/json over HTTP/)).toHaveTextContent(
+        'The /status/live endpoint uses text/event-stream, with JSON data in status and heartbeat events.',
+      )
+      expect(within(overview).getByText(/All endpoints are mounted under the base path/)).toHaveTextContent(
+        'inherit the same authentication as the rest of the API',
+      )
+      expect(within(overview).queryByText(/Every response is JSON over HTTP/)).not.toBeInTheDocument()
+      expect(fetchSpy).not.toHaveBeenCalled()
+    })
+
+    it('renders genuine SSE status and heartbeat frames with the complete REST snapshot as JSON data', () => {
+      renderPage()
+      const wire = expandedExample('/api/v1/status/live')
+      const frames = wire.split('\n\n')
+      expect(frames).toHaveLength(3)
+      expect(frames[2]).toBe('')
+      expect(frames[0].split('\n')).toHaveLength(2)
+      expect(frames[0].startsWith('event: status\ndata: ')).toBe(true)
+      expect(JSON.parse(frames[0].slice('event: status\ndata: '.length))).toEqual(DOCUMENTED_EXAMPLES[0])
+      expect(frames[1]).toBe('event: heartbeat\ndata: {"time":"2025-01-15T14:32:36Z"}')
+      expect(wire).not.toContain('\\n')
+      expect(wire).not.toContain('<full StatusSnapshot JSON>')
+      expect(statusGo).toContain('w.Header().Set("Content-Type", "text/event-stream")')
+      expect(statusGo).toContain('"event: status\\ndata: %s\\n\\n"')
+      expect(statusGo).toContain('"event: heartbeat\\ndata: {\\"time\\":\\"%s\\"}\\n\\n"')
+      expect(statusGo).toContain('heartbeat := 25 * time.Second')
+      expect(statusGo).toContain('return 30 * time.Second')
+    })
+
+    it('matches required Go JSON fields, retaining empty snapshot incidents and distinct snapshot/list ID types', () => {
+      renderPage()
+      const snapshot = JSON.parse(expandedExample('/api/v1/status'))
+      const list = JSON.parse(expandedExample('/api/v1/status/incidents'))
+
+      expect(Object.keys(snapshot).sort()).toEqual(requiredGoJSONKeys(statusGo, 'StatusSnapshot').sort())
+      expect(Object.keys(snapshot.version).sort()).toEqual(requiredGoJSONKeys(statusGo, 'StatusVersion').sort())
+      expect(Object.keys(snapshot.resources).sort()).toEqual(requiredGoJSONKeys(statusGo, 'StatusResources').sort())
+      expect(Object.keys(snapshot.counts).sort()).toEqual(requiredGoJSONKeys(statusGo, 'StatusCounts').sort())
+      expect(snapshot.components).toHaveLength(snapshot.counts.components_total)
+      for (const component of snapshot.components) {
+        expect(Object.keys(component).sort()).toEqual(requiredGoJSONKeys(statusGo, 'StatusComponent').sort())
+      }
+      expect(snapshot.incidents).toEqual([])
+      expect(Object.keys(list.incidents[0]).sort()).toEqual(requiredGoJSONKeys(incidentRepoGo, 'Incident').sort().filter(key => key !== 'created_by'))
+      expect(list.incidents[0].description).toBe('Illustrative incident: MQTT reconnects during TLS certificate rotation.')
+      expect(list.incidents[0].created_at).toBe('2025-01-15T13:55:00Z')
+      expect(typeof list.incidents[0].id).toBe('number')
+      expect(statusGo).toMatch(/type StatusIncident struct \{\s+ID\s+string\s+`json:"id"`/)
+      expect(incidentRepoGo).toMatch(/type Incident struct \{\s+ID\s+int64\s+`json:"id"`/)
+      expect(Object.keys(list).sort()).toEqual(['count', 'incidents'])
+      expect(list.count).toBe(list.incidents.length)
+    })
+
+    it('documents the unfiltered incident default, composable active filter and exact limit fallback', () => {
+      renderPage()
+      const description = screen.getByText(/Incidents list, including resolved incidents by default/)
+      expect(description).toHaveTextContent('ordered by started_at descending')
+      expect(description).toHaveTextContent('active=1 or active=true (case-insensitive)')
+      expect(description).toHaveTextContent('resolved_at is NULL')
+      expect(description).toHaveTextContent('active=1&limit=50')
+      expect(description).toHaveTextContent('The default limit is 50; limits from 1 to 200 are accepted.')
+      expect(description).toHaveTextContent('Missing, invalid, non-positive, or greater-than-200 limits fall back to 50, not 200.')
+      expect(incidentsGo).toContain('q.Get("active") == "1" || strings.EqualFold(q.Get("active"), "true")')
+      expect(incidentRepoGo).toContain('if limit <= 0 || limit > 200 {\n\t\tlimit = 50')
+      expect(incidentRepoGo).toContain('if p.ActiveOnly {\n\t\tq += ` WHERE resolved_at IS NULL`')
+      expect(incidentRepoGo).toContain('ORDER BY started_at DESC LIMIT $1')
+      expect(routerGo).toMatch(/Get\("\/", incidentsHandler.List\)/)
+      expect(routerGo).not.toMatch(/Get\("\/", statusV1.Incidents\)/)
+      expect(routerGo).toContain('r.Get("/live", statusV1.Live)')
+    })
   })
 })
