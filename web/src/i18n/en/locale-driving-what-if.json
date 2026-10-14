@@ -54,6 +54,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "battery": {
     "delta": {
       "aria": "Battery {{from}}% to {{to}}%",
@@ -82,11 +89,6 @@
     "title": "How this was calculated",
     "unavailable": "Not provided",
     "version": "Calculation version"
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
   },
   "delta": {
     "noComparison": "No comparison data",
@@ -262,6 +264,7 @@
       "loading": "Loading source",
       "observationUnknown": "Source observation time not provided",
       "retained": "Retained source",
+      "selectVehicle": "Select a vehicle",
       "unavailable": "Source unavailable"
     }
   },
@@ -356,6 +359,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -406,7 +428,10 @@
     },
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
-    "reviewDetails": "Review details"
+    "reviewDetails": "Review details",
+    "status": {
+      "prerequisite": "Prerequisite required"
+    }
   },
   "problemReport": {
     "context": {
@@ -507,23 +532,19 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -580,17 +601,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -744,7 +754,6 @@
     "ambientLabel": "Ambient temperature",
     "arrival": "Arrival battery",
     "baseline": "Actual drive",
-    "blurb": "Take a real drive and change how it was driven. The engine decomposes the energy you actually used and recomputes it — no guesswork, anchored to your data.",
     "breakdown": "Energy breakdown",
     "brief": {
       "description": "Scenario estimates compared with the selected recorded drive; these are model outputs, not observed savings.",
@@ -771,7 +780,6 @@
     "subtitle": "Replay a real drive under different conditions",
     "takeawayCost": "This would cost an extra {{wh}} — arriving with {{soc}} less battery.",
     "takeawaySave": "This would save {{wh}} — arriving with {{soc}} more battery.",
-    "telemetryAssumptions": "Telemetry is incomplete; elevation and climate use model assumptions, not complete observations.",
     "tireHigh": "Over-inflated (+)",
     "tireLow": "Under-inflated (−)",
     "tireNominal": "Nominal",

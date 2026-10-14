@@ -1385,7 +1385,7 @@
       "destination": "Destination",
       "column": "Column",
       "dualWrite": "Dual write",
-      "subscribed": "Subscribed"
+      "subscribed": "Configured subscription"
     },
     "subscribed": {
       "no": "no",
@@ -1405,7 +1405,7 @@
       "subscriptionCoverage": "Subscription coverage"
     },
     "kpis": "Coverage summary",
-    "subtitle": "Package-derived snapshot of which Tesla proto fields the build routes and which the current subscription pushes. Sourced from routing.yaml and teslaconfig.Builder — no per-vehicle telemetry counts.",
+    "subtitle": "Package-derived snapshot of routed Tesla proto fields and configured desired subscription membership. Sourced from routing.yaml and teslaconfig.Builder — not confirmation of observed vehicle ingestion.",
     "routing": "Destination routing",
     "legend": {
       "title": "Reading this page",
@@ -1414,8 +1414,8 @@
       "columnHelp": "— the typed destination column. A dash means the field is stored in signal_log, a generic key/value table where the field name itself is the key — there is no per-field column.",
       "dualWriteLabel": "Dual write",
       "dualWriteHelp": "— marks fields written to both their primary table AND signal_log (for replay and historical reconstruction). A dash means single-write only, which is the normal case.",
-      "subscribedLabel": "Subscribed",
-      "subscribedHelp": "— whether Tesla Fleet Telemetry is currently pushing this field to us. \"No\" means the writer is wired but the subscription request omits the field."
+      "subscribedLabel": "Configured subscription",
+      "subscribedHelp": "— whether the field belongs to the configured desired subscription. \"Yes\" does not confirm observed vehicle ingestion. \"No\" means the field is routed but omitted from the desired subscription request."
     },
     "orphans": {
       "title": "Orphan fields detected",
@@ -2713,7 +2713,9 @@
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -2947,14 +2949,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -3026,11 +3026,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -3699,6 +3694,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -4233,7 +4247,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -4275,6 +4289,9 @@
       "title": "No results"
     }
   },
+  "settings": {
+    "title": "Settings"
+  },
   "sharing": {
     "aiTripPostcard": {
       "badge": "Helix",
@@ -4295,29 +4312,6 @@
     "gotoPrompt": "Go to…",
     "search": "Search shortcuts…",
     "title": "Keyboard shortcuts"
-  },
-  "signalConfig": {
-    "deselectAll": "Deselect All",
-    "deselectCategory": "Deselect all {{category}} signals",
-    "deselectSignal": "Deselect {{signal}}",
-    "footerAt10s": "{{n}} at 10s",
-    "footerAt500": "{{n}} at 500ms",
-    "footerSelected": "{{n}} signals selected",
-    "intervalForSignal": "Sampling interval for {{signal}}",
-    "masterInterval": "Master Interval:",
-    "masterIntervalLabel": "Master sampling interval for all signals",
-    "noMatches": "No signals match “{{query}}”.",
-    "noSignals": "No telemetry signals are available to configure.",
-    "searchLabel": "Search signals",
-    "searchPlaceholder": "Search signals...",
-    "selectAll": "Select All",
-    "selectCategory": "Select all {{category}} signals",
-    "selectSignal": "Select {{signal}}",
-    "selectedSummary": "{{selected}} / {{total}} signals selected",
-    "setAll": "Set all…",
-    "setCategoryInterval": "Set interval for all {{category}} signals",
-    "subscribeCount": "Subscribe {{n}} Signals",
-    "title": "Fleet Telemetry Signal Configuration"
   },
   "signalExplorer": {
     "aiFilter": {
@@ -4342,18 +4336,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -4444,6 +4431,9 @@
     "door": "Door",
     "window": "Window"
   },
+  "timeMachine": {
+    "ageFresh": "Fresh"
+  },
   "timeline": {
     "empty": "No timeline entries yet.",
     "label": "Timeline",
@@ -4511,17 +4501,6 @@
         "success": "Annotation updated"
       }
     },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
-      }
-    },
     "export": {
       "account": {
         "success": "Account export queued — track progress in the floating widget"
@@ -4539,6 +4518,7 @@
         "success": "Updated {{count}} feedback items"
       }
     },
+    "noChanges": "No changes",
     "notifications": {
       "archive": {
         "success": "Archived"
@@ -4689,7 +4669,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -4789,10 +4768,14 @@
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
   },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
+  },
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"

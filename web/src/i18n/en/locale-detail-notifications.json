@@ -367,8 +367,36 @@
     "channels": {
       "add": "Add channel",
       "fields": {
+        "webhookUrl": "Webhook URL",
+        "botToken": "Bot token",
+        "chatId": "Chat ID",
+        "smtpHost": "SMTP host",
+        "smtpPort": "SMTP port",
+        "smtpUsername": "SMTP username",
+        "smtpPassword": "SMTP password",
+        "fromAddress": "From address",
+        "toAddresses": "Recipients (comma-separated)",
+        "url": "URL",
+        "serverUrl": "Server URL",
+        "topic": "Topic",
+        "userKey": "User key",
+        "appToken": "App token",
         "signingSecret": "Signing secret"
       },
+      "providerNames": {
+        "discord": "Discord",
+        "slack": "Slack",
+        "telegram": "Telegram",
+        "email": "Email",
+        "webhook": "Webhook",
+        "ntfy": "ntfy",
+        "pushover": "Pushover"
+      },
+      "placeholders": {
+        "signingSecret": "Optional — used for HMAC signing"
+      },
+      "namePlaceholder": "My {{provider}}",
+      "providerConfiguration": "{{provider}} Configuration",
       "addTitle": "Add channel",
       "editTitle": "Edit channel",
       "active": "Active",

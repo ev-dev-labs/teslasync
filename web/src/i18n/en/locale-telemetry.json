@@ -1417,6 +1417,11 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "chargeAdvisor": {
+    "current": {
+      "observed": "Observed"
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -1825,6 +1830,11 @@
     "sheetTitle": "Filters",
     "sheetTrigger": "Filters"
   },
+  "fleetOps": {
+    "status": {
+      "requested": "Requested"
+    }
+  },
   "freshness": {
     "noData": "No recent data",
     "offline": "Offline",
@@ -1932,6 +1942,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -2270,6 +2299,11 @@
   "requiresAuth": {
     "title": "{{feature}} requires authentication mode"
   },
+  "resaleVault": {
+    "brief": {
+      "window": "Observed evidence: {{start}} → {{end}}"
+    }
+  },
   "routeEfficiency": {
     "aiSuggestions": {
       "badge": "Helix",
@@ -2283,7 +2317,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -2320,6 +2354,12 @@
       "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
+    }
+  },
+  "shareCard": {
+    "card": {
+      "cappedDisclosure": "Cap reached; full-range coverage not claimed{{missing}}",
+      "returnedDisclosure": "Returned evidence; completeness not guaranteed{{missing}}"
     }
   },
   "sharing": {
@@ -2409,6 +2449,11 @@
       "title": "Helix FSM narrator"
     }
   },
+  "supportBundle": {
+    "source": {
+      "receivedAt": "Last successful response: {{time}}"
+    }
+  },
   "tagInput": {
     "added": "{{count}} tags added",
     "addedOne": "Tag added",
@@ -2439,6 +2484,9 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "teslaOnly": {
+    "scopeRequested": "Requested: {{from}} → {{to}}"
   },
   "timeMachine": {
     "ageFresh": "Fresh"
@@ -2507,17 +2555,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {

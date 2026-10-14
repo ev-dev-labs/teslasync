@@ -1008,6 +1008,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "ai": {
     "common": {
       "errorUnknown": "unknown",
@@ -1068,7 +1075,9 @@
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -1213,14 +1222,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -1278,11 +1285,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -1463,6 +1465,9 @@
           "description": "Source-provided text, retained without numeric coercion.",
           "label": "Text"
         }
+      },
+      "reason": {
+        "missing": "No measurement supplied"
       },
       "state": {
         "empty": "No metrics supplied",
@@ -1741,6 +1746,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -2101,7 +2125,6 @@
       "active": "Active",
       "add": "Add channel",
       "addTitle": "Add channel",
-      "configLabel": "Configuration",
       "deleteAria": "Delete {{name}}",
       "deleteFailed": "Failed to delete channel",
       "deleted": "Channel deleted",
@@ -2114,15 +2137,42 @@
       },
       "enabled": "Enabled",
       "fields": {
-        "signingSecret": "Signing secret"
+        "appToken": "App token",
+        "botToken": "Bot token",
+        "chatId": "Chat ID",
+        "fromAddress": "From address",
+        "serverUrl": "Server URL",
+        "signingSecret": "Signing secret",
+        "smtpHost": "SMTP host",
+        "smtpPassword": "SMTP password",
+        "smtpPort": "SMTP port",
+        "smtpUsername": "SMTP username",
+        "toAddresses": "Recipients (comma-separated)",
+        "topic": "Topic",
+        "url": "URL",
+        "userKey": "User key",
+        "webhookUrl": "Webhook URL"
       },
       "listAria": "Configured channels",
       "listTitle": "Delivery channels",
       "loadFailed": "Failed to load channels",
       "loading": "Loading channels…",
       "nameLabel": "Channel name",
-      "namePlaceholderPrefix": "My",
+      "namePlaceholder": "My {{provider}}",
       "nameRequired": "Name is required",
+      "placeholders": {
+        "signingSecret": "Optional — used for HMAC signing"
+      },
+      "providerConfiguration": "{{provider}} Configuration",
+      "providerNames": {
+        "discord": "Discord",
+        "email": "Email",
+        "ntfy": "ntfy",
+        "pushover": "Pushover",
+        "slack": "Slack",
+        "telegram": "Telegram",
+        "webhook": "Webhook"
+      },
       "providers": {
         "configured": "{{count}} configured",
         "notConfigured": "Not configured",
@@ -2160,7 +2210,6 @@
       "noVehicles": "No vehicles are available to scope to yet.",
       "quietEnabled": "Silence notifications overnight",
       "quietEnd": "Until",
-      "quietHint": "Quiet hours silence the notification rather than dropping it, so nothing is lost. Critical alerts still ring.",
       "quietHours": "Quiet hours on this device",
       "quietStart": "From",
       "reset": "Reset device rules",
@@ -2759,7 +2808,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -2852,18 +2901,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -2909,6 +2951,9 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -2974,17 +3019,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -3181,7 +3215,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -3252,10 +3285,14 @@
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
   },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
+  },
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"

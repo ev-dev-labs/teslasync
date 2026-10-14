@@ -909,6 +909,25 @@
       "description": "Server lifetime aggregates with recorded driving hours, charging sessions, and savings versus gasoline."
     },
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "first-drive": "First Drive",
+      "century": "Century Club",
+      "thousand": "Road Warrior",
+      "ten-thousand": "Explorer",
+      "fifty-thousand": "Nomad",
+      "hundred-thousand": "Legend",
+      "first-charge": "Plugged In",
+      "megawatt": "Megawatt Club",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "thousand-saved": "Money Maker",
+      "five-thousand-saved": "Investment Paid Off",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter",
+      "marathon": "Marathon Runner",
+      "earth-orbit": "Around the World",
+      "supercharger": "Supercharger Fan"
+    },
     "unlocked": "✓ Unlocked",
     "title": "Lifetime stats",
     "allVehicles": "All vehicles",
@@ -995,6 +1014,7 @@
     "source": {
       "retained": "Refresh failed. Showing the last successful mileage data.",
       "paused": "Refresh is paused. Showing the last successful mileage data.",
+      "initialPaused": "Mileage loading is paused. No mileage data has been received yet.",
       "refreshing": "Refreshing mileage data. Previously loaded content remains available.",
       "odometerPeriod": "Daily source: trailing 90 days. Absolute end-of-day odometer readings; days without a reading are omitted. Recording completeness is unknown."
     },

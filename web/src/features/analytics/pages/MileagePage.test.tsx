@@ -185,11 +185,12 @@ function selected(vehicleId: number | null) {
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <QueryClientProvider client={client}>
-        <MileagePage />
-      </QueryClientProvider>
-    </MemoryRouter>,
+    <MileagePage />,
+    { wrapper: ({ children }: { children: ReactNode }) => (
+      <MemoryRouter>
+        <QueryClientProvider client={client}>{children}</QueryClientProvider>
+      </MemoryRouter>
+    ) },
   );
 }
 
@@ -438,6 +439,50 @@ describe('MileagePage — null safety + a11y', () => {
 });
 
 describe('MileagePage — scoped modernization', () => {
+  it.each(['summary', 'daily', 'monthly'])('keeps shells and neighbors when initial %s loading is paused', (source) => {
+    const paused = makeQuery({ isPending: true, fetchStatus: 'paused', dataUpdatedAt: 0 });
+    if (source === 'summary') mockStats.mockReturnValue(paused);
+    if (source === 'daily') mockDaily.mockReturnValue(paused);
+    if (source === 'monthly') mockMonthly.mockReturnValue(paused);
+    const { container } = renderPage();
+    expect(container.querySelectorAll('[data-card]')).toHaveLength(6);
+    expect(screen.getAllByText('Mileage loading is paused. No mileage data has been received yet.')).toHaveLength(2);
+    expect(screen.queryByText('Refresh is paused. Showing the last successful mileage data.')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+    if (source !== 'summary') expect(cardValue(kpiRegion(), 'Total distance')).toBe('12,000 km');
+    if (source !== 'daily') expect(within(dailyRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+    if (source !== 'monthly') expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
+  it.each(['summary', 'daily', 'monthly'])('recovers retained %s data after an independent retry', (source) => {
+    const queries = {
+      summary: makeQuery({ data: STATS }),
+      daily: makeQuery({ data: DAILY }),
+      monthly: makeQuery({ data: MONTHLY }),
+    };
+    const failed = { ...queries[source], error: new ApiError('refresh failed', 503), isError: true };
+    const hook = source === 'summary' ? mockStats : source === 'daily' ? mockDaily : mockMonthly;
+    hook.mockReturnValue(failed);
+    const view = renderPage();
+    const target = source === 'summary' ? kpiRegion() : source === 'daily' ? dailyRegion() : chartsRegion();
+    expect(screen.getAllByText('Refresh failed. Showing the last successful mileage data.')).toHaveLength(2);
+    fireEvent.click(within(target).getByRole('button', { name: 'Retry' }));
+    expect(failed.refetch).toHaveBeenCalledOnce();
+    for (const neighbor of ['summary', 'daily', 'monthly'] as const) {
+      if (neighbor !== source) expect(queries[neighbor].refetch).not.toHaveBeenCalled();
+    }
+    hook.mockReturnValue({ ...queries[source], isFetching: true });
+    view.rerender(<MileagePage />);
+    expect(screen.queryByText('Refresh failed. Showing the last successful mileage data.')).toBeNull();
+    expect(screen.getAllByText('Refreshing mileage data. Previously loaded content remains available.')).toHaveLength(2);
+    hook.mockReturnValue(queries[source]);
+    view.rerender(<MileagePage />);
+    expect(screen.queryByText('Refreshing mileage data. Previously loaded content remains available.')).toBeNull();
+    expect(cardValue(kpiRegion(), 'Total distance')).toBe('12,000 km');
+    expect(screen.getAllByTestId('embedded-chart')).toHaveLength(3);
+    expect(screen.getByRole('table')).toBeInTheDocument();
+  });
+
   it('preserves calendar bucket dates in both daily charts without shifting them into the prior day', () => {
     renderPage();
 

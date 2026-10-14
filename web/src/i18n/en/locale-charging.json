@@ -49,6 +49,7 @@
       "detailsScope": "All loaded pairs, newest first. “Well matched” means no model flag was triggered, not proof of intent. Already-full dwell is inferred from charge-end SoC, not continuous parked measurements. Dates use your browser timezone.",
       "pending": "Both charging and drive history must be loaded before pairings can be evaluated.",
       "chargeBounds": "Observed charge-end timestamps",
+      "chartTime": "Chart timestamps use {{zone}}. Pairing uses elapsed instants within 24 hours, not local calendar dates or a business timezone.",
       "driveBounds": "Observed drive-start timestamps",
       "paused": "History loading is paused. Connect to resume or retry this source.",
       "loaded": "{{count}} records loaded",
@@ -727,8 +728,8 @@
       "totalCost": "Total cost",
       "avgDuration": "Avg duration",
       "favorite": "Favorite charging time",
-      "favoriteValue": "{{day}}s at {{hour}}",
-      "favoriteSessions": "{{count}} sessions",
+      "favoriteValue": "{{day}} at {{hour}}",
+      "favoriteSessions": "{{formattedCount}} sessions",
       "gridTitle": "Weekly charging heatmap",
       "gridAria": "Charging sessions by weekday and hour of day",
       "sessionsWord": "sessions",
@@ -957,6 +958,7 @@
     "heaterOnTime": "Heater on time",
     "heaterOnPct": "{{pct}}% of the session",
     "noSession": "no session selected",
+    "unsupportedHeaterPower": "Heater-power analysis is unsupported for these samples: no measured heater power is available. Recorded charging telemetry is preserved; heater state is not a power measurement.",
     "peakHeater": "Peak heater power",
     "peakHeaterHint": "highest single reading",
     "noSelection": "Select a charging session above to see its thermal breakdown.",
@@ -2127,6 +2129,13 @@
       }
     }
   },
+  "digitalTwin": {
+    "brief": {
+      "status": {
+        "stale": "Retained source snapshots"
+      }
+    }
+  },
   "draft": {
     "discardDraft": "Discard draft",
     "restored": "Draft restored from {{when}}.",
@@ -2384,6 +2393,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -2801,7 +2829,7 @@
     "truncated": "Sample cap hit — oldest prefix solved",
     "unknown": {
       "duration": "Duration",
-      "empty": "Full coverage: no gaps in this window.",
+      "empty": "No unknown intervals returned; coverage is not established.",
       "end": "End",
       "hours": "Unknown hours",
       "reason": "Reason",
@@ -2971,7 +2999,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -3224,17 +3252,6 @@
         "success": "Annotation updated"
       }
     },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
-      }
-    },
     "export": {
       "account": {
         "success": "Account export queued — track progress in the floating widget"
@@ -3385,7 +3402,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -3435,7 +3451,6 @@
         "initialFailure": "Source unavailable",
         "ok": "Source returned",
         "partial": "Partial source coverage",
-        "stale": "Retained after refresh failure",
         "unavailable": "No source data"
       }
     }
@@ -3473,6 +3488,11 @@
     "inputLabel": "Your question for Helix",
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   },
   "yearReview": {
     "aiNarration": {

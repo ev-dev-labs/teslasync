@@ -264,6 +264,9 @@
     "locked": "Locked",
     "unlocked": "Unlocked",
     "sentry": "Sentry",
+    "sentryOn": "Sentry ON",
+    "sentryOff": "Sentry OFF",
+    "sentryUnknown": "Sentry unknown",
     "active": "Active",
     "min": "min",
     "free": "Free",
@@ -316,8 +319,6 @@
     "carPreferences": "Car display preferences",
     "speedHistory": "Speed history",
     "positionDataWillAppear": "Position data will appear here",
-    "sentryOn": "Sentry ON",
-    "sentryOff": "Sentry OFF",
     "climateOn": "Climate ON",
     "climateOff": "Climate OFF",
     "batteryLevel": "Battery level",
@@ -397,6 +398,7 @@
   "contextMenu": {
     "menuLabel": "Context menu"
   },
+  "dataRepair": {},
   "dataSources": {
     "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
     "staleMessage": "Previously loaded data remains visible while affected sources recover.",
@@ -468,6 +470,9 @@
     "stale": {
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible.",
       "title": "Data may be stale"
+    },
+    "staleNamed": {
+      "title": "{{label}} may be out of date"
     },
     "unavailable": {
       "message": "A required service is unavailable. This section will recover when the dependency returns.",
@@ -1847,6 +1852,29 @@
     "openPalette": "Open command palette",
     "openPaletteAlt": "Open command palette",
     "openShortcuts": "Show keyboard shortcuts"
+  },
+  "signalConfig": {
+    "deselectAll": "Deselect All",
+    "deselectCategory": "Deselect all {{category}} signals",
+    "deselectSignal": "Deselect {{signal}}",
+    "footerAt10s": "{{n}} at 10s",
+    "footerAt500": "{{n}} at 500ms",
+    "footerSelected": "{{n}} signals selected",
+    "intervalForSignal": "Sampling interval for {{signal}}",
+    "masterInterval": "Master Interval:",
+    "masterIntervalLabel": "Master sampling interval for all signals",
+    "noMatches": "No signals match “{{query}}”.",
+    "noSignals": "No telemetry signals are available to configure.",
+    "searchLabel": "Search signals",
+    "searchPlaceholder": "Search signals...",
+    "selectAll": "Select All",
+    "selectCategory": "Select all {{category}} signals",
+    "selectSignal": "Select {{signal}}",
+    "selectedSummary": "{{selected}} / {{total}} signals selected",
+    "setAll": "Set all…",
+    "setCategoryInterval": "Set interval for all {{category}} signals",
+    "subscribeCount": "Subscribe {{n}} Signals",
+    "title": "Fleet Telemetry Signal Configuration"
   },
   "slider": {
     "thumbMin": "{{label}} minimum",

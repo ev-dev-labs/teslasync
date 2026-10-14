@@ -107,6 +107,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "automations": {
     "builder": {
       "signals": {
@@ -156,10 +163,8 @@
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
   },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
+  "dataRepair": {
+    "truncated": "The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh."
   },
   "date": {
     "preset": {
@@ -463,6 +468,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -612,6 +636,7 @@
     }
   },
   "requiresAuth": {
+    "body": "{{feature}} is only available when TeslaSync is configured behind an authentication provider (Authentik, Authelia, oauth2-proxy, Keycloak, or similar). Set FORWARD_AUTH_HEADER on the API service to enable it.",
     "title": "{{feature}} requires authentication mode"
   },
   "savedViews": {
@@ -652,18 +677,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -682,6 +700,9 @@
     "removed": "Removed {{tag}}",
     "tagsList": "Tags: {{tags}}",
     "tagsNone": "No tags yet"
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -740,15 +761,57 @@
         "success": "Annotation updated"
       }
     },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
+    "dataRepair": {
+      "case": {
+        "assign": {
+          "success": "Case assignment updated"
+        },
+        "bulk": {
+          "success": "Updated {{count}} repair cases"
+        },
+        "comment": {
+          "success": "Comment added"
+        },
+        "transition": {
+          "success": "Repair case updated"
+        }
       },
-      "test": {
-        "success": "Test notification sent"
+      "charging": {
+        "apply": {
+          "success": "Charging boundary repaired"
+        },
+        "close": {
+          "success": "Charging session closed"
+        },
+        "quarantine": {
+          "success": "Charging session moved to quarantine"
+        },
+        "update": {
+          "success": "Charging session updated"
+        }
       },
-      "toggle": {
-        "success": "Channel toggled"
+      "drive": {
+        "apply": {
+          "success": "Drive boundary repaired"
+        },
+        "close": {
+          "success": "Drive closed"
+        },
+        "quarantine": {
+          "success": "Drive moved to quarantine"
+        },
+        "update": {
+          "success": "Drive updated"
+        }
+      },
+      "quarantine": {
+        "success": "Session moved to quarantine"
+      },
+      "restore": {
+        "success": "Session restored"
+      },
+      "scan": {
+        "success": "Data integrity scan completed"
       }
     },
     "export": {

@@ -34,7 +34,7 @@
       "medianCadence": "Median cadence",
       "p90Cadence": "P90 cadence",
       "span": "Observed span",
-      "subtitle": "Chronological span and cadence of valid, deduplicated climate samples returned by the seven-day endpoint.",
+      "subtitle": "Chronological span and cadence of valid, deduplicated climate samples returned for the selected workspace range.",
       "title": "Source coverage"
     },
     "direction": {
@@ -123,7 +123,7 @@
       "notice": "{{rows}} returned rows and {{candidates}} candidate windows do not support τ unless at least one fit is accepted. Worked projections are descriptive scenarios, not forecasts.",
       "segmentationBody": "Only contiguous, explicitly HVAC-off samples enter candidates. HVAC-active rows, unknown HVAC state, and gaps longer than the configured maximum end continuity; they do not become rejected candidates themselves.",
       "segmentationTitle": "Candidate segmentation",
-      "sourceBody": "The existing climate-history endpoint returns a seven-day signal timeline by default. Forward-filled values are returned rows, not independent thermal experiments.",
+      "sourceBody": "Climate history is requested for the selected workspace range, with both start and end bounds applied by the server. Unscoped callers use the endpoint’s seven-day default. Forward-filled values are returned rows, not independent thermal experiments.",
       "sourceTitle": "Source contract",
       "subtitle": "The evidence hierarchy, model equation, ordered gates, and omitted physical inputs.",
       "title": "Methodology and limitations"
@@ -196,7 +196,7 @@
       "emptyPassive": "No climate rows were returned for this vehicle.",
       "errorKpi": "Climate history is unavailable; retry below.",
       "errorPassive": "Climate history is unavailable; retry from the evidence status above.",
-      "loading": "Loading the climate endpoint’s seven-day history…",
+      "loading": "Loading climate history for the selected workspace range…",
       "loadingAria": "Loading cabin thermal evidence",
       "loadingKpi": "Waiting for climate history…",
       "noAcceptedPassive": "Every candidate was rejected, so fit summaries and passive-soak projections are withheld.",
@@ -1621,6 +1621,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "ai": {
     "common": {
       "errorUnknown": "unknown",
@@ -1967,7 +1974,9 @@
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -2073,14 +2082,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -2093,6 +2100,11 @@
         "generateButton": "Generate diagnosis",
         "title": "Charging diagnosis"
       }
+    }
+  },
+  "chargingPlaces": {
+    "workspace": {
+      "initialPaused": "{{source}} loading is paused. No data has been loaded yet."
     }
   },
   "chart": {
@@ -2131,6 +2143,13 @@
       "title": "Narrate the charging-cost forecast"
     }
   },
+  "dashboard": {
+    "summary": {
+      "status": {
+        "partial": "Partial evidence"
+      }
+    }
+  },
   "dataRepair": {
     "aiSuggestions": {
       "badge": "Helix",
@@ -2142,9 +2161,6 @@
   "dataState": {
     "refreshBlocked": {
       "message": "The device is offline, so this section is showing the last values it received."
-    },
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -2580,9 +2596,7 @@
     "sensitivityHigh": "High",
     "sensitivityHighFull": "High — any movement",
     "sensitivityLow": "Low",
-    "sensitivityLowFull": "Low — movement > 1 km",
     "sensitivityMedium": "Medium",
-    "sensitivityMediumFull": "Medium — movement > 200 m",
     "sentryActive": "Sentry mode active",
     "sentryInactive": "Sentry mode off",
     "sentryUnknown": "Sentry status unavailable",
@@ -2648,6 +2662,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -2962,6 +2995,9 @@
     }
   },
   "quietHours": {
+    "form": {
+      "timezone": "Timezone (IANA)"
+    },
     "severity": {
       "critical": "Critical",
       "info": "Info",
@@ -3006,7 +3042,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -3080,18 +3116,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -3145,9 +3174,15 @@
       "title": "Narrate the cabin-temperature impact"
     }
   },
+  "timeMachine": {
+    "ageFresh": "Fresh"
+  },
   "timeline": {
     "empty": "No timeline entries yet.",
-    "label": "Timeline"
+    "label": "Timeline",
+    "source": {
+      "paused": "{{section}} is paused while the connection is unavailable"
+    }
   },
   "toast": {
     "admin": {
@@ -3200,17 +3235,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -3395,7 +3419,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -3420,6 +3443,11 @@
       "generateButton": "Narrate drain",
       "noVehicleHint": "Pick a vehicle above to enable Helix.",
       "title": "Explain the recent vampire drain"
+    }
+  },
+  "vehicleManagement": {
+    "state": {
+      "vehicleRequired": "Select a vehicle"
     }
   },
   "vehicles": {
@@ -3484,12 +3512,13 @@
       "rl": "Rear left",
       "rr": "Rear right"
     },
-    "hvac": "HVAC"
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   },
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"

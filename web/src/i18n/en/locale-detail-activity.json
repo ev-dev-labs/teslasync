@@ -12,7 +12,7 @@
       "empty": "No recent activity in this window.",
       "disabled": {
         "title": "Activity feed disabled",
-        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER."
+        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure FORWARD_AUTH_HEADER."
       },
       "unauthorized": {
         "title": "Identity required",

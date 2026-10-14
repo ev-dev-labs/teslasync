@@ -196,6 +196,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "automations": {
     "builder": {
       "signals": {
@@ -240,15 +247,16 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "chargingPlaces": {
+    "workspace": {
+      "initialPaused": "{{source}} loading is paused. No data has been loaded yet.",
+      "pausedRetained": "{{source}} refresh is paused. Previously loaded data remains visible."
+    }
+  },
   "combobox": {
     "maxReached": "Maximum reached",
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
   },
   "date": {
     "preset": {
@@ -467,6 +475,9 @@
   "entityContext": {
     "title": "Related context"
   },
+  "error": {
+    "loadFailed": "Failed to load data"
+  },
   "export": {
     "jobDrawer": {
       "activeCount": "{{count}} export running",
@@ -552,6 +563,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -585,6 +615,9 @@
     "writeNotice": {
       "title": "Operational changes are read-only"
     }
+  },
+  "operationalSource": {
+    "fetchedAt": "Fetched {{time}}"
   },
   "operations": {
     "attention": "Attention",
@@ -727,6 +760,9 @@
     "unpin": "Unpin",
     "unsetDefault": "Clear default"
   },
+  "settings": {
+    "title": "Settings"
+  },
   "shortcuts": {
     "empty": "No shortcuts match your search.",
     "filter": {
@@ -741,18 +777,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -771,6 +800,15 @@
     "removed": "Removed {{tag}}",
     "tagsList": "Tags: {{tags}}",
     "tagsNone": "No tags yet"
+  },
+  "teslaOnly": {
+    "workbench": {
+      "recorded": "Actually recorded",
+      "requested": "Requested window"
+    }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -827,17 +865,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {

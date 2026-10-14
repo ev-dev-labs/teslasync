@@ -2280,6 +2280,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "ai": {
     "common": {
       "errorUnknown": "unknown",
@@ -2626,7 +2633,9 @@
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -2644,6 +2653,10 @@
       "generateButton": "Generate explanation",
       "title": "Helix explanation"
     }
+  },
+  "app": {
+    "currency": "Currency",
+    "tzDisplayDefault": "Time zone display"
   },
   "automations": {
     "builder": {
@@ -2859,7 +2872,7 @@
       "analysis": "Range and risk analysis",
       "avgDoD": "Avg depth of discharge",
       "avgDoDLabel": "Avg DoD",
-      "batteryAge": "Battery age",
+      "baselineSampledAt": "Baseline sample timestamp",
       "brief": {
         "prediction": "Degradation model evidence",
         "summary": "Battery degradation evidence"
@@ -2867,7 +2880,6 @@
       "capacity": "Capacity",
       "chargeHabits": "Charge habits",
       "chargingImpact": "Charging habits impact",
-      "confidence": "95% Confidence",
       "currentRange": "Current range",
       "currentSoh": "Current SOH",
       "cycleDepth": "Cycle depth",
@@ -2896,16 +2908,19 @@
       "noSoh": "Battery health is not available yet.",
       "noStress": "Charging impact will appear once charging history is available.",
       "odometer": "Odometer",
-      "originalRange": "Original range",
+      "odometerSampledAt": "Odometer sample timestamp",
       "prediction": "Prediction",
       "predictionAndHabits": "Prediction and charging habits",
       "predictionDesc": "At current rate, battery reaches",
       "projected": "Projected %",
       "range": "Range",
       "rangeLoss": "Range loss over time",
-      "rangeLossAria": "Original and current estimated driving range over time",
+      "rangeLossAria": "First retained comparison baseline and estimated driving range over time",
+      "rangeSampledAt": "Range sample timestamp",
       "rate": "Degradation rate",
       "recommendations": "Recommendations",
+      "retainedRangeBaseline": "First retained range estimate",
+      "retainedRangeEvidence": "The comparison baseline is the range estimate attached to the first retained history row, not new-pack range. Missing baseline values remain unknown. Sample timestamps identify carried-forward telemetry; the history date is the capacity aggregation day.",
       "riskFactors": "Risk factors",
       "riskScore": "Risk score",
       "sampleWindow": "Available battery history",
@@ -2926,7 +2941,6 @@
       "title": "Battery degradation",
       "totalCycles": "Total cycles",
       "trendTitle": "Health trend & projection",
-      "trendTitleAria": "Battery health trend and 95% confidence projection chart",
       "warranty": "80% Warranty",
       "years": "years",
       "yearsCount": "{{y}} years",
@@ -3104,14 +3118,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -3168,11 +3180,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -3537,11 +3544,6 @@
       "placeholder": "e.g. How do I enable energy cost forecasting?",
       "title": "Ask the help assistant"
     },
-    "battery": {
-      "avgDoD": "Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear.",
-      "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
-      "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time)."
-    },
     "energyLedger": {
       "closure": "Energy has to go somewhere. Everything charged either reached the wheels, was lost while standing still, or is still sitting in the pack — so charged minus driven minus standby minus the change in stored energy should come out near zero. Whatever is left over is the ledger residual, and it is the honest measure of how much your data is failing to explain.",
       "iconLabel": "More info about the ledger method"
@@ -3566,6 +3568,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -3991,7 +4012,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -4029,6 +4050,9 @@
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
     }
+  },
+  "settings": {
+    "title": "Settings"
   },
   "sharing": {
     "aiTripPostcard": {
@@ -4074,18 +4098,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -4118,6 +4135,10 @@
       "generateButton": "Narrate impact",
       "title": "Narrate the cabin-temperature impact"
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh",
+    "ageSeconds": "{{value}}s"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -4183,17 +4204,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -4346,7 +4356,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -4407,10 +4416,14 @@
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
   },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
+  },
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"

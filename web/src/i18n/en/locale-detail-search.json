@@ -2,6 +2,11 @@
   "search": {
     "title": "Search",
     "placeholder": "Search vehicles, drives, charging…",
+    "completeness": {
+      "title": "Search coverage is limited",
+      "failed": "Some sources did not respond: {{types}}. Available hits remain visible; no matches does not prove there are none.",
+      "limited": "A search result limit was reached. Additional matches may exist; counts describe only returned hits."
+    },
     "input": {
       "label": "Search query"
     },

@@ -148,6 +148,12 @@
       "modelSoc": "Current SoC used by model: {{pct}}%"
     },
     "violation": {
+      "deadlineInfeasible": "{{vehicleName}} cannot reach its target state of charge before its departure deadline.",
+      "vehicleShortfall": "{{vehicleName}} is projected to fall short of its target by {{unmet}}.",
+      "panelImportExceeded": "Grid import limit exceeded in slot #{{slot}}.",
+      "panelExportExceeded": "Grid export limit exceeded in slot #{{slot}}.",
+      "powerwallReserveBreach": "Powerwall dropped below its reserve floor in slot #{{slot}}.",
+      "invalidInput": "Some plan inputs were invalid and were adjusted or dropped: {{detail}}",
       "unknownVehicle": "A vehicle"
     },
     "violations": {
@@ -234,6 +240,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "automations": {
     "builder": {
       "signals": {
@@ -288,11 +301,6 @@
     "maxReached": "Maximum reached",
     "removeChip": "Remove {{label}}",
     "removedChip": "Removed {{label}}"
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
-    }
   },
   "date": {
     "preset": {
@@ -596,6 +604,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -797,18 +824,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -827,6 +847,9 @@
     "removed": "Removed {{tag}}",
     "tagsList": "Tags: {{tags}}",
     "tagsNone": "No tags yet"
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -883,17 +906,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -1042,5 +1054,10 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   }
 }

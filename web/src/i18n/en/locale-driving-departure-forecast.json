@@ -54,6 +54,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "battery": {
     "delta": {
       "aria": "Battery {{from}}% to {{to}}%",
@@ -83,15 +90,15 @@
     "unavailable": "Not provided",
     "version": "Calculation version"
   },
+  "chargingPlaces": {
+    "workspace": {
+      "initialPaused": "{{source}} loading is paused. No data has been loaded yet."
+    }
+  },
   "chart": {
     "col": {
       "date": "Date",
       "value": "Value"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "delta": {
@@ -101,8 +108,7 @@
   "departure": {
     "brief": {
       "description": "Next-24-hour modeled likelihood uses capped observed departure history; the support index is not a calibrated probability or confidence score.",
-      "source": "Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command.",
-      "window": "Next 24 hours · {{timezone}}; history coverage is limited to returned rows"
+      "source": "Returned drive starts; Poisson-derived likelihood and illustrative planning marker, with no vehicle command."
     },
     "daypart": {
       "afternoon": "Afternoon",
@@ -185,11 +191,9 @@
       "inputsTitle": "Inputs not modeled",
       "limitsBody": "The 20-minute planning marker is illustrative and appears only with enough descriptive support. It does not schedule climate, wake, charge, navigate, or command the vehicle.",
       "limitsTitle": "No command or guarantee",
-      "modelBody": "Each local weekday-hour is a Poisson event cell with a Gamma prior (α {{alpha}}, β {{beta}}). Outputs are modeled likelihood estimates, not calibrated probabilities.",
       "modelTitle": "Model and shrinkage",
       "notice": "Planning aid only: no automation is created, and no departure is promised.",
       "subtitle": "What the forecast learns, what it excludes, and how to interpret every estimate.",
-      "timezoneBody": "Bucketing, weekday support, DST boundaries, half-hour offsets, and upcoming slots use the selected vehicle timezone: {{timeZone}}.",
       "timezoneTitle": "Vehicle-local calendar",
       "title": "Methodology and limitations",
       "windowBody": "The model filters the newest rows returned by /drives to an absolute {{days}}-day lookback. A {{limit}}-row response can be capped and is not guaranteed lifetime history.",
@@ -220,23 +224,18 @@
       "activeWeeks": "Active local weeks",
       "capWarning": "The 1,000-row return cap was reached. Included and excluded counts are complete for returned rows, not guaranteed lifetime history.",
       "concentration": "Routine concentration",
-      "coverageTitle": "Coverage and recurrence",
       "entropy": "Normalized routine entropy",
       "excluded": "Excluded rows",
       "future": "Future start times",
       "included": "Included departures",
       "indexExplanation": "{{band}}. The support index gates elapsed exposure with event volume, active weeks, repeat events, and occupied-cell occurrences; it is not statistical confidence.",
       "invalid": "Invalid start times",
-      "meanOccurrences": "Mean occupied-cell occurrences",
       "occupiedCells": "Occupied cells",
-      "occurrenceScore": "Cell-exposure ingredient",
       "outside": "Outside 120 days",
       "repeatScore": "Repeat-cell ingredient",
       "repeatedCells": "Repeated cells",
       "repeatedDepartures": "Repeat events beyond first",
       "returned": "Rows returned",
-      "spanDays": "Observed span (days)",
-      "spanWeeks": "Observed span (weeks)",
       "subtitle": "Complete accounting for every returned row plus the transparent ingredients of the descriptive support index.",
       "supportIndex": "Evidence support index",
       "supportTitle": "Support and descriptive stability",
@@ -246,7 +245,6 @@
     },
     "ranked": {
       "capQualifier": "Ranking is qualified because the returned 1,000-row history may omit older drives.",
-      "evidence": "{{relative}} · {{departures}} departures across {{occurrences}} observed cell occurrences",
       "likelihood": "{{value}}% modeled",
       "noSupported": "No next-24-hour slot has a recorded departure in the matching weekday-hour cell.",
       "rank": "#{{rank}}",
@@ -312,23 +310,14 @@
     },
     "weeklyTrend": {
       "activeDaySeries": "Active local days",
-      "aria": "Weekly recorded departure events and active local driving days across the observed vehicle-timezone span",
       "column": {
         "activeDays": "Active local days",
         "departures": "Departure events",
         "week": "Local week starting"
       },
       "departureSeries": "Departure events",
-      "description": "Bars count drive starts and the line counts distinct local days containing at least one drive start.",
-      "subtitle": "Monday-based local weeks include zero-event weeks inside the observed returned span.",
-      "summary": "{{departures}} departures across {{activeDays}} active days and {{activeWeeks}} active weeks over {{observedWeeks}} observed weeks in {{timeZone}}.",
       "title": "Recent weekly departure trend and active-day cadence"
     }
-  },
-  "departureForecast": {
-    "colSlot": "Time",
-    "next24Aria": "Departure likelihood and cumulative probability forecast for the next 24 hours",
-    "next24Title": "Next-24h departure forecast"
   },
   "developerReference": {
     "stats": {
@@ -520,6 +509,11 @@
       "prerequisite": "What has to happen first"
     }
   },
+  "energyFlow": {
+    "state": {
+      "pausedTitle": "Source paused"
+    }
+  },
   "entityContext": {
     "title": "Related context"
   },
@@ -595,6 +589,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -755,23 +768,19 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -828,17 +837,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -987,5 +985,10 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   }
 }

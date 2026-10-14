@@ -43,6 +43,8 @@ import { useMileageStats, useDailyMileage, useMonthlyMileage } from '@/api/hooks
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import MileagePage from '../../pages/MileagePage';
+import { MileageSourceNotice } from './MileageSourceNotice';
+import { deriveDataState } from '@/api/dataState';
 
 const stats: MileageStats = {
   vehicle_id: 7, lifetime_km: 12000, last_7d_km: 210, last_30d_km: 930,
@@ -99,6 +101,32 @@ beforeEach(() => {
 });
 
 describe('live mileage modernization preservation', () => {
+  it('distinguishes initial pause from retained empty and zero responses using source trust', () => {
+    const retry = vi.fn();
+    const view = render(<MileageSourceNotice
+      source={deriveDataState({ fetchStatus: 'paused' })} onRetry={retry} />);
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Mileage loading is paused. No mileage data has been received yet.');
+    for (const data of [[], 0]) {
+      view.rerender(<MileageSourceNotice
+        source={deriveDataState({ data, fetchStatus: 'paused' })} onRetry={retry} />);
+      expect(screen.getByRole('status')).toHaveTextContent(
+        'Refresh is paused. Showing the last successful mileage data.');
+      view.rerender(<MileageSourceNotice
+        source={deriveDataState({ data, fetchStatus: 'idle' })} onRetry={retry} />);
+      expect(screen.queryByRole('status')).toBeNull();
+    }
+    expect(retry).not.toHaveBeenCalled();
+  });
+
+  it('does not label active initial loading as a retained refresh', () => {
+    render(<MileageSourceNotice source={deriveDataState({
+      isLoading: true, isFetching: true, fetchStatus: 'fetching',
+    })} onRetry={vi.fn()} />);
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
+  });
+
   it('uses one shared card canvas with all six content shells and unchanged hook scopes', async () => {
     const { container } = mount();
     expect(container.querySelectorAll('[data-card-grid]')).toHaveLength(1);

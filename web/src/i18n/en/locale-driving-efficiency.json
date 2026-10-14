@@ -54,6 +54,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "battery": {
     "delta": {
       "aria": "Battery {{from}}% to {{to}}%",
@@ -87,11 +94,6 @@
     "col": {
       "date": "Date",
       "value": "Value"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -279,6 +281,7 @@
   },
   "driving": {
     "brief": {
+      "awaiting": "Awaiting evidence",
       "eyebrow": "Driving evidence",
       "loading": "Loading source",
       "partial": "Partial evidence",
@@ -322,8 +325,6 @@
     },
     "costPerKm": "Est. cost/km",
     "costPerKmLabel": "Est. cost/km",
-    "dailyTrend": "Daily efficiency ({{unit}})",
-    "dailyTrendAria": "Daily efficiency trend area chart",
     "drives": "Drives",
     "drivesAnalyzed": "Drives analyzed",
     "efficiencyLabel": "Efficiency",
@@ -337,6 +338,10 @@
     "noSummary": "No efficiency summary available yet",
     "noTempData": "Not enough data for temperature breakdown",
     "overview": "Efficiency overview",
+    "perDriveTrend": "Per-drive efficiency ({{unit}})",
+    "perDriveTrendAria": "Per-drive efficiency subset area chart",
+    "perDriveTrendContext": "Up to 30 eligible drive observations in reverse source order; not daily averages.",
+    "perDriveTrendCounts": "Showing {{shown}} of {{eligible}} eligible drives from {{loaded}} range-filtered loaded drives.",
     "period": {
       "lifetime": "Lifetime driving summary",
       "statsSource": "Vehicle driving aggregates; not filtered by the workspace range."
@@ -379,6 +384,11 @@
     "label": {
       "likelyCause": "Most likely reason",
       "prerequisite": "What has to happen first"
+    }
+  },
+  "energyFlow": {
+    "state": {
+      "pausedTitle": "Source paused"
     }
   },
   "entityContext": {
@@ -456,6 +466,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -616,23 +645,19 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
       "desc": "Source layer unknown."
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -689,17 +714,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -848,5 +862,10 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   }
 }

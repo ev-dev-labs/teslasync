@@ -137,6 +137,10 @@
     },
     "firmware": {
       "decision": {
+        "rollout": "Rollout",
+        "hold": "Hold",
+        "investigate": "Investigate",
+        "unknownCode": "Unknown decision: {{code}}",
         "subtitle": "Target and peer regressions use comparable pre/post observation windows.",
         "title": "Matched cohort decisions"
       },
@@ -268,6 +272,7 @@
       "samples": "Samples",
       "title": "Data quality",
       "unsupported": "Quality metadata is unsupported.",
+      "unknownCode": "Unknown quality: {{code}}",
       "window": "Observation window"
     },
     "resilience": {
@@ -403,6 +408,18 @@
       }
     },
     "survival": {
+      "components": {
+        "hv_battery": "High-voltage battery",
+        "tires": "Tires",
+        "brakes": "Brakes",
+        "charging_system": "Charging system"
+      },
+      "interventions": {
+        "battery": "Complete battery inspection",
+        "tires": "Complete tire inspection and alignment",
+        "brakes": "Complete brake inspection",
+        "charging": "Inspect charging equipment and inlet"
+      },
       "adjustedP50": "adjusted P50 {{value}}",
       "cards": {
         "title": "Component survival cards"
@@ -562,7 +579,9 @@
       "qualitySamples": "Source quality sample count: {{value}}",
       "qualityCoverage": "Source coverage: {{value}}%",
       "coverageUnknown": "Source coverage not supplied",
-      "evidenceSamples": "{{summary}} · {{count}} samples"
+      "evidenceSamples": "{{summary}} · {{formattedCount}} samples",
+      "evidenceSamples_one": "{{summary}} · {{formattedCount}} sample",
+      "evidenceSamples_other": "{{summary}} · {{formattedCount}} samples"
     }
   },
   "stormguard": {
@@ -577,6 +596,8 @@
     "arm": "Auto pre-charge before storms",
     "lat": "Home latitude",
     "lng": "Home longitude",
+    "latError": "Enter a finite latitude between -90 and 90.",
+    "lngError": "Enter a finite longitude between -180 and 180.",
     "target": "Pre-storm charge target",
     "save": "Save guard",
     "saveError": "Save failed",
@@ -643,6 +664,28 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
+  "automations": {
+    "builder": {
+      "signals": {
+        "batteryLevel": "Battery level",
+        "insideTemp": "Inside temperature",
+        "isCharging": "Is charging",
+        "isClimateOn": "Climate on",
+        "isLocked": "Is locked",
+        "outsideTemp": "Outside temperature",
+        "sentryMode": "Sentry Mode",
+        "speed": "Speed",
+        "state": "Vehicle state"
+      }
+    }
+  },
   "battery": {
     "delta": {
       "aria": "Battery {{from}}% to {{to}}%",
@@ -684,9 +727,40 @@
       "value": "Value"
     }
   },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
+  "combobox": {
+    "maxReached": "Maximum reached",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}"
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "loadingCalendar": "Loading calendar…",
+      "newRange": "New range",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
     }
   },
   "delta": {
@@ -923,6 +997,19 @@
       "loading": "Loading statistics"
     }
   },
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed",
+    "sheetActiveCount": "{{count}} active",
+    "sheetDone": "Done",
+    "sheetTitle": "Filters",
+    "sheetTrigger": "Filters"
+  },
   "freshness": {
     "noData": "No recent data",
     "offline": "Offline",
@@ -952,6 +1039,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "unlocked": "✓ Unlocked"
   },
   "live": {
@@ -964,6 +1070,21 @@
       "title": "Live data unavailable"
     },
     "unknown": "Unknown"
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    }
   },
   "operationalMode": {
     "writeBlocked": "Return to live mode before making operational changes.",
@@ -1002,7 +1123,10 @@
     },
     "noAttention": "No current attention items.",
     "reviewAll": "Review all",
-    "reviewDetails": "Review details"
+    "reviewDetails": "Review details",
+    "scope": {
+      "days": "{{count}} days"
+    }
   },
   "problemReport": {
     "context": {
@@ -1034,6 +1158,29 @@
     },
     "submitError": "Could not send the report. Please try again.",
     "title": "Report a problem"
+  },
+  "productPreferences": {
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
+    }
   },
   "provenance": {
     "cached": "Cached",
@@ -1112,29 +1259,38 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
       "desc": "Source layer unknown."
     }
   },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
   "tco": {
     "query": {
       "refreshFailed": "The refresh failed; the most recently loaded evidence remains visible.",
       "refreshPaused": "Cached evidence remains visible while its refresh is paused."
     }
+  },
+  "timeMachine": {
+    "ageFresh": "Fresh"
   },
   "timeline": {
     "empty": "No timeline entries yet.",
@@ -1191,17 +1347,6 @@
       },
       "updated": {
         "success": "Annotation updated"
-      }
-    },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
       }
     },
     "export": {
@@ -1355,5 +1500,10 @@
     "next": "Next",
     "prev": "Back",
     "skip": "Skip tour"
+  },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
   }
 }

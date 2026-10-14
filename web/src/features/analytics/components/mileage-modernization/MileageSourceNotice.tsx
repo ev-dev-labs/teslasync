@@ -4,7 +4,7 @@ import { Text } from '@/components/ui';
 import type { DataState } from '@/api/dataState';
 
 interface MileageSourceNoticeProps {
-  source: Pick<DataState<unknown>, 'refreshError' | 'isRefreshBlocked' | 'isRefreshing'>;
+  source: Pick<DataState<unknown>, 'hasData' | 'refreshError' | 'isRefreshBlocked' | 'isRefreshing'>;
   onRetry: () => unknown;
 }
 
@@ -26,7 +26,9 @@ export function MileageSourceNotice({ source, onRetry }: MileageSourceNoticeProp
     return (
       <Text as="p" variant="bodySm" role="status">
         {source.isRefreshBlocked
-          ? t('mileage.source.paused', 'Refresh is paused. Showing the last successful mileage data.')
+          ? source.hasData
+            ? t('mileage.source.paused', 'Refresh is paused. Showing the last successful mileage data.')
+            : t('mileage.source.initialPaused', 'Mileage loading is paused. No mileage data has been received yet.')
           : t('mileage.source.refreshing', 'Refreshing mileage data. Previously loaded content remains available.')}
       </Text>
     );

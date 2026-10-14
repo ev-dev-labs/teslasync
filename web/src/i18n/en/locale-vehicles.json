@@ -1,17 +1,4 @@
 {
-  "card": {
-    "interior": "Interior",
-    "charging": "Charging",
-    "viewDetails": "View details",
-    "removeVehicle": "Remove vehicle",
-    "locked": "Locked",
-    "sentryOn": "Sentry mode on",
-    "stateError": "Live state unavailable",
-    "removeVehicleNamed": "Remove {{name}}",
-    "stateLoading": "Loading live state…",
-    "stateEmpty": "No live telemetry yet",
-    "viewDetailsFor": "View details for {{name}}"
-  },
   "fleet": {
     "size": "Fleet size",
     "online": "online",
@@ -130,12 +117,12 @@
       "title": "Coverage & Method",
       "cappedBadge": "Potentially capped",
       "withinCapBadge": "Within request cap",
-      "empty": "No drive records were returned for this selected UTC window.",
+      "empty": "No drive records were returned for this selected window.",
       "returned": "Records returned",
       "usable": "Usable drives",
       "reconstructed": "Reconstructed stints",
       "located": "Location coverage",
-      "utcWindow": "The server filters drive starts from {{start}} through {{end}} as UTC calendar dates; parking before the first returned drive cannot be reconstructed.",
+      "utcWindow": "The server filters drive starts from {{start}} (inclusive) to {{end}} (exclusive) as exact instants; parking before the first returned drive cannot be reconstructed.",
       "localTime": "Hour, weekday, month, and the 22:00–06:00 split use {{timeZone}}. Dwell is assigned to the period in which parking starts.",
       "ongoing": "The final stint is ongoing as of the frozen page clock ({{time}}); its duration can only increase.",
       "rangeEdge": "The final stint is right-censored at the selected range edge ({{time}}); a later drive outside this window is unknown.",
@@ -143,7 +130,7 @@
       "quality": "{{excluded}} drive records and {{gaps}} non-positive gaps were excluded; {{missing}} of {{stints}} stints lack a destination address.",
       "capped": "The API returned the {{limit}}-drive request cap. Because results are newest-first, older drives inside the selected window may be omitted; all results are observed-window descriptions.",
       "window": "This workspace uses {{count}} server-scoped drives from the selected window, up to the {{limit}}-drive request cap.",
-      "briefWindow": "Requested UTC window: {{start}} → {{end}}"
+      "briefWindow": "Requested instant window: {{start}} → {{end}} (exclusive)"
     },
     "states": {
       "loading": "Loading parking analysis"
@@ -178,7 +165,7 @@
       "end": "End",
       "duration": "Duration",
       "reason": "Reason",
-      "empty": "Full coverage: no gaps in this window."
+      "empty": "No unknown intervals returned; coverage is not established."
     },
     "missing": "missing",
     "kind": "Window",
@@ -1113,6 +1100,13 @@
       "empty": "No recent activity in this window."
     }
   },
+  "admin": {
+    "liveSignals": {
+      "kpi": {
+        "staleHint": "Past 2-min window"
+      }
+    }
+  },
   "ai": {
     "common": {
       "errorUnknown": "unknown",
@@ -1459,7 +1453,9 @@
         "description": "Get a short, Helix-written recap of your week from the digest data above.",
         "generateButton": "Generate narration",
         "noVehicleHint": "Pick a vehicle to enable Helix narration.",
-        "title": "Helix narration"
+        "title": "Helix narration",
+        "utcScope": "Narration uses Monday-to-Monday UTC weeks, which may differ from the local-time totals above.",
+        "weekLimit": "Narration is available only for the current UTC week and the previous 12 weeks. Select a supported week to generate its recap."
       }
     }
   },
@@ -1519,6 +1515,11 @@
       "unknown": "Battery delta unknown"
     }
   },
+  "batteryPassport": {
+    "distribution": {
+      "minimum": "Observed minimum"
+    }
+  },
   "bulk": {
     "clear": "Clear selection",
     "itemDefault": "item",
@@ -1549,6 +1550,24 @@
       }
     }
   },
+  "card": {
+    "charging": "Charging",
+    "interior": "Interior",
+    "locked": "Locked",
+    "removeVehicle": "Remove vehicle",
+    "removeVehicleNamed": "Remove {{name}}",
+    "sentryOn": "Sentry mode on",
+    "stateEmpty": "No live telemetry yet",
+    "stateError": "Live state unavailable",
+    "stateLoading": "Loading live state…",
+    "viewDetails": "View details",
+    "viewDetailsFor": "View details for {{name}}"
+  },
+  "chargeDepartureAlignment": {
+    "modernization": {
+      "driveId": "Drive ID"
+    }
+  },
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
@@ -1561,14 +1580,12 @@
   "charging": {
     "aiClustering": {
       "badge": "Helix",
-      "description": "Ask Helix to name and explain each deterministic charging-curve cluster fingerprint. The narrator never changes the cluster bucketing — it grounds every sentence in the same per-cluster numbers the curves below render.",
       "emptyHint": "Select a vehicle to explain its charging-curve clusters.",
       "generateButton": "Explain clusters",
       "title": "Explain the charging-curve cluster fingerprints"
     },
     "aiMlClustering": {
       "badge": "Helix",
-      "description": "Compute per-cluster (L1 overnight / L2 workplace / DC fast) learned charging envelope from this vehicle's recent sessions and walk through how each cluster compares to the deterministic rule-label baseline used by the Charging curve page today.",
       "generateButton": "Train charging-curve clusters",
       "noVehicleHint": "Pick a vehicle to train its charging-curve clusters.",
       "title": "Learn per-vehicle charging-curve clusters"
@@ -1598,6 +1615,11 @@
       "title": "Suggest a preheat or precool schedule"
     }
   },
+  "comfortConsistency": {
+    "directory": {
+      "censored": "Right-censored"
+    }
+  },
   "compare": {
     "aiNarrative": {
       "badge": "Helix",
@@ -1617,6 +1639,9 @@
   },
   "dashboard": {
     "fleetPosture": {
+      "category": {
+        "unverified": "Unverified"
+      },
       "scope": {
         "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle.",
         "noObservation": "No verified observation time for this vehicle",
@@ -1630,11 +1655,6 @@
       "button": "Draft repair plan",
       "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
       "title": "Helix repair suggestions"
-    }
-  },
-  "dataState": {
-    "staleNamed": {
-      "title": "{{label}} may be out of date"
     }
   },
   "date": {
@@ -2137,7 +2157,6 @@
         "stale": "Retained source snapshots",
         "unavailable": "No source snapshots"
       },
-      "statusBasis": "Charging and driving take priority, then vehicle state and available streams; offline is the fallback when no source reports activity.",
       "timestamp": "Signal timestamp: {{time}}",
       "timestampUnknown": "Signal timestamp unknown",
       "title": "Physical-state summary",
@@ -2267,6 +2286,9 @@
     "telemetry": "Telemetry evidence",
     "title": "Related context"
   },
+  "error": {
+    "loadFailed": "Failed to load data"
+  },
   "errorBoundary": {
     "body": "An unexpected error occurred. Please try again."
   },
@@ -2346,7 +2368,8 @@
   },
   "fleetOps": {
     "brief": {
-      "listCoverage": "{{loaded}} loaded of {{total}} source records; offset {{offset}}, limit {{limit}}"
+      "listCoverage": "{{loaded}} loaded of {{total}} source records; offset {{offset}}, limit {{limit}}",
+      "refreshBlocked": "Refresh paused"
     }
   },
   "freshness": {
@@ -2446,6 +2469,25 @@
   },
   "lifetime": {
     "achievementBadge": "Achievement",
+    "achievementNames": {
+      "century": "Century Club",
+      "earth-orbit": "Around the World",
+      "fifty-thousand": "Nomad",
+      "first-charge": "Plugged In",
+      "first-drive": "First Drive",
+      "five-thousand-saved": "Investment Paid Off",
+      "gigawatt": "Gigawatt Club",
+      "hundred-saved": "Penny Wise",
+      "hundred-thousand": "Legend",
+      "marathon": "Marathon Runner",
+      "megawatt": "Megawatt Club",
+      "supercharger": "Supercharger Fan",
+      "ten-thousand": "Explorer",
+      "thousand": "Road Warrior",
+      "thousand-saved": "Money Maker",
+      "ton-co2": "Eco Warrior",
+      "tree-planter": "Tree Planter"
+    },
     "aiQA": {
       "askButton": "Ask",
       "badge": "Helix",
@@ -2665,6 +2707,7 @@
     "reviewAll": "Review all",
     "reviewDetails": "Review details",
     "status": {
+      "awaitingData": "Awaiting data",
       "loading": "Resolving live state",
       "ready": "Fleet ready",
       "review": "Review recommended"
@@ -2716,7 +2759,6 @@
       "serviceAttentionDescription": "High- or critical-severity maintenance is still open in fleet operations.",
       "serviceAttentionTitle": "Urgent service work requires attention ({{count}})",
       "serviceDetail": "High- or critical-severity work orders requiring review: {{urgent}}.",
-      "serviceUnavailableDescription": "Fleet availability and live state remain visible, but maintenance work orders could not be loaded.",
       "serviceUnavailableMetric": "Work-order data is unavailable; live fleet data remains usable.",
       "serviceUnavailableTitle": "Service attention is temporarily unavailable",
       "softwareCoverageDetail": "Based on {{covered}} of {{total}} vehicles with a current software reading.",
@@ -2883,7 +2925,7 @@
     "aiExplainer": {
       "badge": "Helix",
       "button": "Explain my settings",
-      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "description": "Ask Helix to explain your safety-related TeslaSync settings in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Go to main Settings to update a value yourself; Helix only narrates.",
       "title": "Explain my safety settings"
     }
   },
@@ -2920,6 +2962,11 @@
       "placeholder": "e.g. drives last weekend over 200 km with phantom drain",
       "searchButton": "Search with Helix",
       "title": "Search with natural language"
+    }
+  },
+  "shareCard": {
+    "states": {
+      "pending": "Source availability has not resolved yet."
     }
   },
   "sharing": {
@@ -2966,18 +3013,11 @@
   },
   "sourceLayer": {
     "age": "age",
-    "l1": {
-      "desc": "Read from the in-process SignalStore (hot path, freshest)."
-    },
-    "l2": {
-      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
-    },
     "log": {
       "desc": "Replayed from signal_log (durable history).",
       "label": "Log"
     },
     "stale": {
-      "desc": "Redis-backed value older than the 2-minute freshness window.",
       "label": "Stale"
     },
     "unknown": {
@@ -2995,9 +3035,12 @@
   },
   "system": {
     "outage": {
+      "awaitingSource": "This source has not resolved yet; missing evidence is not a confirmed empty result.",
       "certificateEmpty": "A session certificate is not available for this vehicle yet.",
       "certificateError": "Unable to load the session certificate.",
-      "certificateReady": "The session certificate is available for download with its original evidence intact."
+      "certificateReady": "The session certificate is available for download with its original evidence intact.",
+      "pausedSource": "Waiting for a connection before this source can load. Missing evidence remains unknown.",
+      "refreshPaused": "Connection paused; source freshness is not confirmed."
     }
   },
   "systemStatus": {
@@ -3705,17 +3748,6 @@
         "success": "Annotation updated"
       }
     },
-    "channels": {
-      "delete": {
-        "success": "Channel deleted"
-      },
-      "test": {
-        "success": "Test notification sent"
-      },
-      "toggle": {
-        "success": "Channel toggled"
-      }
-    },
     "export": {
       "account": {
         "success": "Account export queued — track progress in the floating widget"
@@ -3866,7 +3898,6 @@
   "tripPlanner": {
     "aiAgent": {
       "badge": "Helix",
-      "description": "Ask Helix to draft a trip plan grounded in your past charging history along the corridor. The plan is never saved automatically — review the proposed plan and click Plan in the form below to save it.",
       "generateButton": "Draft a plan",
       "noDestination": "Set a destination for Helix to plan the route to.",
       "noOrigin": "Set a starting point for Helix to plan the route from.",
@@ -4007,10 +4038,14 @@
     "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
     "title": "Ask Helix about your watch face"
   },
+  "widget": {
+    "motorPerformance": {
+      "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
+    }
+  },
   "yearReview": {
     "aiNarration": {
       "badge": "Helix",
-      "description": "Get a short, Helix-written recap of your year from the slide data above.",
       "emptyHint": "Select a vehicle above to recap its year.",
       "generateButton": "Generate narration",
       "title": "Helix narration"
