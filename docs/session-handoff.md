@@ -2,6 +2,45 @@
 
 ## Current phase
 
+### Drain complete; remaining-work export, 2026-10-14T13:54:59.042Z
+
+The user's stop-launch/drain/export instruction has been followed. All32
+current workers returned with released source/command claims; all32 results
+were individually intaken, committed and pushed through99e507ebcc. Partial
+source was persisted as WIP, not promoted to completed behavior. No new agent
+was launched after the drain instruction. The final actual child-agent
+overview contains0running and394retainedidle; this host cannot close/cancel
+those historical actors, and they are not live workers.
+
+Root `work-items.json` contains590 canonical remaining-work objects with
+exactly `id`, `task`, `files`, and `dependsOn`. Repository-relative paths,
+unique IDs, resolved dependencies and an acyclic graph were checked as
+metadata only. All189 distinct remaining QA report filenames are accounted
+for by the nine completed21-report dispositions. Their527 proposed
+corrective, blocked and acceptance objectives are preserved, not mislabeled
+as527 approved defects. Ten overlapping English-copy scopes share one
+serialized canonical/projection owner. Twenty exhausted original Phase5
+failure/rescue pairs are represented once under their rescue IDs, with both
+failure histories and spent budgets retained. No additional retry authority
+was invented. Original passing evidence, including the current7/7 assignee
+proof, is not a new remaining proof task.
+
+Phase6 has470source/report receipts complete,38pending,24failed,8blocked,
+0held and1excluded; source receipts are not whole-page/native/runtime
+approval. Phase7 remains NOTRUN. Remaining work includes actual copy,
+oracle/consumer, representation/authority, range compatibility, preservation,
+compiler/runtime and native acceptance needs. The audit controller's four
+introduced type diagnostics were reportedly corrected before release, but
+its final compiler was stopped: no final compiler pass is claimed.
+
+The attributable CarbonCoverageBrief delta was already persisted ind5e222fd57.
+All attributable finished-worker application changes are now committed;
+only inherited `.gitignore`, `web\package.json` and untracked
+`tools\run-workers.ps1` remain untouched. Docker3119 is still the earlier
+immutable5590146 deployment, not this checkout. No parent application
+checks, new native approval, Docker rebuild, phase gate or refill followed
+the drain. After the export/bookkeeping commit is pushed, stop.
+
 ### User-directed drain and remaining-work export, 2026-10-14T12:29Z
 
 The latest user instruction supersedes the refill loop: stop launching new
