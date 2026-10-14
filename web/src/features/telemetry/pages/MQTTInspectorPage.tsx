@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import {
   Radio, Wifi, WifiOff, RefreshCw, AlertTriangle, AlertCircle,
   Activity, Server, Clock,
@@ -7,7 +8,7 @@ import {
 
 import { PageLayout } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, Icon, PanelTitle, Text, Caption, type Column } from '@/components/ui';
-import { OperationalBrief } from '@/components/data-display';
+import { OperationalBrief, useIsStale } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -37,13 +38,18 @@ const STALE_THRESHOLD = 120;
 const THROUGHPUT_COLOR = chartTokens.series[5];
 
 interface ThroughputPoint {
-  time: string;
-  signals: number;
+  receivedAt: number;
+  elapsedSeconds: number | null;
+  signals: number | null;
 }
 
-function formatUptime(seconds: number): string {
-  if (seconds < 3600) return `${Math.floor(seconds / 60)}m`;
-  return `${Math.floor(seconds / 3600)}h ${fmtInt((seconds % 3600) / 60)}m`;
+function formatUptime(seconds: number, t: TFunction, locale: string): string {
+  if (!Number.isFinite(seconds) || seconds < 0) return '—';
+  const minutes = Math.floor(seconds / 60);
+  const values = { hours: fmtInt(Math.floor(minutes / 60), locale), minutes: fmtInt(minutes % 60, locale) };
+  return minutes < 60
+    ? t('mqtt.uptimeMinutes', '{{minutes}}m', { minutes: fmtInt(minutes, locale) })
+    : t('mqtt.uptimeHoursMinutes', '{{hours}}h {{minutes}}m', values);
 }
 
 /**
@@ -52,20 +58,20 @@ function formatUptime(seconds: number): string {
  * of truth shared by the per-row status Badge and the header "N stale" count so
  * the two can never disagree.
  */
-function isVehicleStale(v: VehicleTelemetry): boolean {
+function isVehicleStale(v: VehicleTelemetry, now: number): boolean {
   if (!v.lastReceived) return true;
-  return vehicleFreshness(v) === 'stale';
+  return vehicleFreshness(v, now) === 'stale';
 }
 
-function vehicleFreshness(v: VehicleTelemetry): 'live' | 'stale' | 'unknown' {
+function vehicleFreshness(v: VehicleTelemetry, now: number): 'live' | 'stale' | 'unknown' {
   if (!v.lastReceived) return 'stale';
-  const age = (Date.now() - new Date(v.lastReceived).getTime()) / 1000;
+  const age = (now - new Date(v.lastReceived).getTime()) / 1000;
   if (!Number.isFinite(age) || age < 0) return 'unknown';
   return age > STALE_THRESHOLD ? 'stale' : 'live';
 }
 
-function freshnessLabel(v: VehicleTelemetry, t: (key: string, fallback: string) => string): string {
-  const freshness = vehicleFreshness(v);
+function freshnessLabel(v: VehicleTelemetry, t: (key: string, fallback: string) => string, now: number): string {
+  const freshness = vehicleFreshness(v, now);
   return freshness === 'unknown' ? t('common.unknown', 'Unknown')
     : freshness === 'stale' ? t('mqtt.stale', 'Stale') : t('mqtt.live', 'Live');
 }
@@ -77,6 +83,7 @@ function freshnessLabel(v: VehicleTelemetry, t: (key: string, fallback: string) 
 function buildVehicleColumns(
   t: (key: string, fallback: string) => string,
   formatRelative: (value: string | Date | null | undefined) => string,
+  now: number,
 ): Column<VehicleTelemetry>[] {
   return [
     {
@@ -132,12 +139,12 @@ function buildVehicleColumns(
       key: 'status',
       header: t('mqtt.status', 'Status'),
       align: 'center',
-      filterValue: (v) => vehicleFreshness(v) === 'unknown' ? null : isVehicleStale(v),
-      filterValueLabel: (_value, v) => freshnessLabel(v, t),
+      filterValue: (v) => vehicleFreshness(v, now) === 'unknown' ? null : isVehicleStale(v, now),
+      filterValueLabel: (_value, v) => freshnessLabel(v, t, now),
       className: 'text-center',
       render: (v) => {
-        const freshness = vehicleFreshness(v);
-        return <Badge variant={freshness === 'unknown' ? 'neutral' : freshness === 'stale' ? 'warning' : 'success'} size="sm" dot>{freshnessLabel(v, t)}</Badge>;
+        const freshness = vehicleFreshness(v, now);
+        return <Badge variant={freshness === 'unknown' ? 'neutral' : freshness === 'stale' ? 'warning' : 'success'} size="sm" dot>{freshnessLabel(v, t, now)}</Badge>;
       },
     },
   ];
@@ -165,28 +172,46 @@ export default function MQTTInspectorPage() {
   const totalBatches = vehicles.reduce((sum, v) => sum + (v.batchCount ?? 0), 0);
   const totalRate = vehicles.reduce((sum, v) => sum + (v.signalsPerSecond ?? 0), 0);
   const topics = Array.isArray(status?.topics) ? status.topics : [];
+  // Reuse the existing point-age ticker; all freshness surfaces share this render's instant.
+  useIsStale(vehicles.find(v => v.lastReceived && Number.isFinite(Date.parse(v.lastReceived)))?.lastReceived);
+  const now = Date.now();
 
   /* ---- throughput history (local UI-derived series, not a data fetch) ---- */
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([]);
-  const prevTotalRef = useRef<number | null>(null);
+  const previousReceipt = useRef<{ at: number; counts: Map<string, number> | null } | null>(null);
   const throughputChartRows = useMemo(
-    () => throughputHistory.map(({ time, signals }) => ({ time, signals })),
-    [throughputHistory],
+    () => throughputHistory.map(({ receivedAt, elapsedSeconds, signals }) => ({
+      time: formatTime(new Date(receivedAt)), elapsedSeconds, signals,
+    })),
+    [throughputHistory, formatTime],
   );
 
   useEffect(() => {
-    if (totalSignals === 0 && prevTotalRef.current === null) return;
-    const delta = prevTotalRef.current !== null ? totalSignals - prevTotalRef.current : 0;
-    prevTotalRef.current = totalSignals;
-    if (delta >= 0) {
-      const now = formatTime(new Date());
-      setThroughputHistory((prev) => [...prev, { time: now, signals: Math.max(delta, 0) }].slice(-60));
-    }
-  }, [totalSignals, formatTime]);
+    const at = statusQuery.dataUpdatedAt;
+    if (!statusQuery.isSuccess || !status || statusQuery.error || !Number.isFinite(at) || at <= 0) return;
+    const previous = previousReceipt.current;
+    if (previous?.at === at) return;
+    const counts = Array.isArray(status.vehicles) && vehicles.every(v =>
+      Number.isSafeInteger(v.signalCount) && v.signalCount >= 0)
+      ? new Map(vehicles.map(v => [v.vin, v.signalCount])) : null;
+    const validCounts = counts?.size === vehicles.length ? counts : null;
+    previousReceipt.current = { at, counts: validCounts };
+    if (!previous) return; // First successful receipt establishes a baseline, not an observed zero.
+    const elapsedSeconds = (at - previous.at) / 1000;
+    const comparable = elapsedSeconds > 0 && validCounts && previous.counts
+      && validCounts.size === previous.counts.size
+      && [...validCounts].every(([vin, count]) => previous.counts?.has(vin) && count >= previous.counts.get(vin)!);
+    const delta = comparable
+      ? [...validCounts].reduce((sum, [vin, count]) => sum + count - previous.counts!.get(vin)!, 0) : null;
+    setThroughputHistory(history => [...history, {
+      receivedAt: at, elapsedSeconds: elapsedSeconds > 0 ? elapsedSeconds : null,
+      signals: delta != null && Number.isSafeInteger(delta) ? delta : null,
+    }].slice(-60));
+  }, [statusQuery.dataUpdatedAt, statusQuery.isSuccess, statusQuery.error, status, vehicles]);
 
-  const staleVehicles = useMemo(() => vehicles.filter(isVehicleStale), [vehicles]);
+  const staleVehicles = useMemo(() => vehicles.filter(v => isVehicleStale(v, now)), [vehicles, now]);
 
-  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative), [t, formatRelative, displayPrecision, displayLocale]);
+  const vehicleColumns = useMemo(() => buildVehicleColumns(t, formatRelative, now), [t, formatRelative, displayPrecision, displayLocale, now]);
 
   // AI explainer window: derive (from_unix, to_unix) from the current time so
   // the in-scope window covers the most recent 30 minutes of broker activity.
@@ -276,6 +301,9 @@ export default function MQTTInspectorPage() {
               <Icon icon={Activity} className={typography.color.secondary} />
               {t('mqtt.signalThroughput', 'Signal throughput')}
             </PanelTitle>
+            <Caption className="mb-3 block">
+              {t('mqtt.localDeltaNote', 'Local field-sample count changes between successful broker receipts; not a server throughput or signals-per-second measurement. Resets and unavailable comparisons remain gaps.')}
+            </Caption>
             {error && !status ? (
               <QueryError error={error} />
             ) : (
@@ -284,16 +312,17 @@ export default function MQTTInspectorPage() {
                 ariaLabel={t('mqtt.throughputAria', 'MQTT signal throughput over time')}
                 loading={isLoading && throughputHistory.length === 0}
                 error={!status && error != null ? error : undefined}
-                empty={throughputHistory.length <= 2}
+                empty={throughputHistory.filter(point => point.signals != null).length <= 2}
                 emptyMessage={t('mqtt.collectingData', 'Collecting throughput data…')}
                 data={throughputChartRows}
                 dataColumns={[
                   { key: 'time', label: t('mqtt.time', 'Time') },
+                  { key: 'elapsedSeconds', label: t('mqtt.receiptWindowSeconds', 'Receipt window (seconds)') },
                   { key: 'signals', label: t('mqtt.signals', 'Signals') },
                 ]}
               >
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={throughputHistory}>
+                  <AreaChart data={throughputChartRows}>
                     <defs>
                       <ChartGradient id="throughputGrad" color={THROUGHPUT_COLOR} opacity={0.08} />
                     </defs>
@@ -338,7 +367,7 @@ export default function MQTTInspectorPage() {
                       {t('mqtt.uptime', 'Uptime')}
                     </Caption>
                     <Text as="p" mono variant="body" className="break-words">
-                      {status.uptimeSeconds != null ? formatUptime(status.uptimeSeconds) : '—'}
+                      {status.uptimeSeconds != null ? formatUptime(status.uptimeSeconds, t, displayLocale) : '—'}
                     </Text>
                   </div>
                 </div>
@@ -383,14 +412,20 @@ export default function MQTTInspectorPage() {
               {t('mqtt.vehicleBreakdown', 'Vehicle breakdown')}
               {vehicles.length > 0 && (
                 <Text as="span" variant="caption" className="font-normal">
-                  {vehicles.length} {t('mqtt.vehicles', 'vehicles')}
+                  {t('mqtt.vehicleCount', '{{formattedCount}} vehicles', {
+                    count: vehicles.length, formattedCount: fmtInt(vehicles.length, displayLocale),
+                    defaultValue_one: '{{formattedCount}} vehicle',
+                  })}
                 </Text>
               )}
             </PanelTitle>
             {staleVehicles.length > 0 && (
               <Badge variant="warning" size="sm" dot>
                 <Icon icon={AlertTriangle} size="xs" />
-                {staleVehicles.length} {t('mqtt.stale', 'stale')}
+                {t('mqtt.staleVehicleCount', '{{formattedCount}} stale vehicles', {
+                  count: staleVehicles.length, formattedCount: fmtInt(staleVehicles.length, displayLocale),
+                  defaultValue_one: '{{formattedCount}} stale vehicle',
+                })}
               </Badge>
             )}
           </div>
@@ -419,7 +454,7 @@ export default function MQTTInspectorPage() {
                     case 'batches': return v.batchCount == null ? '—' : fmtInt(v.batchCount);
                     case 'sigPerSec': return v.signalsPerSecond == null ? '—' : fmtNumber(v.signalsPerSecond);
                     case 'lastReceived': return v.lastReceived && Number.isFinite(Date.parse(v.lastReceived)) ? formatRelative(v.lastReceived) : '—';
-                    case 'status': return freshnessLabel(v, t);
+                    case 'status': return freshnessLabel(v, t, now);
                     default: return '—';
                   }
                 },

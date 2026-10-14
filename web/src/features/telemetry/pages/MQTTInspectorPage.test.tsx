@@ -5,7 +5,7 @@
  *   1. A four-tile KPI band (streaming vehicles / total signals / batches /
  *      signals-per-sec) that collapses to '—' while the status query loads.
  *   2. A hero throughput chart that accumulates a live *delta* series from
- *      successive `totalSignals` readings — it stays a "Collecting…"
+ *      successive successful broker receipts — it stays a "Collecting…"
  *      placeholder until more than two points have been observed.
  *   3. A connection panel (broker / uptime / topic patterns) with its own
  *      loading / error / empty branches.
@@ -27,9 +27,15 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+
+const translationFixture = vi.hoisted(() => ({
+  messages: {} as Record<string, string>,
+  calls: vi.fn(),
+  timeZone: 'UTC',
+}));
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -37,8 +43,15 @@ vi.mock('react-i18next', async () => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, fallback?: unknown) =>
-        typeof fallback === 'string' ? fallback : key,
+      t: (key: string, fallback?: unknown, options?: Record<string, unknown>) => {
+        translationFixture.calls(key, options);
+        const pluralKey = options?.count === 1 ? `${key}_one` : `${key}_other`;
+        const defaultValue = options?.count === 1 && typeof options.defaultValue_one === 'string'
+          ? options.defaultValue_one : typeof fallback === 'string' ? fallback : key;
+        const message = translationFixture.messages[pluralKey] ?? translationFixture.messages[key] ?? defaultValue;
+        return message.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, name: string) =>
+          options?.[name] == null ? match : String(options[name]));
+      },
       i18n: { language: 'en', changeLanguage: vi.fn() },
     }),
   };
@@ -54,8 +67,21 @@ vi.mock('@/api/hooks/useTelemetry', async () => {
   return { ...actual, useMQTTStatus: vi.fn() };
 });
 
+vi.mock('@/hooks/useDateFormat', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useDateFormat')>('@/hooks/useDateFormat');
+  return {
+    ...actual,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => {
+      const formatters = actual.useDateFormat(...args);
+      return { ...formatters, formatTime: (...values: Parameters<typeof formatters.formatTime>) =>
+        formatters.formatTime(values[0], { ...values[1], tz: translationFixture.timeZone }) };
+    },
+  };
+});
+
 import { useMQTTStatus } from '@/api/hooks/useTelemetry';
 import { __resetTitleStoreForTests } from '@/lib/titleStore';
+import { getFormatterPreferences, setGlobalLocale, setGlobalPrecision } from '@/lib/numberFormat';
 import MQTTInspectorPage from './MQTTInspectorPage';
 
 const mockUseMQTTStatus = useMQTTStatus as unknown as ReturnType<typeof vi.fn>;
@@ -115,7 +141,11 @@ type QueryStub = {
   refetch?: () => unknown;
   isFetching?: boolean;
   fetchStatus?: 'fetching' | 'paused' | 'idle';
+  dataUpdatedAt?: number;
+  isSuccess?: boolean;
 };
+
+let receiptTime = 0;
 
 function setQuery(stub: QueryStub) {
   mockUseMQTTStatus.mockReturnValue({
@@ -125,29 +155,38 @@ function setQuery(stub: QueryStub) {
     refetch: stub.refetch,
     isFetching: stub.isFetching ?? false,
     fetchStatus: stub.fetchStatus ?? 'idle',
+    dataUpdatedAt: stub.dataUpdatedAt ?? (stub.data == null ? 0 : receiptTime += 5_000),
+    isSuccess: stub.isSuccess ?? (stub.data != null && !stub.error),
   });
 }
 
 function renderPage() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const ui = (
+  const tree = () => (
     <QueryClientProvider client={qc}>
       <MemoryRouter initialEntries={['/mqtt-inspector']}>
         <MQTTInspectorPage />
       </MemoryRouter>
     </QueryClientProvider>
   );
-  return { ui, ...render(ui) };
+  const ui = tree();
+  const result = render(ui);
+  return { ui, ...result, rerenderPage: () => result.rerender(tree()) };
 }
 
 beforeEach(() => {
   mockUseMQTTStatus.mockReset();
+  translationFixture.messages = {};
+  translationFixture.calls.mockClear();
+  translationFixture.timeZone = 'UTC';
+  receiptTime = Date.now() - 100_000;
   setQuery({ data: makeStatus() });
 });
 
 afterEach(() => {
   __resetTitleStoreForTests();
   vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 
 describe('MQTTInspectorPage — connected happy path', () => {
@@ -365,7 +404,7 @@ describe('MQTTInspectorPage — stale detection', () => {
     renderPage();
 
     expect(screen.getByText(/1 stale/i)).toBeInTheDocument();
-    expect(screen.getByText(/1 vehicles/i)).toBeInTheDocument();
+    expect(screen.getByText(/1 vehicle$/i)).toBeInTheDocument();
   });
 });
 
@@ -413,16 +452,20 @@ describe('MQTTInspectorPage — throughput accumulation', () => {
     );
     const { rerender } = render(tree());
 
-    // First point recorded → still a placeholder (length 1).
+    // First successful receipt is a baseline, not a synthetic zero point.
     expect(
       screen.getByText(/Collecting throughput data/i),
     ).toBeInTheDocument();
 
     setQuery({ data: withTotal(250) });
-    rerender(tree()); // second point (length 2)
+    rerender(tree()); // first observed interval
 
     setQuery({ data: withTotal(400) });
-    rerender(tree()); // third point (length 3) → chart branch
+    rerender(tree()); // second observed interval
+    expect(screen.getByText(/Collecting throughput data/i)).toBeInTheDocument();
+
+    setQuery({ data: withTotal(550) });
+    rerender(tree()); // third observed interval → chart branch
 
     expect(
       screen.queryByText(/Collecting throughput data/i),
@@ -545,8 +588,204 @@ describe('MQTTInspectorPage — contract adoption', () => {
     const details = screen.getByRole('dialog');
     const statusField = within(details).getByText('Status', { selector: 'dt' }).parentElement;
     expect(statusField).toHaveTextContent(label);
-    if (stale) expect(screen.getByText('1 stale')).toBeInTheDocument();
-    else expect(screen.queryByText('1 stale')).not.toBeInTheDocument();
+    if (stale) expect(screen.getByText('1 stale vehicle')).toBeInTheDocument();
+    else expect(screen.queryByText('1 stale vehicle')).not.toBeInTheDocument();
     if (label === 'Unknown') expect(within(details).queryByText('Live')).not.toBeInTheDocument();
+  });
+});
+
+describe('MQTTInspectorPage — causal freshness clock', () => {
+  it('ages the same retained array coherently in header, mobile row, filter and already-open details', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime('2030-01-01T00:00:00Z');
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, top: 0, left: 0, bottom: 640, right: 375,
+      width: 375, height: 640, toJSON: () => ({}),
+    });
+    const status = makeStatus({ vehicles: [{
+      vin: 'CLOCK-ONLY', state: 'online', signalCount: 10, batchCount: 1,
+      lastReceived: '2029-12-31T23:58:10Z',
+    }] });
+    setQuery({ data: status, fetchStatus: 'paused', dataUpdatedAt: Date.now() - 5_000 });
+    const { rerenderPage, unmount } = renderPage();
+    const table = screen.getByRole('group', { name: 'Vehicle breakdown' });
+    expect(within(table).getByText('Live')).toBeInTheDocument();
+    fireEvent.click(within(table).getByRole('button', { name: 'Quick view' }));
+    const details = screen.getByRole('dialog');
+    const statusField = within(details).getByText('Status', { selector: 'dt' }).parentElement;
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(statusField).toHaveTextContent('Live'); // Exactly 120s remains live.
+    expect(screen.queryByText('1 stale vehicle')).not.toBeInTheDocument();
+    act(() => { vi.advanceTimersByTime(10_000); });
+    expect(statusField).toHaveTextContent('Stale');
+    expect(screen.getByText('1 stale vehicle')).toBeInTheDocument();
+    expect(within(table).getByText('Stale')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(translationFixture.calls).toHaveBeenCalledWith('mqtt.staleVehicleCount',
+      expect.objectContaining({ count: 1, formattedCount: '1' }));
+    const footer = details.querySelector<HTMLElement>('[data-modal-footer="true"]');
+    if (!footer) throw new Error('Details footer missing');
+    fireEvent.click(within(footer).getByRole('button', { name: 'Close' }));
+    fireEvent.click(within(table).getByRole('button', { name: 'Status filter' }));
+    expect(screen.getByRole('checkbox', { name: 'Stale' })).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'Live' })).not.toBeInTheDocument();
+    rerenderPage();
+    expect(screen.getByText('1 stale vehicle')).toBeInTheDocument();
+    unmount();
+  });
+});
+
+describe('MQTTInspectorPage — successful receipt samples', () => {
+  const at = Date.parse('2030-01-01T00:00:00Z');
+  const snapshot = (count: number | undefined, vin = 'RECEIPT-ONLY') => makeStatus({
+    vehicles: [{ vin, signalCount: count, batchCount: 1, lastReceived: freshIso() }],
+  });
+  const sampleRows = () => {
+    const table = screen.queryByRole('table', { name: 'Signal throughput — data table' });
+    if (!table) return [];
+    return within(table).getAllByRole('row').slice(1).map(row =>
+      within(row).getAllByRole('cell').slice(1).map(cell => cell.textContent));
+  };
+
+  it('requires a successful receipt, records true zeros including structurally shared data, and keeps elapsed windows', () => {
+    const status = snapshot(0);
+    setQuery({ data: status, dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    expect(sampleRows()).toEqual([]);
+    for (const [offset, window] of [[5_000, '5'], [12_000, '7'], [20_000, '8']] as const) {
+      setQuery({ data: status, dataUpdatedAt: at + offset });
+      rerenderPage();
+      expect(sampleRows().slice(-1)[0]).toEqual([window, '0']);
+    }
+    expect(screen.queryByText(/Collecting throughput data/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/not a server throughput or signals-per-second measurement/)).toBeInTheDocument();
+  });
+
+  it('does not sample rerenders, changed query objects, request starts, paused refreshes or failures', () => {
+    const status = snapshot(100);
+    setQuery({ data: status, dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    for (const query of [
+      { data: snapshot(999), dataUpdatedAt: at },
+      { data: status, dataUpdatedAt: at, isFetching: true, fetchStatus: 'fetching' as const },
+      { data: status, dataUpdatedAt: at, fetchStatus: 'paused' as const },
+      { data: status, dataUpdatedAt: at, error: new Error('retained failure') },
+      { data: snapshot(500), dataUpdatedAt: at + 10_000, isSuccess: false },
+    ]) {
+      setQuery(query);
+      rerenderPage();
+      expect(sampleRows()).toEqual([]);
+    }
+    setQuery({ data: snapshot(130), dataUpdatedAt: at + 30_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['30', '30']]);
+  });
+
+  it('does not create samples on precision, locale or formatter changes and updates existing time labels only', () => {
+    const preferences = getFormatterPreferences();
+    setQuery({ data: snapshot(100), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: snapshot(110), dataUpdatedAt: at + 5_000 });
+    rerenderPage();
+    const before = sampleRows();
+    const firstReceiptTime = () => {
+      const table = screen.getByRole('table', { name: 'Signal throughput — data table' });
+      return within(table).getAllByRole('row')[1].querySelector('td')?.textContent;
+    };
+    const beforeTime = firstReceiptTime();
+    try {
+      act(() => { setGlobalLocale('ar-EG'); setGlobalPrecision(3); });
+      translationFixture.timeZone = 'America/New_York';
+      rerenderPage();
+      expect(sampleRows()).toEqual(before);
+      expect(firstReceiptTime()).not.toEqual(beforeTime);
+      translationFixture.messages['mqtt.time'] = 'Receipt time';
+      rerenderPage();
+      expect(sampleRows()).toEqual(before);
+    } finally {
+      act(() => { setGlobalLocale(preferences.locale); setGlobalPrecision(preferences.precision); });
+    }
+  });
+
+  it('keeps reset, missing counter and changed vehicle scope as gaps, then rebases without invented zero', () => {
+    setQuery({ data: snapshot(100), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    const observations: [number | undefined, string, string][] = [
+      [110, 'RECEIPT-ONLY', '10'], [0, 'RECEIPT-ONLY', '—'],
+      [0, 'RECEIPT-ONLY', '0'], [undefined, 'RECEIPT-ONLY', '—'],
+      [5, 'RECEIPT-ONLY', '—'], [8, 'RECEIPT-ONLY', '3'],
+      [20, 'OTHER-SCOPE', '—'], [22, 'OTHER-SCOPE', '2'],
+    ];
+    observations.forEach(([count, vin, expected], index) => {
+      setQuery({ data: snapshot(count, vin), dataUpdatedAt: at + (index + 1) * 5_000 });
+      rerenderPage();
+      expect(sampleRows().slice(-1)[0]).toEqual(['5', expected]);
+    });
+    expect(sampleRows()).toHaveLength(8);
+  });
+
+  it('rebases a backwards receipt clock with an explicit unknown window instead of manufacturing a rate', () => {
+    setQuery({ data: snapshot(100), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: snapshot(110), dataUpdatedAt: at - 1_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['—', '—']]);
+    setQuery({ data: snapshot(120), dataUpdatedAt: at + 4_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['—', '—'], ['5', '10']]);
+  });
+
+  it('preserves a per-vehicle reset gap even when another counter masks it in the fleet total', () => {
+    const pair = (first: number, second: number) => makeStatus({ vehicles: [
+      { vin: 'RESET-A', signalCount: first, batchCount: 1 },
+      { vin: 'RESET-B', signalCount: second, batchCount: 1 },
+    ] });
+    setQuery({ data: pair(100, 0), dataUpdatedAt: at });
+    const { rerenderPage } = renderPage();
+    setQuery({ data: pair(0, 120), dataUpdatedAt: at + 5_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['5', '—']]);
+    setQuery({ data: pair(2, 123), dataUpdatedAt: at + 10_000 });
+    rerenderPage();
+    expect(sampleRows()).toEqual([['5', '—'], ['5', '5']]);
+  });
+});
+
+describe('MQTTInspectorPage — localized complete messages', () => {
+  it.each([
+    { seconds: 3599.9, label: '59m' },
+    { seconds: 3600, label: '1h 0m' },
+    { seconds: 7199.9, label: '1h 59m' },
+    { seconds: 7200, label: '2h 0m' },
+    { seconds: 0, label: '0m' },
+  ])('formats the complete uptime without minute overflow at $seconds seconds', ({ seconds, label }) => {
+    setQuery({ data: makeStatus({ uptimeSeconds: seconds }) });
+    renderPage();
+    expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.queryByText(/1h 60m/)).not.toBeInTheDocument();
+  });
+
+  it('localizes all uptime/count digits and permits translated word order and singular vehicle phrasing', () => {
+    const preferences = getFormatterPreferences();
+    translationFixture.messages = {
+      'mqtt.vehicleCount_one': 'Vehicle: {{formattedCount}}',
+      'mqtt.staleVehicleCount_one': 'Stale: {{formattedCount}}',
+      'mqtt.uptimeHoursMinutes': '{{minutes}}min / {{hours}}hr',
+    };
+    setQuery({ data: makeStatus({ uptimeSeconds: 7200, vehicles: [{
+      vin: 'LOCALE-ONLY', signalCount: 0, batchCount: 0, lastReceived: staleIso(),
+    }] }) });
+    const { rerenderPage } = renderPage();
+    try {
+      act(() => { setGlobalLocale('ar-EG'); });
+      rerenderPage();
+      expect(screen.getByText('٠min / ٢hr')).toBeInTheDocument();
+      expect(screen.getByText('Vehicle: ١')).toBeInTheDocument();
+      expect(screen.getByText('Stale: ١')).toBeInTheDocument();
+      expect(translationFixture.calls).toHaveBeenCalledWith('mqtt.vehicleCount',
+        expect.objectContaining({ count: 1, formattedCount: '١' }));
+    } finally {
+      act(() => { setGlobalLocale(preferences.locale); });
+    }
   });
 });
