@@ -249,7 +249,7 @@ function climate(over: Partial<ClimateState> = {}): ClimateState {
   };
 }
 
-// Two history samples: fan 4/6 (avg 5, peak 6), AC on/off (50% duty),
+// Two history samples: fan 4/6 (avg 5, peak 6), AC on/off (50% known-state share),
 // inside 18/20 → distinctive `.0` cells for unit-boundary assertions.
 const HISTORY: ClimateState[] = [
   climate({
@@ -328,6 +328,105 @@ beforeEach(() => {
   unitState.temp = 'C';
   setGlobalLocale('en-US');
   setGlobalPrecision(2);
+});
+
+describe('climate efficiency measurement evidence', () => {
+  it.each([
+    { name: 'measured zero', speeds: [0, 0], average: '0.00', peak: '0.00' },
+    { name: 'zero with active fan', speeds: [0, 4], average: '2.00', peak: '4.00' },
+    { name: 'signed fractional values', speeds: [-2.5, 0, 1.25], average: '-0.42', peak: '1.25' },
+    { name: 'negative values', speeds: [-2.5, -1.25], average: '-1.88', peak: '-1.25' },
+    { name: 'missing values', speeds: [undefined, undefined], average: '—', peak: '—' },
+    { name: 'null values', speeds: [null, null], average: '—', peak: '—' },
+    { name: 'empty history', speeds: [], average: '—', peak: '—' },
+    { name: 'invalid values', speeds: [NaN, Infinity, -Infinity], average: '—', peak: '—' },
+    { name: 'finite and invalid values', speeds: [NaN, 0, 1.25, Infinity], average: '0.63', peak: '1.25' },
+  ])('preserves $name independently of AC evidence', ({ speeds, average, peak }) => {
+    install({
+      latest: climate(),
+      history: speeds.map((fanSpeed, id) => climate({ id, fanSpeed, isAcOn: undefined })),
+    });
+    renderPage();
+    expect(within(card('Avg fan speed')).getByText(average)).toBeInTheDocument();
+    expect(within(card('Peak fan speed')).getByText(peak)).toBeInTheDocument();
+    expect(within(card('AC on/off · On')).getByText('—')).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'known on and off', states: [true, false, undefined], expected: '50.00%' },
+    { name: 'measured off', states: [false, undefined], expected: '0.00%' },
+    { name: 'measured on', states: [true, undefined], expected: '100.00%' },
+    { name: 'missing', states: [undefined, undefined], expected: '—' },
+    { name: 'null', states: [null, null], expected: '—' },
+    { name: 'empty history', states: [], expected: '—' },
+  ])('computes $name AC samples without fan evidence', ({ states, expected }) => {
+    install({
+      latest: climate(),
+      history: states.map((isAcOn, id) => climate({ id, isAcOn, fanSpeed: undefined })),
+    });
+    renderPage();
+    expect(within(card('Avg fan speed')).getByText('—')).toBeInTheDocument();
+    expect(within(card('Peak fan speed')).getByText('—')).toBeInTheDocument();
+    const acCard = within(card('AC on/off · On'));
+    expect(acCard.getByText(expected)).toBeInTheDocument();
+    const known = states.filter(state => typeof state === 'boolean').length;
+    const on = states.filter(state => state === true).length;
+    expect(acCard.getByText(
+      `Known on-state samples: ${on} / Known-state samples: ${known} · Unknown: ${states.length - known}`,
+    )).toBeInTheDocument();
+  });
+
+  it('excludes malformed AC values instead of treating truthiness as a measurement', () => {
+    install({
+      latest: climate(),
+      history: [
+        climate({ isAcOn: false, fanSpeed: 0 }),
+        Object.assign(climate({ fanSpeed: null }), { isAcOn: 'true' }),
+        Object.assign(climate({ fanSpeed: NaN }), { isAcOn: 1 }),
+      ],
+    });
+    renderPage();
+    expect(within(card('Avg fan speed')).getByText('0.00')).toBeInTheDocument();
+    expect(within(card('Peak fan speed')).getByText('0.00')).toBeInTheDocument();
+    const acCard = within(card('AC on/off · On'));
+    expect(acCard.getByText('0.00%')).toBeInTheDocument();
+    expect(acCard.getByText(
+      'Known on-state samples: 0 / Known-state samples: 1 · Unknown: 2',
+    )).toBeInTheDocument();
+  });
+
+  it('reports unknown-only malformed states without substituting measured off', () => {
+    install({
+      latest: climate(),
+      history: ['true', 0, -1, 0.5, NaN, Infinity].map((isAcOn, id) =>
+        Object.assign(climate({ id }), { isAcOn })),
+    });
+    renderPage();
+    const acCard = within(card('AC on/off · On'));
+    expect(acCard.getByText('—')).toBeInTheDocument();
+    expect(acCard.getByText(
+      'Known on-state samples: 0 / Known-state samples: 0 · Unknown: 6',
+    )).toBeInTheDocument();
+  });
+
+  it('keeps the known-state sample share independent of irregular elapsed durations', () => {
+    install({
+      latest: climate(),
+      history: [
+        climate({ timestamp: '2025-06-15T00:00:00Z', isAcOn: true }),
+        climate({ timestamp: '2025-06-15T00:01:00Z', isAcOn: false }),
+        climate({ timestamp: '2025-06-15T12:00:00Z', isAcOn: true }),
+        climate({ timestamp: '2025-06-15T12:01:00Z', isAcOn: undefined }),
+      ],
+    });
+    renderPage();
+    const acCard = within(card('AC on/off · On'));
+    expect(acCard.getByText('66.67%')).toBeInTheDocument();
+    expect(acCard.getByText(
+      'Known on-state samples: 2 / Known-state samples: 3 · Unknown: 1',
+    )).toBeInTheDocument();
+    expect(screen.queryByText('AC on time')).not.toBeInTheDocument();
+  });
 });
 
 it('keeps temperature-delta classification raw while locale and precision change live', () => {
@@ -415,7 +514,7 @@ describe('ClimateControlPage — active HVAC (happy path)', () => {
     renderPage();
 
     expect(within(card('HVAC power')).getByText('On')).toBeInTheDocument();
-    expect(within(card('HVAC power')).getByText('State: On')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('AC on/off: On')).toBeInTheDocument();
     expect(within(card('Fan speed')).getByText('5')).toBeInTheDocument();
     // heatStyle(2) → "Medium" for the steering-wheel heat level.
     expect(within(card('Steering wheel heat level')).getByText('Medium')).toBeInTheDocument();
@@ -549,9 +648,39 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     renderPage();
 
     expect(within(card('HVAC power')).getByText('Off')).toBeInTheDocument();
-    expect(within(card('HVAC power')).getByText('State: Off')).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText('AC on/off: Off')).toBeInTheDocument();
     expect(within(card('Fan speed')).getByText('0')).toBeInTheDocument();
     expect(within(card('Passenger setting')).getByText('0.00°C')).toBeInTheDocument();
+  });
+});
+
+describe('ClimateControlPage — independent HVAC and AC states', () => {
+  it.each([
+    { hvacPower: true, isAcOn: false, banner: 'Active', power: 'On', ac: 'Off' },
+    { hvacPower: false, isAcOn: true, banner: 'Off', power: 'Off', ac: 'On' },
+    { hvacPower: null, isAcOn: true, banner: '—', power: '—', ac: 'On' },
+    { hvacPower: true, isAcOn: null, banner: 'Active', power: 'On', ac: '—' },
+    { hvacPower: null, isAcOn: null, banner: '—', power: '—', ac: '—' },
+    { hvacPower: undefined, isAcOn: false, banner: '—', power: '—', ac: 'Off' },
+    { hvacPower: false, isAcOn: undefined, banner: 'Off', power: 'Off', ac: '—' },
+  ])('preserves HVAC $hvacPower independently of AC $isAcOn', ({ hvacPower, isAcOn, banner, power, ac }) => {
+    const latest = climate({ hvacPower, isAcOn });
+    install({ latest, history: [latest] });
+    renderPage();
+
+    expect(within(group('climate-status')).getByText(banner)).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText(power)).toBeInTheDocument();
+    expect(within(card('HVAC power')).getByText(`AC on/off: ${ac}`)).toBeInTheDocument();
+    expect(within(card('HVAC power')).queryByText(/\d+\s*(W|kW)\b/)).not.toBeInTheDocument();
+    const props = presentationSpies.table.mock.lastCall![0];
+    const acColumn = props.columns.find(column => column.key === 'isAcOn')!;
+    expect(acColumn.header).toBe('AC on/off');
+    expect(acColumn.filterValue!(latest)).toBe(isAcOn ?? null);
+    const mobile = buildMobileTableRow(latest, latest.id!, props.columns,
+      props.mobilePresentation!, 'Climate history');
+    expect(mobile.details).toContainEqual({ key: 'isAcOn', label: 'AC on/off', value: ac });
+    expect(latest.hvacPower).toBe(hvacPower);
+    expect(latest.isAcOn).toBe(isAcOn);
   });
 });
 
@@ -740,7 +869,7 @@ describe('ClimateControlPage — independent charging source registry', () => {
         { key: 'outsideTemp', label: 'Outside °F', value: '53.60 °F' },
         { key: 'driverTempSetting', label: 'Set temp °F', value: '69.80 °F' },
         { key: 'fanSpeed', label: 'Fan', value: '4' },
-        { key: 'isAcOn', label: 'HVAC', value: 'On' },
+        { key: 'isAcOn', label: 'AC on/off', value: 'On' },
         { key: 'climateKeeperMode', label: 'Climate keeper', value: '—' },
       ]);
       const chart = presentationSpies.chart.mock.calls.find(([chartProps]) =>

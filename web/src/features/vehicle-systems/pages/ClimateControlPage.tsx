@@ -572,7 +572,7 @@ export default function ClimateControlPage() {
         key: 'isAcOn',
         filterValue: (row) => row.isAcOn ?? null,
         filterValueLabel: (_value, row) => row.isAcOn == null ? '—' : row.isAcOn ? t('common.on', 'On') : t('common.off', 'Off'),
-        header: t('widget.hvac', 'HVAC'),
+        header: t('climate.page.acOnOff', 'AC on/off'),
         render: (row) => (
           <Badge variant={row.isAcOn ? 'success' : 'neutral'} size="sm">
             {row.isAcOn == null ? '—' : row.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
@@ -682,15 +682,24 @@ export default function ClimateControlPage() {
   // HvacPower is an enum signal (not kW), so numeric power stats are
   // unavailable. Fan-speed stats derive from the HvacFanSpeed float signal.
   const efficiencyStats = useMemo(() => {
-    if (chronoHistory.length === 0) return null;
-    const withFan = chronoHistory.filter((h) => h.fanSpeed != null && h.fanSpeed > 0);
-    if (withFan.length === 0) return null;
-    const speeds = withFan.map((h) => h.fanSpeed ?? 0);
-    const avgFan = speeds.reduce((s, v) => s + v, 0) / speeds.length;
-    const peakFan = Math.max(...speeds);
-    const acOnCount = chronoHistory.filter((h) => h.isAcOn).length;
-    const acOnPct = (acOnCount / chronoHistory.length) * 100;
-    return { avgFan, peakFan, acOnPct };
+    const speeds = chronoHistory
+      .map((h) => h.fanSpeed)
+      .filter((speed): speed is number => typeof speed === 'number' && Number.isFinite(speed));
+    const avgFan = speeds.length > 0
+      ? speeds.reduce((s, v) => s + v, 0) / speeds.length
+      : null;
+    const peakFan = speeds.length > 0 ? Math.max(...speeds) : null;
+    const acSamples = chronoHistory.filter((h) => typeof h.isAcOn === 'boolean');
+    const acOnCount = acSamples.filter((h) => h.isAcOn === true).length;
+    const acOnPct = acSamples.length > 0 ? (acOnCount / acSamples.length) * 100 : null;
+    return {
+      avgFan,
+      peakFan,
+      acOnPct,
+      acOnCount,
+      acKnownCount: acSamples.length,
+      acUnknownCount: chronoHistory.length - acSamples.length,
+    };
   }, [chronoHistory]);
 
   const hasTempHistory = convertedChartData.length > 0;
@@ -743,13 +752,13 @@ export default function ClimateControlPage() {
           <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
             <Icon icon={Power} size="xl"
-              className={latest?.isAcOn ? neonColorMap.green.text : typography.color.muted}
+              className={latest?.hvacPower ? neonColorMap.green.text : typography.color.muted}
             />
             <Text variant="body" className="font-medium">
               {t('climate.page.hvacSystem', 'HVAC system')}
             </Text>
-            <Badge variant={latest?.isAcOn ? 'success' : 'neutral'}>
-              {latest?.isAcOn == null ? '—' : latest.isAcOn ? t('common.active', 'Active') : t('common.off', 'Off')}
+            <Badge variant={latest?.hvacPower ? 'success' : 'neutral'}>
+              {latest?.hvacPower == null ? '—' : latest.hvacPower ? t('common.active', 'Active') : t('common.off', 'Off')}
             </Badge>
             <Badge variant={comfortScore == null ? 'neutral' : comfort.variant} size="sm">
               {comfortScore == null ? '—' : t(comfort.labelKey, comfort.label)}
@@ -939,16 +948,15 @@ export default function ClimateControlPage() {
               title={t('climate.page.climateSystems', 'Climate systems')}>
               <MetricCard
                 label={t('telemetry.hvac', 'HVAC power')}
-                value={latest?.isAcOn == null ? '—' : latest.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}
-                color={latest?.isAcOn ? 'cyan' : 'blue'}
+                value={latest?.hvacPower == null ? '—' : latest.hvacPower ? t('common.on', 'On') : t('common.off', 'Off')}
+                color={latest?.hvacPower ? 'cyan' : 'blue'}
                 icon={
                   <Icon icon={Power} size="lg"
                     className={typography.color.secondary}
                   />
                 }
-                subtitle={latest?.hvacPower != null
-                  ? `${t('common.state', 'State')}: ${latest.hvacPower ? t('common.on', 'On') : t('common.off', 'Off')}`
-                  : undefined}
+                subtitle={`${t('climate.page.acOnOff', 'AC on/off')}: ${latest?.isAcOn == null
+                  ? '—' : latest.isAcOn ? t('common.on', 'On') : t('common.off', 'Off')}`}
               />
 
               <MetricCard
@@ -1328,7 +1336,7 @@ export default function ClimateControlPage() {
               }}>
                 <MetricCard
                   label={t('climate.page.avgFanSpeed', 'Avg fan speed')}
-                  value={efficiencyStats ? fmtNumber(efficiencyStats.avgFan) : '—'}
+                  value={efficiencyStats.avgFan != null ? fmtNumber(efficiencyStats.avgFan) : '—'}
                   metric={{ metricId: 'number', rawValue: efficiencyStats?.avgFan,
                     display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
@@ -1337,7 +1345,7 @@ export default function ClimateControlPage() {
                 />
                 <MetricCard
                   label={t('climate.page.peakFanSpeed', 'Peak fan speed')}
-                  value={efficiencyStats ? fmtNumber(efficiencyStats.peakFan) : '—'}
+                  value={efficiencyStats.peakFan != null ? fmtNumber(efficiencyStats.peakFan) : '—'}
                   metric={{ metricId: 'number', rawValue: efficiencyStats?.peakFan,
                     display: { formatter: raw => ({ value: fmtNumber(raw), unit: '' }) } }}
                   subtitle={t('climate.page.levelRange', 'Level 0–10')}
@@ -1345,11 +1353,11 @@ export default function ClimateControlPage() {
                   color="purple"
                 />
                 <MetricCard
-                  label={t('climate.page.acOnTime', 'AC on time')}
-                  value={efficiencyStats ? `${fmtNumber(efficiencyStats.acOnPct)}%` : '—'}
+                  label={`${t('climate.page.acOnOff', 'AC on/off')} · ${t('common.on', 'On')}`}
+                  value={efficiencyStats.acOnPct != null ? `${fmtNumber(efficiencyStats.acOnPct)}%` : '—'}
                   metric={{ metricId: 'percent', rawValue: efficiencyStats?.acOnPct,
                     display: { formatter: raw => ({ value: `${fmtNumber(raw)}%`, unit: '' }) } }}
-                  subtitle={t('climate.page.ofSamples', 'of samples')}
+                  subtitle={`${t('hvacCycling.duty.onSamples', 'Known on-state samples')}: ${fmtInt(efficiencyStats.acOnCount)} / ${t('hvacCycling.kpis.known', 'Known-state samples')}: ${fmtInt(efficiencyStats.acKnownCount)} · ${t('common.unknown', 'Unknown')}: ${fmtInt(efficiencyStats.acUnknownCount)}`}
                   icon={<Icon icon={Zap} className={typography.color.secondary} />}
                   color="amber"
                 />
