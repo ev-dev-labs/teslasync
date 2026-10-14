@@ -1,0 +1,1069 @@
+{
+  "item": "phase6-qa-settings-active-sessions",
+  "attempt": 1,
+  "status": "DONE_SOURCE_QA_FINDINGS_NOT_PAGE_ACCEPTANCE; RETURN_DEADLINE_MISSED",
+  "page": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+  "routes": [
+    "/account/sessions"
+  ],
+  "purpose": "Review TeslaSync current account device sessions, not provider/IdP logout or vehicle/date-range telemetry.",
+  "primaryGoal": "Recognize current/other sessions and deliberate sign-out with truthful scope/readiness/confirmation/outcome.",
+  "timing": {
+    "actualStartUtc": "2026-10-14T01:54:55.8482957Z",
+    "returnDeadlineUtc": "2026-10-14T02:07:59.989Z",
+    "hardDeadlineUtc": "2026-10-14T02:12:59.989Z",
+    "releasedUtc": "2026-10-14T02:09:15.055003+00:00",
+    "returnDeadlineMet": false,
+    "hardDeadlineMet": true
+  },
+  "scope": {
+    "readonly": [
+      "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+      "web/src/features/settings/pages/ActiveSessionsPage.test.tsx",
+      "web/src/api/hooks/useSessions.ts",
+      "web/src/api/hooks/useSessions.test.tsx",
+      "web/src/features/settings/components/sessions/deviceLabel.test.ts",
+      "web/src/features/settings/components/sessions/deviceLabel.ts",
+      "web/src/features/settings/components/sessions/index.ts",
+      "web/src/features/settings/components/sessions/SessionBreakdownPanel.test.tsx",
+      "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx",
+      "web/src/features/settings/components/sessions/SessionsOpenModeNotice.test.tsx",
+      "web/src/features/settings/components/sessions/SessionsOpenModeNotice.tsx",
+      "web/src/features/settings/components/sessions/SessionsSummaryCards.test.tsx",
+      "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx",
+      "web/src/features/settings/components/sessions/SessionsTable.test.tsx",
+      "web/src/features/settings/components/sessions/SessionsTable.tsx",
+      "web/src/features/settings/components/sessions/sessionStats.test.ts",
+      "web/src/features/settings/components/sessions/sessionStats.ts"
+    ],
+    "writableOnly": [
+      "docs/frontend-audits/phase6-qa-settings-active-sessions.json",
+      "web/logs/phase6-qa-settings-active-sessions.log"
+    ]
+  },
+  "controlReads": {
+    "orchestrator": "docs/orchestrator-loop.md fully read",
+    "designContract": "Fully read lines1-2539",
+    "mission": "Relevant preservation/architecture/states/date/responsive/mobile/a11y/motion/QA definition-of-done sections read",
+    "inventory": "Existing account sessions row and full audit-page-170 read",
+    "handoff": "Current new-machine recovery/conventions; history not fresh proof",
+    "instructions": "Root/frontend/worker and i18n/table/mobile/a11y guidance read; old referenced session phase5 instructions not found in repo filename scan",
+    "queueRow": "| [~] | 6 | phase6-qa-settings-active-sessions | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-settings-active-sessions.json; web\\logs\\phase6-qa-settings-active-sessions.log | phase5-page-settings-active-sessions | 1 | reserved01:47:59.989Z; actor pending | - | ActiveSessionsPage/direct supports; UI source-only, no session/auth/token/identity requests or revocations. |",
+    "actorMapping": "d098c97f-83e9-4d50-a540-cd4a11b3a7a8; observed queue mapping added concurrently",
+    "dependency": "Completed phase5-page-settings-active-sessions attempt2 at998566f8a2001c27599e83d51c6ddbf7e88b5795 not reopened"
+  },
+  "hashes": {
+    "primaryBaselineCount": 17,
+    "supportBaselineCount": 22,
+    "pins": [
+      {
+        "file": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+        "beforeSha256": "90337266bb37e12deae38394b0757baff1cfa556b8bbb065874556c80e0df216",
+        "afterSha256": "90337266bb37e12deae38394b0757baff1cfa556b8bbb065874556c80e0df216",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/pages/ActiveSessionsPage.test.tsx",
+        "beforeSha256": "0db96a6d656ceddc6162dc3207f90cd0083669dea6e7365554ff2908cc72ffce",
+        "afterSha256": "0db96a6d656ceddc6162dc3207f90cd0083669dea6e7365554ff2908cc72ffce",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/api/hooks/useSessions.ts",
+        "beforeSha256": "1d6b9329dc998f8e442589ea7fe8b66cf509bc5a213aceb010fa10726484fd50",
+        "afterSha256": "1d6b9329dc998f8e442589ea7fe8b66cf509bc5a213aceb010fa10726484fd50",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/api/hooks/useSessions.test.tsx",
+        "beforeSha256": "9b5fc7f564d85dc556db7ba392d078172260b3080da496889912e63c0344ac7a",
+        "afterSha256": "9b5fc7f564d85dc556db7ba392d078172260b3080da496889912e63c0344ac7a",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/deviceLabel.test.ts",
+        "beforeSha256": "f4d8d71a9f6fbb1b0729f73b9ef4b495292aa2562456140fa56b4fcf7df3e198",
+        "afterSha256": "f4d8d71a9f6fbb1b0729f73b9ef4b495292aa2562456140fa56b4fcf7df3e198",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/deviceLabel.ts",
+        "beforeSha256": "ed6be79d67761971b0a993ce152e438ab6fd67740431a2d944bad1878115ca8f",
+        "afterSha256": "ed6be79d67761971b0a993ce152e438ab6fd67740431a2d944bad1878115ca8f",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/index.ts",
+        "beforeSha256": "7041bc5b00cd62bfc9ca8a8619a21fbbeb3bab20e4aa7c13b69947b1135b3ca0",
+        "afterSha256": "7041bc5b00cd62bfc9ca8a8619a21fbbeb3bab20e4aa7c13b69947b1135b3ca0",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionBreakdownPanel.test.tsx",
+        "beforeSha256": "46916bd0e0957462f3f53d1721231c621d2a4684d95fa0c45c405f5353d8554b",
+        "afterSha256": "46916bd0e0957462f3f53d1721231c621d2a4684d95fa0c45c405f5353d8554b",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx",
+        "beforeSha256": "92f86eb360aa78606239ac666ddbfcf40b6838ea993bf894ff2fa913269fb2b0",
+        "afterSha256": "92f86eb360aa78606239ac666ddbfcf40b6838ea993bf894ff2fa913269fb2b0",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionsOpenModeNotice.test.tsx",
+        "beforeSha256": "25d03f237500497de9a3ba066e3b0f51560401d744bb526e49fea4c89550a014",
+        "afterSha256": "25d03f237500497de9a3ba066e3b0f51560401d744bb526e49fea4c89550a014",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionsOpenModeNotice.tsx",
+        "beforeSha256": "6be9b17b80e19e7358697676b6fdebb72a688802737683b6ea7fcff7510a3bff",
+        "afterSha256": "6be9b17b80e19e7358697676b6fdebb72a688802737683b6ea7fcff7510a3bff",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionsSummaryCards.test.tsx",
+        "beforeSha256": "67e430ac0a8d92fc5fa2f88d5b354dffd475efa2a4c058e3a81bca4b5c684df6",
+        "afterSha256": "67e430ac0a8d92fc5fa2f88d5b354dffd475efa2a4c058e3a81bca4b5c684df6",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx",
+        "beforeSha256": "21cb9408cc097029581ae140473eb714864e243318907c48d3aeca94281947bc",
+        "afterSha256": "21cb9408cc097029581ae140473eb714864e243318907c48d3aeca94281947bc",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionsTable.test.tsx",
+        "beforeSha256": "aeb9bb5858bfda0891cde0e6ed07f928e3671ebf78e32e793f92bad88b49281f",
+        "afterSha256": "aeb9bb5858bfda0891cde0e6ed07f928e3671ebf78e32e793f92bad88b49281f",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/SessionsTable.tsx",
+        "beforeSha256": "efaf0911e2c81b48d229b76f784148761702e4b53325b487bdee1e49fb02cd69",
+        "afterSha256": "efaf0911e2c81b48d229b76f784148761702e4b53325b487bdee1e49fb02cd69",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/sessionStats.test.ts",
+        "beforeSha256": "e5cb697cd850889f45d79a2dbed4c0acecf8fd5ef06d4a7e3890a1210ec7ece1",
+        "afterSha256": "e5cb697cd850889f45d79a2dbed4c0acecf8fd5ef06d4a7e3890a1210ec7ece1",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/features/settings/components/sessions/sessionStats.ts",
+        "beforeSha256": "be625d68a6328d09150b5d8a0195e3217ece40d0c01fbb6cf20360956d40eb3e",
+        "afterSha256": "be625d68a6328d09150b5d8a0195e3217ece40d0c01fbb6cf20360956d40eb3e",
+        "unchanged": true,
+        "baseline": "shell1812 pre-review"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "beforeSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "afterSha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/layout/PageContainer.tsx",
+        "beforeSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "afterSha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/ui/DataTable.tsx",
+        "beforeSha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "afterSha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "beforeSha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "afterSha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "beforeSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "afterSha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "beforeSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "afterSha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/feedback/DataStateNotice.tsx",
+        "beforeSha256": "d96d4e5bc8c1b8ccbddce808bfc31a277dad60b82399d14431b7185e94bea4c6",
+        "afterSha256": "d96d4e5bc8c1b8ccbddce808bfc31a277dad60b82399d14431b7185e94bea4c6",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "beforeSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "afterSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/ui/Button.tsx",
+        "beforeSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "afterSha256": "e43e202cc9f465efeef93a1be2b156255958934af635abf0eaa408f310dde16c",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "beforeSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "afterSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "beforeSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "afterSha256": "183b51d7250c841aff21f0c1aa70170cbd437f3487b7f6647389c5020ac38c07",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/i18n/en/locale-settings.json",
+        "beforeSha256": "ca5149bd282cd90aa19c1b6d2a0b2cd43caa23d64c66d954804a7aef35ba61d2",
+        "afterSha256": "ca5149bd282cd90aa19c1b6d2a0b2cd43caa23d64c66d954804a7aef35ba61d2",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+        "beforeSha256": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+        "afterSha256": "9075a1bb2c766e225462ee1eaab67e67293f1b97d052e58c1a48e12eb3a07595",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "beforeSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "afterSha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/api/hooks/_toastHelpers.ts",
+        "beforeSha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "afterSha256": "96bc3304b4cd5a9fd4ead533b10120fbb2eace1ac162d28b839d3f0843689966",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/hooks/useDateFormat.ts",
+        "beforeSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "afterSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/ui/ConfirmDialog.tsx",
+        "beforeSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+        "afterSha256": "36655275cb1ac502e35da2edc4930cfe4d734add15e8b7cf24490c915c9dadb6",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/data-display/DataFreshness.tsx",
+        "beforeSha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "afterSha256": "b178bc8e298abb3f70a1157bcdeee373094606b615664d03ee7eecb6c1ca4965",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "beforeSha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "afterSha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/components/data-display/format/DateTime.tsx",
+        "beforeSha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+        "afterSha256": "08b77196089a97bdf6f1fb37e17af36fa717c1bd7bc8b0d3f603c765c47e04a8",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/features/settings/components/AppearanceSettings.tsx",
+        "beforeSha256": "bb919b4b5ce40bf4a0667c69ae0ae9ff9551d8181a30f0fcdb399d7b55e64c1b",
+        "afterSha256": "bb919b4b5ce40bf4a0667c69ae0ae9ff9551d8181a30f0fcdb399d7b55e64c1b",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      },
+      {
+        "file": "web/src/hooks/useStatusAnnouncer.ts",
+        "beforeSha256": "378541442b5b9cbd5534efa3df15152e0207fa330d9a5473ce7419937b009508",
+        "afterSha256": "378541442b5b9cbd5534efa3df15152e0207fa330d9a5473ce7419937b009508",
+        "unchanged": true,
+        "baseline": "logged support-read snapshot"
+      }
+    ],
+    "changedFiles": []
+  },
+  "filesRead": [
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-inventory.md",
+    "docs/session-handoff.md",
+    "migration-queue.md",
+    "docs/frontend-worker-conventions.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    "docs/I18N_GUIDELINES.md",
+    "docs/MOBILE_GUIDELINES.md",
+    "docs/TABLE_GUIDELINES.md",
+    "docs/A11Y_GUIDELINES.md",
+    "docs/CONTRIBUTING.md",
+    "docs/frontend-audits/audit-page-170.json",
+    "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+    "web/src/features/settings/pages/ActiveSessionsPage.test.tsx",
+    "web/src/api/hooks/useSessions.ts",
+    "web/src/api/hooks/useSessions.test.tsx",
+    "web/src/features/settings/components/sessions/deviceLabel.test.ts",
+    "web/src/features/settings/components/sessions/deviceLabel.ts",
+    "web/src/features/settings/components/sessions/index.ts",
+    "web/src/features/settings/components/sessions/SessionBreakdownPanel.test.tsx",
+    "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx",
+    "web/src/features/settings/components/sessions/SessionsOpenModeNotice.test.tsx",
+    "web/src/features/settings/components/sessions/SessionsOpenModeNotice.tsx",
+    "web/src/features/settings/components/sessions/SessionsSummaryCards.test.tsx",
+    "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx",
+    "web/src/features/settings/components/sessions/SessionsTable.test.tsx",
+    "web/src/features/settings/components/sessions/SessionsTable.tsx",
+    "web/src/features/settings/components/sessions/sessionStats.test.ts",
+    "web/src/features/settings/components/sessions/sessionStats.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/PageContainer.tsx",
+    "web/src/components/ui/DataTable.tsx",
+    "web/src/components/data-display/MetricBar.tsx",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/components/feedback/DataStateNotice.tsx",
+    "web/src/lib/dateFormat.ts",
+    "web/src/components/ui/Button.tsx",
+    "web/src/api/types.ts",
+    "web/src/i18n/en.json",
+    "web/src/i18n/en/locale-settings.json",
+    "web/src/features/settings/components/operationalbrief-all/SettingsSummaryBrief.tsx",
+    "web/src/api/dataState.ts",
+    "web/src/api/hooks/_toastHelpers.ts",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/components/ui/ConfirmDialog.tsx",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/lib/tokens.ts",
+    "web/src/components/data-display/format/DateTime.tsx",
+    "web/src/features/settings/components/AppearanceSettings.tsx",
+    "web/src/hooks/useStatusAnnouncer.ts",
+    "web/src/hooks/useSettings.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/index.css",
+    "web/src/features/settings/components/GeneralSettings.tsx"
+  ],
+  "confirmedIssues": [
+    {
+      "id": "AS-01",
+      "file": "web/src/features/settings/components/sessions/SessionsTable.tsx",
+      "line": 143,
+      "rule": "mobile-information-loss",
+      "priority": "P1",
+      "owner": "sessions-table",
+      "confidence": "confirmed-source",
+      "mechanism": "ip/created_at excluded by mobileColumns; no mobilePresentation or expandable detail. DataTable adds hidden md:table-cell to headers and cells.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Two synthetic sessions with different IP/signed-in times; inspect <768px branch: both fields hidden and no record detail action."
+        ]
+      },
+      "fix": "Use existing complete mobile details/table scroll strategy; preserve five columns/filtering/paging/current exclusion.",
+      "evidence": [
+        "DataTable.tsx:733-743,1172-1183,1520-1540",
+        "SessionsTable.tsx:140-148"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-02",
+      "file": "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx",
+      "line": 50,
+      "rule": "unknown-as-never",
+      "priority": "P1",
+      "owner": "sessions-summary",
+      "confidence": "confirmed-source",
+      "mechanism": "Null lastActive becomes Never, including nonempty lists with absent/invalid activity timestamps.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Nonempty list with invalid/empty last_seen_at -> stats.lastActive null -> ready summary Never."
+        ]
+      },
+      "fix": "Localized unknown/no verified activity; do not infer never-active from absent timestamps.",
+      "evidence": [
+        "sessionStats.ts:69-77",
+        "SessionsSummaryCards.tsx:50-52,68-70"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-03",
+      "file": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+      "line": 81,
+      "rule": "destructive-readiness-not-gated",
+      "priority": "P1",
+      "owner": "sessions-page",
+      "confidence": "confirmed-source",
+      "mechanism": "Retained paused/error list still enables row/bulk entry; disabled checks only own pending id/boolean. Both dialogs omit source-readiness confirmDisabled. Confirmation is not live readiness.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Retain list with noncurrent row; set paused refresh or retained error; inspect enabled entry/confirm only, do not dispatch."
+        ]
+      },
+      "fix": "Retain metadata but apply existing capability/live-readiness guards at entry and final confirm, with truthful deferred reason. Preserve upstream safety.",
+      "evidence": [
+        "ActiveSessionsPage.tsx:68-70,81-86,203-247",
+        "SessionsTable.tsx:103-118"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-04",
+      "file": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+      "line": 204,
+      "rule": "confirmation-scope-not-revalidated",
+      "priority": "P1",
+      "owner": "sessions-page",
+      "confidence": "confirmed-source",
+      "mechanism": "Dialog open depends on saved target/boolean; refreshed open-mode/removed target does not invalidate it. Row callback checks only target nonnull; bulk no current-mode check. Captured id itself is correct, not proof of wrong-user server action.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Open synthetic row/bulk dialog; replace list by mode:open or remove selected row; original confirmation remains eligible to invoke mutate. Do not execute requests."
+        ]
+      },
+      "fix": "Pin original action/target scope and revalidate current mode/target/current-row eligibility immediately before dispatch; explain invalidated confirmation.",
+      "evidence": [
+        "ActiveSessionsPage.tsx:57-63,108-112,203-221,231-247"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-05",
+      "file": "web/src/api/hooks/useSessions.ts",
+      "line": 122,
+      "rule": "bulk-feedback-i18n-contract",
+      "priority": "P1",
+      "owner": "sessions-hooks",
+      "confidence": "confirmed-source",
+      "mechanism": "Used settings.sessions.toasts.revokedAllOthers key absent in inspected canonical/settings projection; existing canonical key is settingsSessions.toasts.revokedAllOthers with {{count}}. Hook passes English interpolated/plural-concatenated fallback but no vars.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Inspect revoked 1/3 success path and JSON lookup: used key missing, English suffix selected locally; adopting existing placeholder without vars leaves count unresolved."
+        ]
+      },
+      "fix": "Align existing canonical/runtime namespace owner and complete plural messages; pass count/format vars. Catalog projection only in separately serialized lease.",
+      "evidence": [
+        "useSessions.ts:121-125",
+        "_toastHelpers.ts:87-91",
+        "en.json:27786; JSON read shell2004",
+        "useSessions.test.tsx:36-40,231-266"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-06",
+      "file": "web/src/api/hooks/useSessions.ts",
+      "line": 121,
+      "rule": "unknown-revoked-count-as-zero",
+      "priority": "P1",
+      "owner": "sessions-hooks",
+      "confidence": "confirmed-source",
+      "mechanism": "Missing result.revoked coerced to measured 0 in success feedback; authored malformed-response test encodes this.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Synthetic result {mode:session} with count omitted -> fallback Signed out 0 other devices."
+        ]
+      },
+      "fix": "Validate safe nonnegative count; separate confirmed operation success from unknown count, never fabricate zero.",
+      "evidence": [
+        "useSessions.ts:119-125",
+        "useSessions.test.tsx:268-281"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-07",
+      "file": "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx",
+      "line": 83,
+      "rule": "number-preference-bypass",
+      "priority": "P2",
+      "owner": "sessions-breakdown",
+      "confidence": "confirmed-source",
+      "mechanism": "String(row.count) overrides MetricBar saved-number-aware fallback with verbatim ASCII.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Count1234 with saved de-DE/grouping/digit preferences still passes sublabel1234."
+        ]
+      },
+      "fix": "Existing reactive formatter for integer display; retain raw count/max.",
+      "evidence": [
+        "MetricBar.tsx:45-48,70",
+        "useNumberFormatting.ts:20-29"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-08",
+      "file": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+      "line": 104,
+      "rule": "missing-load-announcement-wiring",
+      "priority": "P2",
+      "owner": "sessions-page",
+      "confidence": "confirmed-source",
+      "mechanism": "query prop does not drive PageContainer useLoadAnnouncement; loading/error not passed and page uses no governed announcer. Summary aria-busy is not central load-to-settled announcement.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Initial pending->success: PageContainer Boolean(loading) stays false."
+        ]
+      },
+      "fix": "Use existing governed non-replacing announcement contract; do not erase preserved sections by blindly passing replacing loading.",
+      "evidence": [
+        "PageLayout.tsx:9-15",
+        "PageContainer.tsx:136-141,163,243-255"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-09",
+      "file": "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx",
+      "line": 60,
+      "rule": "fixed-decorative-accent",
+      "priority": "P2",
+      "owner": "sessions-breakdown",
+      "confidence": "confirmed-source",
+      "mechanism": "Repeated aria-hidden heading icons fixed text-cyan-300 instead of restrained theme/neutral role; one source occurrence, not three violations.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Three breakdown instances all receive fixed cyan irrespective of theme. Contrast not measured."
+        ]
+      },
+      "fix": "Existing muted/secondary/subdued role; retain decorative semantics.",
+      "evidence": [
+        "SessionBreakdownPanel.tsx:59-63",
+        "ActiveSessionsPage.tsx:135-179"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-10",
+      "file": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+      "line": 69,
+      "rule": "initial-paused-unexplained",
+      "priority": "P1",
+      "owner": "sessions-page",
+      "confidence": "confirmed-source",
+      "mechanism": "No data+paused derives initial/isRefreshBlocked. Page uses initial skeletons, only stale notice; header DataFreshnessAuto omits fetchStatus/blocked. No deferred-first-load explanation wired.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Synthetic data undefined/no error/fetchStatus paused -> skeletons, no paused/deferred cause."
+        ]
+      },
+      "fix": "Reuse trust feedback to distinguish deferred loading from active request without inventing offline cause or hiding shells.",
+      "evidence": [
+        "dataState.ts:191-211",
+        "ActiveSessionsPage.tsx:107,115-193",
+        "DataFreshness.tsx:281-285,330-346"
+      ],
+      "runtimeVerified": false
+    },
+    {
+      "id": "AS-11",
+      "file": "web/src/api/hooks/useSessions.ts",
+      "line": 66,
+      "rule": "unproved-list-as-authoritative-empty",
+      "priority": "P1",
+      "owner": "sessions-hooks",
+      "confidence": "confirmed-source",
+      "mechanism": "Null/missing sessions payload normalized to successful empty session list -> zero counts/no sessions assurance. Authored tests encode malformed/null success.",
+      "repro": {
+        "status": "NOTRUN source-derived synthetic recipe; never live requests",
+        "steps": [
+          "Synthetic null or {mode:session} without sessions -> sessions[] -> zero metrics and no-active-sessions copy."
+        ]
+      },
+      "fix": "Validate discriminated payload; preserve unknown/malformed versus genuine explicit empty, AUTH_MODE_OPEN and retained data.",
+      "evidence": [
+        "useSessions.ts:63-73",
+        "useSessions.test.tsx:122-141",
+        "SessionsSummaryCards.tsx:63-70",
+        "SessionsTable.tsx:148"
+      ],
+      "runtimeVerified": false
+    }
+  ],
+  "candidateIssues": [
+    {
+      "id": "ASC-01",
+      "file": "web/src/components/data-display/MetricBar.tsx",
+      "line": 87,
+      "owner": "shared-metric-bar",
+      "rule": "functional-color-gradient",
+      "mechanism": "Gradient appends99 to light-dark(...) from tokens.ts:399, producing light-dark(...)99. Test asserts string, not native parsing.",
+      "needs": "Separate native CSS parsing/rendering evidence; existing fill=solid caller API available.",
+      "status": "unproved-native"
+    },
+    {
+      "id": "ASC-02",
+      "file": "web/src/features/settings/components/sessions/SessionsTable.tsx",
+      "line": 107,
+      "owner": "sessions-table",
+      "rule": "mobile-target-declaration",
+      "mechanism": "sm button h-9=36px at16px root; header wrapped md min-h-10=40px. MobileActive target boost requires mobilePresentation absent here.",
+      "needs": "Actual cascade/rectangles/spacing/200% text verification; no physical size acceptance.",
+      "status": "unproved-native"
+    },
+    {
+      "id": "ASC-03",
+      "file": "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx",
+      "line": 51,
+      "owner": "sessions-summary",
+      "rule": "saved-time-presentation-contract",
+      "mechanism": "Relative summary body+absolute context and absolute table hardselected; useDateFormat respects locale/tz but not time_format_default. AppearanceSettings:34-38 primarily documents TimeStamp preference.",
+      "needs": "Confirm intended page-specific override before classifying defect; no speculative date/12h setting invented.",
+      "status": "unproved-contract"
+    },
+    {
+      "id": "ASC-04",
+      "file": "web/src/features/settings/pages/ActiveSessionsPage.tsx",
+      "line": 203,
+      "owner": "native-qa",
+      "rule": "mounted-a11y-mobile-matrix",
+      "mechanism": "Shared danger/modal/focus and localized names present; actual keyboard/restore/topmost nested reauth/contrast/RTL/zoom/reduced motion/safe areas not exercised.",
+      "needs": "Separately authorized safe synthetic native acceptance only, never real sessions/auth/revocations.",
+      "status": "NOTRUN"
+    },
+    {
+      "id": "ASC-05",
+      "file": "web/src/api/hooks/useSessions.ts",
+      "line": 28,
+      "owner": "auth-query-integration",
+      "rule": "account-cache-identity-scope",
+      "mechanism": "Constant sessions/list key; auth cache clear/rekey lifecycle not traced.",
+      "needs": "Existing auth/query owner read-only review if needed; not proof of cross-account leakage.",
+      "status": "unproved-integration"
+    }
+  ],
+  "checks": {
+    "rawLog": "web/logs/phase6-qa-settings-active-sessions.log",
+    "failures": [
+      {
+        "shell": "1752",
+        "exit": 1,
+        "detail": "rg missing"
+      },
+      {
+        "shell": "1753",
+        "exit": 1,
+        "detail": "rg missing after page hash/read"
+      },
+      {
+        "shell": "1911",
+        "exit": 0,
+        "detail": "nonterminating missing guessed ui/DateTime path; actual data-display/format source subsequently read"
+      },
+      {
+        "shell": "1991",
+        "exit": 1,
+        "detail": "nested here-string failed/no stdout; corrected JSON read2004 exit0"
+      },
+      {
+        "shell": "2129",
+        "exit": 1,
+        "detail": "Windows206 rejected overlong artifact command/no execution"
+      },
+      {
+        "shell": "2154",
+        "exit": 1,
+        "detail": "uniqueness assertion saw added actor mapping plus task row; corrected exact type filter, no source write"
+      },
+      {
+        "shell": "2220",
+        "exit": 1,
+        "detail": "Finalization deadline assertion failed before report write. Return deadline missed; recorded actual release, not backdated."
+      }
+    ],
+    "notRun": [
+      "tests/lint/build/global TSC",
+      "helpers/preservation CLI/passing reruns",
+      "browser/API/native/auth/session/token/identity requests/revocations",
+      "installs/servers/subagents/Git writes"
+    ],
+    "finalPinCheck": {
+      "status": "PASS",
+      "matched": 39,
+      "total": 39,
+      "queueTaskRowMatch": true,
+      "sourceCoordinatesValid": true
+    },
+    "jsonParse": "PASS on-disk reparse after final write"
+  },
+  "evidenceLimits": {
+    "sourceOnly": true,
+    "repro": "Safe synthetic source-derived recipes NOTRUN; no observed browser failure claim",
+    "historical": "All past passes/context historical only",
+    "integrity": "Initial read-only Git status deviated from worker no-Git convention; no Git writes. Inherited dirty source preserved.",
+    "concurrency": "Queue row coordinates changed; exact item/type used. Additional support hashes at inspection time, not session-start lock."
+  },
+  "released": {
+    "artifacts": true,
+    "commands": true,
+    "sourceWriteClaim": "NONE; source was always read-only",
+    "remainingOwnCommands": "NONE after this command exits"
+  },
+  "confirmedIssueCount": 11,
+  "candidateCount": 5,
+  "summary": {
+    "byRule": {
+      "mobile-information-loss": 1,
+      "unknown-as-never": 1,
+      "destructive-readiness-not-gated": 1,
+      "confirmation-scope-not-revalidated": 1,
+      "bulk-feedback-i18n-contract": 1,
+      "unknown-revoked-count-as-zero": 1,
+      "number-preference-bypass": 1,
+      "missing-load-announcement-wiring": 1,
+      "fixed-decorative-accent": 1,
+      "initial-paused-unexplained": 1,
+      "unproved-list-as-authoritative-empty": 1
+    },
+    "byPriority": {
+      "P1": 8,
+      "P2": 3
+    },
+    "byFile": {
+      "web/src/features/settings/components/sessions/SessionsTable.tsx": 1,
+      "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx": 1,
+      "web/src/features/settings/pages/ActiveSessionsPage.tsx": 4,
+      "web/src/api/hooks/useSessions.ts": 3,
+      "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx": 2
+    },
+    "confirmedOwnerScopes": 5,
+    "priority": "Source trust/readiness/confirmation/outcome/mobile security first; formatting/hierarchy/announcements next."
+  },
+  "needs": [
+    {
+      "owner": "sessions-table",
+      "files": [
+        "web/src/features/settings/components/sessions/SessionsTable.tsx"
+      ],
+      "issueIds": [
+        "AS-01"
+      ],
+      "queueDisposition": "Parent needs NEW narrow source/test item; no matching active session-specific fix found; never redispatch completed Phase5 migration."
+    },
+    {
+      "owner": "sessions-page",
+      "files": [
+        "web/src/features/settings/pages/ActiveSessionsPage.tsx"
+      ],
+      "issueIds": [
+        "AS-03",
+        "AS-04",
+        "AS-08",
+        "AS-10"
+      ],
+      "queueDisposition": "Parent needs NEW narrow source/test item; no matching active session-specific fix found; never redispatch completed Phase5 migration."
+    },
+    {
+      "owner": "sessions-summary",
+      "files": [
+        "web/src/features/settings/components/sessions/SessionsSummaryCards.tsx"
+      ],
+      "issueIds": [
+        "AS-02"
+      ],
+      "queueDisposition": "Parent needs NEW narrow source/test item; no matching active session-specific fix found; never redispatch completed Phase5 migration."
+    },
+    {
+      "owner": "sessions-breakdown",
+      "files": [
+        "web/src/features/settings/components/sessions/SessionBreakdownPanel.tsx"
+      ],
+      "issueIds": [
+        "AS-07",
+        "AS-09"
+      ],
+      "queueDisposition": "Parent needs NEW narrow source/test item; no matching active session-specific fix found; never redispatch completed Phase5 migration."
+    },
+    {
+      "owner": "sessions-hooks",
+      "files": [
+        "web/src/api/hooks/useSessions.ts"
+      ],
+      "issueIds": [
+        "AS-05",
+        "AS-06",
+        "AS-11"
+      ],
+      "queueDisposition": "Parent needs NEW narrow source/test item; no matching active session-specific fix found; never redispatch completed Phase5 migration."
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "owner": "existing canonical/runtime catalog integration",
+      "need": "AS-05 exact key/projection/plural integration only with serialized lease, no QA catalog writes"
+    },
+    {
+      "owner": "MetricBar existing owner",
+      "need": "ASC-01 native candidate only; phase3-metric-bar stays completed, not reopened by this report"
+    },
+    {
+      "owner": "phase6-fix-relative-future-dates",
+      "need": "Already active dateFormat root; do not duplicate future-relative work"
+    }
+  ],
+  "preservation": {
+    "pageLineCount": 251,
+    "pageAndSessionDependencies": 783,
+    "includingHookSourceLines": 917,
+    "changedByThisTask": false,
+    "sectionCounts": {
+      "normalSections": 3,
+      "summaryMetrics": 4,
+      "breakdownPanels": 3,
+      "tableColumns": 5,
+      "openModeNotice": 1,
+      "dangerConfirmations": 2
+    },
+    "sections": [
+      "Session overview",
+      "Device breakdown: browser/platform/exact IP",
+      "Active devices",
+      "Open-mode capability notice",
+      "Per-row/bulk confirmation"
+    ],
+    "actions": [
+      "Copy link/query freshness/refetch",
+      "Shared loaded-row search/value filters/column/layout/page-size persistence/pagination",
+      "Per-row sign-out only non-current sessions",
+      "Conditional bulk all-others sign-out",
+      "Confirm/cancel, nonsilenceable danger, busy dismissal protection",
+      "Fatal/empty retry and summary detail/source context"
+    ],
+    "dataBehavior": [
+      "Keep all rows/groups/counts/current flags/raw timestamps and stable table identity",
+      "UA parsing best-effort; exact-IP grouping not reputation/geolocation",
+      "Genuine explicit empty/zero distinct from missing list/count/time",
+      "Fatal only without retained data; retain refresh-error/paused content",
+      "No optimistic removal/offline queue; success-only invalidation/broadcast/toasts",
+      "No vehicle/date picker/backend capability/SI mutation invented"
+    ]
+  },
+  "states": {
+    "initial": "All normal shells retained, summary suppression,168px/240px skeletons",
+    "fatal": "Per-section QueryError/retry; shells retained",
+    "retained": "Rows/metrics/groups survive refresh error; stale notice/retained summary",
+    "initialPaused": "AS-10 deferred reason absent",
+    "retainedPaused": "Payload retained, generic stale notice; action readiness issue AS-03",
+    "unknown": "AS-02/06/11 absent time/count/list becomes assurance",
+    "empty": "Valid [] retains all normal shells/empty copy; no bulk action",
+    "open": "Intentional unavailable-capability notice not null-hidden section",
+    "mutation": "Correct captured row id, own pending flags, no optimistic removal; onSettled closes for either outcome; auth/backend outcomes unverified"
+  },
+  "preferences": {
+    "localeTimezone": "useDateFormat binds effective locale/tz and validates mode; invalid timestamps em dash; source wiring not saved-setting runtime acceptance",
+    "number": "Shared operational metric/MetricBar preferences present; explicit String(count) bypass AS-07",
+    "savedDateTimeMode": "ASC-03 TimeStamp versus page override unresolved; no invented 12/24h/date-pattern setting",
+    "savedChoicesChanged": false
+  },
+  "responsive": {
+    "source": [
+      "one-column/md-two/xl-three",
+      "min-w-0/responsive padding",
+      "wrapLabel",
+      "Mobile allowlist drops fields without details AS-01"
+    ],
+    "missionWidthsNotRun": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "nativeMeasured": false
+  },
+  "accessibility": {
+    "source": [
+      "Named regions/headings; text current-device badge",
+      "Localized revoke names, hidden decorative icons",
+      "Existing table/modal focus and busy owners",
+      "MetricBar numeric bounds/shared reduced-motion API"
+    ],
+    "issueIds": [
+      "AS-08"
+    ],
+    "notRun": [
+      "keyboard/focus/restore/nested step-up",
+      "actual announcements/touch rectangles/contrast/forced-colors",
+      "RTL/200% text/safe-area/chrome/OS motion"
+    ]
+  },
+  "dataSources": [
+    {
+      "hook": "useSessions",
+      "method": "GET",
+      "path": "/auth/sessions",
+      "scope": "current account latest list",
+      "policy": "AbortSignal, sessions/list key, staleTime30000, focus-refetchfalse, real errors propagate/AUTH_MODE_OPEN discriminant",
+      "requestsExecuted": 0
+    },
+    {
+      "hook": "useRevokeSession",
+      "method": "DELETE",
+      "path": "/auth/sessions/{encoded id}",
+      "requestsExecuted": 0
+    },
+    {
+      "hook": "useRevokeAllOtherSessions",
+      "method": "DELETE",
+      "path": "/auth/sessions/all-others",
+      "requestsExecuted": 0,
+      "serverExclusion": "Documented, not verified here"
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "Summary -> existing SettingsSummaryBrief/OperationalBrief/useOperationalMetrics",
+    "Three breakdown -> MetricBar",
+    "SessionsTable -> DataTable settings:active-sessions",
+    "OpenModeNotice -> existing GlassPanel/EmptyState",
+    "Two danger ConfirmDialog/Modal; no silenceKey",
+    "Typed hooks/deriveDataState/useDateFormat/shared number/motion feedback"
+  ],
+  "tests": {
+    "status": "NOTRUN",
+    "runnerDiscovery": null,
+    "commandsExecuted": 0,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "runnerSkipped": 0,
+    "plainDeclarations": 94,
+    "parameterizedDeclarations": 6,
+    "sourceInventory": {
+      "web/src/features/settings/pages/ActiveSessionsPage.test.tsx": {
+        "plainItDeclarations": 7,
+        "parameterizedDeclarations": 0,
+        "status": "NOTRUN"
+      },
+      "web/src/api/hooks/useSessions.test.tsx": {
+        "plainItDeclarations": 15,
+        "parameterizedDeclarations": 0,
+        "status": "NOTRUN"
+      },
+      "web/src/features/settings/components/sessions/deviceLabel.test.ts": {
+        "plainItDeclarations": 12,
+        "parameterizedDeclarations": 5,
+        "status": "NOTRUN"
+      },
+      "web/src/features/settings/components/sessions/SessionBreakdownPanel.test.tsx": {
+        "plainItDeclarations": 9,
+        "parameterizedDeclarations": 0,
+        "status": "NOTRUN"
+      },
+      "web/src/features/settings/components/sessions/SessionsOpenModeNotice.test.tsx": {
+        "plainItDeclarations": 8,
+        "parameterizedDeclarations": 0,
+        "status": "NOTRUN"
+      },
+      "web/src/features/settings/components/sessions/SessionsSummaryCards.test.tsx": {
+        "plainItDeclarations": 6,
+        "parameterizedDeclarations": 0,
+        "status": "NOTRUN"
+      },
+      "web/src/features/settings/components/sessions/SessionsTable.test.tsx": {
+        "plainItDeclarations": 17,
+        "parameterizedDeclarations": 0,
+        "status": "NOTRUN"
+      },
+      "web/src/features/settings/components/sessions/sessionStats.test.ts": {
+        "plainItDeclarations": 20,
+        "parameterizedDeclarations": 1,
+        "status": "NOTRUN"
+      }
+    },
+    "limits": "Source declarations not discovered/expanded/executed cases. i18n/date/request stubs not real catalog/preferences/session acceptance."
+  },
+  "engineeringRuleChecks": {
+    "receipt": "Scoped PowerShell Select-String raw command/output in log",
+    "regexCandidateMatches": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidate": 3,
+      "page-wrapper": 3,
+      "fetch-useeffect": 0
+    },
+    "exceptions": [
+      "PageLayout wraps existing PageContainer",
+      "Proper UA names/technical IP/em dash are data",
+      "Translated English defaults permitted; String(count) formatting issue",
+      "Shared building-block HTML expected; computed inline styles allowed",
+      "Capability open mode/inapplicable bulk action not null-hidden section"
+    ],
+    "limits": "No zero-total violations/typecheck pass claim; backend Go outside scope; regex searches are bounded candidates."
+  },
+  "ownerDeduplication": {
+    "count": 5,
+    "method": "Exact file/item and bounded session/shared term queue searches in log",
+    "preserved": "Completed original migration, loading fixtures, MetricBar/date hooks remain completed; already active phase6-fix-relative-future-dates root not duplicated. Parent alone queues needs."
+  }
+}
