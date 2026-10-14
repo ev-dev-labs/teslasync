@@ -6,6 +6,7 @@ import type { ConnectionPool, DBStats, MigrationStatus } from '@/types/admin';
 import type { MetricDisplayOptions } from '@/lib/metric-reference';
 import { fmtNumber } from '@/lib/numberFormat';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
+import { useDateFormat } from '@/hooks/useDateFormat';
 import { sourceBriefStatus } from '@/features/admin/components/statstrip-api-quality/sourceBriefStatus';
 
 const databaseSizeDisplay: NonNullable<MetricDisplayOptions['formatter']> = (raw, preferences) => {
@@ -31,20 +32,26 @@ interface Props {
 
 export function DBHealthSummary(props: Props) {
   const { t } = useTranslation();
+  const { formatDateTime } = useDateFormat();
   const sources = [props.stats, props.migration, props.pool];
   const labels = [
     t('dataSources.labels.databaseStatistics', 'Database statistics'),
     t('dataSources.labels.migrationStatus', 'Migration status'),
     t('dataSources.labels.connectionPool', 'Connection pool'),
   ];
-  const periods: Extract<StatPeriod, { kind: 'snapshot' }>[] = sources.map((state, index) => ({
-    kind: 'snapshot', observedAt: state.updatedAt == null ? null : new Date(state.updatedAt).toISOString(),
-    label: t('dbHealth.summary.snapshot', '{{source}} snapshot', { source: labels[index] }),
-    provenance: state.updatedAt == null
-      ? t('dbHealth.summary.unknownObservation', 'Last successful fetch time unknown; this source is independent of the other database sources.')
-      : t('dbHealth.summary.observed', 'Last successful fetch: {{time}}. This source is independent of the other database sources.',
-        { time: new Date(state.updatedAt).toISOString() }),
-  }));
+  const periods: Extract<StatPeriod, { kind: 'snapshot' }>[] = sources.map((state, index) => {
+    const observation = state.updatedAt == null ? null : new Date(state.updatedAt);
+    const observedAt = observation != null && Number.isFinite(observation.getTime())
+      ? observation.toISOString() : null;
+    return {
+      kind: 'snapshot', observedAt,
+      label: t('dbHealth.summary.snapshot', '{{source}} snapshot', { source: labels[index] }),
+      provenance: observedAt == null
+        ? t('dbHealth.summary.unknownObservation', 'Last successful fetch time unknown; this source is independent of the other database sources.')
+        : t('dbHealth.summary.observed', 'Last successful fetch: {{time}}. This source is independent of the other database sources.',
+          { time: formatDateTime(observedAt) }),
+    };
+  });
   const storage: StatMetric[] = [
     { metricId: 'bytes', occurrenceId: 'db-total-size', rawValue: props.sizeBytes,
       display: { formatter: databaseSizeDisplay },
