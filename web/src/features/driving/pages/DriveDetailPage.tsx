@@ -5,13 +5,12 @@ import { ArrowLeft, Play, Share2 } from 'lucide-react';
 import { PageLayout } from '@/components/layout';
 import { BUTTON_BASE, BUTTON_VARIANTS, Button, Icon, PrintButton, Text } from '@/components/ui';
 import { DataProvenanceBadge } from '@/components/data-display';
-import { AlertBanner, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { AlertBanner, DataSourceNotice, QueryError, resolveDataSourceStatus, StaleRefreshWarning } from '@/components/feedback';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
 import { AIDriveCoaching } from '@/components/ai';
 import { AISpeedProfileInsights } from '@/components/ai';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
-import { useTimezone } from '@/lib/timezone';
 import { cn } from '@/lib/cn';
 import { useFsdInsightsForDrive } from '@/api/hooks/useAnalytics';
 import { DriveReportContent } from '../components/layout-modernization';
@@ -38,15 +37,25 @@ export default function DriveDetailPage() {
   const { t } = useTranslation();
   usePageTitle(t('driveDetail.title', 'Drive detail'));
   const {
-    drive, vehicle, isLoading, driveQuery, chartData, stats, routeSource,
+    drive, vehicle, timezone, driveQuery, chartData, stats, routeSource,
     trail, startPos, endPos, centerPos, speedSegments, speedHistData,
   } = useDriveDetailData(id ?? '');
   const driveState = useDataState(driveQuery, { provenance: 'historical' });
-  const timezone = useTimezone('vehicle');
   const fsdQuery = useFsdInsightsForDrive(
     drive ? String(drive.vehicleId) : undefined, id, timezone, true,
   );
   const fsdState = useDataState(fsdQuery, { provenance: 'historical' });
+  const driveSource = { id: 'drive', label: t('driveDetail.title', 'Drive detail'), query: driveQuery };
+  const fsdSource = {
+    id: 'fsd', label: t('driveDetail.fsd.title', 'Supervised driving'),
+    query: fsdQuery, enabled: drive != null && !!id,
+  };
+  const driveReadiness = resolveDataSourceStatus(driveSource);
+  const fsdReadiness = resolveDataSourceStatus(fsdSource);
+  const isLoading = driveReadiness === 'loading';
+  const coldPausedSources = [driveSource, fsdSource].filter(
+    source => source.query.data === undefined && source.query.fetchStatus === 'paused',
+  );
   const contributingDrives = fsdState.data?.drive_analytics?.contributing_drives ?? [];
   const fsdInsight = contributingDrives.find((candidate) => candidate.drive_id === drive?.id);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -123,7 +132,8 @@ export default function DriveDetailPage() {
       {driveState.fatalError ? (
         <QueryError error={driveState.fatalError} onRetry={() => { void driveQuery.refetch(); }} />
       ) : null}
-      {!isLoading && !drive && !driveState.fatalError ? (
+      <DataSourceNotice sources={coldPausedSources} />
+      {driveReadiness === 'ready' && !drive && !driveState.fatalError ? (
         <AlertBanner variant="info">
           {t('driveDetail.notFound', 'This drive could not be found. It may have been deleted, or the link is incorrect.')}
         </AlertBanner>
@@ -142,7 +152,7 @@ export default function DriveDetailPage() {
         meaningful={hasMeaningfulDriveStats}
         sections={reportSections}
         fsdInsight={fsdInsight}
-        fsdLoading={fsdState.status === 'initial'}
+        fsdLoading={fsdSource.enabled && fsdReadiness === 'loading'}
         fsdError={fsdState.fatalError}
         speedInsights={<AISpeedProfileInsights driveId={drive ? id : undefined} />}
         coaching={<AIDriveCoaching driveId={drive ? id : undefined} />}

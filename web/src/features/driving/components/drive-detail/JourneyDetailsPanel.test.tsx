@@ -6,8 +6,7 @@
  * two endpoint columns (Start / Destination), each composed of a labelled
  * header row, an address-or-coordinates line, a timestamp line and a battery
  * line. This suite pins the branches + the hardening fixes rather than smoke
- * rendering, and never touches the network (the component has no data source of
- * its own — everything arrives via the `drive` prop):
+ * rendering, and never touches the network (the record vehicle lookup is mocked):
  *
  *   1. formatCoordinates — N/E vs S/W hemispheres; the absolute-value fix (a
  *      southern/western pair must read "37.77°S", never "-37.77°S"); the
@@ -17,26 +16,59 @@
  *      icons all carrying aria-hidden so only the text labels are announced.
  *   3. Start endpoint — address preferred over coordinates; coordinate fallback;
  *      the 0°-coordinate regression; the "No address data" placeholder; the
- *      start timestamp threaded into <DateTime in="vehicle">; and the battery %
+ *      start timestamp formatted in the record vehicle zone; and the battery %
  *      (including the "?" null-safety fallback).
  *   4. Destination (ended) — address + end timestamp; the "No address data" vs
  *      "In progress" distinction for an ended-but-address-less drive; battery %.
  *   5. In-progress drive — both destination slots read "In progress"; NO end
- *      <DateTime> is emitted (only the start one); and a live position still
+ *      timestamp is emitted; and a live position still
  *      surfaces coordinates while the timestamp slot stays "In progress".
  *
  * Per the repo convention (see DriveDetailHeader.test.tsx / ElevationChart.test.tsx):
  * react-i18next is stubbed to echo the English fallback so asserted copy is
- * decoupled from the locale bundle; <FadeIn> is flattened; and <DateTime> is a
- * light double surfacing value + tz-mode so the timestamp composition is
- * observable without the timezone/settings subtree. The real <GlassPanel> and
- * the pure fmtNumber/isFiniteNumber modules render for real.
+ * decoupled from the locale bundle and <FadeIn> is flattened. Saved settings
+ * and the record vehicle are controlled; the real date formatters, GlassPanel
+ * and pure fmtNumber/isFiniteNumber modules render for real.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 
 import type { DriveDetail } from '@/types/driving';
+import { formatDateTime } from '@/lib/dateFormat';
+
+const timeState = vi.hoisted(() => ({
+  timezone: 'America/New_York' as string | undefined,
+  userTimezone: 'Asia/Tokyo',
+  mode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+  locale: 'de-DE',
+  vehicleId: '',
+}));
+
+vi.mock('@/api/hooks/useVehicles', () => ({
+  useVehicle: (id: string) => {
+    timeState.vehicleId = id;
+    return { data: { timezone: timeState.timezone } };
+  },
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: {
+      locale: timeState.locale,
+      timezone_user: timeState.userTimezone,
+      tz_display_default: timeState.mode,
+      decimal_precision: 2,
+    },
+    locale: timeState.locale,
+    decimals: 2,
+  }),
+}));
+
+beforeEach(() => {
+  timeState.timezone = 'America/New_York';
+  timeState.mode = 'vehicle';
+});
 
 // Echo the English fallback (2nd arg) so assertions read real copy.
 vi.mock('react-i18next', () => ({
@@ -50,21 +82,6 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children, className }: { children?: ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
-  ),
-}));
-
-// <DateTime> double: surface value + tz mode so the composition (which timestamp
-// renders where, and that an in-progress drive emits NO end timestamp) is
-// deterministically assertable without the timezone/settings machinery.
-vi.mock('@/components/data-display', () => ({
-  DateTime: ({ value, in: tzMode }: { value: string | Date | null | undefined; in?: string }) => (
-    <time
-      data-testid="dt"
-      data-value={typeof value === 'string' ? value : ''}
-      data-in={tzMode ?? ''}
-    >
-      {typeof value === 'string' ? value : ''}
-    </time>
   ),
 }));
 
@@ -202,12 +219,11 @@ describe('JourneyDetailsPanel — start endpoint', () => {
     expect(within(startColumn()).getByText('No address data')).toBeInTheDocument();
   });
 
-  it('threads the start timestamp into <DateTime> in the vehicle timezone', () => {
+  it('formats the start timestamp in the loaded drive vehicle timezone', () => {
     renderPanel();
 
-    const dt = within(startColumn()).getByTestId('dt');
-    expect(dt).toHaveAttribute('data-value', START_TS);
-    expect(dt).toHaveAttribute('data-in', 'vehicle');
+    expect(startColumn()).toHaveTextContent(formatDateTime(START_TS, { locale: 'de-DE', tz: 'America/New_York' }));
+    expect(timeState.vehicleId).toBe('7');
   });
 
   it('renders the start battery percentage', () => {
@@ -231,7 +247,7 @@ describe('JourneyDetailsPanel — destination endpoint (ended drive)', () => {
 
     const col = destColumn();
     expect(within(col).getByText('500 Center Rd, Palo Alto')).toBeInTheDocument();
-    expect(within(col).getByTestId('dt')).toHaveAttribute('data-value', END_TS);
+    expect(col).toHaveTextContent(formatDateTime(END_TS, { locale: 'de-DE', tz: 'America/New_York' }));
   });
 
   it('renders "No address data" (not "In progress") when an ended drive lacks an address and coordinates', () => {
@@ -259,11 +275,36 @@ describe('JourneyDetailsPanel — in-progress drive', () => {
     expect(within(destColumn()).getAllByText('In progress')).toHaveLength(2);
   });
 
-  it('emits only the start timestamp (no end <DateTime>) for an in-progress drive', () => {
+  it('emits only the start timestamp for an in-progress drive', () => {
     renderPanel({ endTs: null });
 
-    expect(screen.getAllByTestId('dt')).toHaveLength(1);
-    expect(within(destColumn()).queryByTestId('dt')).toBeNull();
+    expect(startColumn()).toHaveTextContent(formatDateTime(START_TS, { locale: 'de-DE', tz: 'America/New_York' }));
+    expect(destColumn()).toHaveTextContent('In progress');
+  });
+
+  describe('JourneyDetailsPanel — saved timezone and locale', () => {
+    it.each(['vehicle', 'user', 'utc'] as const)('respects %s mode across day boundaries', (mode) => {
+      timeState.mode = mode;
+      const startTs = '2026-01-02T00:30:00Z';
+      const endTs = '2026-01-02T05:30:00Z';
+      renderPanel({ startTs, endTs });
+      const tz = mode === 'vehicle' ? 'America/New_York' : mode === 'user' ? 'Asia/Tokyo' : 'UTC';
+      expect(startColumn()).toHaveTextContent(formatDateTime(startTs, { locale: 'de-DE', tz }));
+      expect(destColumn()).toHaveTextContent(formatDateTime(endTs, { locale: 'de-DE', tz }));
+    });
+
+    it('falls back to the saved user zone before the vehicle timezone is available', () => {
+      timeState.timezone = undefined;
+      renderPanel();
+      expect(startColumn()).toHaveTextContent(formatDateTime(START_TS, { locale: 'de-DE', tz: 'Asia/Tokyo' }));
+    });
+
+    it('keeps invalid and missing dates unknown rather than inventing timestamps', () => {
+      renderPanel({ startTs: '', endTs: 'invalid' });
+      expect(startColumn()).toHaveTextContent('—');
+      expect(destColumn()).toHaveTextContent('—');
+      expect(destColumn()).not.toHaveTextContent('In progress');
+    });
   });
 
   it('still surfaces destination coordinates from a live position while the timestamp stays "In progress"', () => {

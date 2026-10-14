@@ -2,7 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { Navigation, MapPin, Flag } from 'lucide-react';
 import { GlassPanel, PanelTitle, Table } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { DateTime } from '@/components/data-display';
+import { useVehicle } from '@/api/hooks/useVehicles';
+import { useSettings } from '@/hooks/useSettings';
+import { useDateFormat } from '@/hooks/useDateFormat';
+import { resolveTimezone } from '@/lib/timezone';
 import { fmtNumber, isFiniteNumber } from '@/lib/numberFormat';
 import type { DriveDetail } from '@/types/driving';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -36,6 +39,14 @@ export function formatCoordinates(
 export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const { data: vehicle } = useVehicle(String(drive.vehicleId));
+  const { settings } = useSettings();
+  const { formatDateTime } = useDateFormat();
+  const timezone = resolveTimezone(
+    settings.tz_display_default === 'user' || settings.tz_display_default === 'utc'
+      ? settings.tz_display_default : 'vehicle',
+    vehicle?.timezone, settings.timezone_user,
+  );
 
   const startCoords = formatCoordinates(drive.startLat, drive.startLon);
   const endCoords = formatCoordinates(drive.endLat, drive.endLon);
@@ -61,7 +72,7 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
                   : t('driveDetail.noAddress', 'No address data')}
             </p>
             <p className="text-xs text-[var(--text-muted)]">
-              <DateTime value={drive.startTs} in="vehicle" />
+              <span title={drive.startTs || undefined}>{formatDateTime(drive.startTs, { tz: timezone })}</span>
             </p>
             {drive.startAddress && startCoords ? <p className="mt-1 font-mono text-xs text-[var(--text-muted)]">{startCoords}</p> : null}
             <p className="mt-2 text-xs text-[var(--text-secondary)]">{t('driveDetail.battery', 'Battery')}: {drive.startBatteryPct != null ? `${fmtNumber(drive.startBatteryPct)}%` : '—'}</p>
@@ -75,7 +86,7 @@ export function JourneyDetailsPanel({ drive }: JourneyDetailsPanelProps) {
             </p>
             <p className="text-xs text-[var(--text-muted)]">
               {hasEnded
-                ? <DateTime value={drive.endTs} in="vehicle" />
+                ? <span title={drive.endTs || undefined}>{formatDateTime(drive.endTs, { tz: timezone })}</span>
                 : t('driveDetail.inProgress', 'In progress')}
             </p>
             <p className="text-xs text-[var(--text-secondary)]">

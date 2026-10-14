@@ -41,8 +41,11 @@ import { renderHook } from '@testing-library/react';
 
 import type { UnitPref } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { DriveDetail, DriveTelemetryPoint, DrivePosition } from '@/types/driving';
 import type { Vehicle } from '@/types/vehicle';
+import { formatTime } from '@/lib/dateFormat';
+import type { FormatOptions } from '@/lib/dateFormat';
 
 // ── Mutable holder shared with the hoisted vi.mock factories. Tests mutate
 //    H.drive / H.unitPrefs / H.error etc. before rendering; each mock reads the
@@ -52,10 +55,14 @@ const H = vi.hoisted(() => ({
   drive: undefined as DriveDetail | undefined,
   isLoading: false,
   error: null as unknown,
-  vehicle: undefined as unknown,
+  vehicle: undefined as Vehicle | undefined,
   vehicleIdArg: '' as string,
   unitPrefs: null as unknown as UnitPref,
   formatTime: (v: unknown): string => (v == null ? '—' : String(v)),
+  realDates: false,
+  locale: 'de-DE',
+  mode: 'vehicle' as 'vehicle' | 'user' | 'utc',
+  userTimezone: 'Asia/Tokyo',
 }));
 
 vi.mock('@/api/hooks/useDriving', () => ({
@@ -74,7 +81,19 @@ vi.mock('@/hooks/useUnits', () => ({
 }));
 
 vi.mock('@/hooks/useDateFormat', () => ({
-  useDateFormat: () => ({ formatTime: H.formatTime }),
+  useDateFormat: () => ({
+    formatTime: H.realDates
+      ? (value: string | Date | null | undefined, override?: FormatOptions) =>
+        formatTime(value, { locale: H.locale, tz: 'America/Los_Angeles', ...override })
+      : H.formatTime,
+  }),
+}));
+
+vi.mock('@/hooks/useSettings', () => ({
+  useSettings: () => ({
+    settings: { timezone_user: H.userTimezone, tz_display_default: H.mode, locale: H.locale },
+    locale: H.locale,
+  }),
 }));
 
 import { useDriveDetailData } from './useDriveDetailData';
@@ -213,6 +232,39 @@ beforeEach(() => {
   H.vehicle = undefined;
   H.vehicleIdArg = '';
   H.unitPrefs = METRIC;
+  H.realDates = false;
+  H.mode = 'vehicle';
+  H.userTimezone = 'Asia/Tokyo';
+});
+
+describe('useDriveDetailData — record timezone and saved display preferences', () => {
+  it.each(['vehicle', 'user', 'utc'] as const)('formats telemetry in %s mode without changing business timezone', (mode) => {
+    H.realDates = true;
+    H.mode = mode;
+    H.vehicle = { timezone: 'America/New_York' } as Vehicle;
+    const instant = '2026-01-02T00:30:00Z';
+    const { result } = setup(drive({ telemetry: [tele({ timestamp: instant }), tele({ timestamp: 'invalid' })] }));
+    const tz = mode === 'vehicle' ? 'America/New_York' : mode === 'user' ? 'Asia/Tokyo' : 'UTC';
+    expect(result.current.timezone).toBe('America/New_York');
+    expect(result.current.chartData.map(row => row.time)).toEqual([
+      formatTime(instant, { locale: 'de-DE', tz }), '—',
+    ]);
+  });
+
+  it('formats position aliases across midnight and leaves missing dates unknown', () => {
+    H.realDates = true;
+    H.vehicle = { timezone: 'Pacific/Auckland' } as Vehicle;
+    const { result } = setup(drive({ positions: [
+      pos({ timestamp: '2026-01-01T23:30:00Z' }),
+      pos({ timestamp: undefined }),
+    ] }));
+    expect(result.current.chartData.map(row => row.time)).toEqual(['12:30', '—']);
+  });
+
+  it('uses the saved user zone when the record vehicle zone is unavailable', () => {
+    const { result } = setup(drive());
+    expect(result.current.timezone).toBe('Asia/Tokyo');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -366,6 +418,90 @@ describe('useDriveDetailData — speed-coloured segments', () => {
     expect(segs[0].positions).toEqual([
       [1, 1],
       [2, 2],
+    ]);
+  });
+});
+
+describe('useDriveDetailData — unknown route speed', () => {
+  it.each([null, undefined, NaN, Infinity, -Infinity])(
+    'keeps absent/invalid speed %s unknown in telemetry and position routes',
+    (speed) => {
+      for (const source of ['telemetry', 'positions'] as const) {
+        const samples = [
+          { latitude: 1, longitude: 1, speed: 0, createdAt: 'start' },
+          { latitude: 2, longitude: 2, speed, createdAt: 'end' },
+        ];
+        const { result, unmount } = setup(drive({
+          telemetry: source === 'telemetry' ? samples.map((sample) => tele(sample)) : [],
+          positions: source === 'positions' ? samples.map((sample) => pos(sample)) : [],
+        }));
+        expect(result.current.routeSource[1]).toEqual({
+          lat: 2, lng: 2, speed: null, timestamp: 'end',
+        });
+        expect(result.current.chartData[1].speed).toBeNull();
+        expect(result.current.speedSegments[0]).toEqual({
+          positions: [[1, 1], [2, 2]], color: chartTokens.tooltipMutedText,
+        });
+        expect(result.current.speedHistData).toEqual([
+          { range: `${fmtNumber(0)}–${fmtNumber(20)}`, pct: 100 },
+        ]);
+        unmount();
+      }
+    },
+  );
+
+  it.each([0, -0, -1.25, 0.125, SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS])(
+    'preserves measured speed %s without rounding or treating it as unknown',
+    (speed) => {
+      for (const source of ['telemetry', 'positions'] as const) {
+        const samples = [
+          { latitude: 1, longitude: 1, speed: 0 },
+          { latitude: 2, longitude: 2, speed },
+        ];
+        const { result, unmount } = setup(drive({
+          telemetry: source === 'telemetry' ? samples.map((sample) => tele(sample)) : [],
+          positions: source === 'positions' ? samples.map((sample) => pos(sample)) : [],
+        }));
+        expect(result.current.routeSource[1].speed).toBe(speed);
+        expect(result.current.chartData[1].speed).toBeCloseTo(speed * MPS_TO_KMH);
+        const color = speed >= SPEED_SEGMENT_HIGH_MPS ? '#ef4444'
+          : speed >= SPEED_SEGMENT_MED_MPS ? '#f59e0b'
+          : speed >= SPEED_SEGMENT_LOW_MPS ? '#00f0ff' : '#10b981';
+        expect(result.current.speedSegments[0].color).toBe(color);
+        unmount();
+      }
+    },
+  );
+
+  it('does not borrow position speed or timestamps for an unknown telemetry route', () => {
+    const { result } = setup(drive({
+      telemetry: [
+        tele({ latitude: 1, longitude: 1, speed: null, createdAt: 'tele-start' }),
+        tele({ latitude: 2, longitude: 2, speed: null, created_at: 'tele-end' }),
+      ],
+      positions: [pos({ latitude: 3, longitude: 3, speed: 25, createdAt: 'position' })],
+    }));
+    expect(result.current.routeSource).toEqual([
+      { lat: 1, lng: 1, speed: null, timestamp: 'tele-start' },
+      { lat: 2, lng: 2, speed: null, timestamp: 'tele-end' },
+    ]);
+    expect(result.current.speedHistData).toEqual([]);
+  });
+
+  it('falls back to original positions when telemetry coordinates are invalid', () => {
+    const { result } = setup(drive({
+      telemetry: [
+        tele({ latitude: NaN, longitude: 1, speed: 10 }),
+        tele({ latitude: 91, longitude: 1, speed: 10 }),
+      ],
+      positions: [
+        pos({ latitude: Infinity, longitude: 1 }),
+        pos({ latitude: 1, longitude: 181 }),
+        pos({ latitude: -1.25, longitude: 0, speed: null, timestamp: 'position' }),
+      ],
+    }));
+    expect(result.current.routeSource).toEqual([
+      { lat: -1.25, lng: 0, speed: null, timestamp: 'position' },
     ]);
   });
 });

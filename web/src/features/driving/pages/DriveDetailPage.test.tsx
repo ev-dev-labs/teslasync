@@ -1,31 +1,11 @@
 /**
  * DriveDetailPage contract tests.
  *
- * DriveDetailPage is the orchestration layer for a single drive: it pulls the
- * drive + derived stats from `useDriveDetailData`, owns the page-level loading
- * skeleton, error surface and (new) not-found empty state, computes the route
- * title + vehicle meta line, gates the numeric-summary panels behind a
- * "does this drive have meaningful telemetry?" heuristic, and drives the share
- * dialog. These tests exercise every branch a user can reach by controlling the
- * hook's return value and stubbing the heavy chart / map / AI leaf components
- * (each has its own suite) so the assertions target the page's own logic:
- *
- *   1. Loading   → the skeleton renders and nothing else (no page chrome).
- *   2. Error     → PageContainer's error surface shows the message; every
- *                  section is withheld.
- *   3. Not found → drive is null with no error → an explicit empty state, never
- *                  a blank page (the hardening this elevation adds).
- *   4. Rich drive→ the route-title heading, the vehicle meta line, and all
- *                  gated + always-on sections render; no telemetry-gap banner.
- *   5. Empty drive→ all-zero aggregates → the numeric panels collapse to a
- *                  single telemetry-gap banner while the always-on sections
- *                  (timeline, map, why-ended) still render; the title falls
- *                  back to the generic label.
- *   6. Telemetry rows keep the numeric panels alive even with zero aggregates.
- *   7. Zero-energy meaningful drive hides ONLY the cost-savings panel.
- *   8. The Share action opens + closes the (stubbed) share dialog.
- *   9. Back / Replay / Print controls are accessible and replay links to the id.
- *  10. Id-scoped controls disappear when the route carries no drive id.
+ * Query readiness separates active loading, cold pause and resolved absence.
+ * Retained reports survive refresh failures, and independently paused FSD
+ * evidence gets its own notice. Report anchors and section shells remain
+ * available through loading, failure, empty/zero data and recovery.
+ * Heavy chart, map and AI leaves are stubbed to test page orchestration.
  *
  * `useSettings` / `useTimezone` come from the global stubs in
  * src/test-setup.ts; react-i18next is stubbed locally so the English fallbacks
@@ -36,6 +16,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import type { DataStateSource } from '@/api/dataState'
+import type { FsdDriveAnalytics } from '@/types/fsd'
 import { BUTTON_BASE, BUTTON_VARIANTS } from '@/components/ui'
 import type { DriveDetail } from '@/types/driving'
 import type { Vehicle } from '@/types/vehicle'
@@ -80,6 +62,7 @@ vi.mock('react-i18next', async () => {
 interface HookReturn {
   drive: DriveDetail | null
   vehicle: Vehicle | null
+  timezone?: string
   isLoading: boolean
   error: Error | null
   /**
@@ -88,14 +71,7 @@ interface HookReturn {
    * one from `drive` + `error`, which keeps every pre-existing case working
    * while letting a test model "retained rows + failed refresh" explicitly.
    */
-  driveQuery?: {
-    data?: DriveDetail
-    error?: unknown
-    isError?: boolean
-    isFetching?: boolean
-    dataUpdatedAt?: number
-    refetch?: () => unknown
-  }
+  driveQuery?: DataStateSource<DriveDetail | null>
   chartData: ChartDataPoint[]
   stats: DriveStats | null
   trail: LatLngExpression[]
@@ -111,10 +87,13 @@ const hookState: { current: HookReturn } = { current: emptyState() }
 /** Mirrors what `useDrive()` would return for the current controlled state. */
 function synthesiseDriveQuery(state: HookReturn): NonNullable<HookReturn['driveQuery']> {
   return state.driveQuery ?? {
-    data: state.drive ?? undefined,
+    data: state.drive ?? (state.isLoading || state.error ? undefined : null),
     error: state.error ?? undefined,
     isError: state.error != null,
-    isFetching: false,
+    isPending: state.isLoading,
+    isFetching: state.isLoading,
+    isSuccess: !state.isLoading && !state.error,
+    fetchStatus: state.isLoading ? 'fetching' : 'idle',
     dataUpdatedAt: state.drive != null ? 1_000 : 0,
     refetch: () => {},
   }
@@ -125,6 +104,7 @@ vi.mock('../components/drive-detail', () => {
   return {
     useDriveDetailData: () => ({
       ...hookState.current,
+      timezone: hookState.current.timezone ?? 'UTC',
       driveQuery: synthesiseDriveQuery(hookState.current),
     }),
     DriveDetailSkeleton: () => <div data-testid="drive-skeleton" />,
@@ -132,7 +112,9 @@ vi.mock('../components/drive-detail', () => {
     DrivePhysicsDebriefPanel: stub('physics-debrief'),
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
-    SupervisedDrivingPanel: stub('fsd-panel'),
+    SupervisedDrivingPanel: ({ isLoading }: { isLoading: boolean }) => (
+      <div data-testid="fsd-panel" data-loading={String(isLoading)} />
+    ),
     GearTheaterPanel: stub('gear-theater'),
     SilentCounterPanel: stub('silent-counter'),
     DriveLedgerCompactPanel: stub('drive-ledger-compact'),
@@ -153,7 +135,9 @@ vi.mock('../components/drive-detail', () => {
   }
 })
 
-const useFsdInsightsForDriveMock = vi.hoisted(() => vi.fn(() => ({
+const useFsdInsightsForDriveMock = vi.hoisted(() => vi.fn((): DataStateSource<{
+  drive_analytics: Pick<FsdDriveAnalytics, 'contributing_drives'>
+}> => ({
     data: {
       drive_analytics: {
         contributing_drives: [],
@@ -350,13 +334,15 @@ const NOT_FOUND_COPY =
   'This drive could not be found. It may have been deleted, or the link is incorrect.'
 
 function renderPage(path = '/drives/42', routePath = '/drives/:id') {
-  return render(
+  const page = () => (
     <MemoryRouter initialEntries={[path]}>
       <Routes>
         <Route path={routePath} element={<DriveDetailPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
+  const result = render(page())
+  return { ...result, rerenderPage: () => result.rerender(page()) }
 }
 
 beforeEach(() => {
@@ -367,6 +353,114 @@ beforeEach(() => {
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 describe('DriveDetailPage', () => {
+  it('uses the loaded drive business timezone for FSD evidence, not workspace scope', () => {
+    hookState.current = { ...loadedState(), timezone: 'Pacific/Auckland' }
+    renderPage()
+    expect(useFsdInsightsForDriveMock).toHaveBeenCalledWith('1', '42', 'Pacific/Auckland', true)
+  })
+
+  it('does not announce absence for an unresolved idle drive source', () => {
+    hookState.current = { ...emptyState(), driveQuery: { isPending: true, fetchStatus: 'idle' } }
+    renderPage()
+
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    expect(screen.queryByTestId('drive-skeleton')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+  })
+
+  it('uses source readiness rather than the aggregate loading flag', () => {
+    hookState.current = {
+      ...emptyState(),
+      driveQuery: { isPending: true, isFetching: true, fetchStatus: 'fetching' },
+    }
+    renderPage()
+
+    expect(screen.getByTestId('drive-skeleton')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+  })
+
+  it('discloses a cold paused drive and recovers without claiming it is missing', () => {
+    const refetch = vi.fn()
+    hookState.current = {
+      ...emptyState(),
+      isLoading: true,
+      driveQuery: { isPending: true, fetchStatus: 'paused', refetch },
+    }
+    const { rerenderPage } = renderPage()
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    expect(screen.queryByTestId('drive-skeleton')).toBeNull()
+    expect(screen.getByRole('region', { name: 'Route' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Drive detail' }))
+    expect(refetch).toHaveBeenCalledOnce()
+
+    hookState.current = loadedState()
+    rerenderPage()
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+  })
+
+  it('discloses independently paused FSD without treating it as loading or hiding the drive', () => {
+    hookState.current = loadedState()
+    const refetch = vi.fn()
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isPending: true, fetchStatus: 'paused', refetch,
+    })
+    renderPage()
+
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Supervised driving' }))
+    expect(refetch).toHaveBeenCalledOnce()
+  })
+
+  it('does not disclose paused FSD before its drive prerequisite exists', () => {
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isPending: true, fetchStatus: 'paused',
+    })
+    renderPage()
+
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
+  })
+
+  it('distinguishes active FSD loading from successfully empty evidence', () => {
+    hookState.current = loadedState()
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
+      isPending: true, isFetching: true, fetchStatus: 'fetching',
+    })
+    const { rerenderPage } = renderPage()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'true')
+
+    rerenderPage()
+    expect(screen.getByTestId('fsd-panel')).toHaveAttribute('data-loading', 'false')
+    expect(screen.queryByText('Refresh paused')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+  })
+
+  it('clears a retained refresh failure after recovery without losing report sections', () => {
+    const loaded = loadedState()
+    hookState.current = {
+      ...loaded,
+      driveQuery: {
+        data: loaded.drive, isError: true, error: new Error('refresh failed'),
+        fetchStatus: 'idle', dataUpdatedAt: 1_000,
+      },
+    }
+    const { rerenderPage } = renderPage()
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+
+    hookState.current = loaded
+    rerenderPage()
+    expect(screen.queryByTestId('stale-refresh-warning')).toBeNull()
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+  })
+
   it('keeps report context and section placeholders while telemetry is loading', () => {
     hookState.current = { ...emptyState(), isLoading: true }
     renderPage()

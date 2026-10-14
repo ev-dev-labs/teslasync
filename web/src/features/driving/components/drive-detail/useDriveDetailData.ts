@@ -3,6 +3,8 @@ import { useDrive } from '@/api/hooks/useDriving';
 import { useVehicle } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useSettings } from '@/hooks/useSettings';
+import { resolveTimezone } from '@/lib/timezone';
 import {
   convertDistanceFromSI,
   convertSpeedFromSI,
@@ -14,12 +16,26 @@ import type { LatLngExpression } from '@/components/maps';
 import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogramBucket } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { asFiniteNumber } from '@/lib/typeGuards';
+import { isValidLatLng } from '@/lib/geo';
+
+function displaySpeed(value: unknown, unit: 'km/h' | 'mph'): number | null {
+  const speed = asFiniteNumber(value);
+  return speed == null ? null : asFiniteNumber(convertSpeedFromSI(speed, unit));
+}
 
 export function useDriveDetailData(id: string) {
   const { fmtNumber } = useNumberFormatting();
   const driveQuery = useDrive(id);
   const { data: drive, isLoading, error } = driveQuery;
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
+  const { settings } = useSettings();
+  const timezone = resolveTimezone('vehicle', vehicle?.timezone, settings.timezone_user);
+  const displayTimezone = resolveTimezone(
+    settings.tz_display_default === 'user' || settings.tz_display_default === 'utc'
+      ? settings.tz_display_default : 'vehicle',
+    vehicle?.timezone, settings.timezone_user,
+  );
   // Drive aggregate fields use the SI display path; the SQL adapter already
   // exposes canonical values at the repository boundary.
   const { unitPrefs } = useUnits();
@@ -51,7 +67,7 @@ export function useDriveDetailData(id: string) {
     const pos = drive.positions ?? [];
     if (tele.length > 0) {
       const points = tele
-        .filter((tp) => tp.latitude != null && tp.longitude != null && (tp.latitude !== 0 || tp.longitude !== 0))
+        .filter((tp) => tp.latitude != null && tp.longitude != null && isValidLatLng(tp.latitude, tp.longitude))
         .map((tp) => ({
           lat: tp.latitude!,
           lng: tp.longitude!,
@@ -61,7 +77,7 @@ export function useDriveDetailData(id: string) {
       if (points.length > 0) return points;
     }
     return pos
-      .filter((p) => p.latitude !== 0 || p.longitude !== 0)
+      .filter((p) => isValidLatLng(p.latitude, p.longitude))
       .map((p) => ({
         lat: p.latitude,
         lng: p.longitude,
@@ -106,8 +122,8 @@ export function useDriveDetailData(id: string) {
     const tele = drive.telemetry ?? [];
     if (tele.length > 0) {
       return tele.map((tp) => ({
-        time: formatTime(tp.createdAt ?? tp.created_at ?? tp.timestamp),
-        speed: tp.speed != null ? convertSpeedFromSI(tp.speed, unitPrefs.speed) : null,
+        time: formatTime(tp.createdAt ?? tp.created_at ?? tp.timestamp, { tz: displayTimezone }),
+        speed: displaySpeed(tp.speed, unitPrefs.speed),
         battery: tp.batteryLevel ?? null,
         elevation: tp.elevation ?? null,
         power: tp.power ?? null,
@@ -141,11 +157,11 @@ export function useDriveDetailData(id: string) {
     return (drive.positions ?? []).map((row) => {
       const p = row as typeof row & PositionAliases;
       return ({
-      time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp),
+      time: formatTime(p.createdAt ?? p.created_at ?? p.timestamp, { tz: displayTimezone }),
       // Position.speed comes from drivePositionFieldMappings VehicleSpeed -> speed_mph
       // -> aliasPositionFields renames to 'speed'. The value is still m/s SI; the
       // legacy '_mph' suffix from the mapping is misleading per ADR-004 #6.
-      speed: p.speed != null ? convertSpeedFromSI(p.speed, unitPrefs.speed) : null,
+      speed: displaySpeed(p.speed, unitPrefs.speed),
       battery: p.batteryLevel ?? p.battery_level ?? null,
       elevation: p.elevation ?? null,
       power: p.power ?? null,
@@ -167,7 +183,7 @@ export function useDriveDetailData(id: string) {
       fanStatus: p.fanStatus ?? null,
       });
     });
-  }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure, formatTime]);
+  }, [drive, unitPrefs.speed, unitPrefs.temperature, unitPrefs.distance, unitPrefs.pressure, formatTime, displayTimezone]);
 
   /* ---- Computed stats ---- */
   const stats = useMemo<DriveStats | null>(() => {
@@ -296,6 +312,7 @@ export function useDriveDetailData(id: string) {
   return {
     drive: drive ?? null,
     vehicle: vehicle ?? null,
+    timezone,
     isLoading,
     error,
     /**
