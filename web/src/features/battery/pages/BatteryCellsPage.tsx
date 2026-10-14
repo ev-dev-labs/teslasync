@@ -20,7 +20,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
   AREA_DEFAULTS,
 } from '@/components/charts';
-import { Skeleton, EmptyState, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError, StaleRefreshWarning, DataStateNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 
@@ -35,7 +35,7 @@ import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { fmtScientificNumber } from '@/lib/numberFormat';
 import { knownNumber } from '@/api/dataState';
 import { useDataState } from '@/hooks/useDataState';
-import { BatteryCellsStats } from '../components/battery-cells-modernization/BatteryCellsStats';
+import { BatteryCellsStats, batteryCellsHealthValue, type BatteryCellsSnapshot } from '../components/battery-cells-modernization/BatteryCellsStats';
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
@@ -185,8 +185,8 @@ export default function BatteryCellsPage() {
   });
   // no_data applies to brick/cell voltages only. The same envelope can still
   // carry real PackVoltage and ModuleTemp signals; never discard those.
-  const data = batteryState.data;
-  const isLoading = !batteryState.hasData && batteryState.fatalError == null;
+  const data: BatteryCellsSnapshot | undefined = batteryState.data;
+  const isLoading = !batteryState.hasData && batteryQuery.isLoading && !batteryState.isRefreshBlocked;
   const isError = batteryState.fatalError != null;
   const error = batteryState.fatalError;
   const { refetch } = batteryQuery;
@@ -225,7 +225,7 @@ export default function BatteryCellsPage() {
   const insights = useMemo(() => {
     if (!data) return [] as { icon: ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }[];
     const items: { icon: ReactNode; title: string; description: string; status: 'good' | 'warning' | 'critical' }[] = [];
-    const imb = data.status === 'no_data' ? null : knownNumber(data.imbalance_mv);
+    const imb = batteryCellsHealthValue(data, 'imbalance_mv');
 
     if (imb != null && imb > 15) {
       items.push({
@@ -250,9 +250,7 @@ export default function BatteryCellsPage() {
       });
     }
 
-    // The endpoint omits temperature signal-presence flags. In its no-brick
-    // envelope, keep the reported numbers but do not certify thermal health.
-    const tempSpread = data.status === 'no_data' ? null : knownNumber(data.temp_spread);
+    const tempSpread = batteryCellsHealthValue(data, 'temp_spread');
     if (tempSpread != null && tempSpread > 5) {
       items.push({
         icon: <Thermometer className="h-4 w-4" aria-hidden="true" />,
@@ -277,14 +275,14 @@ export default function BatteryCellsPage() {
     }
 
     const criticalCells = cells.filter((c) => c.status === 'significant_deviation').length;
-    if (criticalCells > 0) {
+    if (imb != null && criticalCells > 0) {
       items.push({
         icon: <AlertTriangle className="h-4 w-4" aria-hidden="true" />,
         title: t('battery.cells.insight.criticalCells', 'Critical cells detected'),
         description: t('battery.cells.insight.criticalCellsDesc', { count: criticalCells, defaultValue: '{{count}} cell(s) show significant deviation. Consider scheduling a service appointment.' }),
         status: 'critical',
       });
-    } else if (cells.length > 0 && cells.every(cell => ['normal', 'slight_deviation', 'significant_deviation'].includes(cell.status))) {
+    } else if (imb != null && cells.length > 0 && cells.every(cell => knownNumber(cell.voltage) != null && ['normal', 'slight_deviation', 'significant_deviation'].includes(cell.status))) {
       items.push({
         icon: <Shield className="h-4 w-4" aria-hidden="true" />,
         title: t('battery.cells.insight.healthy', 'All cells healthy'),
@@ -386,6 +384,9 @@ export default function BatteryCellsPage() {
       query={batteryQuery}
       busy={batteryState.isRefreshing}
     >
+      {!batteryState.hasData && batteryState.isRefreshBlocked && (
+        <DataStateNotice state="unavailable" />
+      )}
       <StaleRefreshWarning
         state={batteryState} label={t('battery.cells.title', 'Battery cells')}
         title={batteryState.status === 'unavailable' ? t('battery.cells.heatmap.empty', 'No cell readings available.') : undefined}
@@ -831,9 +832,9 @@ export default function BatteryCellsPage() {
             <Caption as="p" className="mb-3">
               {t('battery.cells.modernization.snapshotSource', 'Vehicle-scoped backend snapshot; cells are synthesized from brick extrema. Request time is not measurement time.')}
             </Caption>
-            <Caption as="p" className="mb-3">
+            {data?.signal_availability == null && <Caption as="p" className="mb-3">
               {t('battery.cells.modernization.signalAvailability', 'Pack and temperature signal availability is not supplied by this endpoint; reported values alone do not establish health.')}
-            </Caption>
+            </Caption>}
             {isLoading ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} height={72} />)}

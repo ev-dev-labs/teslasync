@@ -12,7 +12,7 @@
  */
 import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
 import { EmbeddedChart } from '../EmbeddedChart';
@@ -114,6 +114,84 @@ function ContextProbe({ seriesKeys }: { seriesKeys: string[] }) {
 }
 
 describe('ChartContainer chartKey + ChartLegend toggle (Phase-46/67)', () => {
+  describe('annotation read states remain independent of the chart series', () => {
+    const row: ChartAnnotationRow = {
+      id: 17, vehicle_id: 7, occurred_at: '2025-03-01T00:00:00Z',
+      category: 'maintenance', title: 'Battery inspection', scope: ['battery'],
+      created_at: '2025-03-01T00:00:00Z', updated_at: '2025-03-01T00:00:00Z',
+    };
+    function mount() {
+      const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      render(
+        <QueryClientProvider client={qc}>
+          <MemoryRouter>
+            <ChartContainer title="Battery spread" ariaLabel="Battery spread"
+              annotations={{ vehicleId: 7, scope: 'battery' }} exportable={false}>
+              {({ annotations }) => <div data-testid="battery-series">
+                Measured spread: 0 mV <span data-testid="overlay-count">{annotations.length}</span>
+              </div>}
+            </ChartContainer>
+          </MemoryRouter>
+        </QueryClientProvider>,
+      );
+      return qc;
+    }
+    const footer = () => within(screen.getByRole('region', { name: 'Annotations' }));
+
+    it('shows active annotation loading without replacing measured zero or the series', async () => {
+      let resolve!: (rows: ChartAnnotationRow[]) => void;
+      requestMock.mockReturnValue(new Promise(yes => { resolve = yes; }));
+      mount();
+      expect(screen.getByRole('region', { name: 'Annotations' })).toHaveAttribute('aria-busy', 'true');
+      expect(footer().getByText('', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
+      expect(screen.getByTestId('battery-series')).toHaveTextContent('0 mV');
+      await act(async () => { resolve([]); });
+      await waitFor(() => expect(screen.getByRole('region', { name: 'Annotations' })).not.toHaveAttribute('aria-busy'));
+      expect(footer().queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.getByTestId('overlay-count')).toHaveTextContent('0');
+    });
+
+    it('shows a paused initial annotation request as unavailable, not active loading', () => {
+      onlineManager.setOnline(false);
+      try {
+        mount();
+        expect(footer().getByText('Service unavailable')).toBeInTheDocument();
+        expect(screen.getByRole('region', { name: 'Annotations' })).not.toHaveAttribute('aria-busy');
+        expect(screen.getByTestId('battery-series')).toHaveTextContent('0 mV');
+        expect(requestMock).not.toHaveBeenCalled();
+      } finally {
+        onlineManager.setOnline(true);
+      }
+    });
+
+    it('surfaces fatal annotation errors without treating the battery series as failed', async () => {
+      requestMock.mockRejectedValue(new Error('annotation read failed'));
+      mount();
+      await waitFor(() => expect(footer().getByRole('button', { name: /retry/i })).toBeInTheDocument());
+      expect(screen.getByTestId('battery-series')).toHaveTextContent('0 mV');
+      expect(screen.getByTestId('overlay-count')).toHaveTextContent('0');
+    });
+
+    it.each([{ rows: [] }, { rows: [row] }])('retains successful annotation data through refresh failure and recovery (%j)', async ({ rows }) => {
+      requestMock.mockResolvedValue(rows);
+      const qc = mount();
+      await waitFor(() => expect(screen.getByRole('region', { name: 'Annotations' })).not.toHaveAttribute('aria-busy'));
+      expect(screen.getByTestId('overlay-count')).toHaveTextContent(String(rows.length));
+      requestMock.mockRejectedValue(new Error('annotation refresh failed'));
+      await act(async () => { await qc.invalidateQueries({ queryKey: ['annotations'] }); });
+      await waitFor(() => expect(footer().getByTestId('stale-refresh-warning')).toBeInTheDocument());
+      expect(screen.getByTestId('overlay-count')).toHaveTextContent(String(rows.length));
+      expect(screen.getByTestId('battery-series')).toHaveTextContent('0 mV');
+      if (rows.length) expect(footer().getByText('Battery inspection')).toBeInTheDocument();
+      requestMock.mockResolvedValue([]);
+      fireEvent.click(footer().getByRole('button', { name: 'Refresh' }));
+      await waitFor(() => expect(footer().queryByTestId('stale-refresh-warning')).not.toBeInTheDocument());
+      expect(screen.getByTestId('overlay-count')).toHaveTextContent('0');
+      expect(footer().queryByText('Battery inspection')).not.toBeInTheDocument();
+      expect(screen.getByTestId('battery-series')).toHaveTextContent('0 mV');
+    });
+  });
+
   it('retains the same URL controller and render/context state in an opt-in embedded toolbar frame', () => {
     const { container } = renderWithProviders(
       <EmbeddedChart title="Embedded complete trend" ariaLabel="Embedded complete trend chart"

@@ -41,6 +41,7 @@ import type { ReactNode } from 'react';
 
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { BatteryCellData, CellReading } from '@/api/hooks/useAnalytics';
+import type { BatteryCellsSnapshot } from '../components/battery-cells-modernization/BatteryCellsStats';
 
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
@@ -166,7 +167,10 @@ vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
 // while the create/delete mutation hooks (wired to <ToastProvider>) stay real.
 vi.mock('@/api/hooks/useAnnotations', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useAnnotations')>();
-  return { ...actual, useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false }) };
+  return { ...actual, useChartAnnotations: () => ({
+    data: [], isLoading: false, isError: false, error: null,
+    isFetching: false, fetchStatus: 'idle', dataUpdatedAt: 1,
+  }) };
 });
 
 import BatteryCellsPage, { cellColor, buildHistogram } from './BatteryCellsPage';
@@ -221,8 +225,13 @@ function makeCells(): CellReading[] {
   ];
 }
 
-function makeData(overrides: Partial<BatteryCellData> = {}): BatteryCellData {
+function makeData(overrides: Partial<BatteryCellsSnapshot> = {}): BatteryCellsSnapshot {
   return {
+    signal_availability: {
+      min_voltage: true, max_voltage: true, avg_voltage: true,
+      voltage_spread: true, imbalance_mv: true, pack_voltage: true,
+      min_temperature: true, max_temperature: true, avg_temperature: true, temp_spread: true,
+    },
     status: 'ok',
     total_cells: 4,
     avg_voltage: 3.9025,
@@ -291,6 +300,16 @@ afterEach(() => {
 });
 
 describe('BatteryCellsPage', () => {
+  it('does not show active loading for a paused initial request', () => {
+    h.query = makeQuery({ fetchStatus: 'paused', isLoading: false });
+    renderPage();
+    expect(screen.getByText('Service unavailable')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Summary metrics' })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: 'Voltage spread trend' }))
+      .not.toHaveAttribute('aria-busy', 'true');
+    expect(screen.queryByText('398.50 V')).not.toBeInTheDocument();
+  });
+
   it('renders the full dashboard with SI (°C) values when data is ready', () => {
     renderPage();
 
@@ -530,7 +549,7 @@ describe('BatteryCellsPage', () => {
 
   it('retains reported pack and temperature values without certifying health when cells are unavailable', () => {
     h.query = makeQuery({
-      data: makeData({ status: 'no_data', cells: [], history: [] }),
+      data: makeData({ status: 'no_data', cells: [], history: [], signal_availability: undefined }),
     });
     renderPage();
 
@@ -545,6 +564,60 @@ describe('BatteryCellsPage', () => {
     const recommendations = within(heading.closest('[data-card]') as HTMLElement);
     expect(recommendations.getByText(/cells are synthesized from brick extrema/)).toBeInTheDocument();
     expect(recommendations.getByText(/reported values alone do not establish health/)).toBeInTheDocument();
+  });
+
+  it.each([
+    { name: 'missing metadata', availability: undefined, value: 0, healthy: false },
+    { name: 'unavailable signals', availability: { imbalance_mv: false, temp_spread: false }, value: 0, healthy: false },
+    { name: 'invalid values', availability: { imbalance_mv: true, temp_spread: true }, value: Number.NaN, healthy: false },
+    { name: 'measured zero', availability: { imbalance_mv: true, temp_spread: true }, value: 0, healthy: true },
+    { name: 'fractional values', availability: { imbalance_mv: true, temp_spread: true }, value: 0.25, healthy: true },
+  ])('distinguishes $name from health evidence', ({ availability, value, healthy }) => {
+    h.query = makeQuery({ data: makeData({
+      signal_availability: availability, imbalance_mv: value, temp_spread: value,
+      cells: [{ cell_number: 1, voltage: 0, delta_from_avg: 0, status: 'normal' }],
+    }) });
+    renderPage();
+
+    expect(screen.queryByText('Cells well balanced') != null).toBe(healthy);
+    expect(screen.queryByText('Thermal balance good') != null).toBe(healthy);
+    expect(screen.queryByText('All cells healthy') != null).toBe(healthy);
+    const metrics = within(screen.getByRole('region', { name: 'Summary metrics' }));
+    if (Number.isFinite(value)) {
+      expect(metrics.getByText(`${value.toFixed(2)} mV`)).toBeInTheDocument();
+    } else {
+      expect(metrics.queryByText('NaN mV')).not.toBeInTheDocument();
+    }
+    if (!healthy) {
+      expect(metrics.getByText('Unknown')).toBeInTheDocument();
+    }
+  });
+
+  it('assesses available temperature signals independently of missing brick signals and preserves signed raw values', () => {
+    h.query = makeQuery({ data: makeData({
+      status: 'no_data', cells: [], history: [],
+      avg_temperature: -12.25, min_temperature: -12.5, max_temperature: -12,
+      temp_spread: 0.5,
+      signal_availability: { imbalance_mv: false, temp_spread: true },
+    }) });
+    renderPage();
+
+    expect(screen.getByText('-12.25°C')).toBeInTheDocument();
+    expect(screen.getByText('-12.50°C')).toBeInTheDocument();
+    expect(screen.getByText('Thermal balance good')).toBeInTheDocument();
+    expect(screen.queryByText('Cells well balanced')).not.toBeInTheDocument();
+    expect(screen.queryByText('All cells healthy')).not.toBeInTheDocument();
+  });
+
+  it('uses deviation magnitude for health without rewriting reported signed spreads', () => {
+    h.query = makeQuery({ data: makeData({ imbalance_mv: -16.25, temp_spread: -5.25 }) });
+    renderPage();
+
+    expect(screen.getByText('High voltage spread')).toBeInTheDocument();
+    expect(screen.getByText('High temperature spread')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'Summary metrics' }))
+      .getByText('-16.25 mV')).toBeInTheDocument();
+    expect(screen.getAllByText('-5.25°C').length).toBeGreaterThan(0);
   });
 
   it('keeps cells, charts and recommendations visible after a failed refresh and retries only on request', () => {

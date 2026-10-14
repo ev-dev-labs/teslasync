@@ -15,6 +15,10 @@ import { glassCardClasses, neonColorMap, typography } from '@/lib/tokens';
 import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
+import { StaleRefreshWarning } from '@/components/feedback/StaleRefreshWarning';
+import { DataStateNotice } from '@/components/feedback/DataStateNotice';
+import { Skeleton } from '@/components/feedback/Skeleton';
+import { useDataState } from '@/hooks/useDataState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button } from '../ui/Button';
 import { FullscreenButton } from '../ui/FullscreenButton';
@@ -36,11 +40,12 @@ import {
 } from './chartSizing';
 import type { ChartSamplingDisclosure } from './chartSampling';
 import {
-  useChartAnnotationsAsData,
+  useChartAnnotations,
   useCreateAnnotation,
   useDeleteAnnotation,
 } from '@/api/hooks/useAnnotations';
 import type { AnnotationCategory, AnnotationScope, DataAnnotation } from '@/types/annotations';
+import { toDataAnnotation } from '@/types/annotations';
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
 
 /**
@@ -49,7 +54,9 @@ import type { HiddenSeriesState } from '@/hooks/useHiddenSeries';
  * adds an "Add annotation" + "Hide annotations" toggle to the header, manages
  * the AddAnnotationPopover modal, and renders the AnnotationList footer. The
  * chart consumer renders the actual `<ReferenceLine>` overlays via the
- * function-children render-prop pattern.
+ * function-children render-prop pattern. Annotation read states belong to
+ * the footer, not the chart viewport; a failed refresh retains even a
+ * successfully empty annotation result without hiding the chart series.
  */
 export interface ChartAnnotationsConfig {
   vehicleId?: number | null;
@@ -388,12 +395,17 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       if (annotationsEnabled) setHidden(readHiddenPref(annotationKey));
     }, [annotationsEnabled, annotationKey]);
 
-    const { annotations: fetchedAnnotations } = useChartAnnotationsAsData(
+    const annotationQuery = useChartAnnotations(
       {
         vehicleId: annotationsConfig?.vehicleId,
         scope: annotationsConfig?.scope,
         enabled: annotationsEnabled,
       },
+    );
+    const annotationState = useDataState(annotationQuery);
+    const fetchedAnnotations = useMemo(
+      () => (Array.isArray(annotationState.data) ? annotationState.data : []).map(toDataAnnotation),
+      [annotationState.data],
     );
     const createMutation = useCreateAnnotation();
     const deleteMutation = useDeleteAnnotation();
@@ -955,11 +967,22 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           ) : null}
         </VisuallyHidden>
 
-        {annotationsEnabled && fetchedAnnotations.length > 0 && (
-          <AnnotationList
-            annotations={fetchedAnnotations}
-            onRemove={handleRemoveAnnotation}
-          />
+        {annotationsEnabled && (
+          <section aria-label={t('annotation.listTitle', 'Annotations')} className="mt-2 space-y-2"
+            aria-busy={annotationQuery.isFetching || undefined}>
+            {!annotationState.hasData && annotationQuery.isLoading ? (
+              <Skeleton height={40} />
+            ) : annotationState.fatalError != null ? (
+              <QueryError error={annotationState.fatalError} onRetry={annotationState.retry ?? undefined} />
+            ) : !annotationState.hasData && annotationState.isRefreshBlocked ? (
+              <DataStateNotice state="unavailable" />
+            ) : null}
+            <StaleRefreshWarning state={annotationState} label={t('annotation.listTitle', 'Annotations')} />
+            <AnnotationList
+              annotations={fetchedAnnotations}
+              onRemove={handleRemoveAnnotation}
+            />
+          </section>
         )}
 
         {(annotationsEnabled || annotationTarget) && (
