@@ -7,7 +7,7 @@ import { ApiError } from '@/api/client'
 import { ManagementEndpointCard } from './ManagementEndpointCard'
 import * as apiClient from '@/api/client'
 import { useRefreshVehicleSpecs, useVehiclePricing } from '@/api/hooks/useVehicles'
-import { parseWarrantyDetails } from './managementData'
+import { parseVehicleOptions, parseWarrantyDetails } from './managementData'
 import { WarrantyDataView } from './WarrantyDataView'
 
 const preferences = vi.hoisted(() => ({
@@ -65,6 +65,62 @@ describe('ManagementEndpointCard preservation', () => {
     operationalMode.canWrite = true
     operationalMode.writeBlockReason = null
   })
+
+  it.each([undefined, null, '', 'invalid', 0, 1, -1, 0.5, NaN, Infinity])(
+    'keeps total-active unknown for an absent or invalid option status: %s',
+    (status) => {
+      const data = { codes: [
+        { code: 'ACTIVE', isActive: true },
+        { code: 'INACTIVE', isActive: false },
+        { code: 'UNKNOWN', isActive: status },
+      ] }
+      expect(parseVehicleOptions(data).map((option) => option.isActive)).toEqual([true, false, null])
+      render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+        endpointId="vehicle-options" kind="options" data={data}
+      /></MemoryRouter>)
+      expect(screen.getByText('Unknown active of 3 options returned')).toBeInTheDocument()
+      expect(screen.getByText('Active')).toBeInTheDocument()
+      expect(screen.getByText('Inactive')).toBeInTheDocument()
+      expect(screen.getByText('Status unknown')).toBeInTheDocument()
+      expect(screen.queryByText('1 active of 3 options returned')).not.toBeInTheDocument()
+      expect(data.codes[2].isActive).toBe(status)
+    },
+  )
+
+  it.each([
+    { statuses: [false, false], count: 0 },
+    { statuses: [true, false], count: 1 },
+    { statuses: ['true', 'false'], count: 1 },
+  ])('preserves a known active count including genuine zero: %j', ({ statuses, count }) => {
+    render(<MemoryRouter><ManagementEndpointCard {...baseProps}
+      endpointId="vehicle-options" kind="options"
+      data={{ codes: statuses.map((isActive, index) => ({ code: `OPTION-${index}`, isActive })) }}
+    /></MemoryRouter>)
+    expect(screen.getByText(`${count} active of 2 options returned`)).toBeInTheDocument()
+    expect(screen.queryByText('Status unknown')).not.toBeInTheDocument()
+  })
+
+  it.each([undefined, null, '', 'invalid', NaN, Infinity])(
+    'keeps missing or invalid warranty measurements distinct from zero: %s',
+    (value) => {
+      const parsed = parseWarrantyDetails({
+        activeWarranty: [{ displayName: 'Coverage', coverageAgeInYears: value, expirationOdometer: value }],
+      })
+      expect(parsed.active[0]).toMatchObject({ coverageAgeYears: null, expirationOdometer: null })
+    },
+  )
+
+  it.each([0, -2, 2.5, '0', '-2', '2.5'])(
+    'preserves finite zero, signed and fractional warranty measurements: %s',
+    (value) => {
+      const parsed = parseWarrantyDetails({
+        activeWarranty: [{ displayName: 'Coverage', coverageAgeInYears: value, expirationOdometer: value }],
+      })
+      expect(parsed.active[0]).toMatchObject({
+        coverageAgeYears: Number(value), expirationOdometer: Number(value),
+      })
+    },
+  )
 
   it.each([undefined, 'unknown', 'unrecognized'])(
     'retains a bare warranty without inventing active status: %s',
