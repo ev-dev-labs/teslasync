@@ -12,7 +12,7 @@ import { Plus, RefreshCw } from 'lucide-react';
 
 import { PageLayout } from '@/components/layout';
 import { StaleRefreshWarning } from '@/components/feedback';
-import { Badge, Button, Icon, SectionTitle } from '@/components/ui';
+import { Badge, Button, Icon, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
@@ -94,14 +94,18 @@ export default function ChannelsPage() {
       {/* 1 — Delivery-health KPI band (full-width) */}
       <FadeIn>
         <section aria-label={t('notifications.channels.statsAria', 'Notification delivery summary')}>
-          <ChannelStatsBand
+          {statsState.status === 'initial' && statsState.isRefreshBlocked ? (
+            <Text as="p" role="status" color="secondary">
+              {t('dataSources.status.paused', 'Refresh paused')}
+            </Text>
+          ) : <ChannelStatsBand
             stats={statsQuery.data}
-            isLoading={!statsState.hasData && statsQuery.isLoading}
+            isLoading={statsState.status === 'initial'}
             error={statsState.fatalError}
             retained={statsState.status === 'stale'}
             source={statsState}
             onRetry={() => statsQuery.refetch()}
-          />
+          />}
         </section>
       </FadeIn>
 
@@ -121,6 +125,7 @@ export default function ChannelsPage() {
             isLoading={!channelsState.hasData && channelsQuery.isLoading}
             isError={channelsState.fatalError != null}
             error={channelsState.fatalError}
+            source={channelsState}
             onRetry={() => channelsQuery.refetch()}
             onEdit={openEdit}
             onAdd={openAdd}

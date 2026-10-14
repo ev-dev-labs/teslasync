@@ -34,6 +34,7 @@ import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
 import type { NotificationChannel, NotificationStats } from '@/api/types';
+import type { DataState } from '@/api/dataState';
 import { ToastProvider } from '@/components/feedback';
 import ChannelsPage from './ChannelsPage';
 
@@ -141,6 +142,7 @@ vi.mock('../components/channels/ChannelsGrid', () => ({
     isLoading: boolean;
     isError: boolean;
     error: unknown;
+    source: DataState<NotificationChannel[]>;
     onRetry: () => void;
     onEdit: (channel: NotificationChannel) => void;
     onAdd: () => void;
@@ -154,6 +156,8 @@ vi.mock('../components/channels/ChannelsGrid', () => ({
         data-error={String(isError)}
         data-errmsg={errMsg}
         data-count={String(channels.length)}
+        data-status={props.source.status}
+        data-blocked={String(props.source.isRefreshBlocked)}
       >
         <button type="button" onClick={onAdd}>
           grid-add
@@ -256,6 +260,8 @@ interface FakeQuery<T> {
   error: unknown;
   isStale: boolean;
   isFetching: boolean;
+  isPending: boolean;
+  fetchStatus: 'fetching' | 'paused' | 'idle';
   dataUpdatedAt: number;
   refetch: () => unknown;
 }
@@ -371,6 +377,37 @@ describe('ChannelsPage — structure', () => {
 
 // ── 2. loading / error / empty ────────────────────────────────────────────────
 describe('ChannelsPage — loading / error / empty', () => {
+  it.each(['idle', 'paused'] as const)('consumes an initial %s query without inventing an error or dropping neighbors', (fetchStatus) => {
+    setChannels({ data: undefined, isPending: true, isLoading: false, fetchStatus });
+    renderPage();
+    const grid = screen.getByTestId('channels-grid');
+    expect(grid).toHaveAttribute('data-status', 'initial');
+    expect(grid).toHaveAttribute('data-blocked', String(fetchStatus === 'paused'));
+    expect(grid).toHaveAttribute('data-error', 'false');
+    expect(grid).toHaveAttribute('data-errmsg', '');
+    expect(screen.getByTestId('stats-band')).toHaveTextContent('sent:95');
+    expect(screen.getByTestId('providers-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('browser-push')).toBeInTheDocument();
+  });
+
+  it('shows unresolved statistics as loading even when isLoading is false', () => {
+    setStats({ data: undefined, isPending: true, isLoading: false, fetchStatus: 'idle' });
+    renderPage();
+    expect(screen.getByTestId('stats-band')).toHaveAttribute('data-loading', 'true');
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
+  });
+
+  it('shows paused initial statistics without fabricating zero outcomes or an outage', () => {
+    setStats({ data: undefined, isPending: true, isLoading: false, fetchStatus: 'paused' });
+    renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.queryByTestId('stats-band')).not.toBeInTheDocument();
+    expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('providers-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('browser-push')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it('retains both independent sources and edit identity after failed background refreshes', () => {
     setChannels({ data: [DISCORD, SLACK], isError: true, error: new Error('Channel refresh offline') });
     setStats({ data: STATS, isError: true, error: new Error('Statistics refresh offline') });
