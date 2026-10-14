@@ -196,6 +196,7 @@ interface DataTableProps<T> {
   sortKey?: string
   sortDir?: 'asc' | 'desc'
   onSort?: (key: string) => void
+  /** Caller-owned empty wording; internal filters that hide loaded rows use no-match copy instead. */
   emptyMessage?: string
   className?: string
   /**
@@ -552,6 +553,23 @@ export function DataTable<T>({
     pending: !Object.is(localSearch, deferredLocalSearch),
   } : undefined)
   const hasValueFilters = valueColumns.some(column => valueSelections[column.key] != null)
+  // Incoming rows are loaded evidence, not full server history or the current pagination slice.
+  const localFilterNoMatch = data.length > 0 && filteredData.length === 0
+  const noMatchMessage = t('combobox.noResults', 'No results')
+  const resetFiltersLabel = t('common.clearFilters', 'Clear filters')
+  const clearFilters = () => {
+    searchControls?.onChange('')
+    setValueSelections({})
+    columns.forEach(column => column.onFilterClear?.())
+    mobilePresentation?.onClear?.()
+  }
+  const mobileFilteredPresentation = mobilePresentation && localFilterNoMatch
+    && (!mobilePresentation.state || mobilePresentation.state.kind === 'ready')
+    ? { ...mobilePresentation, state: {
+      kind: 'empty' as const, message: noMatchMessage,
+      action: { label: resetFiltersLabel, onAction: clearFilters },
+    } }
+    : mobilePresentation
   // Shared context menu host. We call this once per
   // table render so the imperative `openMenu` reference stays stable
   // across row renders.
@@ -1388,7 +1406,7 @@ export function DataTable<T>({
           <MobileDataTableAdapter
             rows={paginationEnabled ? filteredData.slice(0, mobilePage * pageSize) : filteredData}
             columns={visibleColumns} allColumns={columns} keyExtractor={keyExtractor}
-            presentation={mobilePresentation} label={accessibleTableName} rowLabel={rowLabel}
+            presentation={mobileFilteredPresentation ?? mobilePresentation} label={accessibleTableName} rowLabel={rowLabel}
             selectedKeys={selectionSet} selectable={isSelectable && Boolean(onSelectionChange)}
             multiSelect={selectable === 'multi'}
             allSelected={allSelected} someSelected={someSelected}
@@ -1406,12 +1424,7 @@ export function DataTable<T>({
             onLoadMore={paginationEnabled && mobilePage * pageSize < filteredData.length
               ? () => setMobilePage(previous => previous + 1) : undefined}
             nextCount={Math.min(pageSize, Math.max(0, filteredData.length - mobilePage * pageSize))}
-            onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? () => {
-              searchControls?.onChange('')
-              setValueSelections({})
-              columns.forEach(column => column.onFilterClear?.())
-              mobilePresentation.onClear?.()
-            } : undefined}
+            onClear={searchControls || enableValueFilters || columns.some(column => column.onFilterClear) || mobilePresentation.onClear ? clearFilters : undefined}
             count={<Text size="sm" color="muted" role="status">
               {paginationEnabled && t('developerReference.mobileGrid.footer.showing', 'Showing {{count}} of {{total}}', {
                 count: Math.min(mobilePage * pageSize, filteredData.length), total: filteredData.length,
@@ -1602,7 +1615,12 @@ export function DataTable<T>({
               {filteredData.length === 0 ? (
                 <tr>
                   <td colSpan={totalCols} className="px-4 py-12 text-center text-sm text-[var(--text-muted)]">
-                    {emptyMessage}
+                    {localFilterNoMatch ? (
+                      <div className="space-y-3">
+                        <Text as="p" variant="bodySm" color="muted" role="status">{noMatchMessage}</Text>
+                        <Button size="sm" variant="secondary" onClick={clearFilters}>{resetFiltersLabel}</Button>
+                      </div>
+                    ) : emptyMessage}
                   </td>
                 </tr>
               ) : virtualizationActive ? (

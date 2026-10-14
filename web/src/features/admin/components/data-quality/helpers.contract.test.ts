@@ -79,10 +79,11 @@ describe('data quality helper preservation contracts', () => {
     ['before hour half', 5399.99, '1h'], ['hour half', 5400, '2h'],
     ['immediately below day', 86399.999, '24h'], ['at day', 86400, '1d'],
     ['immediately above day', 86400.001, '1d'], ['before day half', 129599.99, '1d'],
-    ['day half', 129600, '2d'], ['huge finite duration', 8640000000, '100000d'],
+    ['day half', 129600, '2d'], ['huge finite duration', 8640000000, '100,000d'],
   ] as const)('preserves duration %s threshold and rounding', (_name, seconds, expected) => {
     setGlobalPrecision(5);
     expect(formatSeconds(seconds)).toBe(expected);
+    if (seconds === 0) expect(formatSeconds(-0)).toBe('0s');
   });
 
   it.each([
@@ -95,7 +96,7 @@ describe('data quality helper preservation contracts', () => {
 
   it('localizes duration digits without changing rounded values or default units', () => {
     setGlobalLocale('ar-EG');
-    expect([12, 90, 5400, 129600].map(formatSeconds)).toEqual(['١٢s', '٢m', '٢h', '٢d']);
+    expect([12, 90, 5400, 129600].map(seconds => formatSeconds(seconds))).toEqual(['١٢s', '٢m', '٢h', '٢d']);
   });
 
   it('preserves caller legacy labels and explicit zero and signed versions', () => {

@@ -26,10 +26,9 @@
  * first; only on non-sudo failures do we fall through to the resilient
  * pipeline.
  */
-import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
+import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys, parseError } from '../lib/resilience'
 import { authHeaders, isRemoteMode } from '../lib/serverConnection'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
-import { getErrorMessage } from '../lib/errorMessage'
 import { assertNeverQueuedOffline } from './offlineCache'
 import {
   demoCredentialsMode,
@@ -223,38 +222,6 @@ export function setCachedSudoToken(value: CachedSudoToken | null): void {
 export function __resetSudoStateForTests(): void {
   cachedSudoToken = null
   sudoProvider = null
-}
-
-/**
- * Parses an error response body. Returns the human message AND the
- * structured `code` (when present) so the SUDO_REQUIRED interceptor
- * can dispatch on the latter without parsing the body twice.
- * Accepts both flat errors and httputil's nested error envelope.
- */
-async function parseError(res: Response): Promise<{ message: string; code?: string }> {
-  const contentType = res.headers.get('content-type') ?? ''
-  if (contentType.includes('json')) {
-    let body: unknown
-    try {
-      body = await res.json()
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err
-    }
-    const record = body !== null && typeof body === 'object' && !Array.isArray(body)
-      ? body as Record<string, unknown>
-      : {}
-    const nested = record.error !== null && typeof record.error === 'object' && !Array.isArray(record.error)
-      ? record.error as Record<string, unknown>
-      : {}
-    const message = getErrorMessage(record.error, res.statusText || `HTTP ${res.status}`)
-    const rawCode = typeof record.code === 'string' && record.code.trim() !== ''
-      ? record.code
-      : nested.code
-    const code = typeof rawCode === 'string' && rawCode.trim() !== '' ? rawCode : undefined
-    return { message, code }
-  }
-  const text = await res.text()
-  return { message: text || res.statusText }
 }
 
 /**

@@ -1,0 +1,390 @@
+{
+  "item": "phase6-qa-analytics-firmware-impact",
+  "page": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+  "routes": ["/firmware-impact"],
+  "status": "SOURCE_REVIEW_COMPLETE_WITH_FINDINGS",
+  "purpose": "Bounded read-only QA of the finished install-centered observational consumption comparison page and its necessary direct dependencies.",
+  "primaryGoal": "Distinguish source-demonstrable defects from inherited debt and unpromoted review candidates without remigrating the accepted page.",
+  "acceptance": {
+    "sourceOnly": true,
+    "acceptedSourceCommit": "eaed67b6f0a2c6a2ed441d8b55a11a40833f2232",
+    "commitEvidence": "Assignment and migration-queue.md:1610 only; no Git command was run.",
+    "native": "NOTRUN",
+    "runtime": "NOTRUN",
+    "fullPage": "NOTRUN",
+    "browser": "NOTRUN",
+    "httpOrApiRequests": "NOTRUN",
+    "freshTests": "NOTRUN",
+    "typescript": "NOTRUN",
+    "build": "NOTRUN",
+    "lint": "NOTRUN",
+    "fullSuites": "NOTRUN",
+    "visualOrAccessibilityPass": false,
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "qualification": "No application check or mounted outcome is inferred from successful inspection commands, matching line counts, existing test bodies, or accepted source."
+  },
+  "ownership": {
+    "writtenFiles": [
+      "docs\\frontend-audits\\phase6-qa-analytics-firmware-impact.json",
+      "logs\\phase6-qa-analytics-firmware-impact.log"
+    ],
+    "ignoredLogEvidence": ".gitignore explicitly lists logs/; read without Git.",
+    "readOnly": "All application source, tests, catalogs, types, API, backend, configuration, queue, design and guidance files.",
+    "sourceEdits": 0,
+    "testEdits": 0,
+    "catalogEdits": 0,
+    "newLocalizationKeys": 0,
+    "commands": "Synchronous built-in PowerShell inspection and document validation only; no helper, extension, server, install, Docker, Git, browser, subagent or API operation.",
+    "release": "ALL report/log/command ownership RELEASED on return. No background work or post-return writes."
+  },
+  "guidance": {
+    "finishedPageQa": "migration-queue.md:56-60,223 explicitly authorizes this existing read-only finished-page Phase 6 objective; source acceptance is not QA acceptance.",
+    "worker": "docs\\frontend-worker-conventions.md; docs\\orchestrator-loop.md:110-138 read only for worker discipline, not for entering the parent loop.",
+    "design": "docs\\frontend-design-contract.md MDC-026,033,040-046,060-070 and mission sections 43-44: independent retained states, truthful statistics, preservation, locale/SI and source-versus-mounted acceptance.",
+    "applicableInstructions": [
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md"
+    ],
+    "precedence": "Current SI-cutover/design requirements supersede legacy source-unit examples in the older React/unit instructions. This assignment explicitly forbids fresh tests, global TSC and all runtime/API/browser operations.",
+    "auditGuidance": "Loaded audit-violations and verify-api-hooks. Read audit.sh and the supplied hook-verification guidance. The full audit script was NOTRUN because it invokes forbidden global TSC and a contract helper. Used bounded built-in source scans and direct route citations instead.",
+    "supportingGuidance": [
+      "docs\\A11Y_GUIDELINES.md",
+      "docs\\MOBILE_GUIDELINES.md",
+      "docs\\I18N_GUIDELINES.md"
+    ]
+  },
+  "historicalContext": {
+    "source": "migration-queue.md:1610 and docs\\frontend-audits\\audit-page-044.json",
+    "priorSourceReceipts": "Historical scoped lint/style/preservation exits 0, page 150 to 159, composed presentation 438 to 447, three sections, seven additive cases. These were not rerun.",
+    "priorTestReceipt": "Historical external catalog startup exit 1 with zero cases is neither a fresh failure nor passing test discovery in this worker.",
+    "priorCaptureReceipt": "Historical capture exit 2/readiness/resources FAILED and absent native QA remain history, not a new capture failure.",
+    "priorOwnerNeeds": [
+      "Readiness/announcement integration needs",
+      "Chart palette/typography needs",
+      "Specialist numeric locale consistency needs",
+      "Public layout/barrel and alternate metric-renderer needs",
+      "External catalog integration/startup needs"
+    ],
+    "disposition": "These inherited needs remain outside current new-pass/new-failure accounting. No catalog repair, chart remigration, locale campaign, barrel correction or historical receipt retry was attempted. FI-001 is a separately evidenced statistical trust edge case, not a relabeling of those historical needs and not attributed as a regression introduced by the accepted commit."
+  },
+  "preservation": {
+    "hashAlgorithm": "SHA256",
+    "pageHash": "8F5DA6DBCACE8F3A2E737840AD7D52DF8E91A732AF1B906D7FE9A84CD9ADA5C1",
+    "pageLines": 159,
+    "assignmentBaselinePageLines": 159,
+    "mountedPresentationLineCounts": {
+      "FirmwareImpactPage": 159,
+      "FirmwareBrief": 51,
+      "FirmwareImpactChart": 96,
+      "FirmwareImpactDetails": 117,
+      "FirmwareImpactSlot": 24
+    },
+    "composedPresentationLines": 447,
+    "assignmentBaselineComposedLines": 447,
+    "lineRetentionAgainstSuppliedBaselinePercent": 100,
+    "countQualification": "Matches the supplied accepted-source baseline, not a Git comparison or mounted rendering. The unmounted FirmwareImpactMetrics alternative, barrel and state/model helpers are not counted as presentation.",
+    "sectionCount": 3,
+    "assignmentBaselineSectionCount": 3,
+    "sectionCountMethod": "Select-String '<Section\\b' over the current page.",
+    "sections": [
+      {
+        "id": "firmware-impact-summary",
+        "pageLine": 109,
+        "title": "Comparison overview",
+        "renderer": "FirmwareBrief, locally aliased FirmwareImpactMetrics",
+        "fields": "Updates represented, thin-data skipped count, significant comparisons, best/worst signed deltas and version context, returned-history limitation and methodology help."
+      },
+      {
+        "id": "firmware-impact-deltas",
+        "pageLine": 120,
+        "title": "Observed consumption differences",
+        "renderer": "FirmwareImpactChart",
+        "fields": "Signed consumption bars, zero reference, version/delta/share/p/verdict fallback and export fields. Only insufficient-sample rows are excluded."
+      },
+      {
+        "id": "firmware-impact-versions",
+        "pageLine": 131,
+        "title": "Per-version evidence",
+        "renderer": "FirmwareImpactDetails",
+        "fields": "All normalized installs including thin data, version/install date/verdict, before/after means and sample counts, signed change/share, p and absolute Cohen d, verdict help."
+      }
+    ],
+    "renderQualification": "All three invocations are unconditional JSX after the explicit no-vehicle prerequisite. They were not rendered in this worker.",
+    "directMountedGlassPanelTags": 0,
+    "directMountedChartContainerTags": 1,
+    "frameQualification": "Zero direct GlassPanel tags in the five domain presentation files is not a missing-section finding: the summary delegates OperationalBrief/GlassPanel and details delegates LayoutCard.",
+    "sourceHashes": {
+      "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx": "8F5DA6DBCACE8F3A2E737840AD7D52DF8E91A732AF1B906D7FE9A84CD9ADA5C1",
+      "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FirmwareBrief.tsx": "2334F1812341A580442D1CAF6987EBE6340E4572FFD2EF3BFFD5BFD1FD48C4EF",
+      "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx": "BDDA2BCB1492F1194AA1CD0B2E3AC733D8C860DA5228E633E53DF047E6E778AD",
+      "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.tsx": "9EB0FB9FAA77E5B75F5AE8A7E1792F3BDBA487ED59A3583BEC90630A90F78B11",
+      "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactSlot.tsx": "5ADB9A7EF04C863BB0BA33BAAF704DE8129569F2F475C6EB8A015854CA65BAC4",
+      "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\firmwareImpactState.ts": "30F3286F57C8E1F0097CE7686EDA19D9134EEAC2256F83F68AD7D579C6993BE0",
+      "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\index.ts": "88B6C484F6D279671A17EBB9A3911F48F52F0E4FD09FA1BC6F2F40382899B0A0",
+      "web\\src\\features\\analytics\\lib\\firmwareImpact.ts": "B88234C39E3979636EC2C927BDE494CF3848774C43A8C73C8DCEB6846C1FA7AA"
+    },
+    "sourceStabilityReceipt": "Final synchronous JSON validation/source-hash comparison is recorded in the ignored log; any mismatch must be reported rather than repaired."
+  },
+  "dataSources": [
+    {
+      "hook": "useDrives(vehicleIdStr)",
+      "pageLine": 28,
+      "file": "web\\src\\api\\hooks\\useDriving.ts",
+      "lines": [107,130],
+      "endpoint": "GET /api/v1/drives?vehicle_id=<selected ID>",
+      "routeEvidence": "internal\\api\\router.go:3506-3507 mounts /drives and GET / to driveHandler.ListByVehicle.",
+      "agreement": "Source path and snake_case vehicle_id agree. The hook forwards AbortSignal, keeps its vehicle/window cache key, vehicle gate, safeArray and FAST staleTime. No start/end/limit is supplied by this page.",
+      "coverage": "Returned server-default history only, not complete lifetime history. No deployed response/default/order/authorization was exercised."
+    },
+    {
+      "hook": "useSoftwareUpdates(vehicleIdStr ?? '')",
+      "pageLine": 29,
+      "file": "web\\src\\api\\hooks\\useVehicleSystems.ts",
+      "lines": [118,129],
+      "endpoint": "GET /api/v1/software-updates?vehicle_id=<selected ID>",
+      "routeEvidence": "internal\\api\\router.go:4207 mounts softwareUpdateHandler.List.",
+      "agreement": "Source path, vehicle_id, per-vehicle key, nonempty gate, AbortSignal and safeArray agree. Handler source validates positive int64, delegates GetByVehicle and normalizes nil collections to [].",
+      "shape": "Page consumes version, installedAt and status only. vehicle model JSON installed_at is optional; page maps absent installedAt to null before install normalization. Numeric ID versus unrelated TypeScript ID declarations is not adjudicated because this page does not consume those IDs.",
+      "coverage": "Existing returned history; no request, repository inspection or assumption of complete install coverage."
+    },
+    {
+      "hook": "useSelectedVehicle / existing workspace owner",
+      "pageLine": 23,
+      "endpoint": null,
+      "scopeEvidence": "App.tsx:89,862 lazy-loads /firmware-impact. workspaceScope.ts:23-76 does not range-enable this route; :156-171 returns range=false and vehicle=true for it.",
+      "agreement": "Uses the header-owned selected vehicle without a duplicate picker. The 30-day install-centered business windows are not a workspace date filter; absence of useRangeState is not promoted as a scope defect."
+    },
+    {
+      "hook": "analyzeFirmwareImpact / useOperationalMetrics",
+      "endpoint": null,
+      "agreement": "Domain model reads raw distanceM, energyUsedWh and startTs; Drive Go JSON tags and current TypeScript fields agree through the client's documented camelCaseKeys aliases.",
+      "siEvidence": "internal\\models\\drive\\drive.go:33-36,62; web\\src\\types\\driving.ts:1-23; firmwareImpact.ts:209-216. Only finite >=2000m drives with positive finite Wh and valid start instants become samples.",
+      "displayBoundary": "Wh/km is the preserved specialist analytical display unit, not a wire/cache field. FirmwareBrief adapts signed delta from Wh/km to the metric glossary's Wh/m and returns specialist text through its formatter. No deprecated converter or new source-unit compatibility path.",
+      "clientEvidence": "api\\client.ts:74-94 normalizes relative paths and supplies /api/v1; :296-301 documents and applies both snake_case/camelCase aliases in the direct path. No resilient-path execution claim."
+    }
+  ],
+  "states": {
+    "method": "Current source control-flow walkthrough only; none of these states was mounted or executed.",
+    "noVehicle": "Page:98-100 returns existing NoVehicleSelected; the two measurement hooks are gated by their empty/undefined IDs. Existing setup action stays /onboarding through its guidance owner.",
+    "initialLoading": "firmwareImpactState:18-21 requires missing inputs and pending/loading flags. Summary passes loading to OperationalBrief; chart/details retain their shells and source-shaped skeletons.",
+    "resolvedEmpty": "Resolved [] is known input, not an absent history. Counts can truthfully be zero. Chart gets explicit empty state; details retains its no-comparison explanation. No zero consumption is displayed without a positive sample count.",
+    "thinData": "Model:297-316 preserves insufficient rows and skipped count; page:59 excludes only those rows from chart/export. Details keeps them and guards before/after/change with actual sample counts.",
+    "initialFatal": "Only missing-source fatalError replaces dependent comparison content. PageLayout receives no page-wide loading/error gate, so named source notices and all three section shells remain.",
+    "refreshFailure": "deriveDataState:233-241 keeps retained inputs and populates refreshError; firmwareImpactState marks retained evidence. Summary/chart/details continue using the same histories and nonblocking named source recovery.",
+    "pausedRetained": "deriveDataState:245-251 keeps data with isRefreshBlocked and stale status. Current DataSourceNotice:80 recognizes paused regardless of retained data. This source observation is not a fresh closure/pass for the old shared-notice history.",
+    "partial": "Both histories are required for actual comparisons. Missing one does not erase independent source notice/recovery or the three panel shells.",
+    "boundedInvalidInputs": "Normalization rejects noninstalled/invalid-time installs and model rejects short/nonfinite/nonpositive-energy drives. Degenerate statistical inputs are FI-001 below.",
+    "announcements": "Page:89-96 delegates label/loading/error/count/enabled to the governed hook and PageLayout:149 disables its duplicate automatic announcement. Existing page test bodies exercise representative transitions, but were only read, not run."
+  },
+  "confirmedIssues": [
+    {
+      "id": "FI-001",
+      "severity": "medium",
+      "category": "statistical trust / unavailable evidence mislabeled",
+      "file": "web\\src\\features\\analytics\\lib\\firmwareImpact.ts",
+      "line": 335,
+      "rule": "MDC-026 / MDC-033: unavailable statistical evidence must remain distinguishable from a supported neutral result.",
+      "mechanism": "When both sample SDs are zero, welchTTest returns null at line 195 and pooled Cohen d is null at line 333. With >=5 observations per side the insufficient-sample branch is bypassed, but verdict starts as noChange and changes only inside the nonnull significance/effect-size gate. Thus an uncomputable test is returned as noChange, despite a large observed mean difference.",
+      "relatedEvidence": [
+        "firmwareImpact.ts:241 rounds sample SD to one decimal, so the same branch can also be reached by sufficiently small nonzero variance.",
+        "firmwareImpact.ts:297-316 guards only sample size; :335-342 defaults to noChange; :356-360 preserves null test values alongside that verdict.",
+        "FirmwareImpactDetails.tsx:20,70-72 uses No measurable change as the noChange fallback; :105-108 displays an em dash for unavailable p/d.",
+        "FirmwareImpactPage.tsx:59 admits every verdict except insufficient to the chart/export.",
+        "Existing firmwareImpact.test.ts:106-129 and :191-211 use nonzero variance for identical/neutral samples. Test bodies were read, not executed."
+      ],
+      "sourceDerivedRepro": {
+        "executed": false,
+        "fixture": "Synthetic only: one installed version at 2026-06-15T00:00:00Z; five drives on June 8-12 with distanceM=10000 and energyUsedWh=2000; five drives on June 16-20 with distanceM=10000 and energyUsedWh=3000. Distinct synthetic IDs and otherwise valid typed fields.",
+        "walkthrough": "Each side clears minSample=5 and lies within the nominal window. Samples have means 200 and 300 Wh/km and SDs 0. Welch denominator is 0, therefore p/t/df are null; pooled SD is 0, therefore d is null. The returned verdict remains noChange, deltaWhPerKm=100, deltaShare=0.5, significantCount=0.",
+        "actualSourceOutcome": "Per-version evidence labels the comparison No measurable change while showing +100 Wh/km (+50%) and unavailable p/d. The version is included in the neutral chart/export rather than distinguished as statistically unassessable.",
+        "expected": "Retain observed means, sample sizes and signed delta, but explicitly distinguish unavailable/degenerate statistical assessment from a completed neutral verdict. Do not infer causal significance or fabricate p/d."
+      },
+      "confidence": "high for deterministic source branch; no runtime reproduction",
+      "historicalRelation": "Not listed as a degenerate-test defect in audit-page-044. No claim that eaed67b6f introduced it.",
+      "owner": "Existing firmwareImpact domain model and its bounded verdict presentation integration",
+      "proposedFix": "Separately lease a domain/verdict correction using existing state/label contracts and focused zero-variance/near-zero-variance cases; preserve raw SI, observed deltas, windowing, insufficient rows and all three sections. This worker made no correction."
+    }
+  ],
+  "unpromotedCandidates": [
+    {
+      "id": "FI-C01",
+      "category": "responsive/accessibility",
+      "file": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx",
+      "line": 64,
+      "observation": "Fixed 340px chart height, 56px angled version ticks and many/long version identifiers may crowd narrow allocated widths.",
+      "whyNotConfirmed": "No rendered geometry, label clipping, overlap, contrast or touch-target measurement. Existing chart typography/palette debt remains historical, not a newly failed gate.",
+      "requiredEvidence": "Authorized native/browser narrow-container matrix with long version labels, text scaling, themes and forced colors."
+    },
+    {
+      "id": "FI-C02",
+      "category": "readiness/announcement edge",
+      "file": "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+      "line": 89,
+      "observation": "useLoadAnnouncement has loading/error/count inputs but no paused/retained input. The inspected paused-source test mounts already-paused data rather than a loading-to-retained-paused transition.",
+      "whyNotConfirmed": "Actual query lifecycle/reachability and composed announcement outcome were not exercised. Readiness needs are explicitly inherited history, not current new failure accounting.",
+      "requiredEvidence": "A separately assigned synthetic transition test and authorized screen-reader lifecycle review; no fresh test run in this worker."
+    },
+    {
+      "id": "FI-C03",
+      "category": "locale/timezone historical follow-up",
+      "file": "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.tsx",
+      "line": 73,
+      "observation": "Install labels call bare formatDateShort; dateFormat.ts defaults to browser locale/timezone, while the existing useDateFormat owner binds saved preferences. Numeric means/deltas also retain the previously documented specialist formatting paths.",
+      "whyNotConfirmed": "Retained as the existing locale/preferences follow-up, not promoted to a new failure or accepted fix. No saved-preference, DST, RTL or locale session was run.",
+      "requiredEvidence": "Explicit owner scope and synthetic saved-locale/timezone boundary cases plus later mounted review."
+    }
+  ],
+  "responsive": {
+    "sourceEvidence": [
+      "Three full-size CardGrid items retain independent shells.",
+      "FirmwareImpactSlot:15-22 forwards the existing packed placement class with w-full/min-w-0 and shared FadeIn.",
+      "FirmwareImpactDetails:61-69 uses a one-column base/two-column lg list with min-w-0, wrapped headers and break-words version names.",
+      "Chart uses ResponsiveContainer width/height=100%, not a fixed pixel width."
+    ],
+    "matrix": "320/375/390/430/768/1024/1280/1440/1920/2560px, narrow allocation, long labels, RTL, 200% text and open states: NOTRUN.",
+    "result": "No mobile/overflow/target-size pass or measured failure."
+  },
+  "accessibility": {
+    "sourceEvidence": [
+      "Chart supplies a localized ariaLabel and five dataColumns; ChartContainer:865-925 supplies stable figcaption/table fallback, including forced-colors presentation.",
+      "Details uses the shared Table with per-version aria-label and scope=row for all four evidence fields; verdict is conveyed by visible text as well as badge color.",
+      "PageContainer:185-200 retains the programmatic route-focus heading; page uses busy without blanking content.",
+      "Shared HelpTooltip, QueryError, EmptyState, OperationalBrief drawer and FadeIn remain the existing action/motion owners."
+    ],
+    "limits": "Keyboard reachability, focus trap/restoration, screen-reader output, 44px targets, reduced motion, forced colors and composed contrast: NOTRUN. Presence of shared components is not accessibility acceptance."
+  },
+  "actions": [
+    "Both-history retry: FirmwareImpactPage:85-88 calls both refetch functions without mutation.",
+    "Independent named-source retry remains through PageLayout/PageContainer/DataSourceNotice.",
+    "Summary methodology help and OperationalBrief Review details drawer remain available; drawer behavior was not exercised.",
+    "Per-version verdict HelpTooltip remains delegated to the shared owner.",
+    "Chart source preserves exportData and all five column keys; ChartContainer:472-487 retains CSV/export availability guards. No download, image copy or export was performed.",
+    "Fullscreen is not supplied by this caller; no unsupported fullscreen capability is inferred.",
+    "No-vehicle setup navigation remains the existing onboarding action.",
+    "No local workspace selectors, production commands or mutation workflow."
+  ],
+  "i18n": {
+    "sourceEvidence": "Titles, hints, causal disclaimer, empty states, actions, field labels and verdicts use t() with fallbacks. Read only the firmwareImpact block of canonical English catalog and the governed announcement strings.",
+    "limits": "No catalog generation/validation, localization-key gate, cold-i18n execution, locale transition or RTL render. Existing dynamic-verdict/catalog/locale debt is history, not a fresh catalog pass/failure.",
+    "preservation": "No new keys or catalog writes; technical version identifiers and raw export verdict tokens were not translated or recased."
+  },
+  "verification": {
+    "log": "logs\\phase6-qa-analytics-firmware-impact.log",
+    "executedCommands": [
+      {
+        "name": "COMMAND 1: mounted source counts/hashes and bounded Select-String pattern scan",
+        "shellExit": 0,
+        "elapsedSeconds": 0.166,
+        "rawOutputExcerpt": [
+          "COMPOSED_PRESENTATION_LINES=447",
+          "SECTION_COUNT=3",
+          "static_inline_css_variable MATCH_COUNT=0",
+          "raw_controls MATCH_COUNT=1",
+          "direct_libraries MATCH_COUNT=0",
+          "old_api_import MATCH_COUNT=0",
+          "double_api_prefix MATCH_COUNT=0",
+          "camelcase_query MATCH_COUNT=0",
+          "legacy_unit_calls MATCH_COUNT=0",
+          "raw_fetch MATCH_COUNT=0",
+          "MOUNTED_GLASS_PANEL_COUNT=0",
+          "MOUNTED_CHART_CONTAINER_COUNT=1"
+        ],
+        "qualification": "The raw_controls match was the shared capital-T Table because Select-String defaults to case-insensitive; see corrected COMMAND 2. All pattern zeros are bounded textual results, not an all-guidelines pass."
+      },
+      {
+        "name": "COMMAND 2: case-sensitive raw-element correction, statistical source citations and router agreement",
+        "shellExit": 0,
+        "elapsedSeconds": 0.112,
+        "rawOutputExcerpt": [
+          "raw_controls CASE_SENSITIVE_MATCH_COUNT=0",
+          "DISCARDED_COMMAND_1_CANDIDATE=PowerShell case-insensitive scan matched shared <Table>, not raw <table>; this is not a source violation.",
+          "firmwareImpact.ts:195: if (denom <= 0) return null;",
+          "firmwareImpact.ts:333: const cohensD = pooledSd > 0 ? delta / pooledSd : null;",
+          "firmwareImpact.ts:335: let verdict: ImpactVerdict = 'noChange';",
+          "FirmwareImpactDetails.tsx:20: noChange: 'No measurable change',",
+          "FirmwareImpactPage.tsx:59: .filter((i) => i.verdict !== 'insufficient')",
+          "router.go:3506: r.Route(\"/drives\", func(r chi.Router) {",
+          "router.go:3507: r.Get(\"/\", driveHandler.ListByVehicle)",
+          "router.go:4207: r.Get(\"/software-updates\", softwareUpdateHandler.List)"
+        ],
+        "qualification": "Exact full output retained in ignored log. The synthetic repro was described, not executed."
+      }
+    ],
+    "finalDocumentValidation": "Final command reads this JSON, checks item/ownership/issues, compares the eight recorded source hashes and appends numeric outcome plus ALL_RELEASED to the owned log. It is document validation, not a fresh application test.",
+    "scanScope": "Only the five mounted domain presentation files plus firmwareImpactState, its local barrel and firmwareImpact model. Tests, shared components, unrelated features and entire hook files were not blanket-scanned.",
+    "notRun": [
+      "audit.sh",
+      "verify.sh/contract-paths helper",
+      "global npx tsc --noEmit",
+      "build/lint/full suites",
+      "fresh scoped tests or discovery",
+      "browser/native/capture/HTTP",
+      "model execution/synthetic runtime repro",
+      "catalog validators/generators"
+    ]
+  },
+  "requiredSharedChanges": [],
+  "requiredFollowup": "One separately leased bounded domain/verdict owner for FI-001, plus inherited owner needs and deferred mounted QA. No shared-source change is authorized or claimed by this report.",
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\A11Y_GUIDELINES.md",
+    "docs\\MOBILE_GUIDELINES.md",
+    "docs\\I18N_GUIDELINES.md",
+    "docs\\frontend-audits\\audit-page-044.json",
+    "docs\\frontend-audits\\phase6-qa-analytics-drive-archetypes.json",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".gitignore",
+    "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+    "web\\src\\features\\analytics\\pages\\FirmwareImpactPage.test.tsx",
+    "web\\src\\features\\analytics\\lib\\firmwareImpact.ts",
+    "web\\src\\features\\analytics\\lib\\firmwareImpact.test.ts",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\index.ts",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\firmwareImpactState.ts",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactSlot.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactChart.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactDetails.tsx",
+    "web\\src\\features\\analytics\\components\\firmware-impact-modernization\\FirmwareImpactMetrics.tsx",
+    "web\\src\\features\\analytics\\components\\operationalbrief-a-m\\FirmwareBrief.tsx",
+    "web\\src\\features\\onboarding\\components\\NoVehicleSelected.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\data-display\\OperationalBrief.tsx",
+    "web\\src\\hooks\\useStatusAnnouncer.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\hooks\\useDriving.ts",
+    "web\\src\\api\\hooks\\useVehicleSystems.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\driving.ts",
+    "web\\src\\types\\vehicle-systems.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\Layout.tsx",
+    "web\\src\\i18n\\en.json",
+    "internal\\api\\router.go",
+    "internal\\api\\softwareupdate\\handler.go",
+    "internal\\models\\drive\\drive.go",
+    "internal\\models\\vehicle\\vehicle.go"
+  ]
+}

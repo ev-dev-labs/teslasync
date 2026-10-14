@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "queue_item": "phase6-qa-battery-battery-passport",
+  "repository_root": "D:\\repos\\teslasync",
+  "status": "DONE_SOURCE_QA_WITH_FINDINGS",
+  "scope": "Accepted BatteryPassportPage and its existing direct support only; source inspection, not native/full-page acceptance.",
+  "budget": {
+    "actual_creation_utc": "2026-10-13T20:56:07.874Z",
+    "target_finish_utc": "2026-10-13T21:16:07.874Z",
+    "hard_stop_utc": "2026-10-13T21:21:07.874Z",
+    "completed_source_review_utc": "2026-10-13T21:09:32.9782489Z",
+    "elapsed_minutes_at_completion": 13.42,
+    "elapsed_method": "Difference of explicit UTC Unix-millisecond timestamps; an earlier PowerShell offset subtraction printed an invalid negative interval and was rejected.",
+    "reset": false
+  },
+  "preflight": {
+    "queue_path": "migration-queue.md",
+    "item_line": 329,
+    "item_state_at_intake": "[ ]",
+    "dependency": "phase5-page-battery-battery-passport",
+    "dependency_line": 1726,
+    "dependency_state_at_intake": "[x]",
+    "existing_item_report": "ABSENT",
+    "existing_item_log": "ABSENT",
+    "queue_written": false,
+    "other_battery_pages_reviewed": false
+  },
+  "ownership": {
+    "write_paths": [
+      "docs\\frontend-audits\\phase6-qa-battery-battery-passport.json",
+      "web\\logs\\phase6-qa-battery-battery-passport.log"
+    ],
+    "source_test_catalog_shared_types_global_queue_handoff_writes": false,
+    "agents_launched": 0,
+    "scheduled_prompts_acted_on": false,
+    "parent_orchestration_acted_on": false,
+    "git_dispatch_commit_actions": false,
+    "release_statement": "ALL source/report/log/command/browser CLAIMS RELEASED; NO POST-RETURN WRITES.",
+    "background_work": "NONE"
+  },
+  "acceptance": {
+    "source_report_complete": true,
+    "source_implementation_accepted": false,
+    "native_acceptance": false,
+    "full_page_acceptance": false,
+    "visual_keyboard_runtime_accessibility_acceptance": false,
+    "fresh_api_or_identity_validation": false,
+    "fixes_made": false,
+    "meaning": "DONE describes this bounded report/log delivery only. Findings remain unresolved. Historical receipts, fixtures and literal counts are not live or native proof."
+  },
+  "instructions_read": [
+    "docs\\frontend-design-contract.md:1-680 (applicable core); 681-946 naming annex; remaining headings searched for passport-specific overrides (none)",
+    "docs\\frontend-mission.md (complete)",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md (complete)",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh"
+  ],
+  "instruction_application": {
+    "authority": "Current mission/design source-only boundaries and explicit item prohibitions govern this report. Older source-unit examples do not authorize legacy converters or a wire rename.",
+    "skills_loaded": ["audit-violations", "verify-api-hooks", "a11y-debugging"],
+    "skill_execution_limits": "No compiler/audit script, broader route verifier, Lighthouse, browser or runtime workflow executed; scoped source scans and contract reads only."
+  },
+  "inspected_files": [
+    {"path": "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx", "read": "complete", "lines": 478, "sha256": "8DEA211ABDA409C93EA380F1AC111FA9931CE55FC65DB4CD355881E42D1C943B"},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportCapacityContext.tsx", "read": "complete", "lines": 108},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportFieldDirectory.tsx", "read": "complete", "lines": 466},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportGradeAudit.tsx", "read": "complete", "lines": 185},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportKpiBand.tsx", "read": "complete", "lines": 101},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx", "read": "complete", "lines": 385},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMethodology.tsx", "read": "complete", "lines": 208},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportProvenanceMatrix.tsx", "read": "complete", "lines": 346},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportRecommendations.tsx", "read": "complete", "lines": 93},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportSectionBody.tsx", "read": "complete", "lines": 118},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportThermalProfile.tsx", "read": "complete", "lines": 176},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDiagnostics.tsx", "read": "complete", "lines": 383},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDistribution.tsx", "read": "complete", "lines": 178},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendTimeline.tsx", "read": "complete", "lines": 115},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportUsageProfile.tsx", "read": "complete", "lines": 96},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportVerificationDiagnostics.tsx", "read": "complete", "lines": 184},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\index.ts", "read": "complete", "lines": 19},
+    {"path": "web\\src\\features\\battery\\components\\battery-passport\\types.ts", "read": "complete", "lines": 28},
+    {"path": "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts", "read": "complete", "lines": 861, "sha256": "9773B2CA9A6D05AA6D1F8A33CCC19090F748E83A00E9B600D909C766B0C97B6C"},
+    {"path": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx", "read": "complete", "sha256": "B8BFBDBBAF32E7BE98597CEB3478346DA3ACA2E5438A5EE8E48F8A40DCB00D7A"},
+    {"path": "web\\src\\api\\hooks\\useBatteryPassport.ts", "read": "complete", "sha256": "B573BA4F6FF49C7CECAC834C80BF6980C888D90C8D21018090AB54B51B22A195"},
+    {"path": "web\\src\\features\\battery\\pages\\BatteryPassportPage.test.tsx", "read": "1-235 only; existing synthetic fixture/state/export declarations, not executed"},
+    {"path": "web\\src\\features\\battery\\pages\\BatteryPassportClosure.test.tsx", "read": "1-230 only; existing synthetic closure/mobile declarations, not executed"},
+    {"path": "web\\src\\api\\hooks\\useBatteryPassport.test.tsx", "read": "complete; existing synthetic hook contracts, not executed"},
+    {"path": "web\\src\\App.tsx", "read": "route/import and relevant shell source matches only"},
+    {"path": "web\\src\\lib\\routeRegistry.ts", "read": "passport route entry only"},
+    {"path": "web\\src\\lib\\workspaceScope.ts", "read": "complete"},
+    {"path": "web\\src\\hooks\\useSelectedVehicle.ts", "read": "complete"},
+    {"path": "web\\src\\hooks\\useDataState.ts", "read": "complete"},
+    {"path": "web\\src\\hooks\\useNumberFormatting.ts", "read": "complete"},
+    {"path": "web\\src\\hooks\\useSettings.ts", "read": "preference source matches only"},
+    {"path": "web\\src\\hooks\\useFormatting.ts", "read": "preference source matches only"},
+    {"path": "web\\src\\api\\types.ts", "read": "time/display preference source matches only"},
+    {"path": "web\\src\\api\\dataState.ts", "read": "1-250"},
+    {"path": "web\\src\\api\\queryClient.ts", "read": "40-78 and relevant policy matches"},
+    {"path": "web\\src\\api\\client.ts", "read": "relevant prefix/camel-mirror/operational guard matches and 345-400"},
+    {"path": "web\\src\\api\\hooks\\useVehicles.ts", "read": "1-90; selected-vehicle direct list dependency only"},
+    {"path": "web\\src\\lib\\dateFormat.ts", "read": "1-85"},
+    {"path": "web\\src\\lib\\timezone.ts", "read": "complete"},
+    {"path": "web\\src\\lib\\operationalMode.ts", "read": "complete"},
+    {"path": "web\\src\\components\\ui\\Button.tsx", "read": "complete"},
+    {"path": "web\\src\\components\\ui\\CopyButton.tsx", "read": "complete"},
+    {"path": "web\\src\\components\\ui\\DataTable.tsx", "read": "mobile/expansion source matches, 730-750 and 1168-1188 only"},
+    {"path": "web\\src\\components\\data-display\\MetricBar.tsx", "read": "complete"},
+    {"path": "web\\src\\components\\data-display\\format\\DateTime.tsx", "read": "1-165"},
+    {"path": "web\\src\\components\\charts\\AreaChartWrapper.tsx", "read": "incoming series color/palette source matches only"},
+    {"path": "web\\src\\components\\feedback\\TimeMachineBanner.tsx", "read": "1-170"},
+    {"path": "web\\src\\components\\layout\\Layout.tsx", "read": "time-machine banner mount matches only"},
+    {"path": "web\\src\\i18n\\en.json", "read": "lookup of the 296 referenced passport keys and Paused only"},
+    {"path": "web\\src\\i18n\\en\\locale-battery.json", "read": "145-220 plus lookup of the 296 referenced passport keys only"},
+    {"path": "internal\\api\\router.go", "read": "passport handler and /api/v1/vehicles/{vehicleID} mount matches; limited version-group range"},
+    {"path": "internal\\api\\batterypassport\\dtos.go", "read": "complete"},
+    {"path": "internal\\api\\batterypassport\\handler.go", "read": "complete; wire/provenance/denominator contract only"},
+    {"path": "internal\\api\\batterypassport\\scoring.go", "read": "complete; mask/hash/grade/capacity contract only"},
+    {"path": "migration-queue.md", "read": "only the exact assigned item/dependency rows"},
+    {"path": "docs\\frontend-audits\\audit-page-064.json", "read": "historical file timestamp/hash only; content/results not reused"}
+  ],
+  "mounted_route": {
+    "path": "/battery-passport",
+    "lazy_import": "web\\src\\App.tsx:80",
+    "safe_route_mount": "web\\src\\App.tsx:856",
+    "registry": "web\\src\\lib\\routeRegistry.ts:65",
+    "workspace_vehicle": true,
+    "workspace_range": false,
+    "scope_evidence": "workspaceScope.ts excludes this route from RANGE_ENABLED_PATHS and does not disable its vehicle selector. The server builds a current cumulative certificate; it accepts no workspace date bounds. No second vehicle/date picker is rendered.",
+    "mounted_runtime": "NOTRUN"
+  },
+  "retained_sections": [
+    {"name": "Certificate identity, export, digest status", "page_line": 338, "component": "BatteryPassportMasthead", "shell": "GlassPanel"},
+    {"name": "Six certificate-reported headline metrics", "page_line": 352, "component": "BatteryPassportKpiBand", "shell": "LayoutCard"},
+    {"name": "UTC SoH trend and accessible data alternative inputs", "page_line": 363, "component": "BatteryPassportTrendTimeline", "shell": "ChartCard"},
+    {"name": "Trend accounting, cadence, recency, fit and breadth", "page_line": 375, "component": "BatteryPassportTrendDiagnostics", "shell": "LayoutCard"},
+    {"name": "Trend distribution and range bands", "page_line": 387, "component": "BatteryPassportTrendDistribution", "shell": "LayoutCard"},
+    {"name": "Capacity and reference context", "page_line": 391, "component": "BatteryPassportCapacityContext", "shell": "LayoutCard"},
+    {"name": "Grade/scoring reconstruction", "page_line": 403, "component": "BatteryPassportGradeAudit", "shell": "LayoutCard"},
+    {"name": "Usage-factor rollups", "page_line": 415, "component": "BatteryPassportUsageProfile", "shell": "LayoutCard"},
+    {"name": "Thermal shares and exact accounting", "page_line": 419, "component": "BatteryPassportThermalProfile", "shell": "LayoutCard"},
+    {"name": "Verbatim server recommendation directory", "page_line": 431, "component": "BatteryPassportRecommendations", "shell": "LayoutCard"},
+    {"name": "Seven bound facts versus unbound display evidence", "page_line": 441, "component": "BatteryPassportProvenanceMatrix", "shell": "LayoutCard"},
+    {"name": "Independent verification status and hash prefixes", "page_line": 452, "component": "BatteryPassportVerificationDiagnostics", "shell": "LayoutCard"},
+    {"name": "Top-level/nested certificate field directory", "page_line": 463, "component": "BatteryPassportFieldDirectory", "shell": "LayoutCard"},
+    {"name": "Twelve methodology/interpretation disclosures", "page_line": 474, "component": "BatteryPassportMethodology", "shell": "LayoutCard"}
+  ],
+  "preservation": {
+    "page_lines": 478,
+    "page_plus_render_components_lines": 3620,
+    "including_passport_barrel_and_types_lines": 3667,
+    "including_analysis_lines": 4528,
+    "mounted_section_calls": 14,
+    "shell_counts": {"GlassPanel": 1, "ChartContainer": 0, "ChartCard": 1, "LayoutCard": 12},
+    "state_shells": "All fourteen section calls are unconditional under PageLayout; no page-level loading/error/empty gate. Thirteen evidence shells delegate local state; the methodology shell is static.",
+    "original_baseline_comparison": "NOTRUN: no frozen original-source baseline read/regenerated; historical queue counts are not fresh baseline proof.",
+    "minimum_70_percent_claim": "NOT MADE",
+    "rendered_section_parity": "NOTRUN"
+  },
+  "hook_and_wire_contracts": [
+    {
+      "hook": "useBatteryPassport",
+      "source": "web\\src\\api\\hooks\\useBatteryPassport.ts:68-75",
+      "request": "GET /vehicles/${vehicleId}/battery-passport",
+      "router": "internal\\api\\router.go:3210,3362,3370,3395",
+      "query_parameters": [],
+      "key": ["battery-passport", "vehicleId"],
+      "enabled": "vehicleId !== null",
+      "cancellation": "signal forwarded",
+      "wire": "BatteryPassport fields correspond to Passport JSON tags in internal\\api\\batterypassport\\dtos.go:29-47.",
+      "result": "SOURCE_MATCH; endpoint not contacted"
+    },
+    {
+      "hook": "useVerifyPassport",
+      "source": "web\\src\\api\\hooks\\useBatteryPassport.ts:84-95",
+      "request": "GET /vehicles/${vehicleId}/battery-passport/verify?hash=<encoded digest>",
+      "router": "internal\\api\\router.go:3210,3362,3370,3396",
+      "query_parameters": ["hash"],
+      "parameter_reader": "internal\\api\\batterypassport\\handler.go:178",
+      "key": ["battery-passport-verify", "vehicleId", "hash"],
+      "enabled": "non-null vehicle and non-null/non-empty hash",
+      "cancellation": "signal forwarded",
+      "wire": "valid, expected_hash, provided_hash correspond to VerifyResponse JSON tags.",
+      "result": "SOURCE_MATCH; endpoint not contacted"
+    },
+    {
+      "hook": "useVehicles through useSelectedVehicle",
+      "source": "web\\src\\api\\hooks\\useVehicles.ts:73-80",
+      "request": "GET /vehicles",
+      "router": "internal\\api\\router.go:3362-3363",
+      "result": "SOURCE_MATCH; direct selection dependency only, no other vehicle APIs audited"
+    }
+  ],
+  "evidence_and_state_review": {
+    "privacy_identity": "The current DTO exposes vin_masked, not raw VIN; MaskVIN reveals only WMI/tail for sufficiently long identifiers and fully masks short ones. No real identity was inspected. Export retains current raw response facts; no new public/share endpoint or redaction guarantee for hypothetical added fields is inferred.",
+    "provenance": "The matrix matches seven ordered tsbp-v1 inputs, UTC-day timestamps and fixed-four-decimal backend serialization. VIN mask, reference capacity, thermal, grade, trend and recommendations are explicitly not hash-bound. A match is described as current digest agreement, not telemetry correctness, regulatory certification, safety or remaining life.",
+    "capacity_soh": "Capacity is the median of up to eight qualifying daily energy/SoC estimates against a server-selected reference. SoH=0 with grade=N/A is explicitly treated as unavailable; numerical capacity handling still has finding F03. Grade thresholds/penalties and fit gates correspond to server/source calculations.",
+    "SI_display_exceptions": "Current backend contract explicitly returns capacity_kwh/original_capacity_kwh and the v1 digest binds capacity_kwh. These existing wire identifiers, formula keys, tsbp-v1, N/A and verbatim rule outputs are technical/evidence exceptions, not newly introduced SI fields or hardcoded UI-label findings. No legacy conversion helper was called or requested. A future wire-unit change requires its actual integration owner and hash-version policy; this report does not rename it.",
+    "denominators": "Trend shares use included displayed points and become null with zero points. Thermal shares use drives with ambient readings; fast-share uses all counted charging sessions; end-SoC uses non-null end_soc_pct records. Session/reading totals are absent from the current DTO; candidate C01 remains integration uncertainty rather than a fabricated measured-zero failure.",
+    "date_timezone": "Trend day parsing preserves explicit UTC calendar keys, sorts/deduplicates with exact exclusion categories and uses one immutable mount clock. Masthead instants use the selected vehicle timezone; freshness in the KPI brief does not share it (F06). Range controls are intentionally absent for this cumulative/current contract.",
+    "loading_pending_empty": "No vehicle disables both queries. Local skeleton/status surfaces handle initial loading. Undefined and null responses remain distinct. Empty certificate success disables export while retaining every shell. Paused initial/empty states are described as paused/pending without inventing connectivity or empty-source causes.",
+    "fatal_retained_recovery": "Initial certificate failure has masthead QueryError retry. Retained certificate failure preserves facts/export and warns, but offers no retry (F04). Verification loading, refreshing, mismatch and error do not erase certificate evidence; verification failure has no independent retry (F05). Offline-paused retained certificate uses existing StaleRefreshWarning recovery; it must not be confused with failed refresh recovery.",
+    "malformed": "Source guards Array.isArray for trend/recommendations, checks finite/ranged diagnostics, invalid/future/duplicate dates and thermal totals, and retains unmodified export facts. Existing malformed synthetic fixture declarations were read, not executed. Hypothetical non-string/object wire violations were not promoted to findings.",
+    "exports_live_replay": "Export is local canonical JSON from retained raw facts; strips client-added camel mirrors recursively, preserves returned order/unknown fields, and revokes the object URL. Copy/export make no vehicle command or POST/PUT/DELETE. There is no operational mutation on this page; GET passport has a documented best-effort server ledger append. QueryClient prevents offline mutation replay, but as_of capability/disclosure remains C02.",
+    "i18n": "All 296 referenced batteryPassport keys exist in both inspected English source catalogs. Paused also exists. Verbatim server outputs and technical field identifiers are retained intentionally. Actual locale/catalog loading and translations were NOTRUN.",
+    "source_a11y_mobile": "Localized action names, native shared buttons, section status labels, chart alternative inputs, wrap/stack grids and field-directory keyValue detail roles are present in source. Provenance source/meaning is hidden without mobile recovery (F01). Distribution progressbars falsely announce zero on an empty denominator (F02). Computed focus/contrast/target sizes, screen readers and mobile drawer reachability are NOTRUN, not passed."
+  },
+  "findings": [
+    {
+      "id": "F01",
+      "severity": "medium",
+      "title": "Provenance source/meaning column is unreachable below md",
+      "location": {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportProvenanceMatrix.tsx", "line": 335},
+      "evidence": [
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportProvenanceMatrix.tsx:277-285 defines source/meaning; 328-336 disables column visibility/reorder and supplies only field/value/binding mobileColumns.",
+        "web\\src\\components\\ui\\DataTable.tsx:742-743 maps omitted mobile keys to hidden md:table-cell; 1173-1181 applies that class to cells.",
+        "The provenance caller supplies neither mobilePresentation nor expansion/details; unlike the field directory it has no narrow-screen route to this column."
+      ],
+      "mechanism": "At viewport widths below 768px, the source column's content is display:none. Horizontal scrolling cannot reveal display:none cells, and the disabled column menu cannot restore them. This deterministically removes provenance interpretation metadata from that section.",
+      "minimal_follow_up_scope": "Only BatteryPassportProvenanceMatrix and its named matching test: reuse existing mobile keyValue/details presentation or preserve the complete column through contained scrolling; do not change DataTable globally.",
+      "runtime_reproduction": "NOTRUN"
+    },
+    {
+      "id": "F02",
+      "severity": "medium",
+      "title": "Empty trend denominators become measured-zero accessible bars",
+      "location": {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDistribution.tsx", "line": 77},
+      "evidence": [
+        "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts:386-390 returns share=null when points.length is zero.",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendDistribution.tsx:77 substitutes zero; 80-89 separately shows an em dash.",
+        "web\\src\\components\\data-display\\MetricBar.tsx:49-63 treats finite zero as a reading and emits aria-valuenow=0 instead of its missing-reading aria-valuetext."
+      ],
+      "mechanism": "A valid certificate with degradation_trend=[] retains this section. All five shares have no denominator, yet every progressbar exposes a known zero percentage to assistive technology while its visible sublabel says unknown. This needs no malformed response.",
+      "minimal_follow_up_scope": "BatteryPassportTrendDistribution and a named regression only: pass null for null share and preserve genuine zero shares when the included-point denominator is positive; use the existing MetricBar missing-value API.",
+      "runtime_reproduction": "NOTRUN"
+    },
+    {
+      "id": "F03",
+      "severity": "medium",
+      "title": "Unavailable capacity estimate is rendered as zero capacity and zero ratio",
+      "location": {"path": "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts", "line": 618},
+      "evidence": [
+        "internal\\api\\batterypassport\\scoring.go:163-165 returns zero for an empty capacity sample; handler.go:355 uses this median; 291-294 leaves the grade N/A without positive SoH.",
+        "web\\src\\features\\battery\\lib\\batteryPassportAnalysis.ts:609-618 suppresses the explicit unavailable SoH sentinel but accepts capacity_kwh=0 as a finite estimate; 651-655 computes a zero capacity/reference quotient.",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportCapacityContext.tsx:43-49,88-90 and BatteryPassportKpiBand.tsx:43-46 display these numbers as the reported estimate/ratio."
+      ],
+      "mechanism": "The conforming no-qualifying-estimate response has soh_pct=0, health_grade=N/A and capacity_kwh=0. SoH correctly appears unavailable, but the capacity panels still present 0 kWh and 0% rather than distinguishing the backend's no-sample sentinel from an actual estimate. This is not a wire rename or a request to erase valid zero facts.",
+      "minimal_follow_up_scope": "batteryPassportAnalysis and named capacity/KPI regressions: derive unavailable estimated capacity from the documented no-estimate sentinel while retaining raw zero in the field/hash/export evidence; preserve valid zero semantics elsewhere.",
+      "runtime_reproduction": "NOTRUN"
+    },
+    {
+      "id": "F04",
+      "severity": "medium",
+      "title": "Retained failed certificate refresh has no user retry",
+      "location": {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx", "line": 342},
+      "evidence": [
+        "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx:212-225 supplies onRetry=passportQuery.refetch.",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx:342-355 renders only warning text with a retained passport. QueryError retry occurs only at 209-214 or the empty-response error branch 357-363.",
+        "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx:314 excludes StaleRefreshWarning whenever refreshError exists; queryClient.ts:51 disables refetchOnWindowFocus and the passport hook defines no polling."
+      ],
+      "mechanism": "After a populated certificate exhausts refresh retries, its facts are correctly retained but the available onRetry callback is never attached to the failed-refresh surface. Paused/offline recovery has a separate button; that does not recover this failed-refresh branch.",
+      "minimal_follow_up_scope": "BatteryPassportMasthead and its named retained-refresh regression: expose the existing state.onRetry beside the nonblocking warning, without hiding facts or duplicating fatal recovery.",
+      "runtime_reproduction": "NOTRUN"
+    },
+    {
+      "id": "F05",
+      "severity": "medium",
+      "title": "Failed verification has no independent recovery action",
+      "location": {"path": "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx", "line": 268},
+      "evidence": [
+        "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx:149-153 owns verifyQuery but 234-291 creates only status/data/error.",
+        "web\\src\\features\\battery\\components\\battery-passport\\types.ts:24-28 carries no verify retry callback.",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportVerificationDiagnostics.tsx:85-94 labels the error unavailable; its body has no recovery control.",
+        "The certificate retry at BatteryPassportPage.tsx:214 refetches only passportQuery; an unchanged hash does not change the verification key."
+      ],
+      "mechanism": "A verification-only network failure leaves the certificate usable but cannot be retried directly by the user. Even retrying the certificate would not necessarily retry verification if the seven bound facts/hash remain unchanged. Independent source recovery is missing, not certificate evidence.",
+      "minimal_follow_up_scope": "BatteryPassportPage, passport verification state type and BatteryPassportVerificationDiagnostics plus a named regression: carry verifyQuery.refetch to a localized nonblocking retry; do not widen backend capabilities.",
+      "runtime_reproduction": "NOTRUN"
+    },
+    {
+      "id": "F06",
+      "severity": "low",
+      "title": "KPI freshness silently uses browser timezone instead of certificate display context",
+      "location": {"path": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx", "line": 53},
+      "evidence": [
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportKpiBand.tsx:93-96 passes issued_at as the snapshot observedAt.",
+        "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx:53 calls formatDateTime without locale/timezone options.",
+        "web\\src\\lib\\dateFormat.ts:54-61 then uses browser locale/timezone.",
+        "web\\src\\features\\battery\\pages\\BatteryPassportPage.tsx:133,342 and web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx:264-269 render the same certificate issue instant in vehicle time with i18n locale."
+      ],
+      "mechanism": "For a browser in a different timezone or locale, the same issue instant is presented differently in the identity and KPI freshness surfaces; the KPI freshness has no timezone indicator. Source signatures make this divergence deterministic without inspecting any real timestamp.",
+      "minimal_follow_up_scope": "Passport KPI timestamp presentation at its existing owner; use existing date/time display APIs and explicit context. If BatteryEvidenceBrief needs an optional context prop, its actual shared owner must receive a separate parent claim; no global default changes.",
+      "runtime_reproduction": "NOTRUN"
+    },
+    {
+      "id": "F07",
+      "severity": "low",
+      "title": "Decorative rainbow stripe and fixed series/bar colors bypass restrained theme roles",
+      "location": {"path": "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx", "line": 149},
+      "evidence": [
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx:149 adds a non-data emerald/cyan/purple gradient stripe.",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportTrendTimeline.tsx:108 and BatteryPassportTrendDistribution.tsx:79 force #22d3ee.",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportThermalProfile.tsx:53,55,57 selects three fixed hex colors.",
+        "web\\src\\components\\charts\\AreaChartWrapper.tsx:111-112,161 uses the supplied color directly for tint/stroke, not the saved palette."
+      ],
+      "mechanism": "The masthead decoration has no semantic meaning. Data fills/strokes are fixed regardless of theme or saved palette, contrary to MDC-010/034 and mission color restraint. This establishes source bypass, not a measured contrast failure.",
+      "minimal_follow_up_scope": "Only the four named passport rendering components and their matching regressions: remove the decorative stripe and consume existing semantic/palette roles; retain band identities, source values and user preference IDs.",
+      "runtime_reproduction": "NOTRUN"
+    }
+  ],
+  "unconfirmed_candidates": [
+    {
+      "id": "C01",
+      "title": "Charging-share/end-SoC zero defaults lack denominator provenance",
+      "locations": [
+        "internal\\api\\batterypassport\\handler.go:246-252",
+        "internal\\api\\batterypassport\\dtos.go:29-47",
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportUsageProfile.tsx:54-78"
+      ],
+      "reason_not_promoted": "The backend defaults absent rollups to zero, but the wire omits total session/end-SoC reading counts. A valid returned zero can be genuine; source-only inspection cannot infer missing denominators for an arbitrary displayed certificate. Existing fixtures intentionally preserve zero proxies.",
+      "bounded_follow_up": "Actual passport integration owner may specify nullable aggregate evidence/counts or explicit unavailability provenance, then add focused contract/page regressions. Never blanket-convert zero to unknown.",
+      "confirmation": "NOTRUN"
+    },
+    {
+      "id": "C02",
+      "title": "Current certificate scope under global as_of banner needs capability disclosure",
+      "locations": [
+        "web\\src\\api\\hooks\\useBatteryPassport.ts:68-95",
+        "web\\src\\components\\feedback\\TimeMachineBanner.tsx:115-133",
+        "internal\\api\\batterypassport\\handler.go:162,280",
+        "web\\src\\lib\\operationalMode.ts:67-74"
+      ],
+      "reason_not_promoted": "The hooks intentionally read a current certificate, not as_of state, and page labels repeatedly say current. The global banner describes historical mode while the current GET can append its documented ledger snapshot. This is an integration/disclosure question, not an observed replay failure or a client operational mutation. Local JSON/copy actions do not require live vehicle-write guards.",
+      "bounded_follow_up": "Route capability/disclosure owner should define the current-only passport boundary in historical navigation; do not invent date-bounded/passport replay backend support.",
+      "confirmation": "NOTRUN"
+    },
+    {
+      "id": "C03",
+      "title": "Mobile action target and scaled/translated export-label reachability",
+      "locations": [
+        "web\\src\\features\\battery\\components\\battery-passport\\BatteryPassportMasthead.tsx:170-185,331-340",
+        "web\\src\\components\\ui\\Button.tsx:35-39",
+        "web\\src\\components\\ui\\CopyButton.tsx:57-67"
+      ],
+      "reason_not_promoted": "Export opts into fixed sm sizing and CopyButton defaults to sm; source does not establish actual composed dimensions, global target adjustments, translated-label clipping, zoom, focus, or safe-area reachability. No browser/native measurement occurred.",
+      "bounded_follow_up": "Existing mounted passport QA at mission widths, 200% text/long translations/RTL, keyboard and mobile drawer controls; then scope any caller-only fix. No shared Button campaign.",
+      "confirmation": "NOTRUN"
+    }
+  ],
+  "counts": {"deterministic_findings": 7, "unconfirmed_candidates": 3},
+  "source_checks": {
+    "method": "Case-sensitive Select-String matching-line counts over the page, passport direct modules, analysis, BatteryEvidenceBrief and useBatteryPassport; manually traced returned branches/contracts. Not a compiler or runtime audit.",
+    "static_inline_var_matching_lines": 0,
+    "raw_button_input_textarea_select_table_matching_lines": 0,
+    "direct_recharts_leaflet_motion_import_matching_lines": 0,
+    "old_relative_api_import_matching_lines": 0,
+    "neon_text_matching_lines": 0,
+    "any_type_matching_lines": 0,
+    "request_template_double_prefix_matching_lines": 0,
+    "camelcase_query_parameter_matching_lines": 0,
+    "decorative_gradient_matching_lines": 1,
+    "fixed_hex_color_matching_lines": 5,
+    "referenced_passport_i18n_keys": 296,
+    "missing_referenced_keys_legacy_en_source": 0,
+    "missing_referenced_keys_split_battery_source": 0,
+    "limits": "Literal scans are not multiline/parser/behavioral completeness proof. Initial case-insensitive raw-control scan matched shared <Button>; case-sensitive recheck corrected this false positive to zero. No manufactured malformed-response failures."
+  },
+  "historical_receipts": [
+    {
+      "path": "docs\\frontend-audits\\audit-page-064.json",
+      "last_modified_utc": "2026-10-12T05:46:57.5173410Z",
+      "sha256": "E08326DB013E5F761DC5448F4F12D97B9A4AD50786A57833668E49D1A26E1078"
+    }
+  ],
+  "notrun": [
+    {"check": "npx tsc --noEmit", "reason": "Compiler execution explicitly prohibited."},
+    {"check": "tests, lint, build, full suites, package scripts and coverage", "reason": "Execution explicitly prohibited; existing fixture/test source only was read."},
+    {"check": "audit.sh and verify.sh", "reason": "Audit invokes compiler; verifier broadens route-module scans. No script or custom helper/tooling executed."},
+    {"check": "real passport/battery/identity/data/API access or actions", "reason": "Explicit privacy/source-only restriction."},
+    {"check": "browser, native, Lighthouse, screenshots, network/console, mounted route interaction", "reason": "Explicit restriction; source-only delivery is not acceptance."},
+    {"check": "keyboard, screen reader, composed contrast, focus restoration, tap-target measurements", "reason": "Requires forbidden browser/native runtime evidence."},
+    {"check": "mission widths 320/375/390/430/768/1024/1280/1440/1920/2560, dark/light/custom/RTL/forced colors/200% text/reduced motion", "reason": "No viewport or runtime QA permitted."},
+    {"check": "original baseline preservation comparison and rendered fourteen-section parity", "reason": "No frozen original source/capture was consumed; historical receipts inspected as timestamp/hash only."},
+    {"check": "fresh authentication, privacy redaction beyond current DTO, live/replay and current backend data", "reason": "No real data or requests permitted."},
+    {"check": "runtime i18n loading and translated layouts", "reason": "English referenced-key source lookup is not runtime/catalog-loading proof."},
+    {"check": "Git/status/commit/queue/handoff/orchestration/Discord/Docker/agents/scheduling", "reason": "Parent-only or explicitly prohibited."}
+  ],
+  "report_validation": {
+    "json_parse_and_count_consistency": "Verified by read-only PowerShell: FINAL_REPORT_JSON_PARSE=OK; FINAL_COUNTS=7 findings;3 candidates;14 sections. Artifact-only edits are parsed once more before return.",
+    "exact_citation_recheck": "All seven primary finding locations and fourteen opening section calls printed from current source. Section call offsets corrected to those exact lines.",
+    "source_fingerprint_recheck": "Four report-listed hashes and nine finding-support component/type hashes matched their earlier SHA-256 snapshots; thirteen critical source files unchanged at recheck.",
+    "inspected_path_existence": "MISSING_INSPECTED_PATHS=0",
+    "verification_retry_source_matches": 0,
+    "artifact_validation_utc": "2026-10-13T21:09:32.9782489Z",
+    "log": "web\\logs\\phase6-qa-battery-battery-passport.log"
+  }
+}

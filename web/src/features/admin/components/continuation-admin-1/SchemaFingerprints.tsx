@@ -1,7 +1,8 @@
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Fingerprint } from 'lucide-react';
 import { LayoutCard, SourceContent } from '@/components/layout';
-import { Card, CopyButton, PanelTitle, Caption, Code, Text } from '@/components/ui';
+import { Card, CopyButton, PanelTitle, Caption, Code, Text, ErrorText, HelperText } from '@/components/ui';
 import { Skeleton, QueryError, EmptyState } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
@@ -58,16 +59,32 @@ export function SchemaFingerprints({ state }: { state: SchemaSectionState }) {
 function FingerprintDetails({ title, fp, generatedAt }: {
   title: string; fp: SchemaFingerprint; generatedAt?: string | null;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(['translation', 'settings']);
   const sha = fp?.sha256 ?? '';
+  const [copyFailed, setCopyFailed] = useState(false);
+  useEffect(() => {
+    setCopyFailed(false);
+  }, [sha]);
   return (
     <Card className="min-w-0">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <PanelTitle>{title}</PanelTitle>
         <CopyButton text={sha} iconOnly disabled={!sha}
+          className="h-11 min-h-11 min-w-11 md:h-9 md:min-h-9 md:min-w-0"
+          onCopy={() => setCopyFailed(false)}
+          onCopyError={() => setCopyFailed(true)}
           ariaLabel={t('admin.schemaDrift.copyHash', 'Copy fingerprint hash')} />
       </div>
-      <Code className="mb-3 block break-all">{sha || '—'}</Code>
+      <Code className="mb-3 block select-text break-all">{sha || '—'}</Code>
+      {copyFailed && (
+        <div className="mb-3 space-y-1">
+          <ErrorText>{t('common.copyButton.errorToast', 'Failed to copy')}</ErrorText>
+          <HelperText>{t('totp.copy.manualHint', {
+            ns: 'settings',
+            defaultValue: 'Clipboard unavailable. Select the displayed text and copy it manually.',
+          })}</HelperText>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-2">
         <FingerprintStat label={t('admin.schemaDrift.tables', 'Tables')} value={fp?.table_count} />
         <FingerprintStat label={t('admin.schemaDrift.columns', 'Columns')} value={fp?.column_count} />

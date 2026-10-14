@@ -1,0 +1,390 @@
+{
+  "item": "phase6-qa-advanced-component-survival",
+  "page": "AcceptedComponentSurvivalPage",
+  "sourceComponent": "ComponentSurvivalPage",
+  "status": "SOURCE_AUDIT_COMPLETE_WITH_CONFIRMED_FINDINGS",
+  "acceptance": "NOT_ACCEPTED_BY_THIS_SOURCE_ONLY_REPORT",
+  "routes": ["/intelligence/component-survival"],
+  "purpose": "Review evidence-bounded probabilistic component service horizons, competing risks, and intervention sensitivity.",
+  "primaryGoal": "Distinguish supported estimates, assumptions, and unsupported measurements for the selected vehicle.",
+  "ownership": {
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-advanced-component-survival.json",
+      "logs\\phase6-qa-advanced-component-survival.log"
+    ],
+    "logIgnoredBy": ".gitignore:80 logs/",
+    "sourceWrites": [],
+    "testWrites": [],
+    "sharedTypeCatalogApiBackendConfigWrites": [],
+    "priorPhase6QARead": false,
+    "releaseState": "ALL_RELEASE",
+    "postReturnWrites": "NONE",
+    "parentLoopFollowed": false
+  },
+  "scope": {
+    "method": "Current accepted page and directly used presentation parts, with bounded read-only contract tracing.",
+    "primarySources": [
+      "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx"
+    ],
+    "dependencyBoundary": "Shared renderers, formatting/trust hooks, mounted route, and one source endpoint were read only to explain this page's actual behavior. No broader shared-library or backend audit.",
+    "finishedPageQAGuidanceRead": [
+      "docs\\frontend-mission.md:1416-1487, visual QA and page/application definition of done",
+      "docs\\frontend-design-contract.md:477-606, localization, SI, privacy, responsive/a11y, and evidence limits",
+      "docs\\frontend-worker-conventions.md, assigned ownership and source-only audit reporting",
+      ".github\\prompts\\audit-pages.prompt.md, independent audit guidance",
+      ".github\\agents\\code-auditor.agent.md, violation rules and integrity requirements",
+      ".github\\skills\\audit-violations\\audit.sh, inspected but not executed"
+    ],
+    "applicableInstructionsRead": [
+      ".github\\instructions\\react-frontend.instructions.md:1-510",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md"
+    ],
+    "instructionResolution": "Current SI cutover and design contract supersede legacy-unit/neon examples. User prohibits global TypeScript, suites, runtime/browser/HTTP, repair, Git, Docker, installs, servers, helpers, extensions, and delegation; none were used."
+  },
+  "summary": {
+    "confirmedSourceFindings": 4,
+    "unpromotedCandidates": 3,
+    "runtimeConfirmedFindings": 0,
+    "highestPriority": "P2",
+    "freshApplicationAcceptance": "NOT RUN",
+    "sourceFixes": "NOT AUTHORIZED; NONE"
+  },
+  "dataSources": [
+    {
+      "hook": "useComponentSurvival(vehicleId, 12, (page - 1) * 12)",
+      "pageCitation": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:34",
+      "hookCitations": [
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:29-36",
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:49-74",
+        "web\\src\\api\\hooks\\useAdvancedIntelligence.ts:84-88"
+      ],
+      "method": "GET",
+      "clientPath": "/advanced-intelligence/component-survival?vehicle_id=<positive integer>&limit=12&offset=<nonnegative integer>",
+      "effectiveProductionPath": "/api/v1/advanced-intelligence/component-survival",
+      "routeContract": "SOURCE_MATCH_CONFIRMED",
+      "routeCitations": [
+        "web\\src\\api\\client.ts:74-94",
+        "internal\\api\\router.go:3210",
+        "internal\\api\\router.go:3960",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:69-74",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:127-141",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:405-419"
+      ],
+      "queryContract": "vehicle_id, limit, offset are snake_case/unchanged; positive selected vehicle enables the hook; AbortSignal reaches request; vehicle/limit/offset are in the cache key. Transport bounds are limit 1..100 and offset 0..100000.",
+      "wireShape": "AdvancedPage<ComponentSurvival>: items, total, limit, offset. Nullable probability/horizon/adjusted-P50 values mirror Go pointers; component, data_quality, and intervention_sensitivity are nonnullable by the inspected contracts.",
+      "wireCitations": [
+        "web\\src\\types\\advancedIntelligence.ts:9-31",
+        "web\\src\\types\\advancedIntelligence.ts:104-132",
+        "internal\\domain\\advancedintelligence\\survival_security_charging.go:17-41"
+      ],
+      "sourceOwnership": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go:13-139",
+      "sourceSemantics": "Server selects a two-year evidence window, estimates four named component groups, uses recorded interventions as outcome proxies, leaves unsupported horizons null, and computes survival probability over 365 days. Assumed intervention hazard delta is -20 percent; limitations explicitly qualify that assumption.",
+      "sourceTotal": "The current builder produces four items for a nonnil source, zero for nil source; pageSlice returns the full count and slices before response. The page's >12 pagination branch is therefore not exercised by the inspected current producer.",
+      "runtimeEndpointAuthorizationAndPayload": "NOT RUN / UNKNOWN"
+    }
+  ],
+  "components": [
+    {"name": "PageLayout / FadeIn / AlertBanner", "role": "Persistent page shell and probabilistic-guidance notice"},
+    {"name": "InsightPanel", "role": "Two persistent page sections, per-source loading/error/empty/retained state, freshness and retry"},
+    {"name": "Card / Badge / Text / Icon", "role": "Component cards, semantic labels and unsupported notice"},
+    {"name": "StatStrip", "role": "Four raw nullable metrics per component; display-boundary formatters"},
+    {"name": "MetricBar", "role": "Supported competing risks; null probability uses explicit Unsupported text"},
+    {"name": "EvidencePanel / KVList / EmptyState", "role": "Quality, evidence sources, and limitations"},
+    {"name": "Button / Pagination", "role": "First-page recovery and conditional list navigation"}
+  ],
+  "confirmedFindings": [
+    {
+      "id": "CS-01",
+      "priority": "P2",
+      "rule": "retained-empty-state",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "line": 90,
+      "relatedCitations": [
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:41-48",
+        "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx:70-90",
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:35,61-68,178-186",
+        "web\\src\\api\\dataState.ts:190-191,234-249",
+        "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx:53-75"
+      ],
+      "mechanism": "The hook retains an object envelope with items: []. A refresh error or paused refresh makes it retained. InsightPanel forces SourceContent to ready, then tests Array.isArray(dataState.data), which is false for the envelope. With empty=true and retained=true it renders the empty child grid rather than emptyBody. Freshness/warning and panel shells remain, but the previously explicit no-estimates message and empty-body refresh action disappear in both page panels.",
+      "sourceDerivedRepro": {
+        "inputCondition": "Selected positive vehicle; a resolved response {items: [], total: 0, limit: 12, offset: 0}; then refresh returns an error or fetchStatus becomes paused while data remains.",
+        "expected": "Retain the authoritative empty-result explanation together with the nonblocking stale/paused warning and reachable retry.",
+        "derivedActual": "Both panel bodies render their children with zero mapped items, without the no-estimates EmptyState.",
+        "execution": "NOT RUN; branch evaluation from current source only"
+      },
+      "owner": "page-domain presentation owner",
+      "suggestedFix": "Honor the caller's empty flag for retained object envelopes without deleting retained nonempty evidence or weakening unknown/paused initial-load distinctions.",
+      "confidence": "HIGH_SOURCE; NOT_RUNTIME_VERIFIED"
+    },
+    {
+      "id": "CS-02",
+      "priority": "P2",
+      "rule": "locale-timezone-consistency",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 62,
+      "relatedCitations": [
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:6,90-92",
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:28,85,190",
+        "web\\src\\hooks\\useDateFormat.ts:72-92",
+        "web\\src\\lib\\dateFormat.ts:7-13,45-61"
+      ],
+      "mechanism": "Page-generated timestamps use useDateFormat, which binds saved locale and resolved timezone. EvidencePanel directly calls lib formatDateTime without options for quality-window and evidence timestamps. That helper defaults to browser locale/timezone, so one page uses two formatting scopes and can show different calendar dates for the same instant.",
+      "sourceDerivedRepro": {
+        "inputCondition": "Saved locale de-DE and timezone display UTC; browser locale en-US and timezone America/Los_Angeles; generated_at and observed_at both 2026-10-13T00:30:00Z.",
+        "expected": "Both timestamp surfaces honor the same saved locale/timezone or explicitly identify an intentional differing zone.",
+        "derivedActual": "Generated timestamp uses saved UTC/de-DE; evidence timestamp uses browser local/en-US and a prior local calendar date.",
+        "execution": "NOT RUN; formatter-call contract only"
+      },
+      "owner": "page-domain EvidencePanel owner",
+      "suggestedFix": "Bind evidence/window formatting to existing useDateFormat or explicitly passed existing formatter preferences; do not create a competing date layer.",
+      "confidence": "HIGH_SOURCE; NOT_RUNTIME_VERIFIED"
+    },
+    {
+      "id": "CS-03",
+      "priority": "P2",
+      "rule": "probability-horizon-context",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 94,
+      "relatedCitations": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:80-114",
+        "web\\src\\types\\advancedIntelligence.ts:119-132",
+        "internal\\app\\advancedintelligencesvc\\survival_security_charging.go:118-129"
+      ],
+      "mechanism": "The source computes exp(-hazardPerS * 365 days), but the metric is labeled only Survival probability. Its surrounding period says Result generated and the notice discusses uncertainty, neither naming the probability's 365-day horizon. P10/P50/P90 horizon metrics are different quantities and do not identify that probability period. The wire also provides no probability-horizon field.",
+      "sourceDerivedRepro": {
+        "inputCondition": "A supported component: at least 20 observed drives over 90 days and at least one recorded component outcome.",
+        "expected": "Explain that the percentage is event-free survival over the producer's 365-day horizon, distinct from percentile horizons and guaranteed failure dates.",
+        "derivedActual": "A percent labeled Survival probability without the time horizon used in the source calculation.",
+        "execution": "NOT RUN; current source formula and page label comparison"
+      },
+      "owner": "page owner with source-contract integration review",
+      "suggestedFix": "Expose verified model-horizon context using the existing metric label/context surface. Do not invent a configurable horizon or change the SI contract in this QA item.",
+      "confidence": "HIGH_SOURCE; NOT_RUNTIME_VERIFIED"
+    },
+    {
+      "id": "CS-04",
+      "priority": "P3",
+      "rule": "localized-protocol-labels",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 77,
+      "relatedCitations": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx:74-77,122,132,187",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:57",
+        "web\\src\\types\\advancedIntelligence.ts:8-11",
+        "internal\\app\\advancedintelligencesvc\\survival_security_charging.go:46-49"
+      ],
+      "mechanism": "Known quality enum values are printed directly in both badges instead of translated display labels. Component/risk protocol identifiers from the current producer, including hv_battery and charging_system, are likewise rendered raw. Changing UI locale changes surrounding headings but not these known labels. This is not a claim that arbitrary evidence prose or user data should be rewritten.",
+      "sourceDerivedRepro": {
+        "inputCondition": "Non-English UI locale and a current source row with component hv_battery, quality insufficient, and a charging_system competing-risk entry.",
+        "expected": "Localized human labels for recognized protocol enums/identifiers while preserving raw source identity and safe unknown fallback.",
+        "derivedActual": "Visible protocol strings insufficient, hv_battery, and charging_system remain unchanged.",
+        "execution": "NOT RUN; JSX interpolation/source identifiers inspected"
+      },
+      "owner": "page/domain display mapping; catalog changes require their separate assigned owner",
+      "suggestedFix": "Translate recognized display labels through existing i18n with raw-value fallback; retain source keys unchanged and do not start an unrelated translation campaign.",
+      "confidence": "HIGH_SOURCE; NOT_RUNTIME_VERIFIED"
+    }
+  ],
+  "unpromotedCandidates": [
+    {
+      "id": "CS-C01",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 76,
+      "candidate": "Malformed item.data_quality=null or intervention_sensitivity=null would cause unguarded nested dereferences.",
+      "disposition": "UNPROMOTED_SCHEMA_INVALID_INPUT",
+      "reason": "Both inspected TS and Go response structs require these nested objects; the actual builder initializes both. No observed payload establishes that this malformed shape occurs. Supported nullable metrics and nullable/empty arrays were reviewed separately."
+    },
+    {
+      "id": "CS-C02",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 122,
+      "candidate": "Long component/risk/evidence labels or 200 percent text may exceed competing-risk bar or nested card allocation.",
+      "disposition": "UNPROMOTED_MOBILE_A11Y_RUNTIME_UNKNOWN",
+      "reason": "Page source supplies min-w-0, break-words, wrapping headers, and bounded grids. No viewport, computed-size, RTL, zoom, focus, contrast, forced-color, touch-target, or native measurement was performed."
+    },
+    {
+      "id": "CS-C03",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+      "line": 168,
+      "candidate": "Pagination and first-page recovery need mounted interaction proof if a future source returns more than 12 components.",
+      "disposition": "UNPROMOTED_CURRENT_SOURCE_BRANCH_UNREACHABLE",
+      "reason": "The current source produces at most four items. Local pagination reset and offset wiring exist, but this report did not fabricate a larger backend payload, run old tests, or promote that branch to a current endpoint defect."
+    }
+  ],
+  "states": [
+    {"state": "No selected vehicle", "sourceBehavior": "Hook disabled; both InsightPanel shells remain with Select a vehicle empty guidance. Static notice and explicitly unsupported card remain.", "citations": "ComponentSurvivalPage.tsx:34-38,61-66,178-183,202-214; useAdvancedIntelligence.ts:73", "runtime": "NOT RUN"},
+    {"state": "Initial loading", "sourceBehavior": "Query passed independently to both panels; unresolved fetch maps to loading; shared SourceContent provides status/skeleton rather than asserting no evidence.", "citations": "InsightPanel.tsx:43-55; SourceContent.tsx:42-54", "runtime": "NOT RUN"},
+    {"state": "Initial paused/unresolved", "sourceBehavior": "No cached data and no fatal error uses explicit paused or unresolved status text, not an authoritative empty result.", "citations": "InsightPanel.tsx:48-55", "runtime": "NOT RUN"},
+    {"state": "Initial failure", "sourceBehavior": "Fatal no-data error maps to per-panel ErrorDisplay and source refetch recovery.", "citations": "InsightPanel.tsx:39-45,81-88; SourceContent.tsx:56", "runtime": "NOT RUN"},
+    {"state": "Resolved empty", "sourceBehavior": "items defaults to []; authoritative successful empty displays no-estimates EmptyState with Refresh; CS-01 identifies the retained-empty regression.", "citations": "ComponentSurvivalPage.tsx:35-38; InsightPanel.tsx:45,56-60,90", "runtime": "NOT RUN"},
+    {"state": "Resolved populated", "sourceBehavior": "Component cards, four metrics, competing risks, intervention sensitivity, generated time, quality/evidence/limitations, and unsupported statements are reachable in JSX.", "citations": "ComponentSurvivalPage.tsx:68-159,184-214", "runtime": "NOT RUN"},
+    {"state": "Retained populated error/offline", "sourceBehavior": "deriveDataState preserves data; InsightPanel renders freshness and nonblocking refresh error/paused warning while preserving content.", "citations": "api\\dataState.ts:234-250; InsightPanel.tsx:41,61-90", "runtime": "NOT RUN"},
+    {"state": "Null or unsupported metrics", "sourceBehavior": "StatStrip forwards null rather than zero; formatMetric returns missing em dash before custom formatters. Risk null probability renders Unsupported; missing competing risks and evidence/quality/limitations have separate fallbacks. Adjusted P50 calls null-safe useUnits.", "citations": "ComponentSurvivalPage.tsx:91-114,118-140,150-153; EvidencePanel.tsx:35-37,69-73,95-114; formatMetric.ts:24; unitConversion.ts:475-483", "runtime": "NOT RUN"},
+    {"state": "Valid zero and negative assumptions", "sourceBehavior": "Known zero probability remains numeric, not empty; a recorded assumed -20 percent hazard delta is displayed as a signed number with model limitations. No SI wire/cache mutation or legacy converter calls found.", "citations": "ComponentSurvivalPage.tsx:93-96,120-127,150-153; survival_security_charging.go:72,87-92", "runtime": "NOT RUN"},
+    {"state": "Vehicle scope change", "sourceBehavior": "useSelectedVehicle owns scope; page/cache keys track vehicle and pagination resets to page one. No second vehicle or range picker is rendered.", "citations": "ComponentSurvivalPage.tsx:26,29-34; useAdvancedIntelligence.ts:35-36", "runtime": "NOT RUN"}
+  ],
+  "workspaceScope": {
+    "route": "/intelligence/component-survival",
+    "sourceDerivedControls": {"vehicle": true, "range": false},
+    "citations": [
+      "web\\src\\App.tsx:232,766",
+      "web\\src\\lib\\workspaceScope.ts:23-78,106-198",
+      "web\\src\\hooks\\useSelectedVehicle.ts:46-89"
+    ],
+    "reason": "Route is not in RANGE_ENABLED_PATHS or vehicle-disabled sets/prefixes. Server owns the two-year model observation window. Page consumes selected vehicle and does not pretend to honor header date bounds.",
+    "desktopHeaderAndMobileDrawer": "NOT RUN; shell controls not rendered or accepted here"
+  },
+  "siAndFormatting": {
+    "horizonWireUnits": "seconds, matching *_s TS fields and Go *int64 JSON fields",
+    "displayBoundary": "P10/P50/P90 and adjusted P50 use useUnits.formatDuration; numeric percentages use useNumberFormatting; raw values remain in query data.",
+    "nullPreserved": true,
+    "durationPreference": "Inspected useUnits derives existing shared preference bag, locale and precision; duration currently centralizes h. No page-side unit arithmetic or compatibility adapter.",
+    "knownException": "CS-02: evidence/window dates bypass saved timezone/locale.",
+    "localeAndTimezoneRuntime": "NOT RUN"
+  },
+  "responsive": {
+    "sourceEvidence": "Cards use a min-w-0 grid with @5xl two-column allocation; article/headings wrap; risk-null rows flex-wrap; EvidencePanel uses min-w-0/break-words and lg:grid-cols-3.",
+    "fullDataPreservedInSource": "No mobile-only deletion of component, risk, intervention, evidence, quality, limitation, or unsupported content was found.",
+    "missionWidths": "320/375/390/430/768/1024/1280/1440/1920/2560: NOT RUN",
+    "narrowContainersRTL200PercentLongText": "NOT RUN",
+    "nativeMobile": "NOT RUN"
+  },
+  "accessibility": {
+    "sourceEvidence": "Shared labeled Button/Pagination actions; decorative page and quality icons have aria-hidden; card titles use h3 and competing-risk heading h4; evidence groups use named sections and h3 headings; unknown risks have textual Unsupported, not color alone. Shared source-loading/unresolved content has status semantics; StatTile composes value/missing-reason accessible labels.",
+    "keyboardFocusScreenReader": "NOT RUN",
+    "contrastLightDarkCustomForcedColors": "NOT RUN",
+    "touchTargetsReducedMotion": "NOT RUN",
+    "sourcePresenceIsNotAcceptance": true
+  },
+  "actions": [
+    {"action": "Refresh / fatal retry", "mechanism": "InsightPanel derives retry from query.refetch; empty/fatal and retained warning recovery remain source-owned reads.", "citation": "InsightPanel.tsx:39-40,56-60,71-87", "execution": "NOT RUN"},
+    {"action": "First page", "mechanism": "If page > 1 and items empty, setPagination({vehicleId, page: 1}).", "citation": "ComponentSurvivalPage.tsx:162-166", "execution": "NOT RUN; current four-item source does not expose later pages"},
+    {"action": "Pagination", "mechanism": "If total > 12, page change updates local pagination and hook offset.", "citation": "ComponentSurvivalPage.tsx:167-174", "execution": "NOT RUN; current producer max four"},
+    {"action": "Workspace vehicle selection", "mechanism": "External shared selection, not a duplicate local page selector.", "citation": "ComponentSurvivalPage.tsx:26,29-34", "execution": "NOT RUN"},
+    {"action": "Repair/service authorization/export", "mechanism": "No such page mutation/export exists; explicit unsupported card forbids implying automatic diagnosis or repair authorization.", "citation": "ComponentSurvivalPage.tsx:202-212", "execution": "NOT RUN; none performed"}
+  ],
+  "preservation": {
+    "sourceSnapshots": [
+      {"file": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "sha256": "9181fbc7f2bc1b8d415321bdd4a3ca08e44e2e335eaf30cb2617f06fdd16c235", "lineCount": 216},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "sha256": "68336512c44aca2575339906b1f016eb180a30a1abcb96e42ba0fc27fe0c39b4", "lineCount": 132},
+      {"file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "sha256": "9cc182a39da7697644c2d06dedaa20e50697bc130401e47983ccd3b43bd501be", "lineCount": 95}
+    ],
+    "currentPagePlusDirectPartsLines": 443,
+    "historicalOriginalComparison": "NOT RUN; no historical original or prior Phase6 QA consulted; no >=70-percent claim.",
+    "literalCounts": {"InsightPanelOpenings": 3, "GlassPanelOpenings": 0, "ChartContainerOpenings": 0, "StatStripOpenings": 1},
+    "countInterpretation": "Two top-level InsightPanel sections plus the reusable nested EvidencePanel InsightPanel; no chart was removed by this report and absence of legacy panel names is not a finding.",
+    "pageSections": [
+      "Probabilistic maintenance guidance notice",
+      "Component survival cards",
+      "Per-component four-metric survival/horizon strip",
+      "Per-component competing risks",
+      "Per-component intervention sensitivity",
+      "Evidence, quality, and limitations",
+      "Explicitly unsupported failure-date and repair-authorization statements"
+    ],
+    "evidenceSubsections": ["Data quality", "Evidence sources", "Limitations"],
+    "sectionRenderVerification": "SOURCE_ONLY; no mounted/full-page rendering acceptance",
+    "sourceChanges": "NONE"
+  },
+  "verification": {
+    "boundedSourceScan": {
+      "targets": "Exact three primarySources only",
+      "functionsRgRawOutput": "No matches found.",
+      "selectStringFinalCounts": {
+        "staticInlineVar": 0,
+        "rawControlsCaseSensitive": 0,
+        "directLibraryImports": 0,
+        "oldApiImports": 0,
+        "doublePrefixLiterals": 0,
+        "camelCaseQueryLiterals": 0,
+        "legacyConverterNames": 0,
+        "anyType": 0,
+        "neonTextClass": 0,
+        "directFetchOrEventSource": 0
+      },
+      "interpretation": "Only these lexical patterns had zero matches. This is not zero total defects, full scanner acceptance, endpoint runtime proof, or an application gate pass."
+    },
+    "commands": [
+      {"command": "Bounded Get-ChildItem metadata discovery and functions.view/functions.rg source reads", "result": "READ ONLY; no prior Phase6 report contents read"},
+      {"command": "rg -n --pcre2 <scoped pattern> <three source files> via PowerShell", "result": "EXIT 1: executable rg is not available on shell PATH; no counts claimed from this attempt"},
+      {"command": "Select-String -Pattern <each logged rule> -LiteralPath <three source files>", "result": "EXIT 0; initial raw-controls count 1 was the shared <Button> false positive"},
+      {"command": "Select-String -CaseSensitive -Pattern '<(?:button|input|textarea|select|table)\\b' -LiteralPath <three source files>", "result": "EXIT 0; corrected raw-controls matched lines 0"},
+      {"command": "functions.rg combined prohibited-pattern source scan, exact three paths", "result": "No matches found"},
+      {"command": "Get-FileHash -Algorithm SHA256 and Get-Content line/regex section counts, exact three source files", "result": "EXIT 0; exact hashes and counts retained above and in ignored log"}
+    ],
+    "auditScript": "NOT RUN: inspected audit.sh unconditionally launches prohibited global npx tsc --noEmit",
+    "typeScript": "NOT RUN: user explicitly prohibits global TSC",
+    "freshTests": "NOT RUN: source-only/no-change QA",
+    "lintBuildSuites": "NOT RUN",
+    "nativeRuntimeBrowserHTTP": "NOT RUN",
+    "realIdentityAuthorization": "NOT RUN",
+    "freshCapturesFullPage": "NOT RUN",
+    "gitDockerInstallsServersSubagentsHelpersExtensions": "NOT RUN",
+    "retainedOldTestsOrCaptures": "NOT USED AS FRESH PROOF",
+    "rawReceipt": "logs\\phase6-qa-advanced-component-survival.log",
+    "commandLimit": "No long-running command or background command launched; commands bounded below eight minutes."
+  },
+  "requiredSharedChanges": [
+    {"name": "Retained authoritative empty handling", "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx", "usedBy": "Both inspected ComponentSurvivalPage panels", "dependsOn": "Preserve existing dataState trust and SourceContent contracts", "authorization": "Follow-up owner only; no repair here"},
+    {"name": "Saved evidence date formatting", "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx", "usedBy": "ComponentSurvivalPage evidence blocks", "dependsOn": "Existing useDateFormat locale/timezone contract", "authorization": "Follow-up owner only; no shared formatter change requested"},
+    {"name": "Model-horizon and translated-label context", "existingOwner": "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx", "usedBy": "Survival metric and recognized protocol labels", "dependsOn": "Confirmed producer semantics and separately owned canonical catalog integration", "authorization": "Follow-up owner only; no wire/catalog/source changes here"}
+  ],
+  "competingImplementations": "No new implementation introduced. Existing page formatters and direct EvidencePanel library calls form the date-scope inconsistency in CS-02.",
+  "evidenceLimits": [
+    "Confirmed means exact current-source mechanism, not an executed reproduction or fresh application acceptance.",
+    "All scenario inputs are source-derived descriptions; no fixture was injected, request sent, identity used, or browser opened.",
+    "No prior Phase6 QA, historical capture, or old test result supplied conclusions. Incidental search matches in existing test files were not run or used as acceptance evidence.",
+    "Supported nulls differ from malformed schema-breaking nested null objects; the latter remain unpromoted.",
+    "Source endpoint mount/parameter/SI contracts match, but actual authorization, live payload, freshness, response latency, and deployment behavior remain unknown.",
+    "Full-page preservation, historical line-count parity, viewport, theme, keyboard, native, screen-reader, contrast, reduced-motion, RTL, and fresh tests remain NOT RUN.",
+    "Design and audit documents are guidance, not runtime proof. Global gate prescriptions were not executed in this bounded worker assignment.",
+    "Only the assigned report and ignored log are written; all source, tests, shared types, catalogs, API, backend, and configuration remain read-only."
+  ],
+  "filesRead": [
+    "docs\\frontend-mission.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\orchestrator-loop.md (bounded guidance matches only; loop not followed)",
+    "agent-loop-playbook.md (bounded guidance matches only; loop not followed)",
+    "shared-library-loop.md (bounded guidance matches only; loop not followed)",
+    ".gitignore",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\prompts\\audit-pages.prompt.md",
+    ".github\\agents\\code-auditor.agent.md",
+    "web\\src\\features\\advanced-intelligence\\pages\\ComponentSurvivalPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\index.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts (bounded hook contract)",
+    "web\\src\\api\\client.ts (bounded URL contract)",
+    "web\\src\\api\\dataState.ts:1-260",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts:1-150",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\lib\\dateFormat.ts:1-210",
+    "web\\src\\lib\\unitConversion.ts (bounded duration formatter matches)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\metric-reference\\formatMetric.ts",
+    "web\\src\\types\\advancedIntelligence.ts:1-200",
+    "web\\src\\components\\data-display\\stat-reference\\StatStrip.tsx",
+    "web\\src\\components\\data-display\\stat-reference\\StatTile.tsx",
+    "web\\src\\components\\layout\\layout-reference\\SourceContent.tsx",
+    "web\\src\\App.tsx (bounded route matches)",
+    "internal\\api\\router.go (bounded source route matches)",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go:69-155,405-419",
+    "internal\\domain\\advancedintelligence\\survival_security_charging.go (bounded wire struct matches)",
+    "internal\\app\\advancedintelligencesvc\\survival_security_charging.go:1-174",
+    "internal\\app\\advancedintelligencesvc\\service.go:106-124"
+  ]
+}

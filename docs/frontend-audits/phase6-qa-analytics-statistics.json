@@ -1,0 +1,907 @@
+{
+  "item": "phase6-qa-analytics-statistics",
+  "status": "DONE",
+  "acceptance": "SOURCE_ONLY_REPORT_DELIVERY_WITH_12_CONFIRMED_FINDINGS; NOT WHOLE_PAGE_PASS",
+  "createdUtc": "2026-10-13T20:05:03.5994312Z",
+  "page": "web/src/features/analytics/pages/StatisticsPage.tsx",
+  "routes": [
+    "/statistics"
+  ],
+  "purpose": "Read-only accepted page/direct-support QA, no remigration",
+  "primaryGoal": "Trustworthy scope/statistical interpretation",
+  "ownership": {
+    "allOtherFiles": "READONLY",
+    "ignoreEvidence": "root .gitignore logs/",
+    "sourceEdits": 0,
+    "helpersCreated": 0,
+    "release": "ALL SOURCE/TEST/REPORT/LOG/JSON/COMMANDS RELEASED; NO POST-RETURN WRITES",
+    "branchEvidence": ".git/HEAD refs/heads/fix/dashboard-followups; no Git CLI",
+    "ignoredAbsoluteLog": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-analytics-statistics.log",
+    "soleVersionedOutput": "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-analytics-statistics.json",
+    "testEdits": 0
+  },
+  "eligibility": {
+    "duplicatePhase6QAFound": false,
+    "dependency": "phase5-page-analytics-statistics",
+    "reportLogAbsentInitially": true,
+    "dependencyQueueLine": 1662,
+    "remigration": false,
+    "existingItemQueueLine": 278,
+    "dependencyStatus": "[x] accepted SOURCE with previous30/30 receipt, not current QA",
+    "authority": "sole docs/orchestrator-loop.md; rolling queue181-189; user restrictions"
+  },
+  "timebox": {
+    "returnByUtc": "2026-10-13T20:05:00Z",
+    "commandMaxSeconds": 480,
+    "hardUtc": "2026-10-13T20:10:00Z",
+    "firstObservedUtc": "2026-10-13T19:50:35.0845388Z",
+    "conservativeBoundaryMet": false,
+    "reason": "Windows command-line length rejected two output-creation launches; failures retained. No source work extended/restarted; finalizing original owned outputs only, hard20:10 unchanged."
+  },
+  "preservation": {
+    "sourceCount": 5,
+    "sectionCount": 3,
+    "metricOccurrences": 16,
+    "pageLines": 307,
+    "originalLinesFromAcceptedDependencyReceipt": 391,
+    "briefCount": 4,
+    "bindingCounts": {
+      "onApply": 1,
+      "actionTo": 5,
+      "exportable": 2,
+      "onClick": 1,
+      "onRetry": 6,
+      "semantics": "Exact source matching lines, not mounted action count; forwarded retry included"
+    },
+    "recordedRatioPercent": 78.52,
+    "chartCount": 2,
+    "cardGridCount": 3,
+    "existingTests": {
+      "execution": "NOT RUN",
+      "sourceGuardDeclarations": 4,
+      "sourceStateAdditionalDeclarations": 4,
+      "sourceStateEachRows": 7,
+      "pageLines": 732,
+      "pageDeclarations": 30
+    },
+    "originalByteComparison": "NOT RUN; no Git/snapshot, historical denominator",
+    "sourceManifest": [
+      {
+        "sha256After": "9F7CC753A436BB00F6E31730D14BF87E5AEDDA80DE5E131B9694C7D42BBBAC85",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+        "lines": 307,
+        "unchanged": true,
+        "sha256Before": "9F7CC753A436BB00F6E31730D14BF87E5AEDDA80DE5E131B9694C7D42BBBAC85"
+      },
+      {
+        "sha256After": "1898225E2E83AD8B5C97FB29AF460629BD260B6DECB86A3EF9C6B9A3B3CE52AE",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx",
+        "lines": 732,
+        "unchanged": true,
+        "sha256Before": "1898225E2E83AD8B5C97FB29AF460629BD260B6DECB86A3EF9C6B9A3B3CE52AE"
+      },
+      {
+        "sha256After": "5BACB2FD47A70FC6B3EE3370B693D02538C0529F24176EE07A7C731EE9E3243C",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\BatteryStatistics.tsx",
+        "lines": 63,
+        "unchanged": true,
+        "sha256Before": "5BACB2FD47A70FC6B3EE3370B693D02538C0529F24176EE07A7C731EE9E3243C"
+      },
+      {
+        "sha256After": "EC26B7FE12D6B1406341B85288627FE0485DE54380BE7E73D352C5D0790FCCE3",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\index.ts",
+        "lines": 5,
+        "unchanged": true,
+        "sha256Before": "EC26B7FE12D6B1406341B85288627FE0485DE54380BE7E73D352C5D0790FCCE3"
+      },
+      {
+        "sha256After": "D067BFA4AFAC536B8312DFB4F98B6E6FDC56373F36D1DC1A39C3213CCCEEDAF6",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\MileageStatistics.tsx",
+        "lines": 49,
+        "unchanged": true,
+        "sha256Before": "D067BFA4AFAC536B8312DFB4F98B6E6FDC56373F36D1DC1A39C3213CCCEEDAF6"
+      },
+      {
+        "sha256After": "26DADA493F809AFBA5BCD5140DC8826656024A7DF8782BCA6EC32AB921A8D318",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\PeriodStatistics.tsx",
+        "lines": 87,
+        "unchanged": true,
+        "sha256Before": "26DADA493F809AFBA5BCD5140DC8826656024A7DF8782BCA6EC32AB921A8D318"
+      },
+      {
+        "sha256After": "59E2CBFF36AF53C6E320ABC3A2DE1034F2FE1C154F56514ECAFE1EEE66FAA25E",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsChartPlacement.tsx",
+        "lines": 13,
+        "unchanged": true,
+        "sha256Before": "59E2CBFF36AF53C6E320ABC3A2DE1034F2FE1C154F56514ECAFE1EEE66FAA25E"
+      },
+      {
+        "sha256After": "1C22C84CDFEC477BC128B77EC8F412D3182D24102F769538BE6B5625EED06F54",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsPreservation.test.ts",
+        "lines": 66,
+        "unchanged": true,
+        "sha256Before": "1C22C84CDFEC477BC128B77EC8F412D3182D24102F769538BE6B5625EED06F54"
+      },
+      {
+        "sha256After": "E04B249E6884DA8B906638A0DE8AEFF27D9E8E43C322EBEB2D6AE22E39A3113A",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.test.tsx",
+        "lines": 70,
+        "unchanged": true,
+        "sha256Before": "E04B249E6884DA8B906638A0DE8AEFF27D9E8E43C322EBEB2D6AE22E39A3113A"
+      },
+      {
+        "sha256After": "269E47B0631D565CACB7AE435106BD05F39A626B733E664FCB9F4766A7280B3A",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.tsx",
+        "lines": 37,
+        "unchanged": true,
+        "sha256Before": "269E47B0631D565CACB7AE435106BD05F39A626B733E664FCB9F4766A7280B3A"
+      },
+      {
+        "sha256After": "078D2E44C6A3A9570184DF9B5F1A553D0AFAFBCFBE96DD0DE20C3CFAC9222630",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsPeriodBrief.tsx",
+        "lines": 72,
+        "unchanged": true,
+        "sha256Before": "078D2E44C6A3A9570184DF9B5F1A553D0AFAFBCFBE96DD0DE20C3CFAC9222630"
+      },
+      {
+        "sha256After": "A8E0F5F4072074E72778FE2D9466A1BA54CBDE4125E4BB8CADF96146E06F79B9",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsMileageBrief.tsx",
+        "lines": 52,
+        "unchanged": true,
+        "sha256Before": "A8E0F5F4072074E72778FE2D9466A1BA54CBDE4125E4BB8CADF96146E06F79B9"
+      },
+      {
+        "sha256After": "09609C088B9E1E36B6DB636226C5DB175158B39AC4DC66F56047DA3D167D680B",
+        "file": "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsBatteryBrief.tsx",
+        "lines": 58,
+        "unchanged": true,
+        "sha256Before": "09609C088B9E1E36B6DB636226C5DB175158B39AC4DC66F56047DA3D167D680B"
+      }
+    ],
+    "sections": [
+      "statistics-period",
+      "statistics-health-state",
+      "statistics-mileage-fleet"
+    ],
+    "actions": [
+      "period toolbar/freshness refresh",
+      "five independent source retries",
+      "saved-view apply",
+      "five empty-link bindings",
+      "four review-details capabilities",
+      "two chart exports",
+      "fleet hidden-series legend"
+    ]
+  },
+  "confirmedFindings": [
+    {
+      "id": "STAT-QA-01",
+      "rule": "wire-contract",
+      "priority": "P1",
+      "file": "web/src/api/hooks/useAnalytics.ts",
+      "line": 184,
+      "mechanism": "request<StateSummary[]> plus select:safeArray186 rejects actual registered object envelope; safeArray.ts8-12 returns[]. Even unwrap alone leaves page120-121 reading totalMin/total_min instead of actual total_seconds/percentage.",
+      "evidence": [
+        "internal/api/vehiclestates/handler.go:144-150,231-237",
+        "internal/database/vehicle/states_repo.go:52-56"
+      ],
+      "repro": "Source trace valid200/nonempty by_state ->[] -> false empty chart; API/runtime NOT RUN.",
+      "narrowNeed": "Existing hook/wire owner reconcile actual envelope/seconds/percentage and direct consumer coverage; preserve raw source/signal, no guessed units/new adapter.",
+      "owner": "integration",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-02",
+      "rule": "workspace-date-instants",
+      "priority": "P1",
+      "file": "web/src/features/analytics/pages/StatisticsPage.tsx",
+      "line": 109,
+      "mechanism": "Page85 reads calendar start/end only; both fleet bounds sent but precise rolling/timezone header startInstant/endInstantExclusive discarded. Parser bare dates are UTC day bounds.",
+      "evidence": [
+        "web/src/hooks/useRangeState.ts:656-675",
+        "web/src/api/hooks/useAnalytics.ts:56-65",
+        "internal/api/apiparams/params.go:64-111"
+      ],
+      "repro": "NonUTC single day or rolling24h header interval becomes UTC calendar-day interval. Source calculation only.",
+      "narrowNeed": "Pass existing header instants through existing fleet hook/key with focused bounds coverage, no backend cutover.",
+      "owner": "page",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-03",
+      "rule": "workspace-date-scope",
+      "priority": "P1",
+      "file": "web/src/features/analytics/pages/StatisticsPage.tsx",
+      "line": 107,
+      "mechanism": "State path/key only depend on vehicle; neither header bound sent. Actual handler defaults7d; chart label lacks fixed7d scope. Separate from envelope defect currently masking it.",
+      "evidence": [
+        "web/src/api/hooks/useAnalytics.ts:23,181-186",
+        "internal/api/vehiclestates/handler.go:60,77-130"
+      ],
+      "repro": "Two date-window URLs same vehicle -> identical state query/key/default7d; mounted test NOT RUN.",
+      "narrowNeed": "After wire reconciliation thread header instants into existing state hook/key with already supported handler bounds.",
+      "owner": "integration",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-04",
+      "rule": "partial-source-trust",
+      "priority": "P1",
+      "file": "web/src/features/analytics/pages/StatisticsPage.tsx",
+      "line": 112,
+      "mechanism": "fleet DataState receives provenance only, not partial_result.is_partial. Handler1000-record caps and failed reads replaced with empty lists still200/disclose reasons. Page/export silently show possibly incomplete/failure-derived zero sums as healthy.",
+      "evidence": [
+        "internal/api/analytics/queries.go:20,122-141,308-314,620-625",
+        "web/src/api/types.ts:1003-1016"
+      ],
+      "repro": "Trace existing cap/query_failed200 partial payload ->partial unset->ok/no partial notice. No live incident.",
+      "narrowNeed": "Type current partial_result and disclose capped/partial reasons next to retained chart/export; never assert full-range totals or add producer.",
+      "owner": "integration",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-05",
+      "rule": "unknown-zero",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsPeriodBrief.tsx",
+      "line": 17,
+      "mechanism": "total_drives0 sets avgDriveDistance0, line38 sends measured numeric0; mean with no observations is undefined. Cost/km already uses null for denominator0.",
+      "repro": "Legitimate allzero period ->average0 instead of missing. Arithmetic source proof only.",
+      "narrowNeed": "Require known positive count/known distance; otherwise null/reason. Preserve realzero totals and cost/km.",
+      "owner": "page",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-06",
+      "rule": "unknown-zero",
+      "priority": "P1",
+      "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx",
+      "line": 43,
+      "mechanism": "Any battery object renders current_soh??0 gauge/success. Existing producer initializes SOH0 when no capacity evidence and returns object; nohistory/no-capacity appears measured0% health.",
+      "evidence": [
+        "internal/api/batterydegradation/handler.go:543-562,625-630,641-643"
+      ],
+      "repro": "Source no history/live capacity ->capacity0/SOH0 ->success0% gauge; no API/runtime exercise.",
+      "narrowNeed": "Existing capacity/history/prediction evidence must distinguish unsupported health without rewriting payload or globally hiding realzero; preserve shell.",
+      "owner": "page",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-07",
+      "rule": "paused-source-trust",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsMileageBrief.tsx",
+      "line": 40,
+      "mechanism": "Mileage/battery status only data,error,isLoading; retained paused/noerror labelled Returned statistics/neutral, no blocked-refresh notice. StatisticsSource phase cannot consume fetchStatus/isFetching. Charts have correct paused warning; header freshness period-only.",
+      "evidence": [
+        "StatisticsBatteryBrief.tsx:51-57",
+        "web/src/features/analytics/components/statistics-modernization/StatisticsSource.tsx:5-8,27-35",
+        "web/src/api/dataState.ts:242-249"
+      ],
+      "repro": "Retained data,paused,error null,isLoading false ->ready/Returned; source truth table only.",
+      "narrowNeed": "Existing shared trust/notice locally for these sources: paused/progress/individual retry, retained data, no device-offline inference.",
+      "owner": "page",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-08",
+      "rule": "statistical-proxy-disclosure",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsPeriodBrief.tsx",
+      "line": 40,
+      "mechanism": "Generic efficiency description says consumption, but producer uses all charging-session Wh/completed-drive km: proxy, not measured drive consumption or arithmetic mean efficiency. No occurrence context discloses this.",
+      "evidence": [
+        "internal/api/periodstats/handler.go:114-126,147-150",
+        "web/src/lib/metric-reference/glossary.ts:23"
+      ],
+      "repro": "Compare actual SQL/formula with default metric description; charging energy need not equal completed-drive energy. Source only.",
+      "narrowNeed": "Disclose existing charging-energy/distance proxy/numerator with occurrence context/catalog owner; preserve arithmetic/units, no substitute source.",
+      "owner": "page/catalog integration",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-09",
+      "rule": "statistical-assumption-disclosure",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsPeriodBrief.tsx",
+      "line": 32,
+      "mechanism": "CO2 saved defaults to Recorded mass glossary, but actual estimate distance_km*0.120 assumes ICE120g/km/EV~0; baseline/grid limitation/inferred provenance absent.",
+      "evidence": [
+        "internal/api/periodstats/handler.go:153-154",
+        "web/src/lib/metric-reference/glossary.ts:33"
+      ],
+      "repro": "Compare model formula with default recorded-mass metric detail; source-only.",
+      "narrowNeed": "Existing occurrence context/provenance/catalog disclose estimate/baseline/grid limitation; preserve mass/formula, no new model.",
+      "owner": "page/catalog integration",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-10",
+      "rule": "hardcoded-string",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx",
+      "line": 31,
+      "mechanism": "Age uses String(raw) and English mo outside t(), bypasses locale formatting. Actual unit months, not guessed duration.",
+      "repro": "Formatter always ASCII raw number/mo regardless of language; locale runtime NOT RUN.",
+      "narrowNeed": "Existing number formatter/canonical month label/plural ownership; retain months, never invent seconds/month.",
+      "owner": "page/catalog integration",
+      "confidence": "confirmed source"
+    },
+    {
+      "id": "STAT-QA-11",
+      "rule": "preserved-test-drift",
+      "priority": "P2",
+      "file": "web/src/features/analytics/components/statistics-modernization/StatisticsPreservation.test.ts",
+      "line": 40,
+      "mechanism": "Existing toContain expects Math.round((minutes / Math.max(total, 1)) * 100), absent from accepted null-aware page. Actual C14 String.Contains False. Source assertion drift, not fresh Vitest failure.",
+      "repro": "Current page exact expected literal ->False; assertion cannot match if exercised. Fresh tests NOT RUN.",
+      "narrowNeed": "Separate narrow test owner reconcile obsolete literal with accepted unknown/zero behavior, preserve case meaning/titles, no source revert/assertion weakening.",
+      "owner": "test owner",
+      "confidence": "confirmed source mismatch"
+    },
+    {
+      "id": "STAT-QA-12",
+      "rule": "chart-action-state",
+      "priority": "P2",
+      "file": "web/src/features/analytics/pages/StatisticsPage.tsx",
+      "line": 198,
+      "mechanism": "Both ChartCards exportable but omit loading/error/empty; handled only inside StatisticsSource. Outer export eligibility therefore remains true during skeleton/fatal/no-data branches. No image-success claim.",
+      "evidence": [
+        "StatisticsPage.tsx:198-218,254-275",
+        "web/src/components/layout/layout-reference/ChartCard.tsx:13-40",
+        "web/src/components/charts/ChartContainer.tsx:483-484"
+      ],
+      "repro": "Inner skeleton/QueryError/EmptyState; outer chart source props unset ->showExportMenu true; source eligibility proof.",
+      "narrowNeed": "Thread independent source initial/fatal/empty into existing chart controls, retaining data/table/export on background refresh; no shared redesign.",
+      "owner": "page",
+      "confidence": "confirmed source"
+    }
+  ],
+  "unpromotedCandidates": [
+    {
+      "line": 291,
+      "file": "StatisticsPage.tsx",
+      "detail": "Different-unit distance/energy share Y axis; labels explicit; focused chart/native design review needed",
+      "id": "CAND-01"
+    },
+    {
+      "line": 139,
+      "file": "StatisticsPage.tsx",
+      "detail": "Whole-unit rounding/export fidelity vs precision preference; inherited preserved semantics; requirement undecided",
+      "id": "CAND-02"
+    },
+    {
+      "line": 18,
+      "file": "StatisticsMileageBrief.tsx",
+      "detail": "Malformed missing numeric field fallbacks become0; canonical mandatory fields present, no malformed actual payload observed; no fabricated incident",
+      "id": "CAND-03"
+    },
+    {
+      "line": 149,
+      "file": "StatisticsPage.tsx",
+      "detail": "Header refresh/freshness period-only, local retries exist; intended global action scope/copy undecided",
+      "id": "CAND-04"
+    },
+    {
+      "line": 98,
+      "file": "StatisticsPage.tsx",
+      "detail": "Inline query typed-hook architecture debt, not fetch/useEffect violation; no new hook/adapter authorized",
+      "id": "CAND-05"
+    },
+    {
+      "line": 123,
+      "file": "StatisticsPage.tsx",
+      "detail": "Rounded legacy shares may total99/101; precision/raw-duration alternative review after actual wire reconciliation",
+      "id": "CAND-06"
+    }
+  ],
+  "commands": [
+    {
+      "name": "clock/root discovery",
+      "shellId": "5393",
+      "exit": 0
+    },
+    {
+      "name": "oversized initial report/instruction discovery",
+      "shellId": "5394",
+      "exit": 0
+    },
+    {
+      "name": "bounded instruction/report discovery",
+      "shellId": "5412",
+      "exit": 0
+    },
+    {
+      "name": "oversized broad queue/header discovery",
+      "shellId": "5411",
+      "exit": 0
+    },
+    {
+      "name": "C01 exactqueue/dependency/no duplicate/ownership",
+      "shellId": "5428",
+      "exit": 0
+    },
+    {
+      "name": "C02 directhooks/router/scope contract",
+      "shellId": "5436",
+      "exit": 0
+    },
+    {
+      "name": "C03-C05 sourcehashes/counts/guideline greps",
+      "shellId": "5447",
+      "exit": 0
+    },
+    {
+      "name": "C06-C07 case-sensitive correction/wire types",
+      "shellId": "5459",
+      "exit": 0
+    },
+    {
+      "name": "C08 wire/shared owner discovery",
+      "shellId": "5468",
+      "exit": 0
+    },
+    {
+      "name": "C09 catalog ConvertFrom-Json FAILED casecollision",
+      "shellId": "5471",
+      "exit": 1
+    },
+    {
+      "name": "C10-C11 corrected -AsHashtable/catalog/casecounts/wire",
+      "shellId": "5483",
+      "exit": 0
+    },
+    {
+      "name": "C12 scope/partial/producer grep",
+      "shellId": "5492",
+      "exit": 0
+    },
+    {
+      "name": "C13-C15 numbered directsource/testliteral/historical grep",
+      "shellId": "5500",
+      "exit": 0
+    },
+    {
+      "name": "C16 owner/controlgrep exit0 WITH nonterminating missingpath error",
+      "shellId": "5509",
+      "exit": 0
+    },
+    {
+      "name": "C17-C18 canonical literalkeys/line ratio",
+      "shellId": "5521",
+      "exit": 0
+    },
+    {
+      "name": "C19 action/metric/formula counts",
+      "shellId": "5530",
+      "exit": 0
+    },
+    {
+      "name": "C20 oversized report command FAILED before execution os206",
+      "shellId": "5569",
+      "exit": 1
+    },
+    {
+      "name": "C20B oversized report command FAILED before execution os206",
+      "shellId": "5584",
+      "exit": 1
+    },
+    {
+      "name": "C20C soleJSON initialcreation/pinverification",
+      "shellId": "5589",
+      "exit": 0
+    },
+    {
+      "name": "C20D findings1-6 report only",
+      "shellId": "5594",
+      "exit": 0
+    },
+    {
+      "name": "C20E findings7-12/candidates report only",
+      "shellId": "5597",
+      "exit": 0
+    },
+    {
+      "name": "C20F sourceQA metadata report only",
+      "shellId": "5602",
+      "exit": 0
+    },
+    {
+      "name": "C20G report metadata finalization only",
+      "exit": 0,
+      "shellId": "5609"
+    },
+    {
+      "name": "C21 owned JSON/rawlog final validation and release",
+      "exit": 0,
+      "actual": "Set-Location explicit; ConvertFrom-Json -AsHashtable sole report; verify12findings/6candidates/13recordedpins/rawlog markers; final JSON parse; Get-FileHash sole outputs"
+    }
+  ],
+  "filesRead": [
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\StatisticsPage.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\pages\\StatisticsPage.test.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\BatteryStatistics.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\index.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\MileageStatistics.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\PeriodStatistics.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsChartPlacement.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsPreservation.test.ts",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.test.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\statistics-modernization\\StatisticsSource.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsPeriodBrief.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsMileageBrief.tsx",
+    "D:\\repos\\teslasync\\web\\src\\features\\analytics\\components\\operationalbrief-n-z\\StatisticsBatteryBrief.tsx",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/lib/operationalMetrics.tsx",
+    "web/src/lib/metric-reference/formatMetric.ts",
+    "web/src/lib/metric-reference/glossary.ts",
+    "web/src/lib/safeArray.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/hooks/useRangeState.ts",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/hooks/useFormatting.ts",
+    "web/src/hooks/useNumberFormatting.ts",
+    "web/src/api/hooks/useAnalytics.ts",
+    "web/src/api/hooks/useEnergy.ts",
+    "web/src/api/client.ts",
+    "web/src/api/types.ts",
+    "web/src/types/analytics.ts",
+    "web/src/components/layout/index.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/layout-reference/ChartCard.tsx",
+    "web/src/components/charts/EmbeddedChart.tsx",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/components/feedback/StaleRefreshWarning.tsx",
+    "web/src/components/data-display/index.ts",
+    "web/src/components/data-display/DataFreshness.tsx",
+    "web/src/i18n/en.json",
+    "internal/api/router.go",
+    "internal/api/periodstats/handler.go",
+    "internal/api/analytics/handler.go",
+    "internal/api/analytics/dtos.go",
+    "internal/api/analytics/queries.go",
+    "internal/api/vehiclestates/handler.go",
+    "internal/database/vehicle/states_repo.go",
+    "internal/api/mileage/handler.go",
+    "internal/api/apiparams/params.go",
+    "internal/api/batterydegradation/dtos.go",
+    "internal/api/batterydegradation/handler.go",
+    "migration-queue.md",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/session-handoff.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".agents/state.md",
+    "shared-library-loop.md",
+    "agent-loop-playbook.md",
+    "docs/frontend-audits/audit-page-051.json",
+    ".gitignore",
+    ".git/HEAD"
+  ],
+  "dataSources": [
+    {
+      "name": "period",
+      "consumer": "StatisticsPage98-103 inline useQuery",
+      "key": "['period-stats',activeId]",
+      "endpoint": "/analytics/period-stats?vehicle_id=...",
+      "routerLine": 3936,
+      "wire": "periodstats/handler.go",
+      "scope": "Selected vehicle ALLTIME: days omitted defaults0, no arbitrary header bounds",
+      "aggregation": "SQL completed drives plus charging energy/cost, no loaded-row cap",
+      "units": "Confirmed producer km,kWh,Wh/km,kg",
+      "assumptions": "chargingWh/drivekm efficiency proxy; CO2=0.120kg/km"
+    },
+    {
+      "name": "battery",
+      "hook": "useBatteryHealthAnalytics",
+      "endpoint": "/analytics/battery-health?vehicle_id=...",
+      "routerLine": 3920,
+      "scope": "Selected source estimates, unknown observation bounds",
+      "units": "DTO Wh,%/yr,months,cycles,%",
+      "policy": "signal, enabled nonnull, analytics staleTime,retry false"
+    },
+    {
+      "name": "mileage",
+      "hook": "useMileageStats",
+      "endpoint": "/mileage/stats?vehicle_id=...",
+      "routerLine": 4246,
+      "scope": "Fixed lifetime/7/30/365d, no override",
+      "units": "km; daily30day/30, projection*365 explicitly not measured year"
+    },
+    {
+      "name": "state",
+      "hook": "useStateSummary",
+      "endpoint": "/vehicle-states/summary?vehicle_id=...",
+      "routerLine": 4275,
+      "scope": "Default7d; supported bounds omitted",
+      "wire": "Object by_state rows total_seconds/percentage/transition_count, not legacy array/minutes",
+      "incident": "Route exists, no actual API request/404/500 claim"
+    },
+    {
+      "name": "fleet",
+      "hook": "useFleetAnalytics({start,end})",
+      "endpoint": "/analytics/fleet?start=...&end=...",
+      "routerLine": 3895,
+      "scope": "Allvehicles both bare calendar bounds, no selected filter intentionally",
+      "aggregate": "1000 drives/sessions pervehicle, partial_result caps/failure reasons, not guaranteed full-range totals",
+      "units": "Producer DistanceM/1000 km; TotalEnergyAddedWh/1000 kWh"
+    }
+  ],
+  "scopeReview": {
+    "header": "workspaceScope69 range enabled, vehicle enabled; no duplicate local picker",
+    "defaults": "useRangeState301-318 headerOwned ignores inherited1y/persistKey; actual shared/product default",
+    "bounds": "Fleet both dates present but not exact instants; state neither; lifetime/mileage/battery intentionally distinct windows",
+    "denominators": "Drive mean count; cost/sourcekm explicit even miles; valid state durations all-row denominator/null if any missing/negative or total0; mileage30/365 explicit",
+    "rawSI": "No hook/cache/source mutation; confirmed derived units adapted display-only",
+    "sign": "No sign/clamp edits; formatter preserves finite signed rates/currency, invalid counts/nonfinite rejected; producer degradation absolute slope retained",
+    "preferences": "Existing units/locale/precision/currency; age String/raw bypass confirmed; integer chart rounding candidate only"
+  },
+  "components": [
+    "PageLayout->PageContainer",
+    "Section/CardGrid/ChartCard->EmbeddedChart->ChartContainer",
+    "3StatisticsBriefs/4OperationalBriefs",
+    "StatisticsSource/QueryError/EmptyState/Skeleton",
+    "useDataState/StaleRefreshWarning",
+    "Button/SavedViewMenu/DataFreshnessAuto/FadeIn",
+    "charts barrel/palette/hidden-series"
+  ],
+  "duplicatedPatterns": "Legacy specialists are retained type/barrel/reference dependencies, not current mounts. No deletion/remigration.",
+  "responsive": {
+    "source": "min-w-0/CardGrid placement, charts280/300, refresh min-h/w11 belowmd",
+    "nativeMissionWidthsGeometryTouch": "NOT RUN; CSS class presence not measured44px"
+  },
+  "accessibility": {
+    "source": "Localized page/section/chart/control names, raw state identities/nulls, both data/dataColumns/exportData, fallback table owner ChartContainer888-960 th scope col",
+    "keyboardFocusScreenReaderRTL200pctForcedColorsContrast": "NOT RUN",
+    "palette": "Existing saved preference-aware palette retained, not contrast certification"
+  },
+  "states": {
+    "initial": "Independent skeleton/busy, no wholepage gate",
+    "fatal": "Per-source QueryError, neighbors retained",
+    "retained": "Compact error/data preserved, chart shared nonblocking warnings",
+    "paused": "Charts shared blocked notice; mileage/battery gap confirmed",
+    "refresh": "Toolbar/freshness period-only; local retries target each source",
+    "empty": "Persistent shells/guidance; state false empty wire defect and battery no-evidence0 separate",
+    "chartAlternatives": "Tables/exports present, source control-state eligibility defect separate"
+  },
+  "guidelineChecks": {
+    "scope": "Mounted page/3briefs/Source/Placement + direct hook URL greps; legacy/test mocks not counted as mounts",
+    "static-inline-style": {
+      "matches": 0,
+      "violations": 0
+    },
+    "raw-html": {
+      "initialCandidates": 1,
+      "exception": "case-insensitive shared Button falsepositive",
+      "caseSensitiveMatches": 0,
+      "violations": 0
+    },
+    "direct-library-import": {
+      "matches": 0,
+      "violations": 0
+    },
+    "old-api-import": {
+      "matches": 0,
+      "violations": 0
+    },
+    "double-prefix": {
+      "matches": 0,
+      "hookMatches": 0,
+      "violations": 0
+    },
+    "camelcase-param": {
+      "initialHookCandidates": 4,
+      "exception": "case-insensitive lowercase parameter matches",
+      "correctedCaseSensitiveMatches": 0,
+      "violations": 0
+    },
+    "hidden-section": {
+      "candidateMatches": 0,
+      "violations": 0,
+      "exception": "battery inner gauge condition not shell"
+    },
+    "hardcoded-string": {
+      "jsxCandidates": 2,
+      "exceptions": "Arrow/request generic comparisons, not English JSX",
+      "violations": 1,
+      "canonicalLiteralKeys": 67,
+      "missingKeys": 0,
+      "limit": "Presence only, not all locales/dynamickeys/fallback equality"
+    },
+    "missing-page-container": {
+      "PageLayoutMatches": 1,
+      "violations": 0,
+      "exception": "PageLayout11 wraps PageContainer"
+    },
+    "fetch-useeffect": {
+      "matches": 0,
+      "violations": 0
+    },
+    "TypeScript": "npx tsc --noEmit NOT RUN explicitly prohibited; no pass",
+    "backendRules": "NOT exhaustive backend audit; direct DTO/handler excerpts only, no backend0-violation claim"
+  },
+  "evidenceLimits": {
+    "native": "NOT RUN",
+    "runtime": "NOT RUN",
+    "realAPI": "NOT RUN",
+    "geometry": "NOT RUN",
+    "contrast": "NOT RUN",
+    "performance": "NOT RUN",
+    "freshTests": "NOT RUN",
+    "globalTSC": "NOT RUN",
+    "fullPage": "NOT RUN",
+    "build": "NOT RUN",
+    "fullSuite": "NOT RUN",
+    "Node": "No Node needed/launched/install; existing supported26.11.1 not revalidated",
+    "privateData": "No env/credentials/private identities/realAPI/browser reads",
+    "capture": "Two oversized initial discovery outputs not substantive evidence; C13 full raw log but tool display truncated. C09 stopped before self-capture; original error retainedC10. C16 nonterminating missingpath diagnostic retainedC17."
+  },
+  "requiredSharedChanges": [
+    {
+      "owner": "Existing state hook/types/directconsumer",
+      "findings": [
+        "STAT-QA-01",
+        "STAT-QA-03"
+      ]
+    },
+    {
+      "owner": "Existing FleetAnalytics type/page trust",
+      "findings": [
+        "STAT-QA-04"
+      ]
+    },
+    {
+      "owner": "Existing occurrence briefs/canonicalcatalog owner",
+      "findings": [
+        "STAT-QA-08",
+        "STAT-QA-09",
+        "STAT-QA-10"
+      ]
+    }
+  ],
+  "priorityFixes": [
+    "Actual state envelope/seconds/range",
+    "Precise fleet header instants",
+    "Partial/capped fleet trust",
+    "Unsupported health0",
+    "Narrow remaining denominator/trust/context/i18n/chart-action/testsource only"
+  ],
+  "needs": "Separate narrow owners for confirmed findings; candidates not promoted. Source/tests/backend/catalog/config/queue/handoff readonly. No fixes or new adapters.",
+  "competingImplementations": "None introduced; reference implementations retained",
+  "summary": {
+    "filesWithMostIssues": [
+      {
+        "primaryFindingCount": 4,
+        "file": "web/src/features/analytics/pages/StatisticsPage.tsx"
+      },
+      {
+        "primaryFindingCount": 3,
+        "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsPeriodBrief.tsx"
+      },
+      {
+        "primaryFindingCount": 2,
+        "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsBatteryBrief.tsx"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web/src/api/hooks/useAnalytics.ts"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web/src/features/analytics/components/operationalbrief-n-z/StatisticsMileageBrief.tsx"
+      },
+      {
+        "primaryFindingCount": 1,
+        "file": "web/src/features/analytics/components/statistics-modernization/StatisticsPreservation.test.ts"
+      }
+    ],
+    "frontendGuidelineViolations": 1,
+    "unpromotedCandidates": 6,
+    "findingCountByRule": [
+      {
+        "rule": "chart-action-state",
+        "count": 1
+      },
+      {
+        "rule": "hardcoded-string",
+        "count": 1
+      },
+      {
+        "rule": "partial-source-trust",
+        "count": 1
+      },
+      {
+        "rule": "paused-source-trust",
+        "count": 1
+      },
+      {
+        "rule": "preserved-test-drift",
+        "count": 1
+      },
+      {
+        "rule": "statistical-assumption-disclosure",
+        "count": 1
+      },
+      {
+        "rule": "statistical-proxy-disclosure",
+        "count": 1
+      },
+      {
+        "rule": "unknown-zero",
+        "count": 2
+      },
+      {
+        "rule": "wire-contract",
+        "count": 1
+      },
+      {
+        "rule": "workspace-date-instants",
+        "count": 1
+      },
+      {
+        "rule": "workspace-date-scope",
+        "count": 1
+      }
+    ],
+    "confirmedFindings": 12
+  },
+  "filesReadLimit": "Actual full file or bounded directly relevant excerpt/grep; not entire dependency/backend audits",
+  "readFailures": [
+    "useOperationalMetrics.ts missing, corrected .tsx read",
+    "layout/ChartCard.tsx missing, corrected layout-reference owner read",
+    "lib/operationalMetrics.ts missing, corrected .tsx read",
+    "DataFreshnessAuto.tsx missing, corrected DataFreshness.tsx read"
+  ],
+  "commandDetails": {
+    "actualCheckExpressions": [
+      "Get-FileHash -LiteralPath exact13sourcefiles -Algorithm SHA256",
+      "Get-Content -LiteralPath exactfile; .Count",
+      "Select-String -LiteralPath exactscope -Pattern style=\\{\\{|var\\(--",
+      "Select-String -CaseSensitive -Pattern <(button|input|textarea|select|table)\\b",
+      "Select-String -Pattern direct recharts/react-leaflet/framer-motion import / old relativeapi / /api/v1/",
+      "Select-String -CaseSensitive -Pattern [?&][a-z]+[A-Z][A-Za-z]*=",
+      "Select-String -Pattern conditional shell / JSX English candidate / fetch-useEffect / PageLayout-PageContainer",
+      "Get-Content en.json -Raw | ConvertFrom-Json -AsHashtable",
+      "Select-String StatisticsPage.test.tsx -CaseSensitive -Pattern ^  it\\(",
+      "page.Contains exact literal Math.round((minutes / Math.max(total, 1)) * 100) returned False",
+      "Builtin literal t-key regex/Hashtable canonical resolution:67keys/0missing",
+      "307/391*100=78.52 historical original",
+      "Select-String exact page+3brief action bindings / rawValue / producer formulas"
+    ],
+    "rawReceipt": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-analytics-statistics.log",
+    "failedOutputCapture": "Initial C09 self-capture did not complete; actual original error retained C10; C16 nonterminating error retained C17; two os206 launch errors retained C20C; oversized tool outputs not treated as full check proof",
+    "freshTests": {
+      "failed": null,
+      "skipped": null,
+      "status": "NOT RUN; 30source declarations not discovery or freshpass",
+      "executed": null,
+      "passed": null,
+      "discovered": null
+    },
+    "cwd": "Every command explicit Set-Location D:\\repos\\teslasync\\web"
+  },
+  "finalizedUtc": "2026-10-13T20:08:30.2448519Z",
+  "outputValidation": {
+    "reviewedFileEntries": 67,
+    "hardBoundary": "Finalized before20:10Z",
+    "rawReceiptMarkers": "all named check/retained failure markers present",
+    "checkCommandFailures": 3,
+    "recordedPins": 13,
+    "candidates": 6,
+    "freshSourceChecksAfterStop": "NONE",
+    "sourceProof": "C20C actual hash check13unchanged; not rerun after stop",
+    "lateConservativeBoundary": "MISSED, honestly retained",
+    "nonterminatingCommandDiagnostic": "C16 exit0, missingpath retained, not clean pass",
+    "jsonParse": "actual successful ConvertFrom-Json -AsHashtable",
+    "recordedHashMismatches": 0,
+    "confirmed": 12
+  }
+}

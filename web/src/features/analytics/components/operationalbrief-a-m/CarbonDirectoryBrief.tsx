@@ -34,7 +34,24 @@ export function CarbonDirectoryBrief({ analysis, states, display }: CarbonSectio
   return <CarbonBriefBand testId="carbon-hourly-directory" metrics={metrics} state={states.intensity}
     title={t('carbon.directory.title', 'Ranked hourly directory and bands')} description={rule}
     scope={<span>{t('carbon.source.intensityScope', 'Built-in, admin-editable static 24-hour model')}</span>}>
-    <Table aria-label={t('carbon.directory.title', 'Ranked hourly directory and bands')}>
+    {analysis.curve.rankedRows.length === 0 ? <div className="flex flex-col gap-2 py-5">
+      <Text as="p" variant="bodySm">{t('carbon.curve.empty', 'No valid hourly intensity rows are available.')}</Text>
+      {analysis.curve.source.payloadPresent && <dl className="flex flex-wrap items-baseline gap-x-2">
+        <Text as="dt" variant="caption">{t('carbon.coverage.returned', 'Rows returned')}</Text>
+        <Text as="dd" variant="caption" mono>{display.formatNumber(analysis.curve.source.returnedRows)}</Text>
+      </dl>}
+      {analysis.curve.availability === 'empty' ? <Text as="p" variant="caption">
+        {t('carbon.coverage.expected', '24 expected clock-hours')}
+      </Text> : analysis.curve.availability === 'invalid' ? <>
+        <Text as="p" variant="caption">{t('carbon.coverage.incomplete', 'Coverage is incomplete because invalid or duplicate rows were returned.')}</Text>
+        {analysis.curve.source.invalidHourRows > 0 && <Text as="p" variant="caption">
+          {t('carbon.coverage.hourRange', 'Required integer 0–23')}
+        </Text>}
+        {analysis.curve.source.invalidIntensityRows > 0 && <Text as="p" variant="caption">
+          {t('carbon.coverage.intensityRule', 'Required finite non-negative value')}
+        </Text>}
+      </> : null}
+    </div> : <Table aria-label={t('carbon.directory.title', 'Ranked hourly directory and bands')}>
       <tbody>{analysis.curve.rankedRows.map(row => {
         const band = bandPresentation(row.band, t);
         return <tr key={row.hour}>
@@ -45,6 +62,6 @@ export function CarbonDirectoryBrief({ analysis, states, display }: CarbonSectio
           <td><Badge variant={band.variant}>{band.label}</Badge></td>
         </tr>;
       })}</tbody>
-    </Table>
+    </Table>}
   </CarbonBriefBand>;
 }

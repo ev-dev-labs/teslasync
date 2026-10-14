@@ -1,0 +1,390 @@
+{
+  "item": "phase6-qa-admin-vehicle-cost",
+  "phase": 6,
+  "status": "READ_ONLY_SOURCE_QA_COMPLETED_WITH_CONFIRMED_FINDINGS",
+  "fullPageAcceptance": "NOTRUN",
+  "native": "NOTRUN",
+  "page": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+  "routes": ["/admin/vehicle-cost"],
+  "purpose": "Bounded source QA of telemetry ingest counters, estimates, source trust and presentation. Vehicle cost means ingest volume/storage, not financial expenditure.",
+  "authority": {
+    "queue": "migration-queue.md:143-177,193,1547",
+    "predecessor": "phase5-page-admin-vehicle-cost",
+    "predecessorSourceCommitFromQueue": "aa6abae13a8d308befa99872defc26e986035d0f",
+    "historicalInventory": "docs\\frontend-audits\\audit-page-027.json",
+    "acceptanceLimit": "The predecessor accepts source only. This report neither redispatches implementation nor accepts browser, native, financial preferences, backend execution or the full application.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-qa-admin-vehicle-cost.json",
+      "web\\logs\\phase6-qa-admin-vehicle-cost.log"
+    ],
+    "logLocationReason": "The current rolling QA contract specifies web\\logs\\<item>.log, consistent with cwd web. .gitignore:80 logs/ ignores this log. No root logs artifact was written.",
+    "applicationFiles": "READ ONLY",
+    "sourceTestConfigCatalogQueueHandoffEdits": 0,
+    "browserApiRequests": 0,
+    "financialPreferenceReadsOrWritesAtRuntime": 0,
+    "realIdentityAccess": 0,
+    "gitCommands": 0,
+    "subagents": 0,
+    "installsHelpersExtensionsServersFullSuitesDocker": 0
+  },
+  "timebox": {
+    "creation": "2026-10-13T09:33:27.875-07:00",
+    "firstActualClockRead": "2026-10-13T09:33:46.7366529-07:00",
+    "returnDeadline": "2026-10-13T09:53:27.875-07:00",
+    "hardDeadline": "2026-10-13T09:58:27.875-07:00",
+    "lastReviewClockRead": "2026-10-13T09:46:26.2915095-07:00",
+    "finalValidationClockRead": "2026-10-13T09:45:51.7179438-07:00",
+    "elapsedSecondsAtFinalValidation": 743.8429438,
+    "finalizationClock": "Recorded by the terminal release line in the sole ignored log.",
+    "commandLimit": "All own commands were synchronous bounded reads/diagnostics, with 30/60-second initial waits; none approached eight minutes.",
+    "stopPolicy": "On STOP, return immediately. All claims are released at terminal return; no post-return writes or background work."
+  },
+  "statusDefinitions": {
+    "PASS": "Only the individually specified inspected source property or executed pure/source diagnostic is established.",
+    "FAIL": "Exact source mechanism or executed synthetic pure-function counterexample violates the named contract. No failure implies an executed native/browser reproduction.",
+    "NOTRUN": "No execution or acceptance evidence. Explicitly disallowed runtime/gates remain NOTRUN, never a blanket pass."
+  },
+  "instructionsRead": [
+    "migration-queue.md:1-170,193,1547",
+    "docs\\orchestrator-loop.md:1-300",
+    "docs\\frontend-design-contract.md:1-284,419-605",
+    "docs\\frontend-mission.md:1-220,529-625,1416-1520",
+    "docs\\session-handoff.md:1-200,1230-1249,1718-1732",
+    "docs\\frontend-worker-conventions.md:1-170",
+    ".github\\instructions\\react-frontend.instructions.md:1-560",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh"
+  ],
+  "checks": [
+    {
+      "id": "P01", "status": "PASS", "name": "Existing report-only item and source predecessor",
+      "evidence": ["migration-queue.md:143-177,193,1547"],
+      "detail": "Only the exact report/log pair is writable; no source, test, catalog, queue, global or configuration changes."
+    },
+    {
+      "id": "P02", "status": "PASS", "name": "Four source blocks remain independently composed",
+      "evidence": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:128-181", "web\\src\\components\\layout\\PageContainer.tsx:239-255"],
+      "detail": "Summary, chart, talkers and table remain unconditional children with four page-level SectionErrorBoundary wrappers and three FadeIn bands. PageLayout receives neither global loading/error nor an empty gate that replaces all sections. This is source composition, not mounted rendering."
+    },
+    {
+      "id": "P03", "status": "PASS", "name": "Initial fetching versus initial fatal failure",
+      "evidence": ["web\\src\\api\\dataState.ts:197-222", "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:70-73,135,153,162,175", "web\\logs\\phase6-qa-admin-vehicle-cost.log"],
+      "detail": "Executed pure deriveDataState returns initial without data/error and initialFailure with fatalError on first failure. Source sections receive initial loading and fatal-only section errors; skeleton/QueryError branches exist. No component was rendered."
+    },
+    {
+      "id": "P04", "status": "PASS", "name": "Retained refresh and failed refresh keep payload identity",
+      "evidence": ["web\\src\\api\\dataState.ts:224-248", "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:70,77-78,137-138", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:58-65", "web\\src\\components\\feedback\\DataSourceNotice.tsx:113-119,169-176"],
+      "detail": "Executed pure probes preserve the same data object during refresh and error, with fatalError=null and refreshError only on failure. Child chart/table/talkers keep rows because they receive fatalError, not refreshError. Summary and page notices retain recovery affordances. Duplicate/severity/announcement presentation remains a candidate, not runtime-certified."
+    },
+    {
+      "id": "P05", "status": "PASS", "name": "Paused source has no manufactured query failure",
+      "evidence": ["web\\src\\api\\dataState.ts:205-220,250-257", "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:138", "web\\src\\components\\feedback\\DataSourceNotice.tsx:83-84,156-159", "web\\logs\\phase6-qa-admin-vehicle-cost.log"],
+      "detail": "Executed initial paused probe is initial/blocked with no error; retained paused is stale/blocked with payload retained and no refreshError. Sections do not falsely become authoritative empty while first paused. Shared 'Paused offline' wording is separately flagged C02 because paused alone does not prove offline."
+    },
+    {
+      "id": "P06", "status": "PASS", "name": "Structured unsupported detection, not generic 503",
+      "evidence": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:63-71,111-125", "internal\\handler\\v1\\admin_observability_handler.go:127-136"],
+      "detail": "Current page requires ApiError, status503 and SUBSYSTEM_NOT_CONFIGURED before suppressing section errors/showing unsupported notice. The old audit's generic503 candidate is superseded by this exact source check. A generic503 remains fatal/retryable rather than falsely unsupported."
+    },
+    {
+      "id": "P07", "status": "PASS", "name": "Authoritative empty and summary zero denominator",
+      "evidence": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:77-78,133", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:26-47", "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx:72-76", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:113-125", "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx:26-34"],
+      "detail": "Successful empty arrays have chart/talker/table empty branches. A returned empty array supplies known vehicle count0, while missing totals/nonarray vehicles stay unknown. Average is null with no denominator, not a fabricated0. This excludes F01's per-row missing counters."
+    },
+    {
+      "id": "P08", "status": "PASS", "name": "Known aggregation and limited-report provenance",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts:69-70", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:22-24,29-39,45-57", "web\\logs\\phase6-qa-admin-vehicle-cost.log"],
+      "detail": "Executed arithmetic mean120/3=40 and zero/3=0. Summary explicitly qualifies returned-vehicle limit100, estimated96 bytes/row, selected-window rows versus24h rate/failures, and missing exact report bounds. Database aggregation truth/availability is NOTRUN."
+    },
+    {
+      "id": "P09", "status": "PASS", "name": "Operational units and nonfinancial scope",
+      "evidence": ["web\\src\\types\\admin-operator-confidence.ts:78-98", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:26-50", "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts:53-64", "web\\src\\hooks\\useNumberFormatting.ts:26-43"],
+      "detail": "Values are counts, estimated bytes and rows/minute, not money/distance/energy/speed. No physical SI conversion or currency amount/symbol-to-ISO interpretation is required or added. Raw hook/cache values are not converted; rendering uses shared numeric/binary-byte formatting. Generic OperationalMetrics preferences do not make these counters financial amounts. No saved preferences were requested or changed."
+    },
+    {
+      "id": "P10", "status": "PASS", "name": "Read-only controls, native preset constraint and refresh feedback",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts:19-24", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:32-41,46-67", "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:73-75,97"],
+      "detail": "Native Select exposes only1/7/30/90-day options and starts30; its enclosing localized label names the control. Refresh refetches the existing GET, is disabled while isFetching and has localized aria-label/aria-busy. No financial, save/delete or persistent mutation form exists. Runtime native keyboard, feedback and malformed-event validation are NOTRUN."
+    },
+    {
+      "id": "P11", "status": "PASS", "name": "Page hook URL, registered route, query names and cancellation",
+      "evidence": ["web\\src\\api\\hooks\\useOperatorConfidence.ts:149-165,365-368", "internal\\api\\router.go:4606,4614,4627", "internal\\handler\\v1\\admin_observability_handler.go:36,76-92", "web\\src\\api\\client.ts:73-94"],
+      "detail": "Only consumed useVehicleCost is certified: GET /admin/observability/vehicle-cost?limit=100&since=<encodedISO>; router registers the imported handler, whose exact GET and limit/since parsing agree. Client adds /api/v1. Actual hook-slice scans find double-prefix0 and camelCase query params0. AbortSignal, since/limit query key, standard stale time, slow polling, no background interval and retry1 remain. No upper-bound query is supported by this handler; F03 records that limitation."
+    },
+    {
+      "id": "P12", "status": "PASS", "name": "Feature boundary and actual JSX guideline scan",
+      "evidence": ["web\\logs\\phase6-qa-admin-vehicle-cost.log", "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx:15-29", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:10"],
+      "detail": "Executed TypeScript AST over eight feature files: syntax0, actual raw controls0, inline-style props0, direct prohibited vendor imports0, old API imports0, any types0. Raw PowerShell grep returned five case-insensitive raw-control candidates: shared Button/Select and comments, not forbidden lowercase HTML. Both raw5 and authoritative AST0 are retained, not hidden."
+    },
+    {
+      "id": "P13", "status": "PASS", "name": "Source accessibility names and chart alternative",
+      "evidence": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:146-148", "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx:66-85", "web\\src\\components\\charts\\ChartContainer.tsx:504-510,781-813,837-867", "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx:27-28,42", "web\\src\\components\\data-display\\MetricBar.tsx:53-64"],
+      "detail": "Source has named regions, localized chart aria label, full-name/byte data columns, list semantics, loading status, and shared progressbar missing-reading semantics. The chart alternative covers the plotted top8 only and cannot repair missing per-vehicle mobile table fields. Keyboard, screen-reader, effective contrast and forced-colors rendering remain NOTRUN."
+    },
+    {
+      "id": "P14", "status": "PASS", "name": "Original preservation inventory retained",
+      "evidence": ["docs\\frontend-audits\\audit-page-027.json:301-355", "web\\logs\\phase6-qa-admin-vehicle-cost.log"],
+      "detail": "Fresh source count640 page+five mounted presentation files versus original630, ratio1.015873; four/four blocks, three/three bands, six metrics, six columns and top8 cap remain. Source inventory is not evidence that each section currently renders natively."
+    },
+    {"id":"F01-check","status":"FAIL","name":"Unknown versus zero in per-row ranking/table","issue":"F01","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts:59-62","web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:53-57,71-76,86-91"]},
+    {"id":"F02-check","status":"FAIL","name":"Lossless narrow-table fields","issue":"F02","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:127-135","web\\src\\components\\ui\\DataTable.tsx:478,505,715-725,1162"]},
+    {"id":"F03-check","status":"FAIL","name":"Shared bounded rolling-range ownership","issue":"F03","evidence":["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:55-61,93-99","web\\src\\lib\\workspaceScope.ts:23-77,157-167","internal\\handler\\v1\\admin_observability_handler.go:76-84"]},
+    {"id":"F04-check","status":"FAIL","name":"Canonical keys for all four window options","issue":"F04","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts:20-23","web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:33-36","web\\logs\\phase6-qa-admin-vehicle-cost.log"]},
+    {"id":"F05-check","status":"FAIL","name":"Localized relative last-seen text","issue":"F05","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:99","web\\src\\lib\\dateFormat.ts:120-133"]},
+    {"id":"F06-check","status":"FAIL","name":"Source allocation for 44px mobile refresh target","issue":"F06","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:51-66","web\\src\\components\\ui\\Button.tsx:37,61"]}
+  ],
+  "confirmedIssues": [
+    {
+      "id": "F01", "status": "FAIL", "priority": "high", "owner": "page/domain adapter", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts", "line": 59,
+      "rule": "MDC-026 / MDC-033: unknown must remain distinguishable from measured zero",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts:59-62", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:53-57,71-76,80,86-91", "web\\src\\lib\\numberFormat.ts:61-63,91-105,125-126,163-165", "web\\src\\components\\data-display\\MetricBar.tsx:50-64"],
+      "mechanism": "rankVehicles changes null/absent bytes, rows, rate and failures to0. Table rows/rate use fmtNumber's safeNumber default0; failure cells explicitly use ??0 even though their filter label uses an em dash. Consequently shared missing-reading semantics never receive unknown rank readings and different table representations disagree.",
+      "executedRepro": "Existing pure rankVehicles with two synthetic rows, one all-null and one measured0, returned identical bytes/rows/rate/failures0. Existing formatter calls for undefined rows/rate yielded '0'/'0.00', matching measured0; undefined bytes correctly yielded an em dash. Raw output is retained in the log; no page/API injection.",
+      "reproSpecification": "In an authorized component fixture, supply a partial row with null/omitted counters and a measured-zero row. Compare chart/talker/table readings and accessible values; unknown must not claim0 or0%. This component/native step was NOTRUN.",
+      "limit": "Counter fields are declared required numbers in the TS wire type, but fetchEnvelope casts raw payloads without runtime numeric validation. This proves the defensive partial/unknown path fails; it does not prove a production backend currently returns null.",
+      "narrowFix": "Preserve null/nonfinite readings in the existing rank adapter and table display, define unknown ranking placement explicitly, retain measured0 and source rows. Do not change wire/cache units or patch shared safeNumber globally.",
+      "historicalRelation": "Retained from audit-page-027 and predecessor shared-needs notes, not newly invented source work."
+    },
+    {
+      "id": "F02", "status": "FAIL", "priority": "high", "owner": "VehicleCostTable caller", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx", "line": 130,
+      "rule": "MDC-023 / MDC-043: every mobile field remains reachable",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:127-135", "web\\src\\components\\ui\\DataTable.tsx:478,505,715-725,1162,1522", "web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts:31"],
+      "mechanism": "Caller allows only vehicle/failures/last on mobile and supplies neither mobilePresentation nor expandable details. DataTable applies hidden md:table-cell to rows/bytes/rate regardless of column-menu visibility. Top8 summaries do not expose all three counters for every returned vehicle.",
+      "reproSpecification": "Authorized fixture with nine or more returned vehicles; below768px inspect a row outside the top8 and attempt to reach rows, estimated bytes and rate through its row UI/column menu. They remain CSS-hidden with no details trigger. Native execution/actual viewport measurement NOTRUN.",
+      "narrowFix": "Use the existing lossless DataTable mobile presentation or row-details contract for all six fields; retain admin:vehicle-cost persistence, filters/export, source order and row IDs.",
+      "historicalRelation": "Retained source-proven issue from the original inventory; no shared source was modified."
+    },
+    {
+      "id": "F03", "status": "FAIL", "priority": "medium", "owner": "workspace/API integration", "confidence": "high",
+      "file": "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx", "line": 56,
+      "rule": "MDC-032 / MDC-046: one range owner with truthful rolling/exact bounds",
+      "evidence": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:55-61,93-99", "web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts:20-23", "web\\src\\api\\hooks\\useOperatorConfidence.ts:149-165", "web\\src\\lib\\workspaceScope.ts:23-77,157-167", "internal\\handler\\v1\\admin_observability_handler.go:76-84"],
+      "mechanism": "Local windowDays owns a second range model rather than the shared header. since is memoized only on windowDays, so polling/manual refetch retain the mount/preset-change lower bound despite labels 'Last N days'. Handler parses since/limit only, not both bounds. Executed existing getWorkspaceRouteScope('/admin/vehicle-cost') returns range=false, vehicle=false.",
+      "reproSpecification": "Mount a1-day report at t0, keep the preset unchanged, refetch after elapsedΔ. Source request still uses t0-24h rather than t0+Δ-24h. Inspect shared scope: no header range is enabled. This deterministic source trace was not a timed browser/API run.",
+      "narrowFix": "One coordinated integration through existing workspace range/hook/endpoint owners: preserve1/7/30/90 and default30-day intent, rolling behavior, timezone and fleet-wide vehicle scope; support both bounds over full server results before removing/replacing the local picker. Do not merely hide a control or locally filter loaded rows.",
+      "historicalRelation": "Both local ownership and frozen lower bound are retained inventory findings, grouped as one integration need."
+    },
+    {
+      "id": "F04", "status": "FAIL", "priority": "medium", "owner": "canonical catalog integration", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts", "line": 20,
+      "rule": "MDC-044 / frontend SI cutover: visible fallbacks have canonical catalog keys",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts:20-23", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:33-36", "web\\logs\\phase6-qa-admin-vehicle-cost.log"],
+      "mechanism": "The four dynamic preset keys admin.vehicleCost.window1d/window7d/window30d/window90d are missing from the inspected canonical en.json. These labelKey constants reach t(opt.labelKey,opt.fallback), so English fallback can conceal missing canonical entries.",
+      "executedRepro": "Static AST collects literal t calls plus preset labelKey properties:60 unique keys,56 present strings,4 missing. Exact missing key/file:line output is in the log. This is not a cold namespace or other-locale execution.",
+      "narrowFix": "Catalog owner integrates the four existing fallback texts through normal canonical/split generation. No new catalog keys or projections were written by this QA worker."
+    },
+    {
+      "id": "F05", "status": "FAIL", "priority": "medium", "owner": "table date-format adoption / existing shared date owner", "confidence": "high",
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx", "line": 99,
+      "rule": "MDC-044: visible relative times honor localization",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:16,99", "web\\src\\lib\\dateFormat.ts:120-134"],
+      "mechanism": "Last-seen cell directly uses formatRelative without locale options; the shared helper returns hardcoded 'just now', 'm ago', 'h ago' and 'd ago' below seven days. These branches never invoke t or a locale-aware relative formatter.",
+      "reproSpecification": "In an authorized non-English render, supply a synthetic recent timestamp; source returns the same English relative text independent of application locale. At seven days the absolute-date path defaults to browser locale rather than the saved application locale. Native/locale preference changes NOTRUN.",
+      "narrowFix": "Adopt the existing locale-aware date display boundary for this cell, retaining invalid-date em dash and timestamp semantics. Coordinate any missing relative-format capability at its existing shared owner; do not create another formatter.",
+      "limit": "Hardcoded relative branches are source-proven. Actual saved-locale/browser divergence and rendered translations were not exercised."
+    },
+    {
+      "id": "F06", "status": "FAIL", "priority": "medium", "owner": "VehicleCostToolbar caller", "confidence": "high for source allocation; native measurement NOTRUN",
+      "file": "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx", "line": 51,
+      "rule": "MDC-040 / MDC-043: mobile controls allocate at least44x44px below md",
+      "evidence": ["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:51-66", "web\\src\\components\\ui\\Button.tsx:35-41,61-73"],
+      "mechanism": "Icon-only refresh inherits Button size=md and h-10 without any mobile min-height/class override. The source allocates the40px height role at narrow widths rather than the required44px role. Accessible naming/busy behavior is present; the missing mobile allocation is separate.",
+      "reproSpecification": "At authorized default-scale widths320/375/390/430 below md, measure the refresh button's rectangle/five-point hit region. Check44px minimum and reachability. Those native measurements are explicitly NOTRUN; this finding is source sizing, not a claimed measured rectangle.",
+      "narrowFix": "Allocate the mobile minimum at this existing Button caller while preserving desktop density, localized name, disabled/busy state and focus. Do not enlarge the global Button for unrelated consumers."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01", "status": "NOTRUN", "name": "DLQ availability versus reported zero",
+      "evidence": ["docs\\frontend-audits\\audit-page-027.json:18-29,197-204", "web\\src\\types\\admin-operator-confidence.ts:84-98"],
+      "detail": "Original audit records a repository fallback substituting0 when the DLQ relation is unavailable. Current bounded work did not reread that query or execute the database. Keep historical integration debt; do not call every current0 unknown or claim a fresh backend defect.",
+      "needs": "Existing backend integration owner verifies current fallback/capability metadata before frontend interprets unavailable DLQ."
+    },
+    {
+      "id": "C02", "status": "NOTRUN", "name": "Paused presentation and retained warning duplication",
+      "evidence": ["web\\src\\components\\feedback\\DataSourceNotice.tsx:156-159,237-239", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:65", "web\\src\\components\\data-display\\DataFreshness.tsx:154-168,324-339"],
+      "detail": "Shared notice labels any paused query 'Paused offline', although pause alone is not proof of offline. Summary additionally renders QueryError beside page source warning and header freshness on retained error. No actual reason, duplicate announcements, focus or severity was mounted/measured.",
+      "needs": "Scoped shared trust/native review without erasing retained content or manufacturing an offline/server-failure assertion."
+    },
+    {
+      "id": "C03", "status": "NOTRUN", "name": "Extreme denominators, invalid readings and ranking",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx:19-21,45-52", "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts:64-65"],
+      "detail": "Measured-zero totals fall back to largest-row scale; contradictory nonzero rows could be displayed as100% 'share of total'. Negative/nonfinite values and unstable unknown sorting deserve fixtures. Current backend invariant/capability and component extreme render were not proved.",
+      "needs": "Use existing page/domain test owners after a specific authorized invariant is established; no guessed aggregate change."
+    },
+    {
+      "id": "C04", "status": "NOTRUN", "name": "Visual noise, narrow chart, reduced motion and label wrapping",
+      "evidence": ["web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx:49", "web\\src\\components\\data-display\\MetricBar.tsx:45-46,92", "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx:104-105", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:64"],
+      "detail": "Rotating series colors/default gradient, fixed128px category axis,18-character truncation and direct animate-spin are source review risks. Composed palette/contrast, low-bandwidth motion suppression, chart plot width, long-label wrapping and full-name accessibility require native checks. They are not fabricated screenshot failures."
+    },
+    {
+      "id": "C05", "status": "NOTRUN", "name": "Unsupported shells and exact source semantics",
+      "evidence": ["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:70-71,114-125", "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx:75-76", "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:113-125", "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:38"],
+      "detail": "An unsupported notice correctly explains deployment capability, but sibling empty wording says no ingest; assess actual comprehension before calling this a native trust failure. 'Codec or writer rejections' caption and24h aggregate semantics remain current backend execution/contract unknowns rather than guessed financial/SI corrections."
+    }
+  ],
+  "notRunChecks": [
+    {"id":"N01","status":"NOTRUN","name":"Native route rendering and all four section outcomes","evidence":["web\\src\\features\\admin\\pages\\VehicleCostPage.tsx:101-181"],"reason":"No browser/native grant; source/AST preservation is not rendered acceptance."},
+    {"id":"N02","status":"NOTRUN","name":"Responsive matrix","widths":[320,375,390,430,768,1024,1280,1440,1920,2560],"evidence":["docs\\frontend-design-contract.md:597-601"],"reason":"No viewport, screenshot, overflow, hit-test or mobile-details execution."},
+    {"id":"N03","status":"NOTRUN","name":"Keyboard, focus, screen reader and44px native hit targets","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx:46-67","web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:127-135"],"reason":"Source associations inspected; real navigation/open Select/filter/export/summary-details interactions not exercised."},
+    {"id":"N04","status":"NOTRUN","name":"Light/dark/custom themes, contrast, RTL,200% text, forced colors, motion/low bandwidth","evidence":["docs\\frontend-design-contract.md:525-541,597-601"],"reason":"No native theme/preferences changes or measurements."},
+    {"id":"N05","status":"NOTRUN","name":"API execution, auth, envelope/JSON field agreement and database aggregation","evidence":["web\\src\\api\\hooks\\useOperatorConfidence.ts:49-61,149-165","web\\src\\types\\admin-operator-confidence.ts:78-98","internal\\handler\\v1\\admin_observability_handler.go:76-92"],"reason":"Exact URL/method/query agreement is source-proven; no request, real identity, service/query execution or fresh Go report-struct validation. The typed payload/envelope is declared, not runtime-certified."},
+    {"id":"N06","status":"NOTRUN","name":"Fresh TypeScript/build/lint/tests/full suites","evidence":["docs\\session-handoff.md:64-70","web\\logs\\phase5-page-admin-vehicle-cost.log"],"reason":"No source changes and passing-rerun prohibition. Historical24-case/source scan receipts are not rerun or renamed fresh passes; project gates belong to parent."},
+    {"id":"N07","status":"NOTRUN","name":"audit.sh and verify.sh","evidence":[".github\\skills\\audit-violations\\audit.sh:122-123",".github\\skills\\verify-api-hooks\\verify.sh:49"],"reason":"Read, not run: audit.sh launches full-project tsc; verify.sh scans unrelated mounted route modules. Fresh bounded AST/grep and exact registered route review are separate evidence, not these scripts passing."},
+    {"id":"N08","status":"NOTRUN","name":"Financial settings, preference persistence and monetary validation","evidence":["web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx:26-50"],"reason":"Not a financial page and explicitly forbidden runtime preference access/mutation. No currency or financial-form acceptance invented."},
+    {"id":"N09","status":"NOTRUN","name":"Cold i18n namespace, other locales/plurals and actual relative date rendering","evidence":["web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts:20-23","web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx:99"],"reason":"Static canonical presence and source English branches are proved; runtime catalog/locale matrix was not mounted."}
+  ],
+  "preservation": {
+    "originalReport": "docs\\frontend-audits\\audit-page-027.json:301-355",
+    "originalPageLines": 174,
+    "currentPageLines": 184,
+    "originalMountedPresentationTotal": 630,
+    "currentMountedPresentationTotal": 640,
+    "ratio": 1.0158730158730158,
+    "sourceHash": "CF4E18515253AF0FA5B1D195AFDBF400633834E6BD83D1AC465C1162DF88485A",
+    "sourceHashAlgorithm": "SHA256",
+    "sectionCount": 4,
+    "originalSectionCount": 4,
+    "majorBands": 3,
+    "pageErrorBoundaries": 4,
+    "sectionNames": ["Fleet ingest totals","Ingest cost by vehicle","Top talkers","Per-vehicle breakdown"],
+    "metricCount": 6,
+    "columnCount": 6,
+    "topN": 8,
+    "mountedComponentLines": {"VehicleCostStatStrip":67,"CostByVehicleChart":121,"VehicleCostTalkers":58,"VehicleCostTable":140,"VehicleCostToolbar":70},
+    "structuralCounts": {"pageGlassPanel":0,"pageChartContainer":0,"mountedGlassPanel":2,"mountedEmbeddedChart":1,"mountedLayoutCard":1,"mountedOperationalBrief":1,"mountedDataTable":1},
+    "actions": ["Window1/7/30/90, default30","Refresh and error retry","Top-talker empty retry","Raw-value table filters","Stable admin:vehicle-cost table ID, vehicle_id row identity, shared column/export pipeline","Shared OperationalBrief source/details and chart text/data alternative"],
+    "limitations": ["No page/API mutation","No interactive table sorting wired despite old comment","No chart export/fullscreen opt-in","No unbounded/server full-result export capability","Source counts do not prove mounted section rendering"],
+    "workerSourceChanges": 0,
+    "hashesAndAllEightFeatureLineCounts": "web\\logs\\phase6-qa-admin-vehicle-cost.log"
+  },
+  "executionReceipts": [
+    {
+      "name": "Supported Node26 inline read-only TypeScript AST/i18n/preservation diagnostic",
+      "command": "PowerShell here-string stdin | & \"$nodeDir\\node.exe\" --input-type=module -; nodeDir=$HOME\\.copilot\\session-state\\499cebd4-378c-418c-9113-3b8fe85355b5\\files\\node-v26.11.1-win-x64",
+      "started": "2026-10-13T09:39:22.9468049-07:00",
+      "ended": "2026-10-13T09:39:23.4159708-07:00",
+      "exitCode": 0,
+      "node": "v26.11.1",
+      "scope": "Eight listed production feature files; canonical en.json key lookup; original audit preservation counts",
+      "rawResults": ["syntax=0; actual rawControls=0; inlineStyleProps=0; directVendorImports=0; oldApiImports=0; anyTypes=0","uniqueKeys=60; missingKeys=4; source check FAIL F04","currentMountedTotal=640; originalMountedTotal=630; sections=4; bands=3"],
+      "limit": "Execution exit0 does not mean no findings, semantic TypeScript compilation or native acceptance."
+    },
+    {
+      "name": "Existing pure-source diagnostic counterexamples",
+      "command": "PowerShell here-string stdin | & \"$nodeDir\\node.exe\" --input-type=module -; direct imports of helpers.ts, dataState.ts, numberFormat.ts, workspaceScope.ts; synthetic values only",
+      "started": "2026-10-13T09:40:08.3950318-07:00",
+      "ended": "2026-10-13T09:40:08.5473314-07:00",
+      "exitCode": 0,
+      "results": "F01 reproduced; known mean40/zero0; eight trust probes preserve identity and correct fatal/refresh/paused distinction; route scope range=false/vehicle=false.",
+      "limit": "No helper/test files created, application modules with browser/network side effects invoked, API/cache/preferences touched or Vitest/native suite run."
+    },
+    {
+      "name": "Native PowerShell grep and exact mechanism evidence",
+      "command": "Select-String -LiteralPath <eight feature paths> -Pattern <named guideline regexes>; exact source Select-String and useVehicleCost lines149-166 slice; append raw matches/counts to sole ignored log",
+      "ended": "2026-10-13T09:40:49.4361316-07:00",
+      "exitCode": 0,
+      "rawOutput": ["GREP static-var-style COUNT=0","GREP raw-controls COUNT=5","GREP direct-vendor-import COUNT=0","GREP old-api-import COUNT=0","GREP legacy-physical-unit-field COUNT=0","ACTUAL useVehicleCost DOUBLE_PREFIX_COUNT=0","ACTUAL useVehicleCost camelCase_QUERY_COUNT=0"],
+      "candidateClassification": "All five raw-control matches are case-insensitive shared Button/Select or comments at VehicleCostToolbar.tsx:29,49,51,58 and constants.ts:18. Actual lowercase JSX control AST count0. No false 'grep0' claim and no passing rerun.",
+      "rawLog": "web\\logs\\phase6-qa-admin-vehicle-cost.log"
+    },
+    {
+      "name": "Owned document validation and read-only snapshot verification",
+      "command": "PowerShell here-string stdin | & \"$nodeDir\\node.exe\" --input-type=module -; JSON.parse report, validate individual status/evidence/issue references, compare eight captured SHA256 values",
+      "started": "2026-10-13T09:45:51.6193837-07:00",
+      "ended": "2026-10-13T09:45:51.7179438-07:00",
+      "exitCode": 0,
+      "rawOutput": [
+        "report_document_validation: validJson=true; individualPass=14; individualFail=6; confirmedIssues=6; candidates=5; namedNotrun=9; invalidChecks=[]; native=NOTRUN; fullPageAcceptance=NOTRUN",
+        "read_only_snapshot_verification: featureFiles=8; changedCapturedFeatureFiles=[]"
+      ],
+      "limit": "Document/source-snapshot validation, not a repeated passing application test, Git worktree claim or overall acceptance. Final metadata/citation additions retain this evidence timestamp."
+    }
+  ],
+  "historicalReceipts": {
+    "source": "web\\logs\\phase5-page-admin-vehicle-cost.log",
+    "actualRetainedTail": ["Test Files 1 passed (1)","Tests 24 passed (24)","VITEST_CONTINUATION_EXIT=0 END=2026-10-13T00:02:21.4719106-07:00"],
+    "finalSourceReceipt": "2026-10-13T00:03:32.3904416-07:00",
+    "typecheck": "Handoff records literal npx tsc --noEmit EXIT0 on Node26.11.1; referenced web\\logs\\phase5-requested-typecheck-gate.log is currently zero bytes. No raw output fabricated, no fresh compiler pass claimed.",
+    "reruns": 0
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\orchestrator-loop.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-inventory.md (matched VehicleCost references only)",
+    "docs\\frontend-audits\\audit-page-027.json",
+    "docs\\frontend-audits\\phase6-qa-admin-feedback-queue.json (report format/authority only)",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    ".gitignore (logs ignore rule only; no Git command)",
+    "web\\src\\features\\admin\\pages\\VehicleCostPage.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\index.ts",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\helpers.ts",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\constants.ts",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostToolbar.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\CostByVehicleChart.tsx",
+    "web\\src\\features\\admin\\components\\vehicle-cost\\VehicleCostTable.tsx",
+    "web\\src\\features\\admin\\components\\statstrip-audit-vehicle-cost\\VehicleCostStatStrip.tsx",
+    "web\\src\\features\\admin\\components\\continuation-admin-1\\VehicleCostTalkers.tsx",
+    "web\\src\\api\\hooks\\useOperatorConfidence.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\api\\client.ts (prefix/error contract slice)",
+    "web\\src\\types\\admin-operator-confidence.ts (VehicleCost type slice)",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx (mobile/column/expansion/export source slices)",
+    "web\\src\\components\\ui\\Button.tsx",
+    "web\\src\\components\\ui\\Select.tsx",
+    "web\\src\\components\\charts\\EmbeddedChart.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx (state/accessibility source slices)",
+    "web\\src\\components\\data-display\\DataFreshness.tsx",
+    "web\\src\\components\\data-display\\MetricBar.tsx",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\lib\\operationalMetrics.tsx",
+    "web\\src\\lib\\numberFormat.ts",
+    "web\\src\\lib\\dateFormat.ts (relative/date source slices)",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\resilience.ts (isApiError/type grep only)",
+    "web\\src\\i18n\\en.json (read-only static key lookup; no full catalog output)",
+    "internal\\api\\router.go (observability mount slice)",
+    "internal\\handler\\v1\\admin_observability_handler.go (router's directly registered handler)",
+    "web\\logs\\phase5-page-admin-vehicle-cost.log (existing receipt tail)",
+    "web\\logs\\phase5-requested-typecheck-gate.log (existing empty file metadata/tail)"
+  ],
+  "needs": [
+    "F01 narrow page/domain unknown-preservation fix",
+    "F02 existing lossless mobile-table adoption",
+    "F03 existing workspace/API bounded rolling-range integration",
+    "F04 four preset keys through canonical catalog owner",
+    "F05 localized date-boundary adoption",
+    "F06 caller-specific mobile refresh allocation",
+    "Native/full-page QA and candidates remain NOTRUN; historical DLQ capability needs retained"
+  ],
+  "release": {
+    "allClaimsReleasedAtTerminalReturn": true,
+    "claims": [
+      "docs\\frontend-audits\\phase6-qa-admin-vehicle-cost.json",
+      "web\\logs\\phase6-qa-admin-vehicle-cost.log"
+    ],
+    "applicationSourceWriteClaimEverHeld": false,
+    "capturedFeatureHashesVerifiedUnchanged": 8,
+    "browserApiServerClaimEverHeld": false,
+    "ownBackgroundProcesses": 0,
+    "postReturnWrites": "NONE; all report/log/source/command/browser/API/resource claims relinquished at return"
+  }
+}

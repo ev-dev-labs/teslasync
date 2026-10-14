@@ -1,0 +1,661 @@
+{
+  "item": "phase6-qa-charging-charger-resilience",
+  "status": "DONE",
+  "resultMeaning": "Report-only source QA delivered with findings; NOT native/page/application/release acceptance.",
+  "startedUtc": "2026-10-13T22:27:31.5233967Z",
+  "reviewRecordedUtc": "2026-10-13T22:36:47.805063+00:00",
+  "releaseUtc": "2026-10-13T22:37:21.375118Z",
+  "writableFiles": [
+    "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charger-resilience.json",
+    "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charger-resilience.log"
+  ],
+  "sourceWrites": 0,
+  "testWrites": 0,
+  "queueWrites": 0,
+  "authority": {
+    "registeredItem": "migration-queue.md:336",
+    "acceptedReceipt": "migration-queue.md:1763",
+    "acceptedCommit": "5fed1ace2fc8999965f431086b3e299a0e5e25b8",
+    "inventory": "docs/frontend-inventory.md:135",
+    "historicalAudit": "docs/frontend-audits/audit-page-080.json",
+    "read": [
+      "docs/orchestrator-loop.md entire sole playbook",
+      "docs/session-handoff.md:1-110 current phase/conventions",
+      "docs/frontend-design-contract.md:1-200,419-558 architecture/trust/SI/a11y/mobile",
+      "docs/frontend-mission.md:1-200,1416-1515 principles/QA/definition of done",
+      ".github/copilot-instructions.md:1-180 integrity/SI",
+      ".github/instructions/react-frontend.instructions.md entire",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md entire"
+    ],
+    "reconciliation": "Current modernization raw-SI/restrained contract overrides historical legacy-unit/neon examples. User source-only prohibition controls; all gates/tests/native NOTRUN."
+  },
+  "scope": {
+    "page": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+    "directFeatureParts": [
+      "web/src/features/charging/components/ChargerResilienceStats.tsx",
+      "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx"
+    ],
+    "domainTrace": "web/src/features/charging/lib/chargerResilience.ts",
+    "otherTraces": "Only directly relevant query/trust/router/type/format/scope/shared render contracts. No campaign or backend audit.",
+    "route": "/charger-resilience",
+    "sectionShells": [
+      {
+        "line": 95,
+        "name": "KPI band"
+      },
+      {
+        "line": 100,
+        "name": "Energy share by site"
+      },
+      {
+        "line": 145,
+        "name": "What-if loss"
+      },
+      {
+        "line": 190,
+        "name": "Sites"
+      }
+    ],
+    "lineCounts": {
+      "page": 224,
+      "stats": 83,
+      "brief": 73,
+      "composed": 380,
+      "domainNotInComposed": 317,
+      "acceptedPage": 224,
+      "acceptedComposed": 380,
+      "acceptedSections": 4,
+      "historicalPage": 208,
+      "historicalComposed": 364
+    },
+    "preservation": "Current224/380/4 exactly matches accepted receipt.380/364 historical composed exceeds70%; no remigration/source edits."
+  },
+  "semantics": {
+    "observed": "Selected vehicle returned-history energy-share HHI/concentration. Fallback counts sessions outside top bucket, not delivered capacity, uptime or future success.",
+    "modeled": "What-if removes top bucket energy/sessions and rescales remaining observations. Page:149 explicitly hypothetical, not prediction. Positive score delta is concentration change, not proof outages improve actual charger availability.",
+    "score": "40% complement of top energy share,30% alternative session frequency,30% normalized effective sites with cap5; heuristic0-100, no probability/confidence.",
+    "window": "useChargingHistory:72-84: encoded vehicle_id, limit1000, distinct vehicle/limit cache key, AbortSignal, selected-id enablement, moderate staleTime. No start/end/offset traversal. Stats:78-81 declares returned history unknown period, no complete range guarantee.",
+    "workspace": "workspaceScope.ts:23-78 range opt-in excludes route;:165-178 enables vehicle. No missing global date consumption violation inferred.",
+    "routeEvidence": [
+      {
+        "file": "web/src/App.tsx",
+        "lines": [
+          104,
+          874
+        ]
+      },
+      {
+        "file": "internal/api/router.go",
+        "lines": [
+          3545,
+          3546
+        ]
+      }
+    ],
+    "hardwareProductionClaims": "NONE"
+  },
+  "sourceTrust": {
+    "sources": "One charging-history source for four derived sections; preference/selection infrastructure is not four independent evidence feeds.",
+    "initial": "Page:71/chart/brief/SourceContent source-shaped loading with persistent shells.",
+    "fatal": "Page:72/110/157/194 and Stats:69-70 use fatalError. PageLayout delegates PageContainer; query prop is freshness, not all-page fatal/loading gate.",
+    "successfulEmpty": "[] hasData=true but Stats available=false; chart/detail empty bodies and missing KPI values, not fabricated zeros.",
+    "retained": "Page:73-81 retains payload for refresh failures or paused fetch, one shared warning, detail retained maps ready; brief labels retained. Retained [] still selects source-specific empty bodies.",
+    "paused": "Blocked refresh is not proof device offline; initial pause CR-C-004.",
+    "actions": "Retry/Refresh refetch history only, not physical charger repair/schedule/reconnection mutation. KPI footer retry, fatal source/chart retries, retained warning retry disabled during refresh; all source shells preserved.",
+    "freshness": "DataState carries last successful timestamp and page query delegates freshness; no fresh measurement/native pass implied."
+  },
+  "siSignPreferences": {
+    "energy": "Raw Wh in query/domain; page:162 uses useUnits.formatEnergy at render only. No page hardcoded physical multiplier.",
+    "numbers": "KPIs/what-if/visible shares use fmtNumber/fmtPercent; delta sign explicitly retained and not color-only. Locale/precision paths read; preference runtime NOTRUN.",
+    "limits": "Invalid/negative clamp and total/site Wh rounding exist; production missing/sign contract unproven, see candidate. Table preference issue CR-QA-004.",
+    "csv": "Scalar site/share/session/dependency retained; raw CSV values intentionally not localized."
+  },
+  "sourceA11yMobile": {
+    "declarations": [
+      "PageLayout @container/min-w-0",
+      "detail @3xl stacking; dl/dt/dd @sm pairs",
+      "site label wrapping and badges",
+      "localized chart ariaLabel; complete scalar table",
+      "textual top dependency table/CSV/list",
+      "HelpTooltip h-11 w-11 mobile/md:h-6 md:w-6 and help preference",
+      "single retained role=status notice; signed delta"
+    ],
+    "runtime": "NOTRUN; source declarations are not geometry, focus, contrast, touch, forced-colors, screen-reader or OS acceptance."
+  },
+  "findings": [
+    {
+      "id": "CR-QA-001",
+      "classification": "confirmed-source",
+      "severity": "high",
+      "rule": "zero-energy-denominator",
+      "file": "web/src/features/charging/lib/chargerResilience.ts",
+      "line": 235,
+      "occurrences": 1,
+      "evidence": [
+        {
+          "file": "web/src/features/charging/lib/chargerResilience.ts",
+          "lines": [
+            141,
+            158,
+            225,
+            235,
+            274,
+            277,
+            283,
+            285
+          ]
+        },
+        {
+          "file": "web/src/features/charging/components/ChargerResilienceStats.tsx",
+          "lines": [
+            19,
+            24,
+            37,
+            50
+          ]
+        },
+        {
+          "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+          "lines": [
+            51,
+            162,
+            166,
+            170,
+            179,
+            182
+          ]
+        }
+      ],
+      "mechanism": "Every site energyShare becomes 0 when total Wh is zero; effective-site count becomes raw bucket count and top dependency becomes session frequency. Stats marks all metrics available solely from nonempty sites. Energy-weighted help/axis names do not disclose this denominator switch. Zero remaining energy forces what-if newTop=null and scoreAfter=0 even if a bucket remains.",
+      "repro": "SOURCE WALKTHROUGH ONLY, not executed: successfully returned one A and one B session, both total_energy_added_wh=0. Chart shares=0%/0%, effective count=2, dependency=50%, fallback=50%, score=Math.round(100*(.4*.5+.3*.5+.3*.25))=43. What-if shows 0 Wh at risk, None yet for new top, after=0 and delta=-43 although another bucket remains. Undefined energy shares are presented alongside unqualified fallback resilience values.",
+      "fix": "Explicitly disclose unavailable energy denominator and any session-based fallback, distinguishing no remaining sites from no remaining recorded energy. Preserve raw Wh, sites/counts, positive-energy formulas and section shells; domain/presentation owner decision required.",
+      "dedup": "Current reconfirmation of audit-page-080 zero/unknown-energy root; one mechanism, not a ticket per symptom. No exact queued remedy found for this lib/Stats root."
+    },
+    {
+      "id": "CR-QA-002",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/charging/lib/chargerResilience.ts",
+      "line": 123,
+      "occurrences": 1,
+      "evidence": [
+        {
+          "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+          "lines": [
+            50,
+            119,
+            166,
+            199
+          ]
+        },
+        {
+          "file": "web/src/features/charging/components/ChargerResilienceStats.tsx",
+          "lines": [
+            53
+          ]
+        }
+      ],
+      "mechanism": "Synthetic type:unknown has literal English Unknown location. Chart/table/CSV, KPI top-site context, sites and possible new-top label use it unchanged. Translating groupedBy does not translate the synthetic label.",
+      "repro": "SOURCE WALKTHROUGH ONLY: non-English locale, session without place, valid coordinates or nonempty charger_type; resolveResilienceSite emits literal Unknown location and render paths do not call t() for it.",
+      "fix": "Localize only this synthetic fallback at existing presentation boundary; retain type:unknown identity and real source place/type labels. Catalog integration needs separate owner authority.",
+      "dedup": "Same unresolved fallback as historical audit-page-080, not a completed repair. No exact queued remedy found."
+    },
+    {
+      "id": "CR-QA-003",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "rule": "missing-contextual-help-name",
+      "file": "web/src/features/charging/components/ChargerResilienceStats.tsx",
+      "line": 28,
+      "occurrenceLines": [
+        28,
+        41
+      ],
+      "occurrences": 2,
+      "evidence": [
+        {
+          "file": "web/src/components/ui/HelpTooltip.tsx",
+          "lines": [
+            67,
+            72,
+            101,
+            103
+          ]
+        },
+        {
+          "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+          "lines": [
+            147,
+            152
+          ]
+        }
+      ],
+      "mechanism": "Score/effective-site HelpTooltip calls omit ariaLabel; both triggers get the same localized generic More info name. What-if help already has a contextual name. Source names are indistinguishable; no native screen-reader failure claimed.",
+      "repro": "SOURCE WALKTHROUGH ONLY: contextualHelp enabled with nonempty help text; both KPI triggers use HelpTooltip default aria-label despite explaining different metrics.",
+      "fix": "Pass contextual localized ariaLabel using existing API, preserving explanations and contextual-help preference.",
+      "dedup": "Historical naming root still present; completed phase3-help-tooltip supplies shared sizing, not these consumer labels."
+    },
+    {
+      "id": "CR-QA-004",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "rule": "numeric-alternative-preferences",
+      "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+      "line": 120,
+      "occurrenceLines": [
+        120,
+        121
+      ],
+      "occurrences": 2,
+      "evidence": [
+        {
+          "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+          "lines": [
+            35,
+            51,
+            118,
+            120,
+            121,
+            131,
+            212
+          ]
+        },
+        {
+          "file": "web/src/components/charts/ChartContainer.tsx",
+          "lines": [
+            925,
+            926,
+            929,
+            931,
+            933
+          ]
+        },
+        {
+          "file": "web/src/hooks/useNumberFormatting.ts",
+          "lines": [
+            28,
+            29,
+            37,
+            39
+          ]
+        }
+      ],
+      "mechanism": "Share and sessions fallback columns omit kind/format, so shared chart table uses String(raw), unlike locale/precision-aware visible shares/axes and KPIs. Screen-reader/forced-colors alternative can expose unlocalized decimal points/counts. Raw scalar CSV is intentional, not a locale violation.",
+      "repro": "SOURCE WALKTHROUGH ONLY: de-DE locale, precision=2, share raw=33.3. Visible fmtPercent uses preference path (e.g. 33,30%) but fallback String(raw)=33.3; sessions=1000 likewise bypasses localized count grouping.",
+      "fix": "Use existing numeric column kind/format for share/count. Preserve scalar CSV and complete site/dependency semantics; no shared ChartContainer remigration.",
+      "dedup": "No exact consumer repair scope found. Completed shared chart API is the existing capability to reuse."
+    }
+  ],
+  "candidatesAndNativeQuestions": [
+    {
+      "id": "CR-C-001",
+      "classification": "candidate-contract-question",
+      "file": "web/src/features/charging/lib/chargerResilience.ts",
+      "line": 141,
+      "mechanism": "num(null/undefined/NaN/Infinity) becomes zero and Math.max clamps negatives. Required numeric type at types/charging.ts:22 means these invalid/nullable production payloads are not proven.",
+      "repro": "Future authorized contract fixtures: measured zero versus missing/null/nonfinite/negative energy. NOTRUN; no hardware or production corruption claim.",
+      "dedup": "Extension of CR-QA-001, not another root repair."
+    },
+    {
+      "id": "CR-C-002",
+      "classification": "candidate-model-limit",
+      "file": "web/src/features/charging/lib/chargerResilience.ts",
+      "line": 105,
+      "mechanism": "Place strings coalesce case-insensitively, coordinates round to 0.01 degree, missing locations group by charger type. Page:201-204 discloses grouping. Counts/fallback describe observed buckets, not unique physical chargers, uptime, capacity or guaranteed alternatives.",
+      "repro": "Future authorized semantic review of identical names, one geo cell and shared unknown charger type; inspect whether locations-seen wording needs qualification. NOTRUN; preserve grouping until owner decision."
+    },
+    {
+      "id": "CR-C-003",
+      "classification": "native-question",
+      "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+      "line": 125,
+      "mechanism": "All returned sites share a fixed-height chart with 20-character truncated, angled labels and fixed axis height. Full scalar labels/dependency text exist. Source cannot prove overlap, clipping, contrast, focus/touch or overflow.",
+      "repro": "NOTRUN: widths320/375/430/768/1024/1440/1920/2560, narrow allocations, many sites, long names, 200% text, RTL, forced colors, reduced motion and help reachability; never trim source observations for layout."
+    },
+    {
+      "id": "CR-C-004",
+      "classification": "candidate-initial-pause-ux",
+      "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+      "line": 71,
+      "mechanism": "Initially paused/pending TanStack query may have isLoading=false and no retained data: page selects empty/unloaded copy; shared warning intentionally skips no-data state. KPI footer provides retry; detail empty bodies omit emptyRecovery. No proven dead-end, device-offline state or runtime regression.",
+      "repro": "NOTRUN: first load paused/resumed/failed/empty, then retained-empty refresh failure/pause; verify status and source recovery names without inferring physical offline."
+    }
+  ],
+  "historicalResolvedNotRedispatched": [
+    {
+      "issue": "Color-only top-site marker",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+        "lines": [
+          62,
+          122,
+          207,
+          208
+        ]
+      }
+    },
+    {
+      "issue": "Repeated retained detail notices/retries and retained-empty blankness",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+        "lines": [
+          80,
+          81,
+          92,
+          154,
+          191
+        ]
+      }
+    },
+    {
+      "issue": "Nonsemantic what-if pairs",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+        "lines": [
+          159,
+          161,
+          162,
+          165,
+          166,
+          169,
+          170,
+          174
+        ]
+      }
+    },
+    {
+      "issue": "Unformatted what-if scores/delta",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+        "lines": [
+          170,
+          179,
+          182
+        ]
+      }
+    },
+    {
+      "issue": "Shared undersized help trigger",
+      "evidence": {
+        "file": "web/src/components/ui/HelpTooltip.tsx",
+        "lines": [
+          109
+        ]
+      }
+    },
+    {
+      "issue": "Accented decorative icons/page-local ticks",
+      "evidence": {
+        "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+        "lines": [
+          127,
+          129,
+          131,
+          146,
+          190
+        ]
+      }
+    }
+  ],
+  "deduplication": {
+    "queueReadOnly": true,
+    "method": "Actual phase6 item names and exact lib/Stats/Brief/HelpTooltip/useCharging/ChartContainer/dataState/scope/formatting scopes; exact item-column lookup.",
+    "existingScopes": [
+      {
+        "item": "phase3-help-tooltip",
+        "queueLine": 1234,
+        "status": "[x]",
+        "files": "web\\src\\components\\ui\\HelpTooltip.tsx; web\\src\\components\\ui\\__tests__\\HelpTooltip.test.tsx",
+        "disposition": "Completed shared target sizing is present; consumer help names remain distinct."
+      },
+      {
+        "item": "phase3-chart-container",
+        "queueLine": 918,
+        "status": "[x]",
+        "files": "web\\src\\components\\charts\\ChartContainer.tsx; web\\src\\components\\charts\\__tests__\\ChartContainer.a11y.test.tsx; web\\src\\components\\charts\\__tests__\\ChartContainer.test.tsx",
+        "disposition": "Completed existing numeric column API; fix only consumer omissions."
+      },
+      {
+        "item": "phase3-data-state",
+        "queueLine": 957,
+        "status": "[x]",
+        "files": "web\\src\\api\\dataState.ts; web\\src\\api\\dataState.test.ts",
+        "disposition": "Completed shared fatal/retained contract; no shared trust rewrite needed."
+      },
+      {
+        "item": "phase6-fix-action-center-history-pagination",
+        "queueLine": 265,
+        "status": "[~]",
+        "files": "web\\src\\features\\action-center\\components\\RecommendationDetails.tsx; web\\src\\features\\action-center\\components\\RecommendationDetails.test.tsx; web\\src\\api\\hooks\\useActionCenter.ts; web\\src\\api\\hooks\\useActionCenter.test.ts",
+        "disposition": "ActionCenter hook/details only; not charging complete-history coverage."
+      },
+      {
+        "item": "phase6-fix-insight-panel-retained-empty",
+        "queueLine": 346,
+        "status": "[~]",
+        "files": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx; web\\src\\features\\advanced-intelligence\\components\\InsightPanel.retainedEmpty.test.tsx",
+        "disposition": "Advanced-intelligence InsightPanel only; charging retained-empty already repaired."
+      },
+      {
+        "item": "phase6-fix-evidence-sample-count-plurals",
+        "queueLine": 344,
+        "status": "[ ]",
+        "files": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx; web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.sampleCounts.test.tsx; web\\src\\i18n\\en.json; web\\src\\i18n\\en\\locale-advanced-intelligence.json; web\\src\\i18n\\en\\usage-manifest.json",
+        "disposition": "EvidencePanel/catalog owner only; no plural scope invented here."
+      }
+    ],
+    "historical": "Completed audit-page-080 is not completed repair; reconfirmed roots counted once, repaired historical issues not reopened.",
+    "newQueueItemsCreated": 0,
+    "needs": "Parent may register narrow energy-basis, fallback-label, two help-name and two table-column fixes; this report grants no source/catalog claim."
+  },
+  "checks": {
+    "builtInScanExit": 0,
+    "rawLog": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charger-resilience.log",
+    "method": "Bounded CaseSensitive Select-String plus manual mechanisms; not AST/full-repo/lint.",
+    "matchCounts": {
+      "static-inline-style": 0,
+      "raw-html": 0,
+      "direct-library-import": 0,
+      "old-api-import": 0,
+      "double-prefix": 0,
+      "camelcase-param": 0,
+      "hidden-section": 0,
+      "hardcoded-string-candidates": 2,
+      "page-wrapper-evidence": 2,
+      "fetch-useeffect": 0,
+      "hook-url": 0,
+      "section-shells": 4
+    },
+    "exceptions": [
+      "not_scored technical sentinel not counted as user-visible English",
+      "PageLayout adapts PageContainer/no-vehicle branch acceptable",
+      "dynamic Cell colors/Recharts props not static inline styles",
+      "absent what-if body inside persistent panel not hidden section",
+      "raw numeric CSV intentional"
+    ],
+    "pinsMatchedBeforeCreation": 20,
+    "serializeReparse": {
+      "status": "executed",
+      "exit": 0,
+      "method": "json.dumps -> json.loads equality; authorized file write -> json.loads equality"
+    },
+    "diagnosticFailures": [
+      {
+        "shellId": "6105",
+        "exit": 1,
+        "mechanism": "Nonexistent routes/registry.tsx lookup; corrected App route evidence."
+      },
+      {
+        "shellId": "6117",
+        "exit": 0,
+        "semanticStatus": "INVALID case-insensitive camelcase probe and incorrect literal0; corrected actual CaseSensitive0."
+      },
+      {
+        "shellId": "6138",
+        "exit": 1,
+        "mechanism": "Report prewrite assertion matched item names in dependency/note text; corrected exact item-column match; no report written by failed attempt."
+      }
+    ],
+    "NOTRUN": [
+      "tests",
+      "TypeScript/npx tsc --noEmit",
+      "lint/full lint",
+      "build",
+      "audit wrapper",
+      "browser/Playwright/native/runtime",
+      "real API/device/hardware"
+    ],
+    "testCounts": {
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "finalSourcePinExit": 0,
+    "finalSourcePinsMatched": 20,
+    "reportCreateExit": 0,
+    "finalVerificationExit": 0
+  },
+  "inheritedAcceptanceLimits": {
+    "evidence": "migration-queue.md:1763; historical receipt, not fresh commands",
+    "lintExit": 0,
+    "styleExit": 0,
+    "testStartupExit": 1,
+    "discoveredCases": 0,
+    "captureExit": 1,
+    "capture": "all-width scroll/resource FAILED",
+    "native": "NOTRUN",
+    "waived": false,
+    "guard": "Original external catalog startup failure/zero cases remain explicit; not a pass."
+  },
+  "sourcePins": [
+    {
+      "file": "web/src/features/charging/pages/ChargerResiliencePage.tsx",
+      "sha256": "F9DA7D4725C2F6E1C0BA6B3C76BD9418CB8BB19A5624FC82E4BECD7080FA5AFC"
+    },
+    {
+      "file": "web/src/features/charging/components/ChargerResilienceStats.tsx",
+      "sha256": "336BC87B5CD3CDF30AC885B56FF1FF77A4A827A9A75F8FE9F6EC370169B21A1F"
+    },
+    {
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "B2F42B47F208133F9336395242A7308D7D01B99D6B23ACF3041E97248637326C"
+    },
+    {
+      "file": "web/src/features/charging/lib/chargerResilience.ts",
+      "sha256": "6D2BDFC0AE8FF347EEE34D84B2E0BE78795935B50775B8388E3E4CA975432ECE"
+    },
+    {
+      "file": "web/src/api/hooks/useCharging.ts",
+      "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330"
+    },
+    {
+      "file": "web/src/types/charging.ts",
+      "sha256": "225CBAFAFD597261ABE9222B68F7578565280625602863BA10ADE878268B0720"
+    },
+    {
+      "file": "web/src/api/dataState.ts",
+      "sha256": "21FB454B3C1F01608169F3F3887911DE97F7C754663CC001236EBFDE58211761"
+    },
+    {
+      "file": "web/src/hooks/useDataState.ts",
+      "sha256": "785BD47E706B066874BEC8999D51093982E93B9680B8DEC16BDDC023DC57FB9B"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B"
+    },
+    {
+      "file": "web/src/components/layout/layout-reference/SourceContent.tsx",
+      "sha256": "9B423C800D3C77D0018A939B1C200A86FF851E781052393A4026DAE914B7FAA7"
+    },
+    {
+      "file": "web/src/components/layout/PageContainer.tsx",
+      "sha256": "4B718AC20F8A473A3C59B6DBD7031D9BB686E2C3AD93B25DDB94523EEA074B4A"
+    },
+    {
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "sha256": "6AC14784E96C7D61B8CAE879B7BE39CA7B9A54C520F02EF8260845B1D3FD9694"
+    },
+    {
+      "file": "web/src/components/feedback/StaleRefreshWarning.tsx",
+      "sha256": "C8DF62E2A4F40F60C2CBD3866C48E0590175F7307814FA7E7DAEA7E36A0312E9"
+    },
+    {
+      "file": "web/src/components/ui/HelpTooltip.tsx",
+      "sha256": "FB8D5D08643E810939608E5255F5F967084EC7C7AF3C49EB130E38A682A27C86"
+    },
+    {
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "sha256": "B94754AB501D0894B95B46FE87F8879D6EEFD03FEABBA07C98ABEF12CF09F554"
+    },
+    {
+      "file": "web/src/hooks/useUnits.ts",
+      "sha256": "B90452309357B88FE27EDF878A943FF46CF9083015592D1587997B5C0F4A8B14"
+    },
+    {
+      "file": "web/src/hooks/useNumberFormatting.ts",
+      "sha256": "E32C23DF1CB2001D54D324E2E0A7BE6077720A26820A1CF2AC6C81358ACA2AD7"
+    },
+    {
+      "file": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7"
+    },
+    {
+      "file": "web/src/App.tsx",
+      "sha256": "10669C20207B9DA28A7691107C23BCB6E7F2105BD17BD472AEFD92399F1A517C"
+    },
+    {
+      "file": "internal/api/router.go",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C"
+    }
+  ],
+  "summary": {
+    "confirmedFindingMechanisms": 4,
+    "confirmedViolationOccurrences": 6,
+    "candidateOrNativeQuestions": 4,
+    "severityByMechanism": {
+      "high": 1,
+      "medium": 3
+    },
+    "occurrencesByRule": {
+      "zero-energy-denominator": 1,
+      "hardcoded-string": 1,
+      "missing-contextual-help-name": 2,
+      "numeric-alternative-preferences": 2
+    },
+    "primaryFindingCountsByFile": {
+      "web/src/features/charging/lib/chargerResilience.ts": 2,
+      "web/src/features/charging/components/ChargerResilienceStats.tsx": 1,
+      "web/src/features/charging/pages/ChargerResiliencePage.tsx": 1
+    },
+    "priority": [
+      "Zero/unknown energy basis",
+      "Synthetic label localization",
+      "Two contextual help names",
+      "Two numeric alternative formats"
+    ],
+    "pageReleaseAcceptance": "NOT ACCEPTED by source-only report"
+  },
+  "limitations": [
+    "Bounded current source only; no campaign/Phase5 remigration.",
+    "Required numeric type does not prove real API never omits/zero-fills energy.",
+    "No physical site uniqueness, capacity, outage probability, complete history, production incident or native/runtime behavior proven.",
+    "Only authorized report/log written; concurrent sources pinned/rechecked.",
+    "Early broad discovery tool outputs truncated; conclusions based on later bounded exact reads/scans."
+  ],
+  "claims": {
+    "state": "ALL CLAIMS RELEASED",
+    "releaseUtc": "2026-10-13T22:37:21.375118Z",
+    "source": "RELEASED / READONLY; no source writes",
+    "report": "RELEASED",
+    "log": "RELEASED",
+    "json": "RELEASED",
+    "browser": "RELEASED / NOT ACQUIRED / NOTRUN",
+    "command": "RELEASED after final synchronous command completion",
+    "postReturnWrites": "NO POST-RETURN WRITES"
+  }
+}

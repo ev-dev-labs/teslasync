@@ -1,0 +1,678 @@
+{
+  "item": "phase6-qa-charging-charging-list",
+  "status": "FAILED",
+  "reason": "20-minute return timebox exceeded; initial publication command failed with OS206 before execution. Bounded source findings delivered; no whole-page acceptance.",
+  "startedUTC": "2026-10-13T23:16:20.986Z",
+  "acceptedCommit": "ef68dc046c041b9cd7c7be39a9f75a50c8472a89",
+  "acceptanceAuthority": "migration-queue.md:340,1774; queue source-only attribution, not Git verification",
+  "auditMode": "current ChargingListPage/direct parts source-only; no closedPhase3 loading/provenance rerun or remigration",
+  "findings": [
+    {
+      "id": "CL01",
+      "rule": "pagination-scope",
+      "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "line": 117,
+      "relatedLines": [
+        118,
+        326,
+        327,
+        400,
+        403,
+        1145
+      ],
+      "severity": "high",
+      "mechanism": "URL page/size accept finite values without positive-integer validation; page slice is not clamped on vehicle/list shrink. Vehicle effect clears preview/selection, not page. Empty slice can claim no sessions with nonempty history.",
+      "repro": "Builtin arithmetic: three loaded rows/page10/size50 -> start450/visible0; size0 -> slice(0,0). useUrlState.ts:175-177 accepts zero. Not a TS/browser test.",
+      "fix": "Normalize pagination and reset/clamp on scoped membership change using existing pagination owner.",
+      "dedup": "No matching ChargingList pagination repair found; no task created."
+    },
+    {
+      "id": "CL02",
+      "rule": "unknown-as-zero-search",
+      "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "line": 246,
+      "relatedLines": [
+        258,
+        259
+      ],
+      "severity": "high",
+      "mechanism": "cost_decimal??0 and peak_power_w??0 make nullable evidence match cost:=0/power:=0 and below-threshold searches. Strict free collection uses recorded zero instead.",
+      "repro": "Builtin null-to-zero comparison True; nullable fields at api/types.ts:175,178.",
+      "fix": "Keep missing numeric evidence unknown before compareNumeric.",
+      "dedup": "Existing audit-page-084 unknown-evidence family; precise structured-search mechanism, no new task."
+    },
+    {
+      "id": "CL03",
+      "rule": "mutation-cache-invalidation",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 635,
+      "relatedLines": [
+        47,
+        128
+      ],
+      "severity": "high",
+      "mechanism": "Bulk deletion invalidates ['charging-sessions']; mounted list uses ['charging',vehicle,start,end,limit,offset]. queryBroadcast.ts:68-74 forwards the unmatched prefix. Deleted rows and derived summaries may remain cached.",
+      "repro": "Distinct first query-key elements; no mutation executed.",
+      "fix": "Existing mutation owner must invalidate/broadcast actual paginated family, preserving live-only guard and failed-ID retention.",
+      "dedup": "Exact existing audit-page-084 architecture/shared cache-invalidation root; not a new repair."
+    },
+    {
+      "id": "CL04",
+      "rule": "hidden-section",
+      "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
+      "line": 43,
+      "relatedLines": [
+        48,
+        61,
+        63,
+        68,
+        81,
+        83,
+        93
+      ],
+      "severity": "medium",
+      "mechanism": "Five specialist shells depend on derived data/count; resolved zero rows shows only generic insights empty content. Missing usable rate or optimizer data drops individual panels.",
+      "repro": "count0 fails all five gates and count>0 threshold fallbacks; positive rows with unusable duration produces null chargeRateStats and no delivery-rate shell.",
+      "fix": "Keep named AC/DC, battery, delivery-rate, specs and optimizer shells with independent prerequisite/unknown/recovery states.",
+      "dedup": "Existing audit-page-084 insight-shell root. Five gate sites count as ONE root; CL05 concerns query-state loss."
+    },
+    {
+      "id": "CL05",
+      "rule": "independent-source-trust",
+      "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "line": 155,
+      "relatedLines": [
+        1384
+      ],
+      "severity": "high",
+      "mechanism": "Optimizer query is reduced to data. Loading/error/refresh/last-success/retry never reach its section. Failed source disappears, retained optimizer lacks a refresh warning; disclosed unknown bounds do not establish freshness.",
+      "repro": "Changing optimizer error while retaining data leaves all optimizer state props unchanged.",
+      "fix": "Carry existing query/data-state and individual retry into optimizer, retaining payload and independent bounds.",
+      "dedup": "Existing audit-page-084 optimizer source root; no closed Phase3 receipt rerun."
+    },
+    {
+      "id": "CL06",
+      "rule": "independent-source-trust",
+      "file": "web/src/features/charging/components/ChargeQueuePlanner.tsx",
+      "line": 30,
+      "relatedLines": [
+        37,
+        78,
+        81
+      ],
+      "severity": "medium",
+      "mechanism": "Fleet query status discarded; vehicles??[] presents 'Add a second vehicle' for pending/failed reads and no warning for retained data.",
+      "repro": "undefined vehicles -> cars.length0 -> single-car prerequisite regardless of error.",
+      "fix": "Resolve independent fleet source trust/retry before asserting fleet prerequisite; preserve business form/advice.",
+      "dedup": "Existing audit-page-084 fleet-vehicles root, not a duplicate workspace selector."
+    },
+    {
+      "id": "CL07",
+      "rule": "currency-denomination",
+      "file": "web/src/features/charging/components/charging-list/OptimizerSection.tsx",
+      "line": 46,
+      "relatedLines": [
+        49,
+        70,
+        167
+      ],
+      "severity": "high",
+      "mechanism": "Optimizer rates/savings hardcode dollars. Table/page format cost_decimal with saved symbol ignoring cost_currency; useFormatting.ts:54-56 only prefixes symbol, not currency conversion. Mixed source costs are summed.",
+      "repro": "EUR preference still gives optimizer dollar rate; USD session amount5 receives saved symbol without exchange conversion. Evidence table:144-145, api/types:178-179, aggregation:229.",
+      "fix": "Preserve source denomination/unknown/mixed totals and use existing supported currency formatting; do not invent exchange conversion.",
+      "dedup": "Existing audit-page-084 optimizer localization plus ChargingDetail F07 denomination family, combined once."
+    },
+    {
+      "id": "CL08",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "line": 1537,
+      "relatedLines": [
+        546,
+        1538,
+        1539,
+        1540
+      ],
+      "severity": "medium",
+      "mechanism": "formatHour forces English AM/PM and 12-hour display; optimizer hours at39,54,56 concatenate h:00 without preference-aware formatting.",
+      "repro": "Hour13 returns 1 PM even for 24-hour/non-English preference; function accepts no formatting preferences.",
+      "fix": "Existing locale/time preference formatter with stable source hour identities.",
+      "dedup": "Existing audit-page-084 localization/time root; advanced-only date-preference fix owns different files."
+    },
+    {
+      "id": "CL09",
+      "rule": "hardcoded-string",
+      "file": "web/src/features/charging/components/charging-list/AcDcStatsPanel.tsx",
+      "line": 102,
+      "severity": "medium",
+      "mechanism": "Raw Total: text; five English anomaly messages rendered directly at chargingAggregation.ts:361,371,384,393,402; CostHeatmap:90-92 uses English DAYS from constants.ts:90. JSX-only regex misses expression-adjacent and indirect text.",
+      "repro": "Non-English locale retains Total:, no-cost message and Sun/Mon labels. Unrendered anomaly actionLabel strings not counted.",
+      "fix": "Translate authored messages/labels through existing owners, preserve thresholds and numeric weekday identity.",
+      "dedup": "Existing localization family; no catalog edits/global i18n campaign."
+    },
+    {
+      "id": "CL10",
+      "rule": "source-a11y-value-alternative",
+      "file": "web/src/features/charging/components/charging-list/CostHeatmap.tsx",
+      "line": 75,
+      "relatedLines": [
+        76,
+        99,
+        107,
+        108,
+        109
+      ],
+      "severity": "high",
+      "mechanism": "Generic role=img description; cell costs/counts only in title attributes on nonfocusable divs. No equivalent data table or keyboard-reachable cell detail in this component.",
+      "repro": "Source has no cell focus targets or structured value alternative. Native/assistive-tech behavior NOTRUN.",
+      "fix": "Reuse existing chart/table alternative and reachable contained scroll while retaining all weekday/hour cells.",
+      "dedup": "Exact existing audit-page-084 heatmap accessibility root; contrast/mobile/focus not promoted."
+    },
+    {
+      "id": "CL11",
+      "rule": "recorded-zero-as-missing",
+      "file": "web/src/lib/chargingAggregation.ts",
+      "line": 366,
+      "relatedLines": [
+        367,
+        370,
+        371
+      ],
+      "severity": "medium",
+      "mechanism": "cost_zero condition merges null and recorded zero for non-home sessions, incorrectly saying no cost recorded for free DC charging. Rule priority can suppress later findings.",
+      "repro": "Completed supercharger,10kWh,60min,cost0 -> cost_zero True, 'Energy added but no cost recorded'; same row qualifies Free. Builtin condition demonstration only.",
+      "fix": "Distinguish missing cost from recorded free cost in existing anomaly owner, retaining deliberate priority.",
+      "dedup": "Existing unknown/zero family; precise free-condition manifestation, no manufactured task."
+    },
+    {
+      "id": "CL12",
+      "rule": "prior-source-scope",
+      "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "line": 172,
+      "relatedLines": [
+        135,
+        136,
+        169,
+        171,
+        481,
+        487
+      ],
+      "severity": "medium",
+      "mechanism": "Prior stats filter the same current-bounded response; no independent prior query. Intended server range semantics make prior unavailable by construction.",
+      "repro": "Oct-only response has no September comparison records. Actual backend bounds not exercised; priorUnavailable text is honest, no false zero delta alleged.",
+      "fix": "Retain unavailable text; restore comparison only with separately scoped/trusted prior query or proven aggregate.",
+      "dedup": "Exact existing audit-page-084 prior-scope architecture root."
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C01",
+      "source": "page:132-138,956,972",
+      "claim": "Beyond500/full-range completeness, backend totals/ordering/exhaustion remain unknown; cap is disclosed, no real-data excess established."
+    },
+    {
+      "id": "C02",
+      "source": "helpers.ts:159-163,172-174; aggregation.ts:45",
+      "claim": "Nonfinite required SOC maps to zero bucket; nullable charger historically means home. Actual malformed reachability/domain convention unverified, not promoted."
+    },
+    {
+      "id": "C03",
+      "source": "card:79-84,170-180; charging-curve/helpers.ts:27-31",
+      "claim": "Zero power/negative costs/nonpositive odometer deltas suppressed; positive odometer movement called Range added. Valid signed-cost/range policy and telemetry meaning need integration proof."
+    },
+    {
+      "id": "C04",
+      "source": "page:623-635; aggregation:229; OverviewStats:43-45",
+      "claim": "Known cost5 plus unknown cost gives recorded subtotal5 without missing count. Recorded-only metric may be intentional; completeness policy unverified."
+    },
+    {
+      "id": "C05",
+      "source": "page:160-162,334-335,1465-1519; contextNavigation:13-25,69-105",
+      "claim": "Malformed start dates admitted then skipped from mobile groups; related links omit explicit vehicle but shell may carry it. Runtime/schema/navigation loss not confirmed."
+    },
+    {
+      "id": "C06",
+      "source": "page:643-646; planner:46-54,143-148; insights:27,48,68,83",
+      "claim": "ETA units, inherited charger_kw/kwh_needed contract, completed wording vs all-row thresholds, validation and mounted mobile/RTL/contrast/focus need separate acceptance. Manual defaults are not fake measurements."
+    }
+  ],
+  "scopeAndPreservation": {
+    "sourceFiles": 16,
+    "supportPins": 25,
+    "baselinePageLines": 1499,
+    "currentPageLines": 1541,
+    "minimum70Percent": 1050,
+    "baseline": "audit-page-084 inventory, not fresh accepted Git snapshot",
+    "majorBands": 7,
+    "insightFamilies": 5,
+    "overviewMetrics": 6,
+    "operationalMetrics": 6,
+    "previewFields": 6,
+    "tableColumns": 14,
+    "sectionOpeningSites": 6,
+    "GlassPanelSites": 13,
+    "directChartContainerSites": 0,
+    "sectionLimit": "Multiline section included; insights error/normal are alternatives, not six mounted bands. Chart composition through MetricSwitcherChart/EmbeddedChart.",
+    "sections": "Filters905; overview947; trend971; sessions1010; operational brief1175; fleet planner1372; insights1377-1390. Preview1393 onward. All actions/source feature families remain, but CL04 shells disappear.",
+    "population": "One range/vehicle-scoped500-row offset0 window, local filters/pagination/exports. Overview/trend use date-filtered loaded rows; insights loaded rows; optimizer independent unknown bounds; queue fleet business form. Open/live rows preserved in counts/selection/exports; delivery rate requires positive completed duration. No completed-only eligibility invented.",
+    "workspace": "Range-enabled workspaceScope.ts:29; both start/end instants and vehicle passed at page132-138; started_at buckets use vehicle timezone. No duplicate picker.",
+    "actions": "Saved views/copy link, refresh, chips/filter resets, sort/density, cross-page selection, confirm/delete, CSV/JSON loaded filtered/selected exports, four trend metrics, queue advice, preview and six related destinations preserved. Tagged returns[] and is not claimed implemented.",
+    "trust": "Separate history/live dataState notices/badges; retained rows survive refresh error; fatal history does not remove live neighbor. Current field checks exclude as_of. Inspection not closedPhase3 acceptance rerun. Failed bulk IDs now retained; cache mismatch remains CL03.",
+    "SI": "Raw Wh/W/m cache/type values, display converters and specialist kWh/kW; CSV existing kWh/kW/min schema, JSON raw rows preserved. Queue wire and ETA remain integration unknowns; no remigration."
+  },
+  "deduplication": {
+    "authority": "audit-page-084 and exact queued roots; no tasks/queue edits",
+    "closedPhase3": "loading fixtures/query-contracts/ACDC heading/Optimizer fixture not rerun/reopened",
+    "notMatchingRoots": "Shared DataTable filtered-empty, relative-future-dates and advanced-only date preferences are not these page pagination/hour roots",
+    "resolvedHistorical": "Current chartPalette, mobile/trend loaded-window captions, ungrouped non-date mobile sorting, field-current checks and failed-ID retention observed; historical resolved mechanisms not recounted."
+  },
+  "checks": {
+    "actualNumericExits": [
+      {
+        "shellId": "6289",
+        "exit": 0
+      },
+      {
+        "shellId": "6326",
+        "exit": 0
+      },
+      {
+        "shellId": "6330",
+        "exit": 0
+      },
+      {
+        "shellId": "6331",
+        "exit": 0
+      },
+      {
+        "shellId": "6341",
+        "exit": 1,
+        "error": "The filename or extension is too long. (os error 206); script did not execute"
+      },
+      {
+        "shellId": "6342",
+        "exit": 0
+      }
+    ],
+    "rawOutput": "Actual built-in Select-String scans, arithmetic demonstrations, pins and publication output in sole ignored log; final output pasted on release.",
+    "lexicalMatchedLines": {
+      "rawHTMLCaseSensitive": 0,
+      "staticVarInlineStyle": 0,
+      "directVendorImport": 0,
+      "oldAPIImport": 0,
+      "fetchCall": 0,
+      "hookDoublePrefix": 0,
+      "hookCamelcaseParams": 0
+    },
+    "exceptions": "3 dynamic styles exempt; PageLayout composes PageContainer at layout-reference/PageLayout.tsx:11; 3 effects only URL/selection/preview. Initial insensitive scan matched Button twice, corrected rawHTML0. JSX text regex0 is NOT localization0. Large read output truncated, then focused reads. Guessed PageLayout path absent then resolved."
+  },
+  "NOTRUN": {
+    "tests": {
+      "status": "NOTRUN",
+      "discovered": null,
+      "executed": 0,
+      "passed": null,
+      "failed": null,
+      "skipped": null
+    },
+    "native": "NOTRUN",
+    "TypeScript": "NOTRUN: global npx tsc --noEmit prohibited",
+    "lintBuildFullsuite": "NOTRUN",
+    "APIRealDataBrowser": "NOTRUN",
+    "GitAuditWrapper": "NOTRUN",
+    "catalogCompleteness": "NOTRUN"
+  },
+  "limits": {
+    "targetMinutes": 5,
+    "returnMinutes": 20,
+    "hardMinutes": 25,
+    "commandSecondsMaximum": 180,
+    "acceptance": "Source-only; arithmetic is not source execution/test. Router registrations only, no backend behavior proof. No server/helper/extension/agent/health/dispatch.",
+    "writes": "Only assigned report/log; all source/tests/backend/catalog readonly. No Git clean-tree claim; other actors' writes not attributable here.",
+    "publicationFailure": "Oversized command refused by OS; smaller builtin JSON construction used, failure retained, no helper file."
+  },
+  "pins": [
+    {
+      "path": "web/src/features/charging/pages/ChargingListPage.tsx",
+      "sha256": "D091A4A0EE6A1FE5CE6F0D4E9B69B00954219D5775CAC717B0E177AD0B185F0D",
+      "releaseSha256": "D091A4A0EE6A1FE5CE6F0D4E9B69B00954219D5775CAC717B0E177AD0B185F0D",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/ChargingSessionCard.tsx",
+      "sha256": "739820FBD31FD4C614A6E7FC74B43BF06DC4413029B857AB594167DD0B92AF6D",
+      "releaseSha256": "739820FBD31FD4C614A6E7FC74B43BF06DC4413029B857AB594167DD0B92AF6D",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/ChargingEvidenceTable.tsx",
+      "sha256": "D0A8C86B33CCB67DAA5AE9BF71258FDCEB9EA42DD656FF7DB9F068F0AF27B5D0",
+      "releaseSha256": "D0A8C86B33CCB67DAA5AE9BF71258FDCEB9EA42DD656FF7DB9F068F0AF27B5D0",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/chargingGridValues.ts",
+      "sha256": "2F671E5BE4E5AB26E3D297DB1CABFCE332EDD22CE8E627A1E915B8BAF9F7AB17",
+      "releaseSha256": "2F671E5BE4E5AB26E3D297DB1CABFCE332EDD22CE8E627A1E915B8BAF9F7AB17",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/ChargeQueuePlanner.tsx",
+      "sha256": "153BECC7BD27B1F4302C8A4DA40A50F516B92F898554B8C7222E3806F38F2BA1",
+      "releaseSha256": "153BECC7BD27B1F4302C8A4DA40A50F516B92F898554B8C7222E3806F38F2BA1",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/stat-modernization/ChargingOverviewStats.tsx",
+      "sha256": "5371DFB08482B037E6C8730CEBA999A041A6458F0CD9F7813EC1AA6B513E321F",
+      "releaseSha256": "5371DFB08482B037E6C8730CEBA999A041A6458F0CD9F7813EC1AA6B513E321F",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
+      "sha256": "C02CEFA671EB219FA77C4C48795A4D76EAA65A50A4F696D2F16743A7045D2DFE",
+      "releaseSha256": "C02CEFA671EB219FA77C4C48795A4D76EAA65A50A4F696D2F16743A7045D2DFE",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/ChargingSearchControl.tsx",
+      "sha256": "121617703254D696FBF68E7CCBA369404842788C2F88DDDC97A6ED6CF1A9C478",
+      "releaseSha256": "121617703254D696FBF68E7CCBA369404842788C2F88DDDC97A6ED6CF1A9C478",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/AcDcStatsPanel.tsx",
+      "sha256": "E325952003A762904F6F9A664F5F935AF86D88F71443528F41BCCFAB45E507B7",
+      "releaseSha256": "E325952003A762904F6F9A664F5F935AF86D88F71443528F41BCCFAB45E507B7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/BatteryLevelChart.tsx",
+      "sha256": "CF0F42B79A7EA673A6D7AF3DA9DFC01F09D06C6E0E8CF91A9488ED60F9EF9D77",
+      "releaseSha256": "CF0F42B79A7EA673A6D7AF3DA9DFC01F09D06C6E0E8CF91A9488ED60F9EF9D77",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/ChargeRatePanel.tsx",
+      "sha256": "8C7A367BB3C31A44E298F443547EB3ECA58199502CEA03BF7767E5131ED41780",
+      "releaseSha256": "8C7A367BB3C31A44E298F443547EB3ECA58199502CEA03BF7767E5131ED41780",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/ChargerSpecsPanel.tsx",
+      "sha256": "4FC05A7BF3C87D42D396248747D0BF58FDCDDD1294B757DAA5F4A984DB51A5A3",
+      "releaseSha256": "4FC05A7BF3C87D42D396248747D0BF58FDCDDD1294B757DAA5F4A984DB51A5A3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/OptimizerSection.tsx",
+      "sha256": "A084C7C0EEDBBD4B52239BD971C424941A9FE30B2B4CE040A4D89FB7E7760FD3",
+      "releaseSha256": "A084C7C0EEDBBD4B52239BD971C424941A9FE30B2B4CE040A4D89FB7E7760FD3",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/CostHeatmap.tsx",
+      "sha256": "17C460CCEE14AB87BB00AC574559A4CC5A044448A6EE09BA39B8E7F3BC30FB9E",
+      "releaseSha256": "17C460CCEE14AB87BB00AC574559A4CC5A044448A6EE09BA39B8E7F3BC30FB9E",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/helpers.ts",
+      "sha256": "D1777DF64BE8ABA3ACD70745A055C03CF56043E9F5CE0982FF3B4F958D6A4C65",
+      "releaseSha256": "D1777DF64BE8ABA3ACD70745A055C03CF56043E9F5CE0982FF3B4F958D6A4C65",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-list/index.ts",
+      "sha256": "B24257F033906451E6BD6D4461A2581C86FF688AF069A43EE39244447DB6FFDB",
+      "releaseSha256": "B24257F033906451E6BD6D4461A2581C86FF688AF069A43EE39244447DB6FFDB",
+      "unchanged": true
+    },
+    {
+      "path": "migration-queue.md",
+      "sha256": "E9C99F97D686B011AD2107552EE6B181AE20448AF0AE435F206E5EC03302E1F9",
+      "releaseSha256": "A2DC3B250B983F2774E44EBEE1BD182D553B365969C76072BA12C5ECE48D3A78",
+      "unchanged": false
+    },
+    {
+      "path": "docs/orchestrator-loop.md",
+      "sha256": "61F7A74733404C084C4CB609301E8F860B2C464A6C58104E9493EFF5FF0361C6",
+      "releaseSha256": "61F7A74733404C084C4CB609301E8F860B2C464A6C58104E9493EFF5FF0361C6",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-design-contract.md",
+      "sha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "releaseSha256": "EA31E86973396A9E67F87DADA355189EE698B6442F31B0192C467F5534F4D68E",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-mission.md",
+      "sha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "releaseSha256": "2BD35429E32D06ABF109DD371C2DD011CB974EF6B8C1915B298D1A0C3D7FD98F",
+      "unchanged": true
+    },
+    {
+      "path": "docs/session-handoff.md",
+      "sha256": "E847A5BFF2CE3052C3AC968844EAC18FF85119469F8872D80921E97935CD29DB",
+      "releaseSha256": "E847A5BFF2CE3052C3AC968844EAC18FF85119469F8872D80921E97935CD29DB",
+      "unchanged": true
+    },
+    {
+      "path": ".github/copilot-instructions.md",
+      "sha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "releaseSha256": "94BEB0665DE9713161388A18C26EEB8D739602984BD10C4EE29558E76880DF75",
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/react-frontend.instructions.md",
+      "sha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "releaseSha256": "4583E9B2C262D1EDA8A0B22D24F58BEFB65414F2AD4B6657035221ABB48EC83E",
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/frontend-si-cutover.instructions.md",
+      "sha256": "4449752AAAD173E80FC0CCAE103F9455CD1CBF4631B8811D0B896EF7F683D253",
+      "releaseSha256": "4449752AAAD173E80FC0CCAE103F9455CD1CBF4631B8811D0B896EF7F683D253",
+      "unchanged": true
+    },
+    {
+      "path": ".github/instructions/unit-conversion.instructions.md",
+      "sha256": "8716E35C933ACEE8585DABCF2F1949C833763B0F06674869D6575B9AC92236CF",
+      "releaseSha256": "8716E35C933ACEE8585DABCF2F1949C833763B0F06674869D6575B9AC92236CF",
+      "unchanged": true
+    },
+    {
+      "path": "docs/frontend-audits/audit-page-084.json",
+      "sha256": "DFF496A54DA449C362999C9240941C1E288C916773594B5EBFAC246E79153863",
+      "releaseSha256": "DFF496A54DA449C362999C9240941C1E288C916773594B5EBFAC246E79153863",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useCharging.ts",
+      "sha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "releaseSha256": "EF25F85D86F4972051AD19D37C9A3112E4C4D6900AE9B8786AE021F41D9DB330",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/hooks/useVehicles.ts",
+      "sha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "releaseSha256": "1D7AE8F07FD26C99622E84BE1E6E80B6E7C92E0FB6F17964D06DE4017D634D4B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/api/types.ts",
+      "sha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "releaseSha256": "11A6003464BC550E085B640FED3779705799A2474CE4F255D1DCACA202CEEB9B",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/chargingAggregation.ts",
+      "sha256": "168C45E8935F85087C5CE5E4AF628EAC61758516EFD5EB8991F48CF40E158048",
+      "releaseSha256": "168C45E8935F85087C5CE5E4AF628EAC61758516EFD5EB8991F48CF40E158048",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/queryBroadcast.ts",
+      "sha256": "E2430469A9FC4AFDF35CBB8AAE46D4435397379EE7C5FE5CB0241EDB83188CF5",
+      "releaseSha256": "E2430469A9FC4AFDF35CBB8AAE46D4435397379EE7C5FE5CB0241EDB83188CF5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/workspaceScope.ts",
+      "sha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "releaseSha256": "AEB8C01D410F2377AA5FD713DE1A678A0360ACF647A9C882F03E46C80EFDFCD7",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/contextNavigation.ts",
+      "sha256": "F8F99848167DF92589120D406B3BDA5A9625B0576AA8F31CFBF719372D9A70A5",
+      "releaseSha256": "F8F99848167DF92589120D406B3BDA5A9625B0576AA8F31CFBF719372D9A70A5",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/lib/constants.ts",
+      "sha256": "B474CCF858A25C206F6B6673A89AD6D2756DB6C591D9E5336DD5A6D203107E74",
+      "releaseSha256": "B474CCF858A25C206F6B6673A89AD6D2756DB6C591D9E5336DD5A6D203107E74",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useUrlState.ts",
+      "sha256": "1B8FD7F191489F94E58BFC7960115E8BD56BB2721AD04B7B28F6EE159A46AA53",
+      "releaseSha256": "1B8FD7F191489F94E58BFC7960115E8BD56BB2721AD04B7B28F6EE159A46AA53",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/hooks/useFormatting.ts",
+      "sha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "releaseSha256": "76B8DCC6C2EB27ED9F2E8526BEC7D77BB1E369CA6E71A7EB38CDBA5897A5EC29",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/charging-curve/helpers.ts",
+      "sha256": "F4874D1B839614D71B4797DFB07EDD5353898FE0A8FD48810A1EFD35FFC3FBAB",
+      "releaseSha256": "F4874D1B839614D71B4797DFB07EDD5353898FE0A8FD48810A1EFD35FFC3FBAB",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "sha256": "B2F42B47F208133F9336395242A7308D7D01B99D6B23ACF3041E97248637326C",
+      "releaseSha256": "B2F42B47F208133F9336395242A7308D7D01B99D6B23ACF3041E97248637326C",
+      "unchanged": true
+    },
+    {
+      "path": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "sha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "releaseSha256": "7B7EF06A05FE4A97AB0CFBC8E989901DB0FFCA898DEC7D4F5CD796536B4DCA3B",
+      "unchanged": true
+    },
+    {
+      "path": "internal/api/router.go",
+      "sha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "releaseSha256": "343C14289A528167E82BED42C43B25C7437288462A2775C6249E242C9BFF6D5C",
+      "unchanged": true
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "2B5BD47EFF6C416AECA19086E45CD76906D96B0498F5BABE33D2FEEFEB6EAE96",
+      "releaseSha256": "2B5BD47EFF6C416AECA19086E45CD76906D96B0498F5BABE33D2FEEFEB6EAE96",
+      "unchanged": true
+    }
+  ],
+  "summary": {
+    "confirmedRoots": 12,
+    "candidates": 6,
+    "byRule": [
+      {
+        "rule": "currency-denomination",
+        "count": 1
+      },
+      {
+        "rule": "hardcoded-string",
+        "count": 2
+      },
+      {
+        "rule": "hidden-section",
+        "count": 1
+      },
+      {
+        "rule": "independent-source-trust",
+        "count": 2
+      },
+      {
+        "rule": "mutation-cache-invalidation",
+        "count": 1
+      },
+      {
+        "rule": "pagination-scope",
+        "count": 1
+      },
+      {
+        "rule": "prior-source-scope",
+        "count": 1
+      },
+      {
+        "rule": "recorded-zero-as-missing",
+        "count": 1
+      },
+      {
+        "rule": "source-a11y-value-alternative",
+        "count": 1
+      },
+      {
+        "rule": "unknown-as-zero-search",
+        "count": 1
+      }
+    ],
+    "byPrimaryFile": [
+      {
+        "file": "web/src/features/charging/pages/ChargingListPage.tsx",
+        "count": 5
+      },
+      {
+        "file": "web/src/api/hooks/useCharging.ts",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/charging/components/ChargeQueuePlanner.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/charging/components/charging-list/AcDcStatsPanel.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/charging/components/charging-list/ChargingInsights.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/charging/components/charging-list/CostHeatmap.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/features/charging/components/charging-list/OptimizerSection.tsx",
+        "count": 1
+      },
+      {
+        "file": "web/src/lib/chargingAggregation.ts",
+        "count": 1
+      }
+    ],
+    "countPolicy": "Deduplicated finding objects, not regex lines; candidates excluded",
+    "priority": "Pagination/cache; missing-zero/currency; independent trust/sections; heatmap values/localization"
+  },
+  "release": {
+    "releaseUTC": "2026-10-13T23:42:45.6801662Z",
+    "allClaimsReleased": true,
+    "postReturnWrites": false,
+    "elapsedMinutes": 446.412,
+    "target5Exceeded": true,
+    "return20Exceeded": true,
+    "hard25Exceeded": true,
+    "pinsChecked": 41,
+    "pinMismatches": [
+      "migration-queue.md"
+    ],
+    "jsonReparseExit": 0
+  }
+}

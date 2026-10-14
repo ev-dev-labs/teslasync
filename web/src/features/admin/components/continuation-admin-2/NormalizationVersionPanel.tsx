@@ -6,6 +6,7 @@ import { MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, SectionErrorBoundary } from '@/components/feedback';
 import type { NormalizationSummary } from '@/types/admin-operator-confidence';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
+import { gaugeTone } from '@/lib/tokens';
 import { sortVersions, versionLabel, type SectionState } from '../data-quality/helpers';
 
 export function NormalizationVersionPanel({ normalization, loading, error, onRetry }: SectionState & { normalization: NormalizationSummary | undefined }) {
@@ -28,11 +29,11 @@ export function NormalizationVersionPanel({ normalization, loading, error, onRet
               const share = bucket.share_pct;
               return <li key={bucket.version == null ? 'legacy' : `v${bucket.version}`} className="min-w-0 space-y-1.5">
                 <div className="flex flex-wrap items-baseline justify-between gap-3">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2"><Text weight="medium" className="break-words">{label}</Text>
+                  <div className="flex min-w-0 flex-wrap items-center gap-2"><Text size="sm" weight="medium" color="primary" className="break-words">{label}</Text>
                     <Badge variant={attested ? 'success' : 'warning'}>{attested ? t('admin.dataQuality.versionAttested', 'Attested') : t('admin.dataQuality.versionUnattested', 'Unattested')}</Badge></div>
-                  <Text className="tabular-nums">{t('admin.dataQuality.versionRows', '{{rows}} rows', { rows: fmtInt(bucket.sample_count) })}</Text>
+                  <Text variant="bodySm" className="tabular-nums">{t('admin.dataQuality.versionRows', '{{rows}} rows', { rows: fmtInt(bucket.sample_count) })}</Text>
                 </div>
-                <MetricBar value={share} max={100} label={label} showHeader={false} size="slim" fill="solid" color={attested ? '#34d399' : '#fbbf24'} />
+                <MetricBar value={share} max={100} label={label} showHeader={false} size="slim" fill="solid" color={attested ? gaugeTone.success : gaugeTone.warning} />
                 <Caption className="block tabular-nums">{share == null || !Number.isFinite(share) ? t('admin.dataQuality.shareUnknown', 'Share unknown')
                   : t('admin.dataQuality.versionShare', '{{share}}% of window', { share: fmtNumber(share) })}</Caption>
               </li>;

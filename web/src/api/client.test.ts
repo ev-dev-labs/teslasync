@@ -342,6 +342,14 @@ describe('request() — wire error normalization', () => {
     { caseName: 'unknown envelope', body: { detail: 'not an error envelope' } },
     { caseName: 'invalid nested fields', body: { error: { message: 42, code: false } } },
     { caseName: 'null body', body: null },
+    { caseName: 'array body', body: [{ error: 'not an envelope' }] },
+    { caseName: 'string body', body: 'not an envelope' },
+    { caseName: 'number body', body: 42 },
+    { caseName: 'boolean body', body: false },
+    { caseName: 'empty nested message', body: { error: { message: '' } } },
+    { caseName: 'whitespace nested message', body: { error: { message: '  ' } } },
+    { caseName: 'empty flat error', body: { error: '', code: '' } },
+    { caseName: 'array error', body: { error: [42], code: false } },
   ]
 
   for (const { transport, skipAuthRefresh } of transports) {
@@ -398,6 +406,67 @@ describe('request() — wire error normalization', () => {
     await expect(request('/api-keys/42', { method: 'DELETE' })).resolves.toEqual({ ok: true })
     expect(provider).toHaveBeenCalledWith('/api-keys/42')
     expect(headersOf(1).get('X-Sudo-Token')).toBe('nested-mint')
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  for (const { transport, skipAuthRefresh } of transports) {
+    it(`preserves top level code precedence via ${transport}`, async () => {
+      fetchMock.mockImplementation(async () => jsonResponse({
+        code: 'TOP_LEVEL_DENY',
+        error: { code: 'NESTED_DENY', message: 'permission denied' },
+      }, 403))
+      await expect(request('/admin/check', { skipAuthRefresh })).rejects.toMatchObject({
+        name: 'ApiError', status: 403, code: 'TOP_LEVEL_DENY', message: 'permission denied',
+      })
+    })
+
+    it(`preserves meaningful reason phrase fallback via ${transport}`, async () => {
+      fetchMock.mockImplementation(async () => new Response('null', {
+        status: 502, statusText: 'Bad Gateway', headers: { 'Content-Type': 'application/json' },
+      }))
+      await expect(request('/admin/check', { skipAuthRefresh })).rejects.toMatchObject({
+        name: 'ApiError', status: 502, message: 'Bad Gateway', code: undefined,
+      })
+    })
+
+    it(`preserves text error details via ${transport}`, async () => {
+      fetchMock.mockImplementation(async () => textResponse('gateway maintenance', 503))
+      await expect(request('/admin/check', { skipAuthRefresh })).rejects.toMatchObject({
+        name: 'ApiError', status: 503, message: 'gateway maintenance', code: undefined,
+      })
+    })
+  }
+
+  it('reuses the token minted by a nested sudo challenge', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ deleted_id: 42 }))
+      .mockResolvedValueOnce(jsonResponse({ deleted_id: 43 }))
+    const provider = vi.fn(async (): Promise<SudoCredential> => ({ mode: 'session', token: 'nested-cache' }))
+    registerSudoChallengeProvider(provider)
+    await expect(request('/api-keys/42', { method: 'DELETE' })).resolves.toEqual({ deleted_id: 42, deletedId: 42 })
+    await expect(request('/api-keys/43', { method: 'DELETE' })).resolves.toEqual({ deleted_id: 43, deletedId: 43 })
+    expect(provider).toHaveBeenCalledTimes(1)
+    expect(headersOf(2).get('X-Sudo-Token')).toBe('nested-cache')
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('replays nested open mode challenge without minting a token', async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+    registerSudoChallengeProvider(vi.fn(async (): Promise<SudoCredential> => ({ mode: 'open' })))
+    await expect(request('/api-keys/42', { method: 'DELETE' })).resolves.toEqual({ ok: true })
+    expect(headersOf(1).has('X-Sudo-Token')).toBe(false)
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('preserves cancellation of a nested sudo challenge without replay', async () => {
+    const cancelled = new SudoCanceledError('nested confirmation cancelled')
+    fetchMock.mockResolvedValueOnce(jsonResponse({ error: { code: 'SUDO_REQUIRED', message: 'confirm' } }, 401))
+    registerSudoChallengeProvider(vi.fn(async () => { throw cancelled }))
+    await expect(request('/api-keys/42', { method: 'DELETE' })).rejects.toBe(cancelled)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(resilientFetchMock).not.toHaveBeenCalled()
   })
 })

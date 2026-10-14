@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { FleetEndpoint } from '@/api/hooks/useSettings';
+import * as settingsModule from '@/hooks/useSettings';
 import { FleetEndpointTable } from './FleetEndpointTable';
 
 const endpoint: FleetEndpoint = {
@@ -174,5 +175,102 @@ describe('FleetEndpointTable existing export serialization', () => {
     expect(screen.getAllByRole('row')).toHaveLength(2);
     expect(screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' }))
       .toHaveAttribute('aria-checked', 'false');
+  });
+});
+
+describe('FleetEndpointTable retained export matrix continuation', () => {
+  it('preserves loaded source order and escapes raw identifiers without invoking endpoint actions', async () => {
+    const quoted: FleetEndpoint = {
+      key: 'vehicle.command."quoted",name',
+      method: 'POST',
+      path: '/api/1/vehicles/{vehicle_id}/line\n"quoted",route',
+      category: 'Synthetic descriptor only',
+      pollable: false,
+    };
+    const candidate: FleetEndpoint = { ...endpoint, key: 'candidate.not_loaded', path: '/candidate-only' };
+    const onEnable = vi.fn();
+    const onAuto = vi.fn();
+    const access = { [quoted.key]: false, [endpoint.key]: true, [candidate.key]: true };
+    const auto = { [quoted.key]: true, [endpoint.key]: false, [candidate.key]: true };
+    render(<FleetEndpointTable endpoints={[quoted, endpoint]} candidates={[candidate, endpoint, quoted]}
+      access={access} auto={auto} pollingEnabled pending={false} tableId="fleet:order-escaping-fixture"
+      onEnable={onEnable} onAuto={onAuto} />);
+
+    expect(JSON.parse(await exportText('JSON'))).toEqual([
+      { method: 'POST', operation: quoted.key, path: quoted.path, access: false, auto: null },
+      { method: 'GET', operation: endpoint.key, path: endpoint.path, access: true, auto: false },
+    ]);
+    expect(await exportText('CSV')).toBe(
+      'HTTP method,Operation,API path,Access,Auto-poll\r\n'
+      + 'POST,"vehicle.command.""quoted"",name","/api/1/vehicles/{vehicle_id}/line\n""quoted"",route",false,\r\n'
+      + 'GET,vehicle.data.fetch_snapshot,/api/1/vehicles/{vehicle_id}/data,true,false',
+    );
+    expect(onEnable).not.toHaveBeenCalled();
+    expect(onAuto).not.toHaveBeenCalled();
+    expect(access).toEqual({ [quoted.key]: false, [endpoint.key]: true, [candidate.key]: true });
+    expect(auto).toEqual({ [quoted.key]: true, [endpoint.key]: false, [candidate.key]: true });
+  });
+
+  it.each([
+    { name: 'metric English comfortable', locale: 'en-US', isMiles: false, isFahrenheit: false, isPSI: false, decimals: 2, density: 'comfortable' as const },
+    { name: 'imperial German compact', locale: 'de-DE', isMiles: true, isFahrenheit: true, isPSI: true, decimals: 0, density: 'compact' as const },
+  ])('keeps typed raw values independent of $name display preferences and retains saved column layout', async (preferences) => {
+    const defaults = settingsModule.useSettings();
+    const settings = {
+      ...defaults.settings,
+      locale: preferences.locale,
+      unit_of_length: preferences.isMiles ? 'mi' as const : 'km' as const,
+      unit_of_temp: preferences.isFahrenheit ? 'F' as const : 'C' as const,
+      unit_of_pressure: preferences.isPSI ? 'psi' as const : 'bar' as const,
+      decimal_precision: preferences.decimals,
+      ui_density: preferences.density,
+    };
+    vi.spyOn(settingsModule, 'useSettings').mockReturnValue({ ...defaults, ...preferences, settings });
+    const tableId = 'fleet:preferences-fixture';
+    const layoutKey = `teslasync.table.${tableId}.columns`;
+    const layout = { order: ['auto', 'operation', 'access', 'method', 'path'], hidden: ['path'] };
+    localStorage.setItem(layoutKey, JSON.stringify(layout));
+    render(<FleetEndpointTable endpoints={[endpoint]} candidates={[endpoint]}
+      access={configuration(false)} auto={configuration(true)} pollingEnabled pending={false}
+      tableId={tableId} onEnable={vi.fn()} onAuto={vi.fn()} />);
+
+    expect(JSON.parse(await exportText('JSON'))).toEqual([{
+      auto: false, operation: 'vehicle.data.fetch_snapshot', access: false, method: 'GET',
+    }]);
+    expect(await exportText('CSV')).toBe(
+      'Auto-poll,Operation,Access,HTTP method\r\nfalse,vehicle.data.fetch_snapshot,false,GET',
+    );
+    expect(localStorage.getItem(layoutKey)).toBe(JSON.stringify(layout));
+    expect(settings).toEqual({
+      ...defaults.settings, locale: preferences.locale,
+      unit_of_length: preferences.isMiles ? 'mi' : 'km',
+      unit_of_temp: preferences.isFahrenheit ? 'F' : 'C',
+      unit_of_pressure: preferences.isPSI ? 'psi' : 'bar',
+      decimal_precision: preferences.decimals, ui_density: preferences.density,
+    });
+  });
+
+  it('preserves nonpollable access actions and blocks auto actions when access is disabled', () => {
+    const nonpollable: FleetEndpoint = { ...endpoint, pollable: false };
+    const onEnable = vi.fn();
+    const onAuto = vi.fn();
+    const props = {
+      endpoints: [nonpollable], candidates: [nonpollable], access: configuration(false), auto: configuration(true),
+      pollingEnabled: true, pending: false, tableId: 'fleet:action-branches-fixture', onEnable, onAuto,
+    };
+    const view = render(<FleetEndpointTable {...props} />);
+    expect(screen.getByLabelText('Not scheduled')).toHaveTextContent('—');
+    expect(screen.queryByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('switch', { name: 'Enable GET /api/1/vehicles/{vehicle_id}/data' }));
+    expect(onEnable).toHaveBeenCalledExactlyOnceWith(nonpollable);
+    expect(onAuto).not.toHaveBeenCalled();
+
+    view.rerender(<FleetEndpointTable {...props} endpoints={[endpoint]} candidates={[endpoint]} />);
+    const autoSwitch = screen.getByRole('switch', { name: 'Auto-poll GET /api/1/vehicles/{vehicle_id}/data' });
+    expect(autoSwitch).toHaveAttribute('aria-checked', 'false');
+    expect(autoSwitch).toBeDisabled();
+    fireEvent.click(autoSwitch);
+    expect(onAuto).not.toHaveBeenCalled();
+    expect(onEnable).toHaveBeenCalledTimes(1);
   });
 });

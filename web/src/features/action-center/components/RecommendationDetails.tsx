@@ -251,7 +251,7 @@ export function RecommendationDetails({
             <Text as="p" variant="caption" className="tabular-nums">
               {t('a11y.status.loadedCount', '{{label}} loaded, {{count}} items', {
                 label: t('actionCenter.history.resource', 'Action history'),
-                count: fmtInt(historyItems.length),
+                count: historyItems.length,
               })}
             </Text>
             <fieldset

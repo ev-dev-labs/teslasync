@@ -1,0 +1,798 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-charging-charging-curve",
+  "status": "DONE",
+  "acceptance": "SOURCE-ONLY READ-ONLY QA complete; not browser/native/application acceptance",
+  "requested_start_utc": "2026-10-13T22:51:51.943Z",
+  "original_release_utc": "2026-10-13T23:01:24.4745230Z",
+  "only_writable": [
+    "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charging-curve.json",
+    "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-curve.log"
+  ],
+  "claims_release": "ALL source/report/log/JSON/browser/commands CLAIMS RELEASED / NO POST-RETURN WRITES",
+  "accepted_receipt": {
+    "original_cases": 8,
+    "final_test_exit": 1,
+    "preservation": "Intentional deliberate deltas; not blanket preservation pass",
+    "final_test_limitation": "External catalog startup; not retested",
+    "commit": "126c1090a0228be2d465cd6aab8cc5dfbd576530",
+    "preservation_exit": 1,
+    "page_lines": 290,
+    "six_shells": 6,
+    "queue_line": 1766,
+    "final_test_discovered": 0,
+    "source_only": true,
+    "capture": "Failed historical caller capture; not repeated",
+    "original_lines": 284,
+    "git_verified": false
+  },
+  "authority_read": [
+    "docs/orchestrator-loop.md (sole playbook)",
+    "docs/frontend-design-contract.md:49-72,419-541",
+    "docs/frontend-mission.md:0 principles",
+    "docs/frontend-inventory.md:136 current route section; no inventory campaign",
+    "migration-queue.md:337,1766 exact current item and accepted receipt",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md"
+  ],
+  "scope": {
+    "pins": [
+      {
+        "file": "web/src/features/charging/pages/ChargingCurvePage.tsx",
+        "sha256": "0d24480c39d9a9a7e51182c5d65e8d5da85cdf422e22be54cd48d362724c13d1"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+        "sha256": "f4874d1b839614d71b4797dfb07edd5353898fe0a8fd48810a1efd35ffc3fbab"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/types.ts",
+        "sha256": "ebd7edf164548466d79a3c5fcedfbea33a2d5a07d21d6d8ca039e7c22c5121ad"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
+        "sha256": "a1cec72c7cb7a39d218b4e103b601a21615ae330205986ee42b6087e3f95792f"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx",
+        "sha256": "82d263014f66e3be5092f91788660d9243f58659f1a067b66ee33c179e1895c3"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
+        "sha256": "4a1e85171deb99de5914c594aa0562c5f547881ff435d8edab5ccb9cd1b730ca"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx",
+        "sha256": "ef6bc8814f0f7dda02f0956352902c4f94a81040db7d24f608d756e1d306da97"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+        "sha256": "0ed289d50197bae0a16be18e5b6a65b8c436fbfb2978041da891a7080a72a421"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx",
+        "sha256": "1b74073762489d62d922eea92e1bc9ed55ef12b7a3543e59574b4bfde750675c"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/YearlyTrendChart.tsx",
+        "sha256": "c4d9bc8911aca9f7a95e79d136a8ef6f55b6a034c4d09b9e992ea23727d2072b"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve-modernization/CurveSourceSection.tsx",
+        "sha256": "3eb7b6b73130c535fe08764478dac897eb1df866ffb23b0ec06c8f034969283a"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve-modernization/CurveSummary.tsx",
+        "sha256": "46df144ed53b0cd71dedc64d97a0fb5ab59d5417c48fa510893ee92b3d694a20"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve-modernization/availability.ts",
+        "sha256": "7035cf64dd87fb7c58352b23b03ac57f4b7ba490b4ad325a84d3831c3fd8b371"
+      },
+      {
+        "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+        "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c"
+      },
+      {
+        "file": "web/src/components/ai/AIChargingCurveFingerprintClustering.tsx",
+        "sha256": "955530c076b24d8a17e87b55f2e5b71651b410668654c384e385aceb10cfeda8"
+      },
+      {
+        "file": "web/src/components/ai/AIMLChargingCurveClustering.tsx",
+        "sha256": "15f4f013b45e03ab826abfc0461c0e1610e608c1bfd724496a3ecdd8f60def10"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-curve/index.ts",
+        "sha256": "9a19119901ce2fd99c09c01206d2ee4e567d8f80274e0235fa8cc8916dc018e0"
+      },
+      {
+        "file": "web/src/App.tsx",
+        "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c"
+      },
+      {
+        "file": "web/src/lib/routeRegistry.ts",
+        "sha256": "2f59a162f3dc2180031df87aed196830767fd7720388fa1e6f0c211e550c0a97"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+      },
+      {
+        "file": "web/src/hooks/useRangeState.ts",
+        "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea"
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+      },
+      {
+        "file": "web/src/api/hooks/useCharging.ts",
+        "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330"
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b"
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7"
+      },
+      {
+        "file": "web/src/hooks/useFormatting.ts",
+        "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29"
+      },
+      {
+        "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+        "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+      },
+      {
+        "file": "web/src/components/charts/chartDefaults.tsx",
+        "sha256": "e2955bbdc7d9e73f00c6ba4b6473033a6dd5c77b3edf82cabb192307792e6fc6"
+      },
+      {
+        "file": "web/src/components/charts/index.ts",
+        "sha256": "7c088add21d5d43f2d37f41c72517db9b2eb7738174914bd8bf21b9fbc62de5d"
+      }
+    ],
+    "production_files": [
+      "web/src/features/charging/pages/ChargingCurvePage.tsx",
+      "web/src/features/charging/components/charging-curve/helpers.ts",
+      "web/src/features/charging/components/charging-curve/types.ts",
+      "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
+      "web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx",
+      "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
+      "web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx",
+      "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+      "web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx",
+      "web/src/features/charging/components/charging-curve/YearlyTrendChart.tsx",
+      "web/src/features/charging/components/charging-curve-modernization/CurveSourceSection.tsx",
+      "web/src/features/charging/components/charging-curve-modernization/CurveSummary.tsx",
+      "web/src/features/charging/components/charging-curve-modernization/availability.ts",
+      "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "web/src/components/ai/AIChargingCurveFingerprintClustering.tsx",
+      "web/src/components/ai/AIMLChargingCurveClustering.tsx"
+    ],
+    "supporting_source": [
+      "web/src/features/charging/components/charging-curve/index.ts",
+      "web/src/App.tsx",
+      "web/src/lib/routeRegistry.ts",
+      "web/src/lib/workspaceScope.ts",
+      "web/src/hooks/useRangeState.ts",
+      "web/src/hooks/useDataState.ts",
+      "web/src/api/dataState.ts",
+      "web/src/api/hooks/useCharging.ts",
+      "web/src/api/types.ts",
+      "web/src/hooks/useNumberFormatting.ts",
+      "web/src/hooks/useFormatting.ts",
+      "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "web/src/components/charts/chartDefaults.tsx",
+      "web/src/components/charts/index.ts"
+    ],
+    "source_hash_algorithm": "SHA256",
+    "tests_read_or_run": false,
+    "backend_read_or_run": false
+  },
+  "route_scope": {
+    "inherited_preference": "useRangeState.ts:301-318 ignores local default/persistKey for header-owned route",
+    "wire": "useCharging.ts:32-44,122-134 raw typed sessions, vehicle_id/limit/offset/start/end; cancellation signal forwarded; limit200/offset0",
+    "header_range": "workspaceScope.ts:30,33,156-167",
+    "backend_contract": "NOT RUN; no inclusivity/order/full-history guarantee inferred",
+    "bounds": "ChargingCurvePage.tsx:49-52 sends startInstant/endInstantExclusive; useRangeState.ts:656-683 computes precise rolling or timezone calendar instants",
+    "mounted_same_page": "App.tsx:796,802; routeRegistry.ts:75,80",
+    "header_vehicle": "Neither alias is in vehicle-disabled paths/prefixes",
+    "aliases": [
+      "/charging-curve",
+      "/charging/curves"
+    ]
+  },
+  "numeric_semantics": {
+    "denominator": "Summary and category mean peak use every returned session, with missing peaks contributing zero. Summary explicitly discloses original denominator and coverage (CurveSummary:59-67). Not changed.",
+    "bounded": "Up to200 returned sessions; comparison first10 returned; monthly/yearly from same returned subset, not full history",
+    "physical_sign": "Observed stats/details preserve source sign; modeled power uses Math.max(power,0) (helpers:68). No regen/net-power or backend sign claim inferred.",
+    "raw": "W / Wh / meters / SOC percent / timestamps / configured currency cost_decimal",
+    "display": "power W/1000 kW; energy Wh/1000 kWh; elapsed ms/60000 rounded whole minutes; metric adapters multiply back by1000 or60 to preserve SI raw metric contracts",
+    "modeled": "Metadata model: default end SOC100 and peak11000W, 1% SOC stepping, flat AC and heuristic DC taper50/80, not charging telemetry samples. Hero page helper discloses modeling; export/comparison scope F10.",
+    "preferences": "useNumberFormatting supplies precision/locale for most displayed rows; useFormatting configured currency symbol/precision (no FX conversion). Dates use existing dateFormat/TimeStamp. SOC raw formatting exception F08; chart rounding candidate C06. No distance/temp/pressure rendered here."
+  },
+  "trust": {
+    "partial": "Availability finite coverage drives partial warning; original arithmetic intentionally retained/disclosed; deeper subgroup/details deficiencies F01/F02",
+    "retained": "deriveDataState:223-249 keeps data/fatalError=null for refresh error or pause; global nonblocking StaleRefreshWarning, summary retained flag, populated specialists remain",
+    "paused_initial": "CurveSourceSection:49-56 waiting-for-connection empty state, not fatal server failure",
+    "independent_ai": "Opt-in feature gates are intentional exceptions, not hidden data sections. Independent useAiStream actions stay separate; no calls made.",
+    "initial": "useDataState has no data: skeleton for selected vehicle, without invented values; source initial provenance unknown",
+    "fatal": "Only no-retained-data fatalError replaces each source shell, with retry. Layout remains.",
+    "resolved_empty": "All six CurveSourceSection boundaries remain; reset range action for selected vehicle and loaded empty result"
+  },
+  "sections_actions_a11y_mobile": {
+    "semantic_sections": 5,
+    "current_to_original_ratio": 1.0211267605633803,
+    "mobile": "w-full/min-w-0 page; selector stacked base and sm:flex-row, min-h-11; CardGrid half/third cards; fixed chart heights280/300/320. Footer reachability C01 remains native candidate.",
+    "page_lines": 290,
+    "actions": [
+      "header vehicle/range controls",
+      "Select session",
+      "retry/refetch",
+      "reset date range",
+      "five chart exports/fullscreen/table/legend capabilities via ChartContainer",
+      "Explain clusters / Train clusters opt-in"
+    ],
+    "sections": [
+      "Six-summary metrics",
+      "Session selector + modeled hero + session details",
+      "First-ten returned comparison",
+      "Charger power/energy + counts/duration",
+      "Monthly DC/AC speed trend",
+      "DC threshold durations/fastest/slowest + yearly trend",
+      "Two independent opt-in AI narrators"
+    ],
+    "source_a11y": "Localized section/ChartContainer aria labels; detail region useId/KVList; chart dataColumns/exportData alternatives; shared Select with label; decorative icons hidden. Runtime keyboard/focus/announcement/download not asserted.",
+    "source_section_shells": 6,
+    "historical_original_lines": 284,
+    "exceptions": [
+      "Two inline styles use array/color lookup: acceptable dynamic values",
+      "Recharts label API styles are not static-inline-style violations; theme tokens assessed separately",
+      "One useEffect only resets selectedSessionId; no data loading",
+      "Four && matches are selection caption, optional comparison legend/footer/secondary content, not hidden source panels",
+      "PageLayout wraps PageContainer (PageLayout.tsx:2,11), so no missing-page-container violation",
+      "Opt-in AI off-mode hides features intentionally; baseline sections remain"
+    ]
+  },
+  "confirmed_findings": [
+    {
+      "id": "F01",
+      "rule": "unknown-zero",
+      "severity": "high",
+      "file": "web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx",
+      "lines": [
+        45
+      ],
+      "mechanism": "Nullable peak_power_w becomes measured-looking 0 kW in the selected-session detail; unlike summary availability guarding.",
+      "source_repro": "Valid typed session with peak_power_w=null: (null ?? 0)/1000 yields 0. Model fallback yields 11 kW (helpers.ts:50), not an observation.",
+      "recommendation": "Represent unavailable observed peak explicitly; keep any model assumption separately identified.",
+      "sites": 1
+    },
+    {
+      "id": "F02",
+      "rule": "unknown-zero",
+      "severity": "high",
+      "file": "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+      "lines": [
+        50,
+        51
+      ],
+      "related": {
+        "file": "web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx",
+        "helper": {
+          "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+          "lines": [
+            73,
+            74,
+            75
+          ]
+        },
+        "lines": [
+          87,
+          88
+        ]
+      },
+      "mechanism": "Empty subgroup mean is zero, so absent AC/DC monthly samples and absent yearly threshold cohorts become plotted/table/export zero readings. Year count includes all dated DC sessions, not qualifying completed threshold counts (72-80).",
+      "source_repro": "DC-only month [120kW] gives AC=[] -> 0kW; year containing one completed DC 50->70 session gives count=1, d10=[], d20=[], both threshold averages=0min.",
+      "recommendation": "Use unavailable subgroup values and qualifying sample denominators; do not silently change accepted arithmetic in this QA item.",
+      "sites": 4
+    },
+    {
+      "id": "F03",
+      "rule": "threshold-duration-label",
+      "severity": "high",
+      "file": "web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx",
+      "lines": [
+        49,
+        52,
+        55,
+        56,
+        79,
+        80,
+        99,
+        107
+      ],
+      "mechanism": "10->80 and 20->80 labels describe threshold intervals but averages use the complete started_at-to-ended_at session duration for any session spanning those thresholds. No crossing timestamps are used.",
+      "source_repro": "Completed DC 0->100 over 60min satisfies both predicates; both displayed threshold means use full-session 60min. Actual crossing duration is not established by this metadata.",
+      "recommendation": "Explicitly label whole-session durations for threshold-spanning cohorts, or seek an authorized observed crossing-time source; do not invent crossing telemetry.",
+      "sites": 2
+    },
+    {
+      "id": "F04",
+      "rule": "independent-source-scope",
+      "severity": "high",
+      "file": "web/src/components/ai/AIMLChargingCurveClustering.tsx",
+      "lines": [
+        48,
+        76,
+        96
+      ],
+      "related": {
+        "file": "web/src/components/ai/AIChargingCurveFingerprintClustering.tsx",
+        "page": {
+          "file": "web/src/features/charging/pages/ChargingCurvePage.tsx",
+          "lines": [
+            49,
+            51,
+            52,
+            154,
+            155
+          ]
+        },
+        "lines": [
+          93,
+          95,
+          100,
+          117
+        ]
+      },
+      "mechanism": "Page charts use the header instant range and up to 200 sessions; ML narrator sends only vehicle_id and lookback_days=90; fingerprint narrator sends only vehicle_id. Visible copy does not identify those independent bounds, and fingerprint description asserts the same per-cluster numbers as charts that are actually modeled per-session metadata.",
+      "source_repro": "Changing page range alters start/end query key, but neither AI body includes those range values. Backend response window remains unknown, not inspected.",
+      "recommendation": "Disclose the independent narrator window/provenance and avoid unestablished chart equivalence.",
+      "sites": 2
+    },
+    {
+      "id": "F05",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+      "lines": [
+        13,
+        15,
+        16
+      ],
+      "mechanism": "Home / AC, Supercharger, DC Fast are returned untranslated and appear in Select options, detail values, chart labels, legend names, accessible columns and export categories.",
+      "source_repro": "getChargerLabel outputs English regardless of t/locale; callers directly display its return value.",
+      "recommendation": "Separate stable grouping/color category identity from localized display labels; preserve existing grouping and IDs.",
+      "sites": 3
+    },
+    {
+      "id": "F06",
+      "rule": "theme-label-token",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
+      "lines": [
+        87,
+        96
+      ],
+      "related": [
+        {
+          "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
+          "lines": [
+            88,
+            97
+          ]
+        },
+        {
+          "file": "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+          "lines": [
+            107
+          ]
+        },
+        {
+          "file": "web/src/features/charging/components/charging-curve/YearlyTrendChart.tsx",
+          "lines": [
+            76,
+            87
+          ]
+        }
+      ],
+      "mechanism": "Seven axis labels use fixed rgba(255,255,255,0.4) rather than theme label tokens. These Recharts label API styles are NOT static-inline-style rule violations, but bypass semantic theme labeling.",
+      "source_repro": "Literal fill is identical in light/dark theme; actual composed contrast is not measured.",
+      "recommendation": "Reuse shared chart label tokens; native/forced-colors contrast remains separate acceptance.",
+      "sites": 7
+    },
+    {
+      "id": "F07",
+      "rule": "reduced-motion-declaration",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx",
+      "lines": [
+        115,
+        130
+      ],
+      "related": {
+        "file": "web/src/features/charging/components/charging-curve/YearlyTrendChart.tsx",
+        "shared": "web/src/components/charts/chartDefaults.tsx:9-24,46-51; index.ts:88",
+        "lines": [
+          92
+        ]
+      },
+      "mechanism": "Three directly re-exported Recharts Bars have neither AREA_DEFAULTS nor chartAnimationProps/isAnimationActive. Shared defaults document vendor requestAnimationFrame animation and its reduced-motion getter requirement.",
+      "source_repro": "Source comparison: corresponding Lines/Area spread AREA_DEFAULTS; these three Bars do not. Runtime animation was not observed.",
+      "recommendation": "Adopt existing motion-aware animation props without changing series, IDs or data.",
+      "sites": 3
+    },
+    {
+      "id": "F08",
+      "rule": "locale-number",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx",
+      "lines": [
+        21,
+        22,
+        37
+      ],
+      "mechanism": "SOC range strings use raw numeric interpolation rather than configured locale/decimal precision, while other detail measurements use useNumberFormatting.",
+      "source_repro": "SOC 33.333333 is rendered literally as 33.333333%, independent of a two-decimal/non-English display preference. Missing/nonfinite SOC placeholder is correctly preserved.",
+      "recommendation": "Format finite SOC through the existing number preference formatter while preserving unknown placeholders.",
+      "sites": 1
+    },
+    {
+      "id": "F09",
+      "rule": "inferred-category-unknown",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+      "lines": [
+        7,
+        8,
+        9,
+        13,
+        16
+      ],
+      "mechanism": "Missing charger_type and peak_power_w is labeled Home / AC; any nonempty non-home type is treated as DC even without power evidence. No unknown/inferred qualifier reaches labels.",
+      "source_repro": "charger_type=null, peak_power_w=null is valid typed input: isDcSession=false -> Home / AC. This is a rule classification, not an observed AC fact.",
+      "recommendation": "Expose unknown/inferred category provenance without silently rewriting accepted bucketing.",
+      "sites": 1
+    },
+    {
+      "id": "F10",
+      "rule": "modeled-bounded-export-provenance",
+      "severity": "medium",
+      "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
+      "lines": [
+        31,
+        58,
+        65,
+        66,
+        69,
+        71,
+        76
+      ],
+      "related": {
+        "file": "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
+        "page": {
+          "file": "web/src/features/charging/pages/ChargingCurvePage.tsx",
+          "lines": [
+            201,
+            202,
+            203,
+            239
+          ]
+        },
+        "lines": [
+          49,
+          51,
+          57,
+          58,
+          65
+        ]
+      },
+      "mechanism": "Page inspector helper discloses modeled curves, but independent chart subtitles/accessible column schemas/export rows contain no modeled or bounded-window provenance. Comparison takes first ten returned rows and calls them last ten without a frontend sort or explicit ordering contract; server ordering is unverified.",
+      "source_repro": "Hero export rows are {soc,power}; comparison rows are {soc,s0...s9}; comparisonSessions=sessions.slice(0,10), from a 200-row bounded result.",
+      "recommendation": "Use existing chart metadata/description/export context for modeled assumptions and returned-window limits; do not infer backend order.",
+      "sites": 2
+    },
+    {
+      "id": "F11",
+      "rule": "category-import-boundary",
+      "severity": "low",
+      "file": "web/src/features/charging/components/charging-curve-modernization/CurveSourceSection.tsx",
+      "lines": [
+        5
+      ],
+      "related": {
+        "file": "web/src/features/charging/components/charging-curve-modernization/CurveSummary.tsx",
+        "lines": [
+          3,
+          4
+        ]
+      },
+      "mechanism": "Feature components import layout/layout-reference and data-display/stat-reference internals instead of category barrels (MDC-002:58-60). Not a direct vendor-library import.",
+      "source_repro": "Three literal import declarations in current rendered feature parts bypass canonical categories.",
+      "recommendation": "Use existing category exports only in an authorized source item; no shared API expansion inferred.",
+      "sites": 3
+    }
+  ],
+  "runtime_or_integration_candidates": [
+    {
+      "id": "C01",
+      "file": "web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx",
+      "lines": [
+        152,
+        154,
+        159,
+        161
+      ],
+      "reason": "Footer uses no-wrap paired flex rows without min-w-0/gap/break strategy. Narrow-card/translated/zoom overflow requires native evidence; no overflow asserted."
+    },
+    {
+      "id": "C02",
+      "file": "web/src/features/charging/components/charging-curve/helpers.ts",
+      "lines": [
+        48,
+        49,
+        53
+      ],
+      "reason": "Finite SOC bounds are not clamped to 0-100; extreme finite ranges could produce excessive iteration. API acceptance of such corrupt input is unverified; no loop stress test or hang executed."
+    },
+    {
+      "id": "C03",
+      "file": "web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx",
+      "lines": [
+        41
+      ],
+      "reason": "Defensive missing-energy fallback is zero, but total_energy_added_wh is nonnullable in api/types.ts:173. Nullable/malformed energy payload not established; peak null in F01 is established."
+    },
+    {
+      "id": "C04",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "lines": [
+        40,
+        41,
+        42,
+        43
+      ],
+      "reason": "Page sends startInstant/endInstantExclusive correctly; backend filtering inclusivity/completeness/order is not verified because backend/API work is prohibited."
+    },
+    {
+      "id": "C05",
+      "file": "web/src/features/charging/pages/ChargingCurvePage.tsx",
+      "lines": [
+        160,
+        174,
+        192,
+        207,
+        251
+      ],
+      "reason": "Named sections, 44px selector declaration, grid sizes and retained selection are source evidence only. Keyboard focus, mobile reflow, forced-colors, export download and native behavior remain NOT RUN."
+    },
+    {
+      "id": "C06",
+      "file": "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx",
+      "lines": [
+        39
+      ],
+      "related": {
+        "file": "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx",
+        "monthly": {
+          "file": "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx",
+          "lines": [
+            50,
+            51
+          ]
+        },
+        "lines": [
+          47
+        ]
+      },
+      "reason": "One-decimal chart rounding is intentionally used for consistent chart/table/export values. Preference-parity impact needs contract/runtime review; not promoted as arithmetic regression."
+    }
+  ],
+  "deduplication": {
+    "exact_existing_queue_roots": [
+      {
+        "item": "phase6-qa-charging-charging-curve",
+        "line": 337,
+        "status": "[~]"
+      }
+    ],
+    "queue_writes": 0,
+    "historical": "Accepted source behaviors/history preserved, not redispatched. Findings are present current-source mechanisms, not claims of new regression.",
+    "mechanism_duplicates": "No other exact curve-source root found in bounded Phase6 row grep; unrelated vehicle-access palette result excluded",
+    "new_queue_or_fix_items_created": 0
+  },
+  "summary": {
+    "confirmed_mechanism_sites": 29,
+    "candidate_count": 6,
+    "most_issues": "Primary-file root attribution: helpers.ts=2 and SessionDetailPanel.tsx=2; remaining primary files=1 each. Cross-file related locations are separately listed, not additional roots.",
+    "confirmed_root_findings": 11,
+    "priority": [
+      "Unknown-versus-zero and qualifying sample denominator truth F01/F02",
+      "Whole-session threshold and independent narrator scope F03/F04",
+      "Localization/inferred category/model export context F05/F08/F09/F10",
+      "Theme/motion declarations and category boundary F06/F07/F11"
+    ],
+    "counts_by_rule": {
+      "unknown-zero": 2,
+      "threshold-duration-label": 1,
+      "independent-source-scope": 1,
+      "hardcoded-string": 1,
+      "theme-label-token": 1,
+      "reduced-motion-declaration": 1,
+      "locale-number": 1,
+      "inferred-category-unknown": 1,
+      "modeled-bounded-export-provenance": 1,
+      "category-import-boundary": 1
+    },
+    "primary_file_root_counts": {
+      "web/src/features/charging/components/charging-curve/SessionDetailPanel.tsx": 2,
+      "web/src/features/charging/components/charging-curve/SpeedTrendChart.tsx": 1,
+      "web/src/features/charging/components/charging-curve/TimeToChargeSection.tsx": 1,
+      "web/src/components/ai/AIMLChargingCurveClustering.tsx": 1,
+      "web/src/features/charging/components/charging-curve/helpers.ts": 2,
+      "web/src/features/charging/components/charging-curve/SessionCurveChart.tsx": 1,
+      "web/src/features/charging/components/charging-curve/ChargerTypeChart.tsx": 1,
+      "web/src/features/charging/components/charging-curve/SessionComparisonChart.tsx": 1,
+      "web/src/features/charging/components/charging-curve-modernization/CurveSourceSection.tsx": 1
+    }
+  },
+  "checks": {
+    "numeric_command_exits": {
+      "6207": 1,
+      "6218": 0,
+      "6197": 0,
+      "6221": 0,
+      "6224": 0,
+      "6215": 0,
+      "6220": 0,
+      "6214": 0,
+      "6204": 1,
+      "6217": 0,
+      "6235": 0,
+      "6196": 0,
+      "6191": 0,
+      "6223": 0,
+      "6230": 0,
+      "6202": 0,
+      "6227": 0,
+      "6228": 0,
+      "6231": 0,
+      "6200": 0,
+      "6210": 0,
+      "6205": 0,
+      "6192": 0,
+      "6206": 1,
+      "6213": 0,
+      "6199": 0,
+      "6189": 0,
+      "6238": 1,
+      "6239": 0
+    },
+    "json_serialize_reparse_exit": 0,
+    "queue_dedup_scan_exit": 0,
+    "not_run": [
+      "source changes",
+      "tests / repeated Phase0/Phase3/Phase5 acceptance",
+      "backend/router reads or backend work",
+      "API/network/real-vehicle calls",
+      "browser/native/Playwright/screenshots",
+      "npx tsc --noEmit / full TypeScript",
+      "build/full lint/full suites/audit wrappers",
+      "Git/status/claims/queue edits",
+      "server/dependency/helper/extension/catalog work",
+      "health/dispatch/Discord/heartbeat/subagents"
+    ],
+    "source_derivation_exit": 0,
+    "method": "Built-in PowerShell Select-String and Get-FileHash; bounded literal Python arithmetic; no audit wrapper or production execution",
+    "source_scan_exit": 0,
+    "grep": [
+      {
+        "rule": "static-inline-style",
+        "raw_match_count": 0,
+        "exit": 0,
+        "raw_matches": []
+      },
+      {
+        "rule": "raw-html",
+        "raw_match_count": 0,
+        "exit": 0,
+        "raw_matches": []
+      },
+      {
+        "rule": "direct-library-import",
+        "raw_match_count": 0,
+        "exit": 0,
+        "raw_matches": []
+      },
+      {
+        "rule": "old-api-import",
+        "raw_match_count": 0,
+        "exit": 0,
+        "raw_matches": []
+      },
+      {
+        "rule": "hidden-section-candidates",
+        "raw_match_count": 4,
+        "exit": 0,
+        "raw_matches": [
+          "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx:192:{selectedSession && (",
+          "web\\src\\features\\charging\\components\\charging-curve\\SessionComparisonChart.tsx:114:{comparisonSessions.length > 0 && (",
+          "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx:68:{secondary != null && <div className=\"mt-3\">{secondary}</div>}",
+          "web\\src\\features\\charging\\components\\operationalbrief-all\\ChargingSummaryBrief.tsx:69:{footer != null && <div className=\"mt-3\">{footer}</div>}"
+        ]
+      },
+      {
+        "rule": "hardcoded-string-candidates",
+        "raw_match_count": 7,
+        "exit": 0,
+        "raw_matches": [
+          "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts:13:if (!isDcSession(s)) return 'Home / AC';",
+          "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts:15:return 'Supercharger';",
+          "web\\src\\features\\charging\\components\\charging-curve\\helpers.ts:16:return 'DC Fast';",
+          "web\\src\\features\\charging\\components\\charging-curve\\TimeToChargeSection.tsx:55:const d10to80 = crossedDurations((s) => s.start_soc_pct <= 10 && (s.end_soc_pct ?? 0) >= 80);",
+          "web\\src\\features\\charging\\components\\charging-curve\\TimeToChargeSection.tsx:56:const d20to80 = crossedDurations((s) => s.start_soc_pct <= 20 && (s.end_soc_pct ?? 0) >= 80);",
+          "web\\src\\features\\charging\\components\\charging-curve-modernization\\CurveSummary.tsx:31:const coverage = (known: number) => known < availability.count",
+          "web\\src\\features\\charging\\components\\charging-curve-modernization\\availability.ts:20:partial: count > 0 && [energy, power, cost, duration, soc].some(known => known < count),"
+        ]
+      },
+      {
+        "rule": "missing-page-container-candidate",
+        "raw_match_count": 1,
+        "exit": 0,
+        "raw_matches": [
+          "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx:128:<PageLayout"
+        ]
+      },
+      {
+        "rule": "fetch-useeffect-candidates",
+        "raw_match_count": 1,
+        "exit": 0,
+        "raw_matches": [
+          "web\\src\\features\\charging\\pages\\ChargingCurvePage.tsx:83:useEffect(() => {"
+        ]
+      },
+      {
+        "rule": "dynamic-inline-style-exceptions",
+        "raw_match_count": 2,
+        "exit": 0,
+        "raw_matches": [
+          "web\\src\\features\\charging\\components\\charging-curve\\SessionComparisonChart.tsx:121:style={{ backgroundColor: palette[i % palette.length] }}",
+          "web\\src\\features\\charging\\components\\charging-curve\\ChargerTypeChart.tsx:157:style={{ backgroundColor: CHARGER_COLORS[ct.label] ?? CHART_COLORS[3] }}"
+        ]
+      },
+      {
+        "rule": "double-prefix",
+        "raw_match_count": 0,
+        "exit": 0,
+        "raw_matches": []
+      },
+      {
+        "rule": "camelcase-query-param",
+        "raw_match_count": 0,
+        "exit": 0,
+        "raw_matches": []
+      }
+    ],
+    "pin_stability_exit": 0,
+    "inspection_failures": [
+      "6204 exit1 Unicode console encoding",
+      "6206 exit1 Unicode console encoding",
+      "6207 exit1 Unicode console encoding"
+    ],
+    "artifact_validation_initial_exit": 1,
+    "artifact_validation_recovered_exit": 0,
+    "artifact_validation_failure": "6238: Written JSON reparse verification failed. 6239 diagnosed valid written JSON with correct 30/11/6 counts; PowerShell ConvertFrom-Json coerced release UTC to System.DateTime. Measure-Object over OrderedDictionary also yielded null site sum; recovered with standard JSON string parsing and explicit integer sum=29. No source change.",
+    "final_command_exit": 0
+  },
+  "log": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-curve.log",
+  "completed_utc": "2026-10-13T23:02:48.043006+00:00"
+}

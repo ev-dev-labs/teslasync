@@ -93,6 +93,9 @@ const fleet: Vehicle[] = [
   { id: 8, vehicle_id: 8, vin: 'SYNTHETIC-AC-8', display_name: 'Lyra',
     model: '', trim_badging: '', exterior_color: '', wheel_type: '', state: 'online',
     healthy: true, created_at: '', updated_at: '' },
+  { id: 9, vehicle_id: 9, vin: 'SYNTHETIC-AC-9', display_name: 'Vega',
+    model: '', trim_badging: '', exterior_color: '', wheel_type: '', state: 'online',
+    healthy: true, created_at: '', updated_at: '' },
 ];
 
 const recommendation: ActionCenterRecommendation = {
@@ -303,6 +306,57 @@ describe('ActionCenterPage URL scope roundtrip', () => {
     expect(useActionCenterMock).toHaveBeenLastCalledWith({
       vehicle_id: 7, priority: undefined, source_feature: undefined, state: 'open', limit: 50, offset: 0,
     });
+  });
+
+  it.each([
+    { name: 'malformed ID with stored fallback', rawVehicle: 'abc', storedVehicle: '8', effectiveVehicle: 8, copiedVehicle: '8', scope: 'selected' },
+    { name: 'deleted ID with stored fallback', rawVehicle: '42', storedVehicle: '8', effectiveVehicle: 8, copiedVehicle: '8', scope: 'selected' },
+    { name: 'malformed ID with first-vehicle fallback', rawVehicle: 'abc', storedVehicle: '42', effectiveVehicle: 7, copiedVehicle: '7', scope: 'selected' },
+    { name: 'deleted ID with first-vehicle fallback', rawVehicle: '42', storedVehicle: '42', effectiveVehicle: 7, copiedVehicle: '7', scope: 'selected' },
+    { name: 'valid selected ID', rawVehicle: '7', storedVehicle: '8', effectiveVehicle: 7, copiedVehicle: '7', scope: 'selected' },
+    { name: 'valid numeric ID spelling', rawVehicle: '08', storedVehicle: '8', effectiveVehicle: 8, copiedVehicle: '08', scope: 'selected' },
+    { name: 'intentional fleet marker with malformed ID', rawVehicle: 'abc', storedVehicle: '8', effectiveVehicle: undefined, copiedVehicle: 'abc', scope: 'fleet' },
+  ])('copies effective scope for $name and reopens with recipient preference 9', async ({ rawVehicle, storedVehicle, effectiveVehicle, copiedVehicle, scope }) => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText } });
+    window.localStorage.setItem(__SELECTED_VEHICLE_STORAGE_KEY__, storedVehicle);
+    useActionCenterMock.mockReturnValue(queryResult({ data: { ...data, total: 120 } }));
+    const historyLength = window.history.length;
+    const mounted = renderPage(
+      '/action-center?vehicle_id=' + rawVehicle + '&vehicle_scope=' + scope + '&priority=critical&source_feature=battery_health&state=all&limit=25&offset=25&context=review&vin=retained',
+    );
+    const expected: ActionCenterFilter = {
+      vehicle_id: effectiveVehicle, priority: 'critical', source_feature: 'battery_health',
+      state: undefined, limit: 25, offset: 25,
+    };
+    await waitFor(() => expect(useActionCenterMock).toHaveBeenLastCalledWith(expected));
+    expect(screen.getByLabelText('Vehicle')).toHaveValue(effectiveVehicle == null ? '' : String(effectiveVehicle));
+    expect(window.localStorage.getItem(__SELECTED_VEHICLE_STORAGE_KEY__)).toBe(String(effectiveVehicle ?? 8));
+    expect(window.history.length).toBe(historyLength);
+    fireEvent.click(screen.getByRole('button', { name: 'Copy link to this view' }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledTimes(1));
+    const copied = writeText.mock.calls[0]![0] as string;
+    const copiedUrl = new URL(copied);
+    expect(copied).toBe(window.location.href);
+    expect(Object.fromEntries(copiedUrl.searchParams)).toEqual({
+      vehicle_id: copiedVehicle, vehicle_scope: scope, priority: 'critical',
+      source_feature: 'battery_health', state: 'all', limit: '25', offset: '25',
+      context: 'review', vin: 'retained',
+    });
+    mounted.unmount();
+    window.localStorage.setItem(__SELECTED_VEHICLE_STORAGE_KEY__, '9');
+    const reopened = renderPage(copied);
+    expect(useActionCenterMock).toHaveBeenLastCalledWith(expected);
+    expect(screen.getByLabelText('Vehicle')).toHaveValue(effectiveVehicle == null ? '' : String(effectiveVehicle));
+    expect(screen.getByLabelText('Priority')).toHaveValue('critical');
+    expect(screen.getByLabelText('Source')).toHaveValue('battery_health');
+    expect(screen.getByLabelText('State')).toHaveValue('');
+    expect(screen.getByLabelText('Rows per page')).toHaveValue('25');
+    expect(screen.getByText('Showing 26–50 of 120')).toBeInTheDocument();
+    expect(window.localStorage.getItem(__SELECTED_VEHICLE_STORAGE_KEY__)).toBe(String(effectiveVehicle ?? 9));
+    expect(window.history.length).toBe(historyLength);
+    expect(mutateAsyncMock).not.toHaveBeenCalled();
+    reopened.unmount();
   });
 
   it.each([

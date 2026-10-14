@@ -35,7 +35,7 @@ const translations = {
     colCoverage: 'Couverture', unknown: 'Inconnu', trustUnknown: 'Inconnu',
     trustPartial: 'Partiellement attesté', trustComplete: 'Entièrement attesté',
     trustNone: 'Non attesté',
-  } },
+  }, diskForecast: { severityOk: 'Correct' } },
   severity: { warn: 'Avertissement', critical: 'Critique' },
   recentPages: { shortMinute: 'min-local', shortHour: 'h-local', shortDay: 'j-local' },
 };
@@ -197,7 +197,7 @@ describe('FieldQualityTable presentation and preservation contracts', () => {
   });
 
   it('defines CSV as display text while JSON remains a raw numeric contract', async () => {
-    mount([field()]);
+    const view = mount([field()]);
     await exportAs('CSV');
     const csv = vi.mocked(downloadCSV).mock.calls[0][1];
     expect(csv).toContain('Freshness');
@@ -208,15 +208,30 @@ describe('FieldQualityTable presentation and preservation contracts', () => {
     expect(csv).toContain('81.04%');
     expect(csv).toContain('Partially attested');
     expect(downloadJSON).not.toHaveBeenCalled();
+    view.unmount();
+    vi.mocked(downloadCSV).mockClear();
+    const saved = { order: ['coverage', 'field', 'severity', 'freshness', 'gap', 'duplicates', 'versioned', 'unversioned'], hidden: ['gap'] };
+    localStorage.setItem('teslasync.table.admin:data-quality-fields.columns', JSON.stringify(saved));
+    mount([field()]);
+    await exportAs('CSV');
+    expect(vi.mocked(downloadCSV).mock.calls[0][1].split('\r\n')[0])
+      .toBe('Coverage,Field,Quality,Freshness,Duplicates,Attested,Unattested');
+    expect(vi.mocked(downloadCSV).mock.calls[0][1]).not.toContain('2h');
+    await exportAs('JSON');
+    expect(exportedRows()).toEqual([field()]);
+    expect(localStorage.getItem('teslasync.table.admin:data-quality-fields.columns')).toBe(JSON.stringify(saved));
   });
 
   it.each([
     ['warn', 'Avertissement'], ['critical', 'Critique'],
   ] as const)('localizes severity %s without changing the raw classification', (severity, label) => {
     const row = field({ severity });
-    mount([row], {}, 'fr');
+    const healthy = field({ field: 'Healthy', severity: 'ok', composite_score: 100 });
+    mount([row, healthy], {}, 'fr');
     expect(screen.getByText(label)).toBeInTheDocument();
+    expect(screen.getByText('Correct')).toBeInTheDocument();
     expect(row.severity).toBe(severity);
+    expect(healthy.severity).toBe('ok');
   });
 
   it('uses a localized human caption instead of the persistent table identifier', () => {
@@ -247,7 +262,7 @@ describe('FieldQualityTable presentation and preservation contracts', () => {
     const view = mount([field()]);
     expect(view.container.querySelector('[data-grid-frame]')).toHaveAttribute('data-grid-variant', 'embedded');
     expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Columns' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Reorder or hide columns' })).toBeEnabled();
     expect(screen.getByRole('searchbox', { name: 'Search loaded rows' })).toBeEnabled();
   });
 

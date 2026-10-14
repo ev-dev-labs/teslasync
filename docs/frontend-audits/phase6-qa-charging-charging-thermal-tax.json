@@ -1,0 +1,720 @@
+{
+  "item": "phase6-qa-charging-charging-thermal-tax",
+  "phase": 6,
+  "status": "DONE",
+  "mode": "source-only QA, not native/page/application acceptance",
+  "page": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+  "routes": [
+    "/charging-thermal-tax"
+  ],
+  "purpose": "Inspect recorded heater-power overhead for one charging session, separating measured inputs from sampled estimates and source limits.",
+  "primaryGoal": "Select a session for the workspace vehicle, interpret heater/charge power, derived metrics and phase uncertainty without inventing thermal data.",
+  "identity": {
+    "acceptanceAuthority": "migration-queue.md:1775",
+    "commitCryptographicallyVerified": false,
+    "priorPhase6DuplicateMatches": 0,
+    "reason": "No Git allowed; acceptance read from queue, current bytes pinned separately.",
+    "acceptedSource": "4cbecb16d6af394758d74b90b92c1b6d18ebf028",
+    "routeEvidence": [
+      "web/src/App.tsx:106,876",
+      "internal/api/router.go:3545-3552"
+    ],
+    "pageRouteVerifiedFromSource": true,
+    "preexistingReport": false,
+    "mountVerified": false
+  },
+  "scope": {
+    "writeOnly": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charging-thermal-tax.json",
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-thermal-tax.log"
+    ],
+    "tests": "READONLY",
+    "git": "NOTRUN",
+    "prohibitedExecution": "No API/physical charging/browser/native/fullTSC/suite/auditwrapper/server/helper/extension/subagent/parent-health",
+    "instructionsRead": [
+      "docs/orchestrator-loop.md entire",
+      "migration-queue.md:210-248,341,1775 and targeted roots",
+      "docs/frontend-design-contract.md:1-240,419-542 and applicable section map",
+      "docs/frontend-mission.md:0/1 relevant opening",
+      "docs/frontend-worker-conventions.md:1-135",
+      "docs/session-handoff.md opening current phase/conventions",
+      "docs/frontend-inventory.md target and G068",
+      " .github/copilot-instructions.md:1-160",
+      ".github/instructions/react-frontend.instructions.md:1-280",
+      ".github/instructions/frontend-si-cutover.instructions.md",
+      ".github/instructions/unit-conversion.instructions.md"
+    ],
+    "catalog": "READONLY",
+    "applicationSource": "READONLY",
+    "backend": "READONLY"
+  },
+  "summary": {
+    "byRule": {
+      "category-barrel-import": 3,
+      "denominator-window-mismatch": 1,
+      "date-preference-bypass": 1,
+      "wire-contract-mismatch": 1,
+      "bounded-source-disclosure": 1,
+      "phase-transition-interval-omission": 1,
+      "timestamp-identity-loss": 1
+    },
+    "historicalCarryForwardRoots": 3,
+    "priority": "First authentic telemetry contract/capability; then comparable intervals and phase boundary semantics, date preference, historical caller debt.",
+    "noGeneralCleanBillOfHealth": true,
+    "conditionalCalculatorRoots": 2,
+    "candidates": 4,
+    "confirmedRootFindings": 7,
+    "newSourceRoots": 4,
+    "confirmedLocationsCountingCategorySites": 9,
+    "mostIssues": [
+      {
+        "roots": 2,
+        "file": "web/src/features/charging/lib/chargingThermalTax.ts"
+      },
+      {
+        "roots": 2,
+        "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx"
+      }
+    ]
+  },
+  "findings": [
+    {
+      "repro": "Source-only repro specification, NOT executed: pass two objects of the actual DTO shape {created_at: ISO timestamp, power_w: 7000, energy_added: 1/2, battery_heater_on: true}. sample.ts is undefined, timed/filter results are empty, four heater metrics are missing, chart empty, phase panel says no usable telemetry despite successful nonempty query.",
+      "rule": "wire-contract-mismatch",
+      "fix": "Create one narrowly owned contract integration after deciding an authentic heater-power source/capability. Align timestamp and actual SI fields explicitly, respecting the endpoint kWh conversion. Do not estimate watts from a boolean/temperature, fake samples, or silently assume energy_added is Wh. If heater power is unavailable, disclose unsupported evidence instead of claiming no telemetry.",
+      "owner": "charging telemetry API/type/hook integration",
+      "file": "web/src/api/hooks/useCharging.ts",
+      "line": 112,
+      "classification": "new-source-confirmed",
+      "dedup": "Exact identifiers searched across existing Phase6 reports: no match. Prior audit-page-085 checked declarations only and explicitly did not inspect handlers. Existing nested-error root does not repair these success-payload semantics.",
+      "mechanism": "The actual GET route serializes chargeTelemetryRow with created_at, merged power_w, and energy_added in kWh. It emits neither ts nor battery_heater_power_w nor separate AC/DC W/Wh fields. useChargeTelemetry only applies safeArray; request camelCaseKeys adds naming aliases, not semantic field mappings. Analyzer and presentation parse sample.ts, so every real declared DTO row has an invalid timestamp and is discarded. The heater power signal is not mapped or serialized at all; BatteryHeaterOn and temperatures cannot establish heater watts.",
+      "related": [
+        "web/src/api/types.ts:231-248",
+        "internal/api/router.go:3545-3552",
+        "internal/api/charging/handler.go:107-121,354-389,430-479",
+        "web/src/features/charging/lib/chargingThermalTax.ts:90-92,193-211",
+        "web/src/features/charging/components/charging-thermal-tax-modernization/thermalPresentation.ts:5-7,19-28"
+      ],
+      "severity": "P1",
+      "id": "CTT-S01"
+    },
+    {
+      "repro": "Static arithmetic, NOT executed: t=0,60,120 seconds, heater=3000 W each; cumulative AC=null,0,100 Wh; DC=null each. Heater numerator=100 Wh over 120 seconds, denominator=100 Wh over only final60 seconds, displayed share100%; same-interval heater energy would be50 Wh/share50%. All heater evidence is complete, so missing-heater warning cannot disclose the denominator mismatch. This conditional arithmetic defect is currently masked by CTT-S01 for the declared endpoint.",
+      "rule": "denominator-window-mismatch",
+      "fix": "Preserve raw readings and existing methods; expose matched source intervals/coverage and calculate comparable numerator/denominator or mark share unavailable when scope cannot be established. Cover absent first/last counters separately.",
+      "owner": "charging specialist analyzer",
+      "file": "web/src/features/charging/lib/chargingThermalTax.ts",
+      "line": 135,
+      "classification": "new-source-confirmed-conditional",
+      "dedup": "Not present in audit-page-085 or located charging/shared Phase6 roots; one analyzer root, not a separate KPI bug.",
+      "mechanism": "Heater integral spans all timestamp-valid samples, but cumulative delivered energy spans only the first/last samples containing energy counters. No common interval or denominator coverage is recorded before heaterWh/deliveredEnergyWh is displayed as session share.",
+      "related": [
+        "web/src/features/charging/lib/chargingThermalTax.ts:127-135,214-220,245-259",
+        "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalTaxStats.tsx:52-64"
+      ],
+      "severity": "P2",
+      "id": "CTT-S02"
+    },
+    {
+      "repro": "Static source repro specification, NOT executed: t=0,60,120s heater=1000,1000,0W. Summary on-time=120s; heater-on row duration60s/end60s; heater-off row duration0s/start120s; final60s is in no row although sample gaps are fully covered. Phase-method estimates do not identify this unassigned interval. Currently masked by CTT-S01 for declared endpoint payloads.",
+      "rule": "phase-transition-interval-omission",
+      "fix": "Obtain specialist-owned boundary policy and explicitly represent transition uncertainty/intervals; preserve raw observations, threshold, phase states and distinct KPI method. Do not silently replace the specialist or rewrite historical tests.",
+      "owner": "charging specialist analyzer",
+      "file": "web/src/features/charging/lib/chargingThermalTax.ts",
+      "line": 172,
+      "classification": "new-source-confirmed-conditional",
+      "dedup": "Single analyzer root; phase-state-only authored test at chargingThermalTax.test.ts:108 does not assert partitioned duration. No execution claim.",
+      "mechanism": "A completed run ends at its last same-state sample, while the next run starts at the first changed-state sample. Every inter-run interval is omitted. The documented transition boundary is the newly observed sample timestamp, not the previous timestamp. KPI midpoint on-time still includes those intervals.",
+      "related": [
+        "web/src/features/charging/lib/chargingThermalTax.ts:158-159,167-181,223-241",
+        "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx:41-44,56-59"
+      ],
+      "severity": "P2",
+      "id": "CTT-S03"
+    },
+    {
+      "repro": "Source/native candidate recipe, NOT executed: browser America/Los_Angeles, configured UTC, sample/session at 2026-10-01T00:30:00Z. Selector derives Sep30 and chart/phase times browser-local rather than chosen UTC; changing only saved timezone supplies no dependency to chart rows.",
+      "rule": "date-preference-bypass",
+      "fix": "Use existing effective date-format hook/options at callers, preserve original instants and short axes, and include preference dependencies. Do not modify global formatter or invent a second timezone store.",
+      "owner": "thermal page and direct date presentation callers",
+      "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+      "line": 42,
+      "classification": "new-source-confirmed",
+      "dedup": "phase6-fix-relative-future-dates is unrelated relative-time root; phase6-fix-advanced-evidence-date-preferences owns different advanced domain callers. Keep one thermal caller cluster; audit-page-085 locale-only issue is resolved, not re-reported.",
+      "mechanism": "Locale fix is present, but selector/phase calls only pass i18n.language and chart rows use native toLocaleTimeString with no timezone. These paths do not consume effective user/vehicle/UTC timezone via useDateFormat; browser timezone wins and chart memo cannot react to timezone-only changes.",
+      "related": [
+        "web/src/features/charging/components/charging-thermal-tax-modernization/thermalPresentation.ts:31",
+        "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx:43-44",
+        "web/src/lib/dateFormat.ts:31-41,54-62,74-81",
+        "web/src/hooks/useDateFormat.ts:75-88"
+      ],
+      "severity": "P2",
+      "id": "CTT-S04"
+    },
+    {
+      "repro": "Source recipe, NOT executed: vehicle with more than1000 sessions; request includes limit1000 and selector contains only returned rows, with no window/truncation disclosure or earlier-history route.",
+      "rule": "bounded-source-disclosure",
+      "fix": "Add factual localized observed-window context without claiming server total/completeness or expanding the history query.",
+      "owner": "page caller",
+      "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+      "line": 27,
+      "classification": "historical-confirmed-still-present",
+      "dedup": "Carry forward audit-page-085 states issue at line27 and accepted Phase5 queue parent-owned disclosure debt; not a newly discovered root.",
+      "mechanism": "Session selector uses observed history limit1000 without pagination, date bounds, loaded-window or limit disclosure. Page no-sessions message is vehicle-specific, but the control does not explain the non-lifetime window.",
+      "related": [
+        "web/src/api/hooks/useCharging.ts:67-84",
+        "web/src/features/charging/pages/ChargingThermalTaxPage.tsx:67-94",
+        "internal/api/charging/handler.go:142-160"
+      ],
+      "severity": "P2",
+      "id": "CTT-H01"
+    },
+    {
+      "repro": "Source recipe, NOT executed: correctly-shaped samples at 12:00:05Z and12:00:55Z, or identical clock time on successive dates/DST. Distinct input instants become identical time labels in CSV and accessible table. Current wire mismatch is separate.",
+      "rule": "timestamp-identity-loss",
+      "fix": "Retain original exact timestamp/UTC identity as an additional row/export/accessibility field; keep short localized chart axis labels and raw W/nulls. Do not change the shared CSV engine.",
+      "owner": "thermal presentation export caller",
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/thermalPresentation.ts",
+      "line": 31,
+      "classification": "historical-confirmed-still-present",
+      "dedup": "Carry forward audit-page-085 architecture timestamp issue. Existing phase3-chart-container/export-menu roots provide caller objects as supplied; this is caller identity loss.",
+      "mechanism": "After sorting, rows discard tMs and retain only localized hour/minute time. Same objects feed exportData and accessible fallback table; original date, zone/offset and seconds cannot be recovered from those rows.",
+      "related": [
+        "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPowerChart.tsx:41-47,53",
+        "web/src/components/charts/ChartContainer.tsx:471-477,501-509"
+      ],
+      "severity": "P2",
+      "id": "CTT-H02"
+    },
+    {
+      "id": "CTT-H03",
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx",
+      "fix": "Caller-only import adoption; no new public adapter or shared export addition is needed.",
+      "dedup": "Carry forward audit-page-085 import issue. G068 former missing useCardPlacement capability and closed phase4-category-hook-public-contract/phase4-battery-category-hook-closure are not reopened: export exists now.",
+      "occurrences": [
+        {
+          "line": 3,
+          "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx"
+        },
+        {
+          "line": 6,
+          "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPowerChart.tsx"
+        },
+        {
+          "line": 5,
+          "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalTaxStats.tsx"
+        }
+      ],
+      "rule": "category-barrel-import",
+      "mechanism": "Three feature imports bypass existing layout/data-display public category barrels. Actual category now exports useCardPlacement as well as LayoutCard and StatMetric/StatPeriod.",
+      "severity": "P3",
+      "related": [
+        "web/src/components/layout/index.ts:11-12",
+        "web/src/components/data-display/index.ts:5-6"
+      ],
+      "line": 3,
+      "classification": "historical-confirmed-still-present",
+      "repro": "Exact Select-String results in log identify three internal-barrel import lines and matching public exports.",
+      "owner": "three direct thermal component import sites"
+    }
+  ],
+  "candidates": [
+    {
+      "file": "web/src/features/charging/lib/chargingThermalTax.ts",
+      "runtime": "NOTRUN",
+      "lines": "100-109,216-241,263-268",
+      "kind": "model/trust-review",
+      "detail": "Integration/on-time extrapolate through gaps beyond300s; Coverage badge separately reports them but does not restrict integrals. Existing zero-fill behavior is explicitly disclosed. Whether additional low-coverage uncertainty policy is required needs specialist review, not silent algorithm replacement.",
+      "id": "CTT-C01"
+    },
+    {
+      "file": "web/src/features/charging/lib/chargingThermalTax.ts",
+      "runtime": "NOTRUN",
+      "lines": "125-135,145-148,245-254",
+      "kind": "source-data semantics",
+      "detail": "Partial AC/DC fields are summed with missing channel0; monotonic sum can hide a single channel reset, and zero cumulative difference falls back to power. Need actual signal invariants before classifying as physical-domain errors. Negative heater clamp is explicit existing policy/test, not a sign regression.",
+      "id": "CTT-C02"
+    },
+    {
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx",
+      "runtime": "NOTRUN",
+      "lines": "101-121",
+      "kind": "native-a11y/mobile/visual",
+      "detail": "Verify Quick view exposes hidden start/end/algorithm state at all narrow allocated widths, keyboard focus and help/export/legend controls, forced colors, contrast and200% text. Authored mobile test is not mounted/native evidence.",
+      "id": "CTT-C03"
+    },
+    {
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalTaxStats.tsx",
+      "runtime": "NOTRUN",
+      "lines": "30-36,45-64",
+      "kind": "observed-versus-modeled physical meaning",
+      "detail": "Heater energy is a sampled numerical estimate, not a metered loss/pack-temperature rise or net battery-energy measurement. No temperature is used by ThermalTaxSample or analyzer. Page subtitle implies warming-vs-range but no range/temperature model proves that interpretation; review physical explanatory copy with source owner. Do not derive temperature or fabricate heater draw from backend booleans.",
+      "id": "CTT-C04"
+    }
+  ],
+  "dataSources": [
+    {
+      "scope": "Effective URL/store/first known vehicle; no second page vehicle picker.",
+      "hook": "useSelectedVehicle -> useVehicles",
+      "owner": "shared workspace",
+      "evidence": "web/src/hooks/useSelectedVehicle.ts:49-80"
+    },
+    {
+      "policy": "Vehicle+limit query key; bounded limit, AbortSignal, enabled with vehicle, safeArray, moderate stale time. No page date range.",
+      "hook": "useChargingHistory",
+      "endpoint": "GET /api/v1/charging?vehicle_id=<encoded id>&limit=1000",
+      "evidence": "web/src/api/hooks/useCharging.ts:72-84; internal/api/router.go:3545-3546; internal/api/charging/handler.go:123-161"
+    },
+    {
+      "policy": "Selected returned session must resolve before finite numeric ID; session-keyed query, AbortSignal, safeArray, disabled on null. Backend queries session vehicle and start through ended_at or currentUTC; response mismatch CTT-S01.",
+      "hook": "useChargeTelemetry",
+      "endpoint": "GET /api/v1/charging/<numeric session id>/telemetry",
+      "evidence": "web/src/api/hooks/useCharging.ts:109-115; internal/api/router.go:3550-3552; internal/api/charging/handler.go:354-389"
+    }
+  ],
+  "components": [
+    "PageLayout -> PageContainer",
+    "CardGrid/LayoutCard and optional useCardPlacement",
+    "ChargingSummaryBrief -> OperationalBrief/useOperationalMetrics",
+    "ChartContainer/ChartTooltip/ChartLegend via category barrel",
+    "Select/Button/Text/Badge/DataTable/HelpTooltip",
+    "EmptyState/QueryError/StaleRefreshWarning/Skeleton/FadeIn",
+    "NoVehicleSelected onboarding boundary"
+  ],
+  "coverage": {
+    "actions": [
+      "Select returned session",
+      "History and telemetry retries/refresh independent",
+      "Persistent legend via charging-thermal-tax-power",
+      "Default image/clipboard and caller CSV export",
+      "Phase table columns and mobile Quick view via shared DataTable",
+      "Help and operational metric evidence/details",
+      "No-vehicle onboarding recovery"
+    ],
+    "unitsAndSigns": "Expected analyzer operands W/Wh/s, positive consumed heater power; heater negative clamp existing policy. useUnits/useOperationalMetrics display-only conversion and preferences retained. Actual endpoint energy_added is kWh, not expected Wh; never substitute without explicit contract.",
+    "scope": "workspaceScope.ts range opt-in excludes /charging-thermal-tax and vehicle exclusions do not include it: vehicle=true, range=false by source. Independent session selector intentionally not duplicate workspace scope; do not add a range picker. History is observed1000 window, telemetry bounded by chosen session.",
+    "i18n": "71 unique literal/source-dynamic English keys reparsed; none missing. This is English presence only, not other locales/fallback-equivalence/runtime switching. Existing selector locale/memo fix is present, not re-reported.",
+    "unknownAndZero": "heaterEvidence requires at least two distinct finite heater timestamps for integral, one for peak. Null metrics remain unknown, finite recorded0 is a value when evidence exists. Missing readings labeled incomplete zero-fill estimates; phase unknown label preserved. Zero/unknown delivered energy produces unavailable share; nonzero fallback policy candidate separate.",
+    "a11y": "Translated visible Select label + stable id, chart ariaLabel plus raw-data fallback columns, phase table name/caption, decorative icons aria-hidden, CardGrid min-width/wrapping. Exact chart timestamp identity deficient CTT-H02. Native reachability, announcements, focus, colors and target sizes unverified.",
+    "trust": "Independent historical history/telemetry useDataState. Only fatalError replaces its source content; retained failures/offline keep data with warning/retry. Stats retain missing/loading slots, chart and phase shells independently handle loading/fatal/empty/paused. Summary model trust does not establish physical temperature measurements.",
+    "observedVersusModeled": "Heater Wh and on-time derived from power samples; cumulative denominator preferred, power-integral fallback labeled. No temperature/range prediction is implemented. Actual mounted endpoint supplies temperatures/boolean but no heater watts; cannot infer watts."
+  },
+  "preservation": {
+    "originalBeforeModernizationLines": null,
+    "historicalOriginalRatioClaim": "NOT VERIFIED; no Git/original source retrieval, queue baseline only",
+    "sectionCount": 4,
+    "composedPresentationLines": 498,
+    "composition": "117 page +4 barrel +122 stats +79 chart +123 phases +53 presentation",
+    "chartSeriesCount": 2,
+    "acceptedQueuePresentationBaseline": 498,
+    "sections": [
+      {
+        "line": 67,
+        "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+        "name": "Inspect session",
+        "behavior": "Persistent LayoutCard; explicit history loading/error/paused/empty and retry"
+      },
+      {
+        "line": 98,
+        "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+        "name": "Charging thermal tax metrics",
+        "behavior": "Four slots via shared brief remain with missing/loading/retained states"
+      },
+      {
+        "line": 107,
+        "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+        "name": "Heater vs. Charge Power",
+        "behavior": "Persistent ChartContainer shell; independent empty/error/loading, two series"
+      },
+      {
+        "line": 111,
+        "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+        "name": "Thermal Phases",
+        "behavior": "Persistent LayoutCard with independent error/loading/paused/empty, seven columns"
+      }
+    ],
+    "noVehicle": "Established NoVehicleSelected -> PageContainer onboarding prerequisite boundary, not hidden-data panel regression",
+    "composedRatioToQueueBaseline": 1.0,
+    "pageLines": 117,
+    "sourceAndTestsEdited": false,
+    "metricCount": 4,
+    "phaseColumns": 7
+  },
+  "sourceScans": {
+    "corrections": "Initial case-insensitive raw HTML scan found3 shared Button/Select false positives. Intermediate22-key enumeration missed components; definitive explicit8-file scan and71-key reparse supersede it. Both retained in log.",
+    "matches": {
+      "double-prefix": 0,
+      "fetch-useeffect": 0,
+      "hidden-section-candidates": 0,
+      "camelcase-param": 0,
+      "old-api-import": 0,
+      "hardcoded-string-candidates": 0,
+      "direct-library-import": 0,
+      "static-inline-style": 0,
+      "raw-html": 0
+    },
+    "method": "PowerShell Select-String -CaseSensitive explicit8 production files; full raw patterns/results in log",
+    "filesScanned": 8,
+    "exceptions": [
+      "Recharts tick/margin/stroke API object/variable props are not style-attribute violations.",
+      "SOURCE_DEFAULTS English strings are translated through dynamic source keys.",
+      "PageLayout and NoVehicleSelected both resolve to PageContainer.",
+      "Shared building blocks may use native HTML/direct library imports; no scope-wide component rule misapplication."
+    ]
+  },
+  "checks": [
+    {
+      "shellId": "6302",
+      "exitCode": 0,
+      "name": "scope/route/duplicate/ignore + initial source scans/pins"
+    },
+    {
+      "shellId": "6309",
+      "exitCode": 0,
+      "name": "first corrective grep/hook/catalog/mechanism"
+    },
+    {
+      "shellId": "6325",
+      "exitCode": 0,
+      "name": "definitive8-file grep/71-key English reparse/authored counts"
+    },
+    {
+      "exitCode": 0,
+      "shellIds": [
+        "6324",
+        "6327",
+        "6328"
+      ],
+      "name": "wire/source roots read"
+    },
+    {
+      "exitCode": 0,
+      "name": "final pins/source-wire grep/duplicate-root grep/owned JSON reparse",
+      "meaning": "source/report verification only, not tests"
+    }
+  ],
+  "tests": {
+    "failed": 0,
+    "sourceExpandedCases": 32,
+    "skipped": null,
+    "note": "Authored declarations and static expansion only, not test runner discovery. No fixtures executed and no historical3/3 borrowed as current proof.",
+    "status": "NOTRUN",
+    "nativePassClaim": false,
+    "discovered": null,
+    "passed": 0,
+    "authoredDeclarations": 28,
+    "parameterizedMobileValues": 5,
+    "sourceDeclarationBreakdown": {
+      "analyzer": 12,
+      "page": 3,
+      "runtime": 13
+    },
+    "executed": 0
+  },
+  "evidenceLimits": {
+    "backend": "Read-only router/handler response/source scope inspection, not DB/service/auth/native acceptance.",
+    "typescript": "NOTRUN: npx tsc --noEmit forbidden by source-only/fullTSC restriction; no compile claim.",
+    "sourceDrift": [],
+    "readFailure": "One view used absent useOperationalMetrics.ts; corrected to .tsx. Views do not expose numeric shell exits.",
+    "rootDedup": "audit-page-085/current queue targeted shared roots plus exact identifier grep across existing Phase6 JSON. Not a fresh global application audit.",
+    "visualKeyboardContrast": "UNVERIFIED",
+    "browserNativeScreenshots": "NOTRUN",
+    "testsBuildLintSuites": "NOTRUN",
+    "serverAPIPhysicalCharging": "NOTRUN",
+    "sourceRepros": "Arithmetic/expression-level specifications only; no executable repro/test was run.",
+    "readonlyGuarantee": "Only report/log written by this worker; initial20 source pins compared. No Git status or general working-tree cleanliness claim."
+  },
+  "pins": [
+    {
+      "initialSha256": "3b13b269e9187f76c445970ca70b1c55e147c6aede3136f0fe08cca5e458bedd",
+      "lines": 117,
+      "file": "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "3b13b269e9187f76c445970ca70b1c55e147c6aede3136f0fe08cca5e458bedd"
+    },
+    {
+      "initialSha256": "c4de4cb8353876700569c168e9ee6930e3b96867f2b7fa26c79479aa80be1a3d",
+      "lines": 4,
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/index.ts",
+      "unchangedDuringReview": true,
+      "sha256": "c4de4cb8353876700569c168e9ee6930e3b96867f2b7fa26c79479aa80be1a3d"
+    },
+    {
+      "initialSha256": "509c5d18378e1c2c69822da2325b158dda07257547636c8c7f1048e0294fcd79",
+      "lines": 122,
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalTaxStats.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "509c5d18378e1c2c69822da2325b158dda07257547636c8c7f1048e0294fcd79"
+    },
+    {
+      "initialSha256": "b016d39543f0b0101d4bc6f33b29e30c4d128a826f9988026cf32429fc94808c",
+      "lines": 79,
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPowerChart.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "b016d39543f0b0101d4bc6f33b29e30c4d128a826f9988026cf32429fc94808c"
+    },
+    {
+      "initialSha256": "9ac1e0f4fd3d11c60fac63b526b6abd8d1c881935550767e70e6395f99a9d3ed",
+      "lines": 123,
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "9ac1e0f4fd3d11c60fac63b526b6abd8d1c881935550767e70e6395f99a9d3ed"
+    },
+    {
+      "initialSha256": "3172566dfd3e14bae4481eecdd1b980ed07f2b58c024bcd24b65735be09a6a30",
+      "lines": 53,
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/thermalPresentation.ts",
+      "unchangedDuringReview": true,
+      "sha256": "3172566dfd3e14bae4481eecdd1b980ed07f2b58c024bcd24b65735be09a6a30"
+    },
+    {
+      "initialSha256": "59af0fc988c87247cc4fbca5b74d0be95966e72af047737a8e2d9309e582a02c",
+      "lines": 283,
+      "file": "web/src/features/charging/lib/chargingThermalTax.ts",
+      "unchangedDuringReview": true,
+      "sha256": "59af0fc988c87247cc4fbca5b74d0be95966e72af047737a8e2d9309e582a02c"
+    },
+    {
+      "initialSha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+      "lines": 73,
+      "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c"
+    },
+    {
+      "initialSha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+      "lines": 643,
+      "file": "web/src/api/hooks/useCharging.ts",
+      "unchangedDuringReview": true,
+      "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330"
+    },
+    {
+      "initialSha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+      "lines": 4194,
+      "file": "web/src/api/types.ts",
+      "unchangedDuringReview": true,
+      "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b"
+    },
+    {
+      "initialSha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "lines": 194,
+      "file": "web/src/hooks/useUnits.ts",
+      "unchangedDuringReview": true,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14"
+    },
+    {
+      "initialSha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "lines": 462,
+      "file": "web/src/lib/dateFormat.ts",
+      "unchangedDuringReview": true,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64"
+    },
+    {
+      "initialSha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "lines": 168,
+      "file": "web/src/lib/workspaceScope.ts",
+      "unchangedDuringReview": true,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7"
+    },
+    {
+      "initialSha256": "ba6d17d61b70b9f070506a6ede2d966252bd05688a323ff629074f503a4e2080",
+      "lines": 160,
+      "file": "web/src/features/charging/pages/ChargingThermalTaxPage.test.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "ba6d17d61b70b9f070506a6ede2d966252bd05688a323ff629074f503a4e2080"
+    },
+    {
+      "initialSha256": "875f43603f0b187bce4596f16364e56139e25887c4c9aad51a5462e43a69debf",
+      "lines": 357,
+      "file": "web/src/features/charging/components/charging-thermal-tax-modernization/ChargingThermalTaxPage.runtime.test.tsx",
+      "unchangedDuringReview": true,
+      "sha256": "875f43603f0b187bce4596f16364e56139e25887c4c9aad51a5462e43a69debf"
+    },
+    {
+      "initialSha256": "3de52c1d2eb0e335602db115cafb51b71d95b49d9dc27b8ffe2e3b1ecbeb2eee",
+      "lines": 149,
+      "file": "web/src/features/charging/lib/chargingThermalTax.test.ts",
+      "unchangedDuringReview": true,
+      "sha256": "3de52c1d2eb0e335602db115cafb51b71d95b49d9dc27b8ffe2e3b1ecbeb2eee"
+    },
+    {
+      "initialSha256": "ddc7b1e020421f6f914cf6e6b1bc9fe884aad42f005b7c601105082c34d58fdd",
+      "lines": 481,
+      "file": "internal/api/charging/handler.go",
+      "unchangedDuringReview": true,
+      "sha256": "ddc7b1e020421f6f914cf6e6b1bc9fe884aad42f005b7c601105082c34d58fdd"
+    },
+    {
+      "initialSha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "lines": 5363,
+      "file": "internal/api/router.go",
+      "unchangedDuringReview": true,
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c"
+    },
+    {
+      "initialSha256": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c",
+      "lines": 38986,
+      "file": "web/src/i18n/en.json",
+      "unchangedDuringReview": true,
+      "sha256": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c"
+    },
+    {
+      "initialSha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542",
+      "lines": 148,
+      "file": "web/src/hooks/useDateFormat.ts",
+      "unchangedDuringReview": true,
+      "sha256": "97b1b0ebd44436cd8274a4927d0df4381b112df1468a22ef6238029675d6a542"
+    },
+    {
+      "initialSha256": null,
+      "lines": 458,
+      "file": "web/src/api/client.ts",
+      "unchangedDuringReview": null,
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5"
+    },
+    {
+      "initialSha256": null,
+      "lines": 1008,
+      "file": "web/src/lib/resilience.ts",
+      "unchangedDuringReview": null,
+      "sha256": "e100c50c5ce8080aadde8badbf083254f1ed4730978e52fa4b690876cd2f0bca"
+    },
+    {
+      "initialSha256": null,
+      "lines": 28,
+      "file": "web/src/lib/safeArray.ts",
+      "unchangedDuringReview": null,
+      "sha256": "1fb7c265406af84b39935106b855c1d184143a52fbea4e13b044bba694e95e94"
+    },
+    {
+      "initialSha256": null,
+      "lines": 24,
+      "file": "web/src/hooks/useOperationalMetrics.tsx",
+      "unchangedDuringReview": null,
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554"
+    },
+    {
+      "initialSha256": null,
+      "lines": 174,
+      "file": "web/src/hooks/useSelectedVehicle.ts",
+      "unchangedDuringReview": null,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3"
+    },
+    {
+      "initialSha256": null,
+      "lines": 65,
+      "file": "web/src/hooks/useDataState.ts",
+      "unchangedDuringReview": null,
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b"
+    },
+    {
+      "initialSha256": null,
+      "lines": 434,
+      "file": "web/src/api/dataState.ts",
+      "unchangedDuringReview": null,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761"
+    },
+    {
+      "initialSha256": null,
+      "lines": 17,
+      "file": "web/src/components/layout/layout-reference/PageLayout.tsx",
+      "unchangedDuringReview": null,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b"
+    },
+    {
+      "initialSha256": null,
+      "lines": 27,
+      "file": "web/src/components/layout/index.ts",
+      "unchangedDuringReview": null,
+      "sha256": "16105443f3f6c85fc73ae940f65f8b61f751a1fb30e77369b229d24ec7dfc642"
+    },
+    {
+      "initialSha256": null,
+      "lines": 178,
+      "file": "web/src/components/data-display/index.ts",
+      "unchangedDuringReview": null,
+      "sha256": "f8495446c7eb521756f6071b4fb021fc71cec90218f2f204db7ad65d841158d9"
+    },
+    {
+      "initialSha256": null,
+      "lines": 1006,
+      "file": "web/src/components/charts/ChartContainer.tsx",
+      "unchangedDuringReview": null,
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694"
+    },
+    {
+      "initialSha256": null,
+      "lines": 77,
+      "file": "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+      "unchangedDuringReview": null,
+      "sha256": "d936024c8298d84b499f47c4beb7daa8f145feeb10a23d8fa97e95458737dc61"
+    }
+  ],
+  "filesRead": [
+    "web/src/features/charging/pages/ChargingThermalTaxPage.tsx",
+    "web/src/features/charging/components/charging-thermal-tax-modernization/index.ts",
+    "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalTaxStats.tsx",
+    "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPowerChart.tsx",
+    "web/src/features/charging/components/charging-thermal-tax-modernization/ThermalPhases.tsx",
+    "web/src/features/charging/components/charging-thermal-tax-modernization/thermalPresentation.ts",
+    "web/src/features/charging/lib/chargingThermalTax.ts",
+    "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+    "web/src/api/hooks/useCharging.ts",
+    "web/src/api/types.ts",
+    "web/src/hooks/useUnits.ts",
+    "web/src/lib/dateFormat.ts",
+    "web/src/lib/workspaceScope.ts",
+    "web/src/features/charging/pages/ChargingThermalTaxPage.test.tsx",
+    "web/src/features/charging/components/charging-thermal-tax-modernization/ChargingThermalTaxPage.runtime.test.tsx",
+    "web/src/features/charging/lib/chargingThermalTax.test.ts",
+    "internal/api/charging/handler.go",
+    "internal/api/router.go",
+    "web/src/i18n/en.json",
+    "web/src/hooks/useDateFormat.ts",
+    "web/src/api/client.ts",
+    "web/src/lib/resilience.ts",
+    "web/src/lib/safeArray.ts",
+    "web/src/hooks/useOperationalMetrics.tsx",
+    "web/src/hooks/useSelectedVehicle.ts",
+    "web/src/hooks/useDataState.ts",
+    "web/src/api/dataState.ts",
+    "web/src/components/layout/layout-reference/PageLayout.tsx",
+    "web/src/components/layout/index.ts",
+    "web/src/components/data-display/index.ts",
+    "web/src/components/charts/ChartContainer.tsx",
+    "web/src/features/onboarding/components/NoVehicleSelected.tsx",
+    "docs/frontend-audits/audit-page-085.json",
+    "docs/frontend-audits/phase6-qa-charging-charge-departure-alignment.json targeted grep",
+    "migration-queue.md",
+    "docs/orchestrator-loop.md",
+    "docs/frontend-design-contract.md",
+    "docs/frontend-mission.md",
+    "docs/frontend-worker-conventions.md",
+    "docs/session-handoff.md",
+    "docs/frontend-inventory.md",
+    ".github/copilot-instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md",
+    ".gitignore"
+  ],
+  "limits": {
+    "commandLimitSeconds": 180,
+    "targetMinutes": "5-10",
+    "returnBudgetMinutes": 20,
+    "note": "Completed report-only QA beyond requested20minute return budget, within25minute hard limit. Earlier terminal ELAPSED_SECONDS=26460.2 was an incorrect local-DateTime/UTC subtraction; corrected here with DateTimeOffset. No clock reset and no tests/native pass.",
+    "startedUTC": "2026-10-13T23:16:35.0258562Z",
+    "hardLimitMinutes": 25,
+    "actualElapsedSeconds": 1294.7,
+    "twentyMinuteReturnBudgetExceeded": true,
+    "twentyFiveMinuteHardLimitExceeded": false
+  },
+  "release": {
+    "releaseUTC": "2026-10-13T23:38:09.7309038+00:00",
+    "allClaimsReleased": true,
+    "postReturnWrites": false,
+    "commands": "No background commands started; all scoped commands bounded",
+    "reportLogClaims": "Released at final verification",
+    "sourceClaim": "Never held/written"
+  }
+}

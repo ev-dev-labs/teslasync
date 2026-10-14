@@ -1,8 +1,9 @@
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, ShieldCheck, Database, Columns3, KeyRound } from 'lucide-react';
-import { OperationalBrief, SeverityBadge } from '@/components/data-display';
+import { OperationalBrief, SeverityBadge, type OperationalAttention } from '@/components/data-display';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import type { StatMetric } from '@/components/data-display/stat-reference';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { QueryError } from '@/components/feedback';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { formatSchemaDelta, schemaDeltaTone, type SchemaSectionState } from './schemaPresentation';
@@ -58,6 +59,42 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
     })),
   ];
   const briefMetrics = useOperationalMetrics(metrics);
+  const periodUnknown = t('admin.operationalBrief.periodUnknown', 'Observation time and complete analysis bounds are not supplied by this source.');
+  const missingEvidence = t('admin.schemaDrift.guidanceEmpty', 'Restart the API to capture a seed fingerprint, then drift interpretation appears here.');
+  const changes = deltas.filter(({ delta }) => delta != null && Number.isFinite(delta) && delta !== 0)
+    .map(({ key, delta }) => t(`admin.schemaDrift.change${key[0].toUpperCase()}${key.slice(1)}`,
+      key === 'tables' ? 'Tables {{delta}}' : key === 'columns' ? 'Columns {{delta}}' : 'Indexes {{delta}}',
+      { delta: formatSchemaDelta(delta) }));
+  const countsKnown = deltas.every(({ delta }) => delta != null && Number.isFinite(delta));
+  const interpretation = !drift ? missingEvidence : !isDrifted
+    ? t('admin.schemaDrift.statusClean', 'No drift')
+    : changes.length > 0
+      ? t('admin.schemaDrift.driftedBodyCounts', 'The live schema differs from the seed: {{changes}}.', { changes: changes.join(' · ') })
+      : countsKnown
+        ? t('admin.schemaDrift.driftedBodyHash', 'The live schema fingerprint differs from the seed even though object counts match — inspect column definitions or index expressions.')
+        : t('admin.schemaDrift.driftedBodyUnknownCounts', 'The live schema fingerprint differs from the seed. Object-count comparisons are unavailable; inspect the available fingerprints and confirm migrations before making changes.');
+  const attention: OperationalAttention[] = !drift || isDrifted ? [{
+    key: 'schema-comparison',
+    title: drift ? t('admin.schemaDrift.statusDrifted', 'Drift detected')
+      : t('admin.operationalBrief.unmeasured', 'Not measured'),
+    description: interpretation,
+    tone: drift ? 'warning' : 'neutral',
+  }] : [];
+  const narrative: OperationalNarrative = {
+    whatChanged: interpretation,
+    whyItMatters: null,
+    confidence: { label: 'not_scored', score: null, basis: [] },
+    likelyCause: null,
+    recommendedResponse: !drift ? missingEvidence : isDrifted
+      ? [
+        t('admin.schemaDrift.remediateSeed', 'Confirm migrations are applied, then restart the API to regenerate the seed fingerprint.'),
+        t('admin.schemaDrift.remediateDdl', 'If migrations are already current, investigate raw DDL that bypassed the migration system.'),
+      ].join(' ') : null,
+    limitations: [periodUnknown, ...(retained ? [t('admin.operationalBrief.retained', 'Retained evidence')] : [])],
+    evidence: drift ? [{ id: 'schema-comparison', summary: interpretation, observedAt: null,
+      provenance: { source: hint } }] : [],
+    provenance: [{ source: hint }],
+  };
   return (
     <section className="min-w-0" data-retained={retained}>
       <OperationalBrief compact testId="schema-drift-summary" metrics={briefMetrics}
@@ -67,9 +104,9 @@ export function SchemaKpis({ state, isDrifted, retained = false }: {
           : drift ? t('admin.operationalBrief.snapshot', 'Source snapshot')
           : t('admin.operationalBrief.unmeasured', 'Not measured')}
         statusTone={state.error || retained ? 'warning' : 'neutral'}
-        scope={<span>{hint} · {t('admin.operationalBrief.periodUnknown', 'Observation time and complete analysis bounds are not supplied by this source.')}</span>} loading={isLoading && !retained}
+        scope={<span>{hint} · {periodUnknown}</span>} loading={isLoading && !retained}
         freshness={retained ? t('admin.operationalBrief.retained', 'Retained evidence') : undefined}
-        provenance={hint} />
+        provenance={hint} attention={attention} narrative={narrative} />
       {Boolean(state.error) && <QueryError error={state.error} onRetry={state.onRetry}
         resourceName={t('admin.schemaDrift.pageTitle', 'Schema drift')} />}
     </section>

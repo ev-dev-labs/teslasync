@@ -1,0 +1,403 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-analytics-timeline",
+  "status": "DONE_SOURCE_ONLY_QA_WITH_FINDINGS",
+  "assessment": "The bounded report is complete. This is not finished-page, visual, runtime, native, typecheck or full-suite acceptance.",
+  "started_at_utc": "2026-10-13T19:57:16.581Z",
+  "return_deadline_utc": "2026-10-13T20:17:00Z",
+  "hard_deadline_utc": "2026-10-13T20:22:00Z",
+  "authority": {
+    "queue": "migration-queue.md:279",
+    "row_observed_at_utc": "2026-10-13T19:57:49.8241872Z",
+    "row_status_at_intake": "[ ]",
+    "dependency": "phase5-page-analytics-timeline",
+    "accepted_dependency": "migration-queue.md:1666 is [x]; retained Phase5 receipt reports 15 discovered/executed/passed, 0 failed/skipped. That is historical evidence, not a test execution in this QA.",
+    "duplicate_check": "Exact Phase6 report was absent and its exact queue row was pending. No accepted Phase5 source work was redone.",
+    "read": [
+      "docs\\orchestrator-loop.md, entire file",
+      "docs\\frontend-mission.md:1416-1486, sections 43-44",
+      "docs\\frontend-design-contract.md:1-654, foundational decisions and source/acceptance contracts",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md"
+    ],
+    "precedence": "Current SI cutover/design contracts take precedence over legacy source-unit/neon examples in older instructions. No legacy converter was introduced.",
+    "skills": "audit-violations and verify-api-hooks guidance loaded. Their wrappers were NOTRUN because they invoke prohibited helper/global validation work. Direct scoped source scans and method/path comparison were used instead.",
+    "write_scope": [
+      "docs\\frontend-audits\\phase6-qa-analytics-timeline.json",
+      "logs\\phase6-qa-analytics-timeline.log (user-designated ignored log)"
+    ],
+    "parent_only": "Queue orchestration, commits, new fix claims and acceptance decisions remain with the parent."
+  },
+  "page": {
+    "file": "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+    "routes": ["/timeline"],
+    "mount_evidence": [
+      "web\\src\\App.tsx:162 lazy(routeLoaders.Timeline)",
+      "web\\src\\App.tsx:664 Route path=\"timeline\" with SafeRoute",
+      "web\\src\\lib\\routeLoaders.ts:57 imports the actual TimelinePage"
+    ],
+    "purpose": "Inspect selected-vehicle historical FSM transitions, requested-window dwell summaries, state composition and daily transition counts, then inspect an individual transition and navigate to related evidence.",
+    "direct_used_feature_support": [
+      "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSource.tsx",
+      "web\\src\\api\\hooks\\useTimelinePage.ts"
+    ],
+    "nonconsumer": "TimelineSummary.tsx is barrel-exported but not rendered by the current page. It was inspected only to distinguish historical support from the actual OperationalBrief path; its behavior is not counted as page coverage.",
+    "bounded_shared_trace": [
+      "useSelectedVehicle, useRangeState, workspaceScope, useTimezone",
+      "useDataState and deriveDataState",
+      "useNumberFormatting, dateFormat, useOperationalMetrics, operationalMetrics, formatMetric",
+      "DataFreshnessAuto/DataFreshness",
+      "CompositionRail, MetricBar, EntityPreviewDrawer",
+      "ChartCard -> EmbeddedChart -> ChartContainer; relevant DataTable contracts",
+      "contextNavigation.buildContextHref and drivesAggregation.localDayKey",
+      "Relevant vehicle-state router registrations, handler and states_repo source"
+    ]
+  },
+  "data_sources": [
+    {
+      "name": "FSM transition timeline",
+      "consumer": "TimelinePage.tsx:140-141",
+      "hook": "web\\src\\api\\hooks\\useTimelinePage.ts:38-53",
+      "method": "GET",
+      "path": "/vehicle-states/timeline",
+      "query": ["vehicle_id", "start", "end"],
+      "query_key": ["vehicle-timeline", "activeId", "startInstant", "endInstantExclusive"],
+      "enablement": "Nonempty string selected-vehicle ID",
+      "cancellation": "queryFn receives signal and forwards it to request",
+      "router": "internal\\api\\router.go:3210,4272-4275",
+      "handler": "internal\\api\\vehiclestates\\handler.go:83-117,164-204",
+      "shape": "Object envelope with transitions; ts, from_state, to_state, trigger_field, trigger_value match repository JSON tags at states_repo.go:41-47. Additional vehicle/window metadata exists on the server but is not consumed by the narrow timeline DTO.",
+      "source_agreement": "Method, path, vehicle parameter and both bound operands agree; exclusive-upper-bound semantics do not, see TL-01.",
+      "source_ownership": "Historical fsm_transitions rows restricted to fsm_name='vehicle'; not a live-state or current-location feed.",
+      "policies": "No hook-local retry, staleTime or polling override; global defaults were not audited."
+    },
+    {
+      "name": "FSM state summary",
+      "consumer": "TimelinePage.tsx:143-146",
+      "hook": "web\\src\\api\\hooks\\useTimelinePage.ts:57-72",
+      "method": "GET",
+      "path": "/vehicle-states/summary",
+      "query": ["vehicle_id", "start", "end"],
+      "query_key": ["vehicle-summary", "activeId", "startInstant", "endInstantExclusive"],
+      "enablement": "Nonempty string selected-vehicle ID",
+      "cancellation": "queryFn receives signal and forwards it to request",
+      "router": "internal\\api\\router.go:3210,4272-4276",
+      "handler": "internal\\api\\vehiclestates\\handler.go:147-156,212-251",
+      "shape": "total_seconds and by_state/state/total_seconds/percentage/transition_count source-match consumed fields. Handler also returns start/end metadata.",
+      "source_agreement": "Method/path and both bound parameters agree. Summary reuses the inclusive timeline SQL and a bounded dwell algorithm; see TL-01 and TL-03.",
+      "limits": "No max-days cap in the inspected handler. No LIMIT/offset truncation in the inspected timeline SQL. Summary is derived from the requested query rows, not browser pagination."
+    },
+    {
+      "name": "Vehicle collection / selection",
+      "consumer": "TimelinePage.tsx:122,136; selection/timezone hooks also observe it",
+      "hook": "web\\src\\api\\hooks\\useVehicles.ts:73-79",
+      "method": "GET",
+      "path": "/vehicles",
+      "router": "internal\\api\\router.go:3362-3363",
+      "source_agreement": "GET collection route agrees; signal forwarded, FAST staleTime and safeArray select retained.",
+      "limits": "Only the consumed collection observer was inspected; unrelated vehicle endpoints were not audited."
+    }
+  ],
+  "scope": {
+    "workspace_registration": "workspaceScope.ts:72 registers /timeline; getWorkspaceRouteScope returns range=true, vehicle=true because no vehicle-disabled route/prefix matches it.",
+    "vehicle_precedence": "useSelectedVehicle.ts:59-80 resolves valid path/query vehicle_id, persisted selection, then first collection vehicle. Timeline supplies that ID to both historical queries.",
+    "range_owner": "Header View settings and mobile shell own the range. No local range or vehicle picker is rendered.",
+    "page_consumption": "TimelinePage.tsx:126-132 passes vehicle timezone to useRangeState and both startInstant/endInstantExclusive to each historical hook.",
+    "page_default": "Despite legacy page arguments timeline.range/7d, useRangeState.ts:299-319 ignores page persistKey/default on header-owned canonical-key routes and inherits the shared/product default.",
+    "bounds": "useRangeState.ts:656-675 supplies precise rolling Live/24h instants or calendarRangeToInstants for local-calendar windows. Server receives both bounds, but SQL includes the intended exclusive end.",
+    "timezone": "timezone.ts:29-38,47-50 uses selected vehicle zone; absent/UTC vehicle zone falls back to configured user/browser zone. Table, preview timestamps and summary period receive zone and number locale.",
+    "daily_grouping": "TimelinePage.tsx:228 intentionally uses UTC YYYY-MM-DD, and :527 explicitly discloses UTC grouping. This differs from local-calendar table/drillthrough grouping but is not reported as an undisclosed timezone defect.",
+    "completeness": "Summary period explicitly marks completeness unknown at :192-195. Requested bounds are not proof of continuous observation.",
+    "unverified": "Actual URL/persistence updates, DST boundaries, fallback timezone meaning and rolling-window clock behavior were not executed."
+  },
+  "states": {
+    "initial_loading": "TimelineSource.tsx:40-44 supplies named skeleton status. OperationalBrief and daily chart suppress loading replacement when their source arrays are retained.",
+    "no_vehicle": "TimelineSource.tsx:25-27 selects workspace recovery copy; historical queries disabled; six region shells remain declared.",
+    "initial_failure": "TimelineSource.tsx:29-37 supplies source-local ErrorDisplay, optionally paused information. Daily chart receives error only without available transition array. Vehicle collection errors have a separate banner.",
+    "retained_failure": "TimelineSource.tsx:52-56 keeps children and warns. Page summary and timeline use independent useDataState historical states; failed refresh does not erase the other source.",
+    "paused": "isRefreshBlocked is carried into each source; source-specific paused/retained copy remains. Manual refreshability is disabled while blocked.",
+    "freshness_and_retry": "Header metadata plus refresh icon target timelineQuery; :441-445 separately exposes source-labeled summaryQuery DataFreshnessAuto. DataFreshness.tsx:325-347 maps last successful update and manual query.refetch. The older audit's missing-summary-freshness/retry finding is not reissued.",
+    "empty_timeline": "Successful transitions=[] yields chart/table empty copy, not a failed query.",
+    "empty_summary": "Successful by_state=[] is array-available; composition/dwell show empty copy, but dwell KPIs manufacture numeric zero. See TL-03.",
+    "unknown_shape": "Absent/non-array transitions/by_state produce unavailable source copy. Distribution also requires finite total_seconds. Individual row fields are not equivalently validated before page arithmetic.",
+    "measured_zero": "Explicit numeric zero is distinct from unavailable envelopes, but absent state rows are collapsed to zero and zero/negative dwell rows disappear from the positive-only time list.",
+    "success": "Available source is labeled returned/historical, not live or continuously observed.",
+    "announcement_limits": "Named loading status and shared freshness polite live regions are source-present. Mounted screen-reader announcements, focus and announcement frequency are NOTRUN."
+  },
+  "si_display_and_preferences": {
+    "raw_units": "Dwell is SI seconds in hooks/repository; transition duration converts timestamp differences from milliseconds to seconds at display. Counts and returned percentages are dimensionless.",
+    "render_boundary": "OperationalBrief receives numeric duration/count rawValue through useOperationalMetrics -> formatMetric. No source-unit conversion, deprecated converter or unit-suffixed field rewrite was made.",
+    "rounding": "Page deliberately rounds whole minutes once then splits h/m; subminute display switches to seconds. The accepted 3599/7199-second rounding mechanism is retained.",
+    "locale": "Percentages use subscribed useNumberFormatting; dates use explicit locale/timezone. Specialist duration interpolation bypasses locale, see TL-06.",
+    "sign_and_invalid": "Raw finite negatives reach the custom duration formatter unless separately guarded; the custom formatter turns nonpositive duration into zero, see TL-07. This is conditional source-hardening evidence, not an observed bad server payload.",
+    "saved_ids": [
+      "analytics:timeline-transitions",
+      "timeline-daily-breakdown",
+      "timeline-summary",
+      "timeline-total-transitions",
+      "timeline-driving-time",
+      "timeline-charging-time",
+      "timeline-idle-sleep-time"
+    ],
+    "chart": "Series use restrained chartTokens/semantic state identity, integer count axis and hidden-series stable keys. Fixed STATE_COLORS and theme light-dark colors are source-visible; saved palette choice effects require separate evidence.",
+    "not_applicable": "Page has no distance/speed/energy/temperature/pressure/currency measurement to convert. Vehicle GUI units must not be used to reinterpret SI seconds.",
+    "preference_limits": "Effective chart palette, density/font scaling, 12/24h settings, theme contrast and persistence were not exercised."
+  },
+  "sections": [
+    {"id": "summary", "lines": [419,451], "source": "summaryQuery", "coverage": "Permanent compact OperationalBrief with four metrics, period/provenance, independent freshness and source recovery."},
+    {"id": "state-distribution", "lines": [455,520], "source": "summaryQuery", "coverage": "Permanent full-width LayoutCard, composition track, readable per-state evidence, fixed state key and invalid-composition fallback."},
+    {"id": "daily-breakdown", "lines": [524,576], "source": "timelineQuery", "coverage": "Permanent ChartCard, four stacked count series, UTC disclosure, integer axis, tooltip/legend/hidden series and canonical accessible data columns."},
+    {"id": "time-by-state", "lines": [580,611], "source": "summaryQuery", "coverage": "Permanent full-width LayoutCard and positive dwell MetricBars with source-local recovery."},
+    {"id": "state-transitions", "lines": [615,657], "source": "timelineQuery", "coverage": "Permanent full-width LayoutCard and embedded DataTable with six columns, filters, sorting, local pagination, mobile quick view and inspection."},
+    {"id": "transition-preview", "lines": [659,787], "source": "selected transition row", "coverage": "Always-declared controlled drawer, five evidence fields, recorded timestamp/status, close and seven related-context actions; source-scope coupling needs TL-04."}
+  ],
+  "actions": [
+    {"name": "Timeline refresh icon", "evidence": "TimelinePage.tsx:398-407", "mechanism": "refetch timeline only; disabled without selection, when paused or refreshing; localized accessible name and 44px minimum."},
+    {"name": "Timeline metadata refresh", "evidence": "TimelinePage.tsx:415; DataFreshness.tsx:325-347", "mechanism": "Independent timeline query.refetch through shared freshness component."},
+    {"name": "Summary metadata refresh", "evidence": "TimelinePage.tsx:441-445", "mechanism": "Independent summary query.refetch and source-labeled age; not a global refresh of all panels."},
+    {"name": "Summary metric details", "evidence": "TimelinePage.tsx:421-438", "mechanism": "Existing OperationalBrief owns metric inspection; no new local drawer engine. Its mounted behavior was not tested."},
+    {"name": "Chart legend and hidden series", "evidence": "TimelinePage.tsx:560-569", "mechanism": "Stable chartKey and driving/charging/idle/sleeping hidden-state keys retained."},
+    {"name": "Chart export/fullscreen", "evidence": "ChartCard.tsx:13-55; EmbeddedChart.tsx:19-44", "mechanism": "Neither capability is requested by this page; EmbeddedChart defaults both false. No fabricated chart-export action or preservation loss is claimed."},
+    {"name": "Transition filters/sort/pagination/column preferences", "evidence": "TimelinePage.tsx:307-391,619-648", "mechanism": "DataTable consumes all scoped rows; time/from/to/trigger sortable, duration/actions not sortable; persistent tableId and value filters retained."},
+    {"name": "Transition table search/export/density", "evidence": "DataTable.tsx:289-307,362-380", "mechanism": "Shared local-table controls/default contracts apply; page does not request server pagination. Export scopes or file contents were not executed or asserted."},
+    {"name": "Desktop inspect", "evidence": "TimelinePage.tsx:375-387", "mechanism": "Localized state-specific name and minimum-height shared Button sets preview row."},
+    {"name": "Mobile row open / inspect / all details", "evidence": "TimelinePage.tsx:630-651", "mechanism": "Roles preserve time/states/duration/trigger; explicit inspect and trigger_value detail supplement shared quick view."},
+    {"name": "Preview close", "evidence": "TimelinePage.tsx:661; EntityPreviewDrawer.tsx:88-101,155-159", "mechanism": "Clears row; related navigation also closes. Escape/focus belongs to shared Drawer and was not executed."},
+    {"name": "Related Vehicle", "evidence": "TimelinePage.tsx:725-730", "mechanism": "Navigates /vehicles/{current selected vehicleId}; susceptible to preview scope mismatch TL-04."},
+    {"name": "Related Drives / Charging / Locations / Alerts", "evidence": "TimelinePage.tsx:731-765", "mechanism": "Links /drives, /charging, /locations, /notifications/inbox with event-local from=to day; selected vehicle is not serialized, see TL-08."},
+    {"name": "Related Service", "evidence": "TimelinePage.tsx:766-771", "mechanism": "Plain /maintenance destination retains historical action; range/date support at target was not audited."},
+    {"name": "Related Telemetry", "evidence": "TimelinePage.tsx:772-782", "mechanism": "Links /signals with event-local day and optional raw trigger_field as signals; backend-to-signal-name compatibility remains a runtime/integration candidate."},
+    {"name": "Unknown-response recovery", "evidence": "TimelineSource.tsx:46-49", "mechanism": "Existing /state-debugger action; source unavailable/paused/no-vehicle states intentionally avoid duplicate workspace controls."}
+  ],
+  "confirmed_findings": [
+    {
+      "id": "TL-01",
+      "severity": "high",
+      "title": "Exclusive end is applied inclusively by the vehicle-state repository",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:126-145,183-195",
+        "web\\src\\api\\hooks\\useTimelinePage.ts:43,62",
+        "internal\\database\\vehicle\\states_repo.go:95-99,120-123,147-153"
+      ],
+      "mechanism": "Both hooks serialize endInstantExclusive as end, but timelineSelectSQL uses ts <= $3. Summary calls that same Timeline query. A transition exactly at the intended exclusive boundary is included in timeline/daily counts and can add a zero-dwell summary transition entry; adjacent windows can count the same boundary event.",
+      "owner": "Narrow backend vehicle-state window-contract owner: internal\\database\\vehicle\\states_repo.go plus directly covering repository/handler tests. Hook/handler contract review by API owner; no backend edits authorized here.",
+      "proposed_scope": "Align this endpoint's upper-bound semantics with the existing workspace [start,endExclusive) contract; cover exact boundary and adjacent windows without changing unrelated APIs.",
+      "runtime_status": "NOTRUN; source predicate and caller contract establish the mismatch."
+    },
+    {
+      "id": "TL-02",
+      "severity": "high",
+      "title": "Final transition dwell extends historical windows to wall-clock now",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:108-113,203-215,352-365,706",
+        "internal\\database\\vehicle\\states_repo.go:210-212"
+      ],
+      "mechanism": "The final in-window row always has next_ts=null, and transitionDuration uses Date.now rather than the requested exclusive end or an evidence-backed successor. For a past window the table/mobile/preview duration keeps extending after that window and can disagree with bounded summary suffix dwell. Absence of a successor inside a bounded query does not establish current state.",
+      "owner": "Narrow TimelinePage duration owner, with directly covering TimelinePage tests.",
+      "proposed_scope": "Make row-duration semantics explicitly requested-window/evidence bounded; preserve minute-rounding and all table/mobile/preview uses. Do not claim current-state duration from a bounded historical list.",
+      "runtime_status": "NOTRUN; Date.now and missing successor construction are directly observed source."
+    },
+    {
+      "id": "TL-03",
+      "severity": "high",
+      "title": "Unavailable dwell evidence becomes zero-valued summary duration",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:157-176,270-298,460-465,586-591",
+        "internal\\database\\vehicle\\states_repo.go:160-179,185-188"
+      ],
+      "mechanism": "Array.isArray(by_state) alone makes summarySource available. Missing driving/charging/grouped state rows become 0 via ?? 0, and an empty by_state makes all dwell metrics show 0m. The repository returns []/0 when there are no in-window transitions, not a continuous zero-dwell observation; a null first from_state also leaves prefix coverage unknown. The page already labels observation completeness unknown, so array availability is insufficient evidence for per-state measured-zero dwell.",
+      "owner": "Narrow TimelinePage summary-evidence adapter owner. An API owner may separately specify coverage/absence metadata; do not invent it in this page.",
+      "proposed_scope": "Keep zero transition count for an authoritative empty transition list, but distinguish missing per-state dwell from explicit returned numeric zero. Preserve all four metrics and independent empty composition/list states.",
+      "runtime_status": "NOTRUN; sparse-row/empty-array coercion is source-confirmed."
+    },
+    {
+      "id": "TL-04",
+      "severity": "high",
+      "title": "Open transition preview is not bound to its originating vehicle/window",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:122-134,385,642-646,659-730"
+      ],
+      "mechanism": "previewTransition stores only a TransitionRow, not the originating vehicle/range/timezone. It is cleared only on close or replaced on inspect; no scope-change reset is present. A mounted workspace selection/range change therefore leaves old event fields visible while previewDay/recorded time use the new timezone and the Vehicle action uses the new vehicleId.",
+      "owner": "Narrow TimelinePage preview-scope owner with directly covering page tests.",
+      "proposed_scope": "Reset or explicitly bind retained preview evidence/actions to the originating scope on vehicle/window changes, using existing drawer and workspace ownership.",
+      "runtime_status": "Interaction reproduction NOTRUN; incompatible state/prop dependencies are source-confirmed."
+    },
+    {
+      "id": "TL-05",
+      "severity": "medium",
+      "title": "Daily transition classifications omit unknown states and under-disclose grouped states",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:216-244,527,550-569"
+      ],
+      "mechanism": "Only eight fixed destination strings increment the four daily buckets. Every other to_state leaves a day row with no increment, so returned unknown/new states remain in the transition table but are silently absent from daily counts. The displayed Sleeping series also includes offline, and Idle includes online/parked, without visible classification disclosure; the UTC subtitle describes time grouping only.",
+      "owner": "Narrow TimelinePage daily-classification/disclosure owner; product/FSM owner decides authoritative group meaning.",
+      "proposed_scope": "Retain raw transitions and existing series identities; make unclassified evidence visible and explain existing grouping instead of reclassifying offline as measured sleep. Do not silently change domain semantics.",
+      "runtime_status": "Observed production state vocabulary NOTRUN; the fixed mapping and omission mechanism are confirmed source facts."
+    },
+    {
+      "id": "TL-06",
+      "severity": "medium",
+      "title": "Specialist duration display bypasses effective numeric locale",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:86-105,117-118,287-298,478-479,502,601",
+        "web\\src\\hooks\\useOperationalMetrics.tsx:11-23",
+        "web\\src\\lib\\metric-reference\\formatMetric.ts:38-42,57-62"
+      ],
+      "mechanism": "Duration formatters interpolate JS integers directly into h/m/s strings. Operational duration callbacks ignore the effective formatter preferences argument. Thus duration digits remain ordinary JS decimal text even when the number locale changes, while dates and percentages honor the subscribed locale.",
+      "owner": "Narrow TimelinePage display adapter owner, reusing existing formatting/i18n owners rather than creating another formatter engine.",
+      "proposed_scope": "Preserve once-only minute rounding and seconds thresholds while applying effective locale and agreed compact duration-unit labels at the display boundary.",
+      "runtime_status": "Locale matrix NOTRUN; preference argument is demonstrably unused."
+    },
+    {
+      "id": "TL-07",
+      "severity": "medium",
+      "category": "conditional malformed-source hardening, not observed production corruption",
+      "title": "Finite negative dwell can be represented as a valid zero duration",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:86-87,261-267,271-298",
+        "web\\src\\lib\\metric-reference\\formatMetric.ts:37-38,52-62",
+        "web\\src\\lib\\operationalMetrics.tsx:16,35-38"
+      ],
+      "mechanism": "The page's custom duration formatter maps seconds <= 0 to 0m. Its display options use formatter but do not set durationStyle=roundedMinutes. The shared formatter rejects finite negative duration only for that named style before invoking a custom formatter, so a negative finite raw dwell can yield valueState=value with 0m; the time-by-state positive filter simultaneously drops the row. Healthy repository output clamps negatives, so this finding concerns the page's malformed-source handling rather than claiming bad persisted values exist.",
+      "owner": "Narrow TimelinePage numeric-evidence validation owner; shared formatter contract owner only if a separately authorized cross-consumer change is needed.",
+      "proposed_scope": "Keep explicit zero valid, preserve raw evidence and distinguish invalid negative dwell without hiding sections or weakening specialist rounding.",
+      "runtime_status": "Malformed payload injection NOTRUN; conditional control-flow mechanism is source-confirmed."
+    },
+    {
+      "id": "TL-08",
+      "severity": "medium",
+      "title": "Related evidence URLs are not self-contained selected-vehicle drillthroughs",
+      "evidence": [
+        "web\\src\\features\\analytics\\pages\\TimelinePage.tsx:731-765,772-782",
+        "web\\src\\lib\\contextNavigation.ts:13-25",
+        "web\\src\\components\\data-display\\EntityPreviewDrawer.tsx:146-160"
+      ],
+      "mechanism": "The five day-scoped related URLs serialize from/to and optional signals, but not vehicle_id. buildContextHref only serializes explicitly supplied keys, and EntityPreviewDrawer renders a plain router Link rather than preserveWorkspaceScope. The persisted selection may preserve same-session scope, but these URLs alone do not retain the originating selected vehicle when opened/bookmarked in another scope/session.",
+      "owner": "Narrow TimelinePage related-link owner; destination-specific scope owners decide supported vehicle filters, particularly fleet-owned notification inbox.",
+      "proposed_scope": "Serialize originating vehicle only where the existing destination contract supports it, preserve local-day drillthrough, and explicitly disclose fleet-wide destinations. Do not add duplicate selectors.",
+      "runtime_status": "Bookmark/new-tab behavior NOTRUN; absent query context is source-confirmed, not a claim that every same-session click loses selection."
+    }
+  ],
+  "runtime_or_integration_candidates": [
+    {
+      "id": "C-01",
+      "topic": "Responsive, visual and accessibility acceptance",
+      "evidence": "Page full-width CardGrid bands, min-w-0/wrapping legends, mobile roles/details, localized 44px inspect/refresh actions, canonical chart data table and existing Drawer are present in source.",
+      "required": "Synthetic/privacy-safe mounted checks at 320/375/390/430/768/1024/1280/1440/1920/2560px, allocated narrow containers, dark/light/custom themes, forced colors, reduced motion/low bandwidth, 200% text, RTL/long labels, keyboard/focus/escape/screen reader and actual composed contrast.",
+      "owner": "Parent-authorized bounded runtime QA owner using existing resources/locks, never this source-only report worker.",
+      "status": "NOTRUN; source presence is not a pass."
+    },
+    {
+      "id": "C-02",
+      "topic": "Saved palette, font, density and clock preferences",
+      "evidence": "STATE_COLORS uses fixed chartTokens.series; chart typography helpers and stable persistence keys are present. Numeric/datetime and duration paths differ.",
+      "required": "Verify actual saved palette/theme/font scaling/density, 12/24h behavior, chart hidden-series and table persistence without resetting saved identities.",
+      "owner": "Existing chart/preference/shared primitive owners plus bounded runtime QA.",
+      "status": "NOTRUN; fixed source colors alone do not certify effective preference behavior."
+    },
+    {
+      "id": "C-03",
+      "topic": "Trigger-field to signal drillthrough compatibility",
+      "evidence": "states_repo.go:93 derives trigger_field from FSM trigger; TimelinePage.tsx:775-780 forwards it unchanged as signals.",
+      "required": "Establish that FSM trigger identifiers are selectable signal identities at the existing /signals destination, or disclose unmapped evidence without inventing a mapping.",
+      "owner": "Signals integration/FSM contract owner, narrowly scoped to this drillthrough.",
+      "status": "NOTRUN; no API/provider/real signal lookup performed."
+    },
+    {
+      "id": "C-04",
+      "topic": "Actual async source and server behavior",
+      "evidence": "Source branches cover initial/retained/error/paused/empty/unknown independently; handler checks vehicle existence and normalizes nil slices.",
+      "required": "Privacy-safe mounted responses for each independent state, cancellation/race recovery, successful-fetch age, both-bound server results, boundary/adjacent windows, carry-in coverage and very large timelines.",
+      "owner": "Scoped hook/page/API verification owners after source fixes are separately claimed.",
+      "status": "NOTRUN; no live response, database or auth behavior asserted."
+    },
+    {
+      "id": "C-05",
+      "topic": "Localization and raw source identifiers",
+      "evidence": "Page-owned headings/actions/error recovery use t calls. Known raw state strings appear in badges/key/dwell labels, and time-by-state recases the first character at TimelinePage.tsx:596.",
+      "required": "Review whether raw FSM states should remain explicit identifiers or have localized presentation labels while preserving raw values; validate canonical keys/fallbacks, long translations and RTL at actual UI surfaces.",
+      "owner": "Narrow page-label owner and parent-owned canonical catalog integration if new labels are authorized.",
+      "status": "Catalog-wide validation and mounted localization NOTRUN; no catalog edits or missing-key diagnosis fabricated."
+    }
+  ],
+  "preservation_and_scans": {
+    "accepted_baseline": "User/queue record is source791 versus original772, six regions. No Git/history reconstruction or accepted-source rerun was performed.",
+    "actual_line_accounting": {
+      "page_logical_lines": 790,
+      "page_split_on_newline_tokens": 791,
+      "original_recorded_lines": 772,
+      "logical_page_percentage_of_recorded_original": 102.33,
+      "used_local_TimelineSource_logical_lines": 65,
+      "page_plus_used_local_support_logical_lines": 855,
+      "explanation": "ReadAllLines counts 790 actual lines; splitting the trailing-newline text yields 791 tokens, reconciling the accepted source791 notation without changing source. Unused TimelineSummary is not added to consumer coverage."
+    },
+    "source_sha256": {
+      "web\\src\\features\\analytics\\pages\\TimelinePage.tsx": "33D8B151E7CA1CF540229223781AFDD6E5A07BB02369276606A36EAD0AB6071D",
+      "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSource.tsx": "6C0147887C6036F25DAD323AB3EBAF6A8A8582C1430CC5DFB10037F218FC1BD6",
+      "web\\src\\api\\hooks\\useTimelinePage.ts": "C62A0A851887FFFDEA04FAC593B0C22A2BE1F7E69F8E752317966B8373304BA7"
+    },
+    "counted_source_regions": 6,
+    "direct_tag_counts": {
+      "GlassPanel": 0,
+      "ChartContainer": 0,
+      "OperationalBrief": 1,
+      "LayoutCard": 3,
+      "ChartCard": 1,
+      "EntityPreviewDrawer": 1,
+      "Bar_series": 4,
+      "metricId_entries": 4
+    },
+    "chart_frame": "ChartCard source forwards actual children through EmbeddedChart into canonical ChartContainer. Zero direct ChartContainer tags are expected at this page, not missing-chart evidence.",
+    "scan_scope": [
+      "web\\src\\features\\analytics\\pages\\TimelinePage.tsx",
+      "web\\src\\features\\analytics\\components\\timeline-modernization\\TimelineSource.tsx",
+      "web\\src\\api\\hooks\\useTimelinePage.ts for URL/type/converter checks"
+    ],
+    "scoped_pattern_counts": {
+      "static_inline_style_containing_var": 0,
+      "lowercase_raw_button_input_textarea_select_table": 0,
+      "direct_recharts_leaflet_motion_import": 0,
+      "old_relative_api_import": 0,
+      "double_api_v1_prefix_in_consumed_timeline_hook": 0,
+      "camelCase_vehicle_drive_session_charging_query_param": 0,
+      "any_type_pattern": 0,
+      "deprecated_converter_name_pattern": 0
+    },
+    "scan_correction": "Initial PowerShell Select-String raw-control scan was case-insensitive and matched three shared <Button> lines. Corrected -CaseSensitive scan returned 0 lowercase raw controls. Initial raw output remains in the log; it is not three violations.",
+    "scan_limits": "These are scoped text-pattern counts, not AST/full-repository audit, TypeScript success, effective rendered CSS, a localization gate or complete code-quality certification."
+  },
+  "verification": {
+    "log": "logs\\phase6-qa-analytics-timeline.log",
+    "powershell_commands_before_final_validation": 4,
+    "powershell_commands_including_final_document_validation": 5,
+    "commands": [
+      {"ordinal": 1, "tool": "powershell", "purpose": "Initial exact-row/completed-report lookup", "exit": 1, "result": "Incorrect docs\\migration-queue.md path absent. Resolved actual root queue using glob; no write, Git or HTTP."},
+      {"ordinal": 2, "tool": "powershell", "purpose": "Read root exact row, check exact report absence and UTC", "exit": 0, "result": "migration-queue.md:279 pending; exact report absent; intake UTC recorded."},
+      {"ordinal": 3, "tool": "powershell", "purpose": "Initialize sole ignored log; bounded hashes, line/tag counts and eight pattern scans", "exit": 0, "result": "Raw counts/hashes in log. Raw-control false positives corrected by command 4."},
+      {"ordinal": 4, "tool": "powershell", "purpose": "Case-sensitive correction, line-accounting reconciliation and exact hook/page/repository citations", "exit": 0, "result": "RAW_CONTROLS=0; logical page790/newline tokens791; 102.33%; no tests executed."},
+      {"ordinal": 5, "tool": "powershell", "purpose": "Final document JSON parsing/assertions, queue reread and three source-hash comparisons", "exit": "See actual terminal/log output; not inferred before execution", "result": "Only report integrity and unchanged cited source snapshots are checked, not application behavior."}
+    ],
+    "document_validation": "Final JSON parse/assertions, exact findings/candidate/region/source-route counts and source-hash recheck are recorded by the final bounded PowerShell command in the log. A document validation exit does not validate application behavior.",
+    "tests": {"status": "NOTRUN", "discovered": 0, "executed": 0, "passed": 0, "failed": 0, "skipped": 0},
+    "not_run": [
+      "npx tsc --noEmit: prohibited global compiler work for this source-only documentation item",
+      "Build, lint, tests and full suites",
+      "audit.sh and verify.sh/helper scripts",
+      "Preservation CLI, API/provider/database queries and HTTP",
+      "Browser/native/screenshot/visual/accessibility interaction checks",
+      "Catalog guards/locale-wide validation",
+      "Git, commits, queue edits, installs, servers, extensions, nested agents and parent orchestration"
+    ],
+    "privacy": "Only source code/contracts and synthetic conditional mechanisms were reviewed. No real vehicle IDs, VINs, people, locations, payloads or HTTP data were acquired or copied.",
+    "provider_locks": "None acquired; shared preview5173 not contacted."
+  },
+  "handoff": {
+    "confirmed_source_findings": 8,
+    "runtime_or_integration_candidates": 5,
+    "needs": "Parent may register narrow owners for TL-01 through TL-08; preserve accepted Phase5 six-region source and action coverage. Runtime candidates need separate explicit authorization and existing privacy/helper budgets.",
+    "writes": "Only this report and the user-designated ignored log; no source/test/catalog/backend/config/queue changes.",
+    "release": "ALL source/report/log/JSON/commands RELEASED / NO POST-RETURN WRITES. No running/background validators, helpers, servers, provider locks or child agents were started by this item."
+  }
+}

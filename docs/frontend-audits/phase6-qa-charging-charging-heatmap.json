@@ -1,0 +1,609 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-charging-charging-heatmap",
+  "status": "DONE",
+  "acceptance": "SOURCE-ONLY READ-ONLY QA complete, not repaired or application/native acceptance",
+  "requested_start_utc": "2026-10-13T23:16:20.806Z",
+  "actual_start_utc": "2026-10-13T23:16:33.1178926Z",
+  "creation_utc": "2026-10-13T23:35:24.1346318Z",
+  "release_utc": "2026-10-13T23:37:31.8409383Z",
+  "only_writable": [
+    "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-charging-charging-heatmap.json",
+    "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-heatmap.log"
+  ],
+  "authority_read": [
+    "docs/orchestrator-loop.md:1-284 sole playbook",
+    "migration-queue.md:339 current row;1773 accepted receipt;302,371 existing gradient root",
+    "docs/frontend-design-contract.md:49-72,419-547 and relevant scope grep",
+    "docs/frontend-mission.md:19-92 principles",
+    "docs/session-handoff.md scoped source-only context grep, not parent health",
+    "docs/frontend-audits/audit-page-083.json historical preservation/architecture evidence",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md"
+  ],
+  "accepted_receipt": {
+    "authority": "migration-queue.md:1773",
+    "historical_capture_exit": 2,
+    "historical_test_exit": 1,
+    "historical_lint_exit": 0,
+    "historical_test_limit": "catalog startup failed,zero cases",
+    "historical_scan_exit": 0,
+    "historical_capture_limit": "resourceFAILED,no new capture/lock",
+    "final_correction_validation": "NOTRUN immediate historical health stop; parent literal1661 Heatmap compiler error absent, not overall green",
+    "historical_preservation_exit": 0,
+    "historical_test_discovered": 0,
+    "source_only": true,
+    "commit": "8a4c3ba0ad9cc90eadf97b319040c7b3e327ca0f",
+    "page_lines": 465,
+    "historical_original_lines": 369,
+    "git_verified": false,
+    "preservation": "Historical receipts retained, not rerun/waived/promoted to fresh acceptance"
+  },
+  "scope": {
+    "audited_files": 7,
+    "commit_equivalence": "Current disk hashes pinned; Git/accepted blob comparison NOTRUN. Queue accepted commit is receipt authority, not independently verified byte equivalence.",
+    "supporting_files": 24,
+    "pins": [
+      {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "sha256": "0e72aa6173acc637a0f8787c3047ca570a8d99ab0480dc3cef2ff69a1a5dc7ac",
+        "lines": 465,
+        "role": "audited-source"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+        "sha256": "9c0789451bf89d8649a642b17d07454248424a50cbaca1503472cbaaea7efb81",
+        "lines": 188,
+        "role": "audited-source"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+        "sha256": "49e6e615af14f3a4c7f95db3c781b7c3ff54b184b70536c81b31800611638e58",
+        "lines": 95,
+        "role": "audited-source"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap/index.ts",
+        "sha256": "7bca909bbf20448d8bd52a4c436a34c7cfc06635a7a63c5c1adf0867fec68d55",
+        "lines": 15,
+        "role": "audited-source"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx",
+        "sha256": "3f5eba358c8d69417a91771b6fe9440db5f5b4f7714842997dc55b140990159e",
+        "lines": 98,
+        "role": "audited-source"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap-modernization/index.ts",
+        "sha256": "595c90b01f6364d6d60606c8d5195f9de8560cd740897e86c770ed448b1057eb",
+        "lines": 1,
+        "role": "audited-source"
+      },
+      {
+        "file": "web/src/features/charging/components/operationalbrief-all/ChargingSummaryBrief.tsx",
+        "sha256": "b2f42b47f208133f9336395242a7308d7d01b99d6b23acf3041e97248637326c",
+        "lines": 73,
+        "role": "audited-source"
+      },
+      {
+        "file": "docs/orchestrator-loop.md",
+        "sha256": "61f7a74733404c084c4cb609301e8f860b2c464a6c58104e9493eff5ff0361c6",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "migration-queue.md",
+        "sha256": "e9c99f97d686b011ad2107552ee6b181ae20448af0ae435f206e5ec03302e1f9",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "docs/frontend-design-contract.md",
+        "sha256": "ea31e86973396a9e67f87dada355189ee698b6442f31b0192c467f5534f4d68e",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "docs/frontend-audits/audit-page-083.json",
+        "sha256": "9a31f332cf5ee233571102eadd0f6c22baa6dc408e5410fb8547146777a0759d",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/hooks/useRangeState.ts",
+        "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/lib/workspaceScope.ts",
+        "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/api/hooks/useCharging.ts",
+        "sha256": "ef25f85d86f4972051ad19d37c9a3112e4c4d6900ae9b8786ae021f41d9db330",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/api/types.ts",
+        "sha256": "11a6003464bc550e085b640fed3779705799a2474ce4f255d1dcaca202ceeb9b",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/hooks/useDataState.ts",
+        "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/api/dataState.ts",
+        "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/hooks/useUnits.ts",
+        "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/hooks/useNumberFormatting.ts",
+        "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/hooks/useOperationalMetrics.tsx",
+        "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/lib/constants.ts",
+        "sha256": "b474ccf858a25c206f6b6673a89ad6d2756db6c591d9e5336dd5a6d203107e74",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/lib/dateFormat.ts",
+        "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.test.tsx",
+        "sha256": "5019e7f536beb4a6392061e48ad5476c55a28ffebcf4d1243a23eb5d2698bf66",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/features/charging/pages/__tests__/ChargingHeatmapPage.test.tsx",
+        "sha256": "fdd91238ed2f90ab7c3c2b272b54ead1ea8a383b69871f11ca0a2e6ef45e4fda",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap/heatmapData.test.ts",
+        "sha256": "fb18e431635760b48eba9c85e341de87e6c597da45bce4d4a6867c1843108d1e",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.test.tsx",
+        "sha256": "9be384d3db2be985dc20e411428d77b4e39ffd66efc9e0898fed06806e7be7b2",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapModernization.test.tsx",
+        "sha256": "e4752126e3f1f99e79c414e0056c78f181d11b9ebec9b0bb2af488703f97766d",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/i18n/en.json",
+        "sha256": "ca087f394590450a80752647120a73009e3a18dedc799fdea0e3af7818ee5e6c",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": ".gitignore",
+        "sha256": "2b5bd47eff6c416aeca19086e45cd76906d96b0498f5babe33d2feefeb6eae96",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/components/data-display/MetricBar.tsx",
+        "sha256": "a7681d29402e9c208e21c01f2d87d7bd5e4cec18a59cc5c994511e6cf6e1f5fc",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      },
+      {
+        "file": "web/src/lib/tokens.ts",
+        "sha256": "04bdaa937938f96af3b2d39b8236608063de83d7a530db8c67fe6bd1dee120a3",
+        "lines": null,
+        "role": "supporting-readonly-evidence"
+      }
+    ],
+    "release_pin_check": {
+      "total": 31,
+      "unchanged": 31,
+      "external_drift": [],
+      "audited_heatmap_drift": 0
+    }
+  },
+  "findings": [
+    {
+      "id": "CHH001",
+      "rule": "workspace-instant-bounds",
+      "severity": "high",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 46,
+      "related": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:51",
+        "web/src/hooks/useRangeState.ts:656-669",
+        "web/src/api/hooks/useCharging.ts:40-43,122-133"
+      ],
+      "mechanism": "Page forwards start/end calendar labels instead of available startInstant/endInstantExclusive. This drops exact rolling cutoffs and timezone-exclusive boundary precision. Header ownership is present and overrides page default/persistKey; those backup options are not a defect.",
+      "source_repro": "Choose 24h at 15:30 UTC: useRangeState computes now-minus-24h/now instants, but page query sends YYYY-MM-DD labels. Labels cannot communicate the 15:30 cutoff regardless of server date interpretation.",
+      "repro_execution": "SOURCE_TRACE_ONLY; no mounted test/API/browser",
+      "impact_limit": "Precision loss is confirmed; actual returned-row error, server inclusivity, DST filtering and limit clamping are unknown.",
+      "fix": "Integration owner verifies charging bound semantics and forwards both existing instant bounds through typed hook. Preserve header ownership, query keys, signal, Sunday-first business buckets and raw SI; do not client-filter only the response.",
+      "dedup": {
+        "new_root": false,
+        "kind": "carried-existing-observation",
+        "reference": "docs/frontend-audits/audit-page-083.json architectureIssues[0]",
+        "existing_queued_root": null
+      }
+    },
+    {
+      "id": "CHH002",
+      "rule": "measurement-missing-vs-zero",
+      "severity": "high",
+      "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+      "line": 68,
+      "related": [
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts:31-33,51",
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:78-93,260",
+        "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx:45-48"
+      ],
+      "mechanism": "Grid initializes energy to 0 and adds missing Wh as 0 without recording observation coverage. Hover formats this total for any occupied cell. All-missing slots appear measured zero; partial slots lack partial context. Page table/export separately counts finite energy and distinguishes these states, so presentations contradict.",
+      "source_repro": "One valid-start session with total_energy_added_wh=null yields count=1,totalEnergyWh=0. Hover formats 0 Wh (default 0.00 kWh), while table energy_wh is null with No recorded measurements. One measured zero plus one null yields an unqualified zero hover but a partial table status.",
+      "repro_execution": "SOURCE_TRACE_ONLY; authored null-energy fixture at ChargingHeatmapPage.test.tsx:127-139 was not executed",
+      "impact_limit": "Known zero must remain zero; recorded-only summary/table behavior must be retained.",
+      "fix": "Carry energy observation counts/coverage in the existing model or pass existing slot coverage to tooltip; show unavailable/partial evidence instead of fabricated zero. Preserve 168 cells, accessible table, export, SI and sign.",
+      "dedup": {
+        "new_root": true,
+        "kind": "new-confirmed-local-root",
+        "reference": null,
+        "existing_queued_root": null
+      }
+    },
+    {
+      "id": "CHH003",
+      "rule": "hardcoded-string",
+      "severity": "medium",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 65,
+      "related": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:83-84,291-293,310,317",
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx:39-40,45,56,65,68",
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts:186-187",
+        "web/src/lib/constants.ts:90",
+        "web/src/lib/dateFormat.ts:99-116"
+      ],
+      "mechanism": "English DAYS reaches grid, axes, insights and table/export without localization. Favorite fallback appends English s to abbreviated weekdays. formatHourLabel forces HH:00 independent of locale hour cycle. Raw grid count/hour interpolation bypasses existing number formatting; t() around the outer sentence does not format operands.",
+      "source_repro": "Under a non-English display locale DAYS remains Sun..Sat. In en-US locale bucket13 remains 13:00 instead of locale time. Favorite English fallback yields e.g. Mons at 13:00. Grid counts are raw decimal strings while table uses fmtInt.",
+      "repro_execution": "SOURCE_TRACE_ONLY; preference/language change not exercised",
+      "impact_limit": "47 literal translation keys present, 0 missing. This is operand/formatting bypass, not missing catalog keys. No separate explicit hour-cycle preference source was established.",
+      "fix": "Reuse existing locale date/time/number formatting and translate a complete weekday/time phrase. Preserve numeric Sunday-first/hour bucket identities independently of translated labels.",
+      "dedup": {
+        "new_root": false,
+        "kind": "carried-existing-observation",
+        "reference": "docs/frontend-audits/audit-page-083.json architectureIssues[2]",
+        "existing_queued_root": null
+      }
+    },
+    {
+      "id": "CHH004",
+      "rule": "chart-color-contract",
+      "severity": "medium",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 309,
+      "related": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:316,323,330",
+        "web/src/components/data-display/MetricBar.tsx:45,87",
+        "web/src/lib/tokens.ts:399"
+      ],
+      "mechanism": "Four insight MetricBars pass chartTokens.series light-dark() functions without fill=solid. Default gradient appends 99 to the full CSS color function, constructing an invalid color token.",
+      "source_repro": "series[5] becomes linear-gradient(90deg, light-dark(#3f6268, #91bbc0)99, light-dark(#3f6268, #91bbc0)). A suffix after the color function is not a valid color. All four insight bars use this construction.",
+      "repro_execution": "SOURCE_STRING_TRACE_ONLY; no browser/CSS parser",
+      "impact_limit": "Malformed CSS construction confirmed; actual paint/forced-colors behavior not claimed. Numeric labels and accessible progress values remain.",
+      "fix": "Use existing MetricBar fill=solid caller contract for function-valued colors, coordinated with existing root owner; no competing shared rewrite.",
+      "dedup": {
+        "scope_limit": "Existing queued writable scope does not cover heatmap callsites; do not expand its claims",
+        "kind": "existing-shared-mechanism-additional-callsites",
+        "new_root": false,
+        "reference": "phase6-qa-admin-disk-forecast.json; migration-queue.md:302,371",
+        "existing_queued_root": "phase6-fix-disk-forecast-contracts"
+      }
+    }
+  ],
+  "unpromoted_candidates": [
+    {
+      "id": "CHHC01",
+      "file": "web/src/features/charging/components/charging-heatmap/heatmapData.ts",
+      "line": 47,
+      "related": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:79",
+        "web/src/hooks/useRangeState.ts:325-333",
+        "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx:89-95"
+      ],
+      "mechanism": "Actual bins are browser-local session START weekday/hour via getDay/getHours, not UTC, elapsed-time occupancy or a calendar of dates. Offset timestamps convert to browser local time; repeated DST hour collapses into one slot. No business timezone argument or heatmap timezone caption.",
+      "why_unpromoted": "Historical audit explicitly preserves browser-local business buckets pending timezone decision. Settings/vehicle zone ownership contract not established; do not silently switch to UTC or claim current bins are incorrect.",
+      "source_example": "2026-10-12T00:30:00Z corresponds to Sunday17 in America/Los_Angeles and Monday00 in UTC; reasoning only, not an executed timezone test.",
+      "dedup": "audit-page-083.json architectureIssues[1]",
+      "needed": "Integration/product timezone decision plus offset/DST tests and disclosure acceptance; NOTRUN"
+    },
+    {
+      "id": "CHHC02",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 119,
+      "related": [
+        "web/src/features/charging/components/charging-heatmap-modernization/ChargingHeatmapSummary.tsx:59-62",
+        "web/src/api/types.ts:178-179",
+        "web/src/hooks/useOperationalMetrics.tsx:16-20"
+      ],
+      "mechanism": "cost_decimal summed and formatted via existing user currency symbol, not grouped by per-session cost_currency.",
+      "why_unpromoted": "Mixed currency/source normalization not established. No billing error or exchange conversion invented. Zero/negative recorded costs are not clamped by page.",
+      "dedup": "audit-page-083.json architectureIssues[4]",
+      "needed": "Source currency normalization contract and safe mixed-currency fixtures; NOTRUN"
+    },
+    {
+      "id": "CHHC03",
+      "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+      "line": 118,
+      "related": [
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:120-127,78",
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts:45,51"
+      ],
+      "mechanism": "Summary counts non-null energy/cost while table counts finite energy; individual summed operands not finite-validated. Invalid timestamps skipped by bins but included in returned-session KPI. Duration denominator uses finite strictly positive completed intervals, excludes zero-length records by declared definition.",
+      "why_unpromoted": "Invalid timestamp/nonfinite/meaningful-zero-duration wire validity not established; JSON cannot natively represent NaN/Infinity. Conditional input-contract issue is not merged with confirmed missing-energy tooltip defect.",
+      "dedup": "No matching current Phase6 root found; not promoted",
+      "needed": "Wire/input validity contract and scoped cases, not guessed backend changes"
+    },
+    {
+      "id": "CHHC04",
+      "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+      "line": 30,
+      "related": [
+        "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx:58,63-68",
+        "web/src/features/charging/components/charging-heatmap/heatmapData.ts:67-82",
+        "web/src/features/charging/pages/ChargingHeatmapPage.tsx:229-262"
+      ],
+      "mechanism": "Noninteractive role=img grid has pointer detail/fixed 640px inner width. Popover placement/saturated hardcoded RGBA palette need real contrast, viewport and forced-colors review; separate keyboard table provides all168 slots.",
+      "why_unpromoted": "Source table, headers, focus and complete alternative exist. No browser/native/contrast/touch/screen-reader checks run; no actual clipping/inaccessible-detail/contrast failure asserted.",
+      "dedup": "audit-page-083.json visualIssues/accessibility; no new palette repair root",
+      "needed": "Later actual browser/native acceptance within existing constraints; NOTRUN"
+    }
+  ],
+  "checks": [
+    {
+      "name": "calendar/timezone",
+      "result": "SOURCE_REVIEWED: Sunday-first7x24 START-time density, browser-local bins, invalid timestamps skipped, first-crossing max/tie behavior preserved. Correct intended zone remains CHHC01."
+    },
+    {
+      "name": "denominators/absent/zero",
+      "result": "FAIL_SOURCE CHH002. Summary distinguishes unknown energy/cost via observation counts, annotates partial; duration average divides only by durationCount. Successful empty result count0 is authoritative but unmeasured energy/cost/duration remain missing. Table/export includes168 slots and raw recorded_energy_count."
+    },
+    {
+      "name": "SI/sign/preferences",
+      "result": "SOURCE_REVIEWED_WITH_FINDINGS: raw Wh in hooks/grid/export; raw seconds from timestamps; existing useUnits/useOperationalMetrics own display conversion, locale/precision/currency. No abs/sign flip/negative-cost clamp by page. Formatting/color CHH003/004; currency identity CHHC02."
+    },
+    {
+      "name": "header actual scope/bounds",
+      "result": "FAIL_SOURCE CHH001. Registered workspaceScope:31/App:902; shared vehicle hook; no local duplicate picker; header overrides backup default/persistKey. Query key includes vehicle,bounds,limit,offset; signal forwarded. Read-only router registration ListByVehicle router.go:3546 confirmed; handler semantics not exercised."
+    },
+    {
+      "name": "bounds/provenance/trust",
+      "result": "SOURCE_REVIEWED: single limit2000 offset0 response; no pagination or lifetime claim. Page70/171 and summary89-95 disclose returned sessions; weekly ariaDescription/disclosure carry limitation. Historical fatal-vs-retained-refresh-vs-paused source handling; no fake live trust. Actual server clamping/ordering/completeness and export/fullscreen scope acceptance unknown."
+    },
+    {
+      "name": "sections/actions",
+      "result": "SOURCE_REVIEWED:465 lines vs historical369 (126.02%, >=70%); no original Git blob reconstructed. Three sections/four cards/four KPIs/four MetricBars/favorite block/three EmbeddedCharts. Every shell renders with own loading/error/empty state. Refresh, retries, inherited controls, pointer detail, keyboard table, export/fullscreen preserved in source; actions not executed."
+    },
+    {
+      "name": "i18n",
+      "result": "FAIL_SOURCE CHH003;47 literal t() keys present,0 missing. Catalog READONLY, presence only; parser case-key failure corrected with -AsHashtable. No runtime/helper/projection/guard success claimed."
+    },
+    {
+      "name": "source-a11y",
+      "result": "SOURCE_REVIEWED_NOT_NATIVE_ACCEPTED: localized section names/IDs;44px named refresh; contained table region, tabIndex0, column/row headers, visible focus class; complete168-slot touch/keyboard alternative. No positive tabindex/data-gated section shell observed. Native questions CHHC04."
+    },
+    {
+      "name": "static-inline-style",
+      "raw_matches": 5,
+      "result": "No matching violation in scanned scope: computed heatColor and mapped legend c inline styles are allowed dynamic exceptions; remaining hits Tailwind var() classes."
+    },
+    {
+      "name": "raw-html",
+      "raw_matches": 0,
+      "result": "Case-sensitive grep0. Initial case-insensitive scan2 matched shared Button/Table, false positives corrected."
+    },
+    {
+      "name": "direct-library-import",
+      "raw_matches": 0,
+      "result": "GREP_ZERO in audited source scope"
+    },
+    {
+      "name": "old-api-import",
+      "raw_matches": 0,
+      "result": "GREP_ZERO in audited source scope"
+    },
+    {
+      "name": "double-prefix",
+      "raw_matches": 0,
+      "result": "GREP_ZERO; consumed hook source /charging not /api/v1/charging"
+    },
+    {
+      "name": "camelcase-param",
+      "raw_matches": 0,
+      "result": "GREP_ZERO; consumed URLSearchParams vehicle_id/limit/offset/start/end"
+    },
+    {
+      "name": "hidden-section",
+      "raw_matches": 0,
+      "result": "GREP_ZERO; all3 shells render, no all-page data gate"
+    },
+    {
+      "name": "missing-page-container",
+      "raw_matches": 1,
+      "result": "Accepted existing PageLayout wrapper at158; not missing legacy PageContainer violation"
+    },
+    {
+      "name": "fetch-useeffect",
+      "raw_matches": 0,
+      "result": "GREP_ZERO in audited direct sources; typed TanStack Query hook. Shared range effects synchronize URL/preferences/clock, not page data loading."
+    },
+    {
+      "name": "TypeScript/tests/native",
+      "result": "NOTRUN per explicit assignment; no TypeScript/lint/build/suite/native/browser/API pass claimed"
+    }
+  ],
+  "deduplication": {
+    "new_repair_items_created": 0,
+    "carried_phase0_observations": 2,
+    "existing_shared_mechanism_additional_callsites": 1,
+    "confirmed_total": 4,
+    "explanation": "CHH001/003 revalidate audit-page-083 observations. CHH004 additional caller of existing gradient mechanism; existing queued writable scope does not authorize heatmap changes. Only CHH002 new confirmed local root.",
+    "queue_changed": false,
+    "new_confirmed_local_roots": 1,
+    "existing_matching_phase6_heatmap_reports": 0
+  },
+  "summary": {
+    "confirmed_findings": 4,
+    "files_with_most_issues": [
+      {
+        "file": "web/src/features/charging/pages/ChargingHeatmapPage.tsx",
+        "primary_findings": 3
+      },
+      {
+        "file": "web/src/features/charging/components/charging-heatmap/HeatmapGrid.tsx",
+        "primary_findings": 1
+      }
+    ],
+    "unpromoted_candidates": 4,
+    "priority_fixes": [
+      "CHH002 unknown/partial hover vs valid zero",
+      "CHH001 integration-confirmed exact instant plumbing",
+      "CHH003 shared locale operand formatting",
+      "CHH004 coordinate existing gradient mechanism owner"
+    ],
+    "counts_by_rule": {
+      "measurement-missing-vs-zero": 1,
+      "hardcoded-string": 1,
+      "workspace-instant-bounds": 1,
+      "chart-color-contract": 1
+    },
+    "count_semantics": "Four deduplicated confirmed root findings, not individual repeated callsites or raw grep matches; four separately unpromoted candidates."
+  },
+  "execution": {
+    "raw_outputs_location": "D:\\repos\\teslasync\\web\\logs\\phase6-qa-charging-charging-heatmap.log",
+    "read_failure": "web/src/hooks/useTimezone.ts path does not exist; no app issue inferred",
+    "global_tsc": "NOTRUN",
+    "auditwrapper": "NOTRUN",
+    "builtin_checks_only": true,
+    "json_reparse_exit": 0,
+    "raw_scan_outputs": [
+      "CHECK static-inline-style raw_matches=5",
+      "CHECK raw-html raw_matches=2",
+      "CHECK direct-library-import raw_matches=0",
+      "CHECK old-api-import raw_matches=0",
+      "CHECK double-prefix raw_matches=0",
+      "CHECK camelcase-param raw_matches=0",
+      "CHECK hidden-section raw_matches=0",
+      "CHECK hardcoded-string raw_matches=17",
+      "CHECK missing-page-container raw_matches=1",
+      "CHECK fetch-useeffect raw_matches=0",
+      "CHECK raw-html_case_sensitive raw_matches=0"
+    ],
+    "typescript": "NOTRUN",
+    "fullsuite": "NOTRUN",
+    "api": "NOTRUN",
+    "tests": {
+      "status": "NOTRUN",
+      "failed": 0,
+      "discovered": null,
+      "skipped": 0,
+      "executed": 0,
+      "passed": 0
+    },
+    "git": "NOTRUN",
+    "servers_helpers_extensions_nestedagents_parenthealth": "NOTRUN",
+    "actual_commands": [
+      "C01 Get-FileHash SHA256; Select-String rule patterns; Get-Content count",
+      "C02 Select-String -CaseSensitive raw tags; source scope grep; queue IDs; historical audit ConvertFrom-Json",
+      "C03 source/catalog inspection, ConvertFrom-Json exit1 on case-distinct keys",
+      "C04 narrower source/route/history grep; failure recorded",
+      "C05 ConvertFrom-Json -AsHashtable and regex literal t() key lookup:47,missing0",
+      "C06 Get-FileHash support/test files; Select-String denominators/trust;line ratio",
+      "C07 Select-String light-dark()/MetricBar template/existing queued root",
+      "C08 object/report creation failed on PowerShell false token before writes",
+      "C09 corrected builtin object/ConvertTo-Json/Set-Content report and ConvertFrom-Json reparse"
+    ],
+    "native": "NOTRUN",
+    "command_exits": {
+      "C09": 0,
+      "C06": 0,
+      "C04": 0,
+      "C01": 0,
+      "C03": 1,
+      "C05": 0,
+      "C08": 1,
+      "C02": 0,
+      "C07": 0,
+      "C10": 1,
+      "C11": 1,
+      "C12": 0,
+      "C13": 0
+    },
+    "preliminary_shell_exits": {
+      "6253": 0,
+      "6271": 0,
+      "6266": 0,
+      "6262": 0,
+      "6252": 0,
+      "6284": 0,
+      "6247": 0,
+      "6256": 0
+    },
+    "browser": "NOTRUN",
+    "source_pin_recheck_exit": 0,
+    "raw_final_reparse_log": "C13_FINAL_JSON_REPARSE_EXIT recorded after actual final reparse",
+    "release_assertion_failures": {
+      "C10": "Automatic DateTime versus string assertion",
+      "C11": "UTC versus local wall-time equality assertion; JSON/counts valid in actual C12"
+    }
+  },
+  "limits": [
+    "Only requested report/log written; application/tests/catalog/backend/shared/queue READONLY",
+    "No API/browser/native/globalTSC/fullsuite/auditwrapper/Git/server/helper/extension/nested-agent/parent-health action",
+    "Target5min/max20creation/HARD25 from actual start; shells30s initial wait, all finished under180s",
+    "Tests/native NOTRUN; historical catalog startup/capture resource failure/final unvalidated correction retained",
+    "Original369-line count from historical audit, not original Git reconstruction",
+    "Source accessibility is not focus/viewport/touch/screen-reader/contrast/OS acceptance",
+    "Server bounds/clamping/ordering/authorization/currency semantics unknown; no backend or completeness invention",
+    "C03 parser and C08 creation failures honest raw receipts, not application failures or hidden successes",
+    "C10 release assertion failed after successful parse due to automatic DateTime coercion; failure preserved, corrected final equality check executed",
+    "C11 UTC/local timestamp assertion failure preserved; actual C12 valid JSON/counts; final C13 normalizes UTC before equality"
+  ],
+  "claims_release": "ALL CLAIMS RELEASED / NO POST-RETURN WRITES",
+  "elapsed_seconds_at_release": 1258.714
+}

@@ -1,0 +1,490 @@
+{
+  "item": "phase6-qa-advanced-charging-forensics",
+  "page": "ChargingForensicsPage",
+  "status": "SOURCE_AUDIT_COMPLETE_WITH_FINDINGS",
+  "acceptance": "NOT_RUNTIME_OR_FULL_PAGE_ACCEPTANCE",
+  "lifecycle": "RELEASED",
+  "auditStartedAt": "2026-10-13T18:15:54Z",
+  "sourceSnapshotsValidatedAt": "2026-10-13T18:26:41.0380219Z",
+  "confirmedIssueCount": 7,
+  "candidateCount": 4,
+  "routes": ["/intelligence/charging-forensics"],
+  "purpose": "Separate recorded charging facts from unsupported meter, loss, tariff and billing assumptions.",
+  "primaryGoal": "Inspect session reconciliation and its supporting evidence; export canonical values without inferring unsupported readings.",
+  "method": {
+    "mode": "bounded-current-source-only",
+    "priorPhase6ReportsRead": false,
+    "scope": "Accepted mounted page, its directly used feature panels/formatters/export adapter, and read-only immediate hook/type/route/backend/formatting/table/catalog contracts.",
+    "ownedFiles": [
+      "docs\\frontend-audits\\phase6-qa-advanced-charging-forensics.json",
+      "logs\\phase6-qa-advanced-charging-forensics.log"
+    ],
+    "logIgnoredBy": ".gitignore:80 logs/",
+    "sourceWrites": false,
+    "testWrites": false,
+    "catalogWrites": false,
+    "sharedWrites": false,
+    "backendWrites": false,
+    "prohibitedOperationsExecuted": [],
+    "sourceDerivedReproductions": "All reproductions below are paper traces of inspected source, not executed tests, fixtures, requests or mounted interactions."
+  },
+  "dataSources": [
+    {
+      "hook": "useChargingForensics(vehicleId, 15, (page - 1) * 15)",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "lines": [48, 73, 105, 109],
+      "endpoint": "GET /api/v1/advanced-intelligence/charging-forensics?vehicle_id=<id>&limit=15&offset=<offset>",
+      "owner": "integration",
+      "contract": "Positive selected vehicle; query key includes vehicle, limit and offset; queryFn forwards AbortSignal to request; list hook returns raw SI.",
+      "registration": [
+        "internal\\api\\router.go:415,1161,3960",
+        "internal\\handler\\v1\\advancedintelligence\\handler.go:68-77,179-192,405-419"
+      ],
+      "agreement": "SOURCE_MATCH: MountRoutes registers GET /charging-forensics under /advanced-intelligence in the shared API composition root. vehicle_id/limit/offset are snake_case; handler permits limit 1..100 and offset 0..100000.",
+      "runtime": "NOTRUN"
+    },
+    {
+      "action": "CSV/JSON full-result reconciliation download",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "lines": [47, 51],
+      "readHelper": "fetchAllChargingForensics(vehicleId)",
+      "endpoint": "Same GET with limit=100 and incrementing offset",
+      "mutation": false,
+      "findings": ["CF-04", "CF-05"]
+    },
+    {
+      "file": "internal\\app\\advancedintelligencesvc\\survival_security_charging.go",
+      "lines": [324, 380],
+      "source": "ListChargingEvidence from charging_sessions",
+      "currentCapabilities": "Current service returns vehicle energy, recorded cost/currency, started/ended times, evidence and limitations. Meter energy, loss/bounds, expected cost and discrepancy remain null. Current statuses are unsupported, incomplete and recorded_only; quality is insufficient or limited. Supported non-null meter/loss/billing cases in existing mocked tests are not proof of current backend capability.",
+      "wireAgreement": "Go nullable fields and snake_case names match ChargingForensicsItem; Wh remains canonical energy."
+    }
+  ],
+  "components": [
+    "PageLayout: existing page/shell layout",
+    "AlertBanner + Icon: unsupported-data disclosure",
+    "InsightPanel -> LayoutCard/SourceContent/useDataState/DataFreshness/StaleRefreshWarning",
+    "DataTable with stable tableId, localized caption and explicit full-result export controls",
+    "MobileDataTablePresentation: summary roles plus session-associated allDetails",
+    "Pagination: server-page navigation",
+    "EvidencePanel: data quality, sources and limitations",
+    "useUnits/useDateFormat/formatCurrencyMinor: display-boundary formatters",
+    "FadeIn: existing motion boundary; composed motion acceptance not exercised"
+  ],
+  "confirmedIssues": [
+    {
+      "id": "CF-01",
+      "severity": "P2",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 40,
+      "relatedLines": [70, 99, 115],
+      "rule": "MDC-026: unresolved and failed sources are not authoritatively unsupported or empty",
+      "mechanism": "EvidencePanel always mounts an InsightPanel without query/sourceState/error. Absent quality/evidence/limitations immediately select definitive 'Quality metadata is unsupported', 'No supporting evidence was returned' and 'No additional limitations were returned' copy. The page supplies only payload-derived props, so initial loading, paused-first-load and fatal-first-load all use this ready-looking empty disclosure. The reconciliation neighbor handles the query correctly but does not change these assertions.",
+      "sourceDerivedRepro": "Trace vehicleId=4 with query.data undefined and isLoading=true/fetchStatus=fetching, or a first-load error. items becomes []; page lines 222-225 pass undefined quality and empty flattened arrays. EvidencePanel lines 40-46 supply no query; its empty-array branches render the three assertions before any successful response.",
+      "expected": "Keep the evidence shell and static unsupported capability notice visible, but distinguish not-yet-resolved/paused/failed evidence from a successful empty response; retain previously returned disclosure on refresh failure.",
+      "owner": "page + existing feature EvidencePanel owner",
+      "fix": "Compose the existing source-state/query presentation into this panel without adding a second trust model or hiding the whole page.",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CF-02",
+      "severity": "P2",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 62,
+      "relatedLines": [6, 90, 92],
+      "rule": "MDC-044: preserve selected locale and timezone consistently",
+      "mechanism": "EvidencePanel imports the unbound lib formatDateTime and passes no locale/timezone options. That formatter explicitly defaults to browser locale/timezone. The page's Started, mobile Ended and mobile evidence dates instead use useDateFormat, which resolves settings locale and selected timezone. Identical evidence instants can therefore show different dates/times between the page's mobile session detail and its evidence section.",
+      "sourceDerivedRepro": "For observed_at=2026-06-01T12:30:00Z, user/vehicle display timezone Pacific/Auckland and browser timezone UTC, the page hook represents June 2 00:30 while EvidencePanel's unbound formatter represents June 1 12:30. No actual browser timezone or identity was read.",
+      "expected": "Use the same existing date preferences for observation window, evidence timestamps and session timestamps.",
+      "owner": "existing feature EvidencePanel owner",
+      "fix": "Use useDateFormat or an existing explicit formatter-preferences prop; do not change UTC wire/export values.",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CF-03",
+      "severity": "P2",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 129,
+      "relatedLines": [130, 131, 132, 144, 185, 190, 224, 225],
+      "rule": "MDC-023/MDC-043: preserve all original record fields and meaningful details across table presentations",
+      "mechanism": "Ended time, separate currency code and session-associated evidence/limitations are exclusively supplied through mobilePresentation.allDetails. The desktop columns contain only the nine reconciliation fields and the page does not opt into expandable/renderExpanded or a row-detail action. Desktop EvidencePanel flattens evidence/limitations from all sessions without preserving session_id. Consequently desktop cannot access Ended or reliably associate repeated evidence/limitations with their source session.",
+      "sourceDerivedRepro": "Trace two rows with different session_id/ended_at and identical source='charging_sessions'. In allocated desktop table mode, allDetails is not rendered; DataTable's expansion defaults false. The global evidence cards receive identical flattened source/summary records, not their session IDs. Switching to mobile detail recovers the associated fields, demonstrating presentation asymmetry rather than absent API data.",
+      "expected": "A desktop-accessible existing row-details/expansion path should expose the same session-associated fields available on mobile.",
+      "owner": "page",
+      "fix": "Reuse DataTable's existing row-detail/expansion capabilities and the same record-detail renderer; preserve the mobile adapter and all nine columns.",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CF-04",
+      "severity": "P2",
+      "file": "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts",
+      "line": 4,
+      "relatedLines": [7, 9, 10, 11, 12, 13, 14, 15, 16, 17],
+      "rule": "MDC-045/046 and original-schema export declaration: source-record and disclosure preservation",
+      "mechanism": "The adapter's explicit object omits ended_at, evidence and limitations even though they are returned by the current backend and exposed in mobile details. It also changes nullable meter/loss/cost/currency values into empty strings, including in JSON. The comment promises the original SI/minor-unit schema and the download description promises the full reconciliation result; actual serialized records are a lossy projection, not that original record.",
+      "sourceDerivedRepro": "Paper-trace a row with ended_at, evidence=[{source:'charging_sessions',...}], limitations=['Meter-side energy ... not recorded'], and meter_energy_wh=null through chargingForensicsExportRow. The output has no ended_at/evidence/limitations and meter_energy_wh=''. The page maps both CSV and JSON through this same adapter before serialization.",
+      "expected": "Preserve session endpoint/disclosures and JSON null semantics, or explicitly and accurately declare a narrower numeric-ledger export rather than claiming original/full reconciliation records.",
+      "owner": "page-local export adapter",
+      "fix": "Keep canonical SI/minor-unit values and include record/disclosure fields; use CSV-appropriate serialization separately from typed JSON null handling.",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CF-05",
+      "severity": "P1",
+      "file": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "line": 130,
+      "relatedLines": [116, 137, 139],
+      "rule": "MDC-023: loaded/partial exports must not be represented as full results",
+      "mechanism": "fetchAllChargingForensics stops when offset reaches 10000 and returns accumulated rows without an incomplete-result signal or exception. The page unconditionally downloads those rows as the full reconciliation result. Current repository count is not capped at 10000 and the handler permits offsets beyond it.",
+      "sourceDerivedRepro": "Assume a valid stable total=10001 and 100 items for offsets 0 through 9900. After 100 reads, rows.length=10000; the inner break remains false because 10000<10001. The loop condition rejects offset=10000 and return rows succeeds. Session 10001 is silently absent. This is a paper trace only; no requests or large fixtures were created.",
+      "expected": "Retain the safety bound but explicitly refuse or label an incomplete export, or continue within a safely supported complete-export strategy.",
+      "owner": "integration/API hook owner; page export caller",
+      "fix": "Expose completion/limit-reached evidence and prevent a partial packet from being advertised as full.",
+      "confidence": "high-source",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CF-06",
+      "severity": "P2",
+      "file": "internal\\database\\advancedintelligence\\source_repository.go",
+      "line": 476,
+      "relatedFiles": [
+        "web\\src\\features\\advanced-intelligence\\formatters.ts:29-36",
+        "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx:44,95-96"
+      ],
+      "rule": "Wire/display currency denomination agreement; do not guess currency units",
+      "mechanism": "The immediate repository contract generates recorded_cost_minor using ROUND(cost_decimal * 100) irrespective of cost_currency. The page formatter interprets recorded_cost_minor using the currency's Intl fraction-digit exponent, not an unconditional /100. These two assumptions agree for USD-style two-digit currencies but disagree for zero- and three-digit currencies. This is an end-to-end contract mismatch, not a request to change the otherwise currency-aware frontend formatter to a fixed /100.",
+      "sourceDerivedRepro": "For a source amount cost_decimal=100 and cost_currency='JPY', repository arithmetic produces recorded_cost_minor=10000. Intl JPY digits=0 makes the page formatter divide by 1 and display JPY 10000. For a three-digit currency the same repository multiply-100 is then divided by 1000. No claim is made that such a row currently exists or that real ingestion was exercised.",
+      "expected": "Define and consistently produce true ISO-currency minor units at the wire boundary, or explicitly constrain supported currencies without silently rescaling recorded amounts.",
+      "owner": "integration/backend source-query owner",
+      "fix": "Resolve the existing denomination contract at its source; preserve negative/zero amounts, recorded currency and no-conversion policy.",
+      "confidence": "high-source conditional on a returned non-two-digit currency; actual currency population unverified",
+      "runtimeReproduced": false
+    },
+    {
+      "id": "CF-07",
+      "severity": "P3",
+      "file": "web\\src\\i18n\\en\\locale-advanced-intelligence.json",
+      "line": 59,
+      "relatedFiles": [
+        "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx:139-140",
+        "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx:88-89",
+        "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.test.tsx:145"
+      ],
+      "rule": "I18N_GUIDELINES rule 5: pluralization via count-aware forms",
+      "mechanism": "The sampleLine key and both source fallbacks are '{{count}} samples · {{date}}' with no singular/plural sibling forms. Current backend evidence supplies sample_count=1, so source-derived output is '1 samples'. The existing mocked page test also expects that text; it was only read, not run.",
+      "sourceDerivedRepro": "Use the current service's intPointer(1) evidence count. Both evidence presentation paths pass count=1 into the single plain catalog key and render the plural noun unchanged.",
+      "expected": "One sample versus multiple samples through the existing i18next plural catalog mechanism.",
+      "owner": "assigned catalog/localization owner; page/feature fallback owner if needed",
+      "fix": "Add the appropriate singular/plural forms at the existing catalog owner, without changing technical identifiers or API enum values.",
+      "confidence": "high-source",
+    "runtimeReproduced": false
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C-01",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 87,
+      "concern": "Small nonzero energy/loss/bounds can round to the same display value under low user precision.",
+      "disposition": "REVIEW, not a confirmed fabricated-zero defect. useUnits intentionally honors decimal_precision and preserves signs/raw SI. Current backend loss/bounds are null; extreme supported-loss cases are hypothetical. Specialist forensic precision policy needs a design decision, not an invented preference override."
+    },
+    {
+      "id": "C-02",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 32,
+      "concern": "The date-bearing list is all-time and has no workspace range consumption.",
+      "disposition": "NOT A CONFIRMED IGNORED-RANGE BUG. Current RANGE_ENABLED_PATHS excludes /intelligence/charging-forensics and the immediate handler/repository expose only vehicle/limit/offset, with no date bounds. Vehicle is header-owned and enabled. If time-scoped forensics is required later, it needs an explicit integration assignment for both bounds, full aggregates and exports; do not add a duplicate local date picker."
+    },
+    {
+      "id": "C-03",
+      "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "line": 118,
+      "concern": "Raw technical status labels and backend English evidence/reasons are not locale-adapted.",
+      "disposition": "NOT CLASSIFIED AS A CONFIRMED MISSING-KEY DEFECT. I18N_GUIDELINES rule 7 explicitly preserves technical/FSM/database identifiers; table guidelines also prohibit recasing source data. Page-owned labels use t() and the inspected forensics catalog contains their keys. Any human-readable enum/structured backend-message localization must preserve original source values and be separately designed."
+    },
+    {
+      "id": "C-04",
+      "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "line": 22,
+      "concern": "Unrecognized runtime quality status would fall through to danger.",
+      "disposition": "ROBUSTNESS CANDIDATE ONLY. Current TypeScript union and current service return recognized statuses. No invalid response was supplied or observed; do not claim present failure or change valid insufficient semantics without owner review."
+    }
+  ],
+  "states": {
+    "notSelected": "Page passes undefined query to reconciliation; vehicle-selection empty copy is explicit. No table/pagination action is mounted for empty content.",
+    "initialLoading": "Reconciliation resolves loading through existing SourceContent; evidence shell stays present but CF-01 applies.",
+    "initialPausedOrUnresolved": "InsightPanel differentiates unresolved/paused availability from resolved empty reconciliation; CF-01 applies to evidence disclosure.",
+    "initialError": "Reconciliation exposes fatal error/retry without hiding alert or evidence section; CF-01 applies to evidence disclosure.",
+    "resolvedEmpty": "Reconciliation has explicit empty copy. Quality metadata may remain visible. No record means no fabricated energy/cost.",
+    "success": "Nine reconciliation columns; quality, evidence, limitations and explicit unsupported capability list remain mounted.",
+    "retainedRefreshFailureOrPause": "InsightPanel uses hasData/stale status to keep children, source freshness and nonblocking refresh failure/paused warning with individual retry. Evidence receives retained query.data; its own panel has no separate trust-state props.",
+    "pageRecovery": "Successful non-placeholder response with matching offset and safe nonnegative total clamps invalid pages. A failed/placeholder response does not trigger this correction. Selected vehicle changes reset page synchronously.",
+    "partialFields": "Energy formatter maps null/nonfinite to em dash; unsupported meter/loss/cost uses explicit translated label; interval endpoints independently tolerate null. Zero and signed energy/cost remain eligible for formatting."
+  },
+  "numericAndDateReview": {
+    "SI": "Source-confirmed: raw vehicle/meter/loss fields are Wh; useUnits performs display-boundary conversion and respects locale/decimal_precision. No legacy converter caller was found in inspected direct files.",
+    "displayPrecision": "Energy follows user precision; currency uses its denomination fraction digits. Forensic low-precision concern is C-01; currency source agreement is CF-06.",
+    "signs": "No positivity or truthiness guard drops valid zero/negative energy, loss or discrepancy. Null cost/currency is distinct from zero. No fresh numeric tests were run.",
+    "dates": "Session dates and mobile evidence use useDateFormat; global evidence has CF-02. UTC timestamps remain original in the export fields that are retained.",
+    "workspace": "Selected vehicle is the workspace owner; there is no duplicate VehicleSelect/RangePicker. Route has vehicle=true and range=false by inspected workspaceScope source.",
+    "currency": "No currency conversion inferred. Missing currency is unsupported; formatter accepts ISO denomination semantics, but the backend recorded-cost source has CF-06."
+  },
+  "responsive": {
+    "sourceEvidence": "Page supplies mobile summary roles and allDetails; detail lists wrap using min-w-0/break-words. Evidence stacks into three columns at lg. Existing shared DataTable switches its mobile adapter based on allocated width rather than deleting fields.",
+    "confirmedFinding": "CF-03: desktop loses detail access and record association.",
+    "unverified": [
+      "All actual mission viewport widths and allocated-width transitions",
+      "Long text/RTL/200% zoom",
+      "Toolbar/export menu wrapping and clipping",
+      "Mobile modal footer/safe-area visibility",
+      "Dark/light/custom themes and native host presentation"
+    ]
+  },
+  "accessibility": {
+    "sourceEvidence": "Localized table caption and row label; decorative ReceiptText icon is aria-hidden; evidence sub-sections have localized aria-label and h3 Text headings; no positive tabindex or raw interactive HTML matched in the five inspected direct files. Shared primitives own keyboard/focus behavior.",
+    "limitations": "This establishes source wiring only. Actual accessible tree, modal focus/trap/restore, announced loading/error/freshness, touch target geometry, composed contrast, forced colors and reduced-motion behavior are NOTRUN. No browser/Lighthouse/native tool was called.",
+    "confirmedAccessibilityDefects": []
+  },
+  "actions": {
+    "preserved": [
+      "Server pagination",
+      "Full-result CSV read/download",
+      "Full-result JSON read/download",
+      "DataTable persisted column layout via advanced-intelligence:charging-forensics",
+      "Mobile quick-view details through existing shared adapter",
+      "Existing source retry/refresh"
+    ],
+    "scope": "Read-only page; no production mutation capability was invoked. Export callbacks close over the selected vehicle when invoked. Shared export failure/loading handling was not executed.",
+    "defects": ["CF-04", "CF-05"]
+  },
+  "preservation": {
+    "snapshot": [
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+        "lines": 234,
+        "sha256": "1e352c704f5dfb45cf7a5cc92992aab3d6f1e1b03f1400cd382c33170011e67c"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+        "lines": 95,
+        "sha256": "9cc182a39da7697644c2d06dedaa20e50697bc130401e47983ccd3b43bd501be"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+        "lines": 132,
+        "sha256": "68336512c44aca2575339906b1f016eb180a30a1abcb96e42ba0fc27fe0c39b4"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\formatters.ts",
+        "lines": 44,
+        "sha256": "04a7db2f8b03374d3353618653fe8d2e8bcd108a6fa5ea4d87267d956c9d0280"
+      },
+      {
+        "file": "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts",
+        "lines": 19,
+        "sha256": "92ede6f4344dda09abbb045706924bd3e4f4e895d57d9e6150a7591c7b00d7b1"
+      }
+    ],
+    "pagePlusDirectPanelsLines": 461,
+    "allFiveDirectFilesLines": 524,
+    "originalBaselineComparison": "NOTRUN: current-source-only assignment; no old Git version or previous Phase6 report read, no original percentage asserted.",
+    "topLevelSections": [
+      "Null-means-unsupported informational disclosure",
+      "Session reconciliation table plus pagination",
+      "Evidence, quality and limitations"
+    ],
+    "evidenceSubsections": ["Data quality", "Evidence sources", "Limitations and explicitly unsupported fields"],
+    "columnCount": 9,
+    "literalGlassPanelCount": 0,
+    "literalChartContainerCount": 0,
+    "panelOpeningTagMatches": 3,
+    "panelCountExplanation": "Page directly mounts one InsightPanel and one EvidencePanel; EvidencePanel internally mounts one InsightPanel. Three matching tags are not three independent top-level panels. LayoutCard/SourceContent is the actual panel architecture.",
+    "mountedSectionEvidence": "Source JSX only; all three top-level sections are unconditionally mounted. Actual full-page rendering was NOTRUN."
+  },
+  "verification": {
+    "sourceScanScope": [
+      "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "web\\src\\features\\advanced-intelligence\\formatters.ts",
+      "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts"
+    ],
+    "commands": [
+      {
+        "command": "rg --line-number --no-heading <prohibited-pattern> <five exact direct source files>",
+        "result": "FAILED",
+        "exitCode": 1,
+        "rawOutput": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+        "consequence": "No result claimed; retried with native Select-String, no tool installed."
+      },
+      {
+        "command": "Select-String -LiteralPath <five exact direct source files> -Pattern <each of nine scoped patterns>",
+        "result": "COMPLETED",
+        "exitCode": 0,
+        "rawOutput": [
+          "static_inline_css_var: matched_lines=0; command_completed=True",
+          "raw_controls: matched_lines=0; command_completed=True",
+          "direct_vendor_import: matched_lines=0; command_completed=True",
+          "old_api_import: matched_lines=0; command_completed=True",
+          "double_api_prefix: matched_lines=0; command_completed=True",
+          "camel_case_query: matched_lines=0; command_completed=True",
+          "any_type: matched_lines=0; command_completed=True",
+          "positive_tabindex: matched_lines=0; command_completed=True",
+          "direct_neon_body: matched_lines=0; command_completed=True"
+        ],
+        "limitation": "Lexical patterns only, not parser/full-app validation; token-backed styles are not blanket certified. Hook URL agreement was separately traced through actual URLSearchParams and delegated router mounting."
+      },
+      {
+        "command": "Get-Content line counts; Get-FileHash -Algorithm SHA256; Select-String panel opening tags for five direct source paths",
+        "result": "COMPLETED",
+        "exitCode": 0,
+        "rawOutput": [
+          "ChargingForensicsPage.tsx | lines=234",
+          "InsightPanel.tsx | lines=95",
+          "EvidencePanel.tsx | lines=132",
+          "formatters.ts | lines=44",
+          "chargingForensicsExport.ts | lines=19",
+          "ChargingForensicsPage.tsx:176: <InsightPanel",
+          "ChargingForensicsPage.tsx:222: <EvidencePanel",
+          "EvidencePanel.tsx:40: <InsightPanel",
+          "panel_opening_tag_matches=3; command_completed=True"
+        ]
+      },
+      {
+        "command": "Get-Content <owned report> -Raw | ConvertFrom-Json; report identity/count checks; Get-FileHash five direct source snapshots; Select-String exact issue citations",
+        "result": "COMPLETED",
+        "exitCode": 0,
+        "rawOutput": [
+          "JSON_PARSE_OK | confirmed=7 | candidates=4 | sourceWrites=False",
+          "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx | snapshot_match=True",
+          "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx | snapshot_match=True",
+          "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx | snapshot_match=True",
+          "web\\src\\features\\advanced-intelligence\\formatters.ts | snapshot_match=True",
+          "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts | snapshot_match=True",
+          "source_repository.go:476: ELSE ROUND(cost_decimal * 100)::bigint",
+          "ChargingForensicsPage.test.tsx:145: expect(detail.getByText('1 samples · 2 Jun 2026, 00:30')).toBeInTheDocument();"
+        ]
+      }
+    ],
+    "existingTestsRead": "ChargingForensicsPage.test.tsx was inspected only. It mocks hook, units, date preferences, downloads and translations; it includes source assertions for nine columns, mobile detail, signed/zero/null values, page reset/recovery, retained failure/pause, loading/failure/empty and off-page exports. Its presence is not a fresh test pass or native/runtime evidence.",
+    "notRun": {
+      "native": "NOTRUN",
+      "runtime": "NOTRUN",
+      "freshTests": "NOTRUN",
+      "fullPage": "NOTRUN",
+      "browser": "NOTRUN",
+      "realIdentity": "NOTRUN",
+      "networkRequests": "NOTRUN",
+      "mutations": "NOTRUN",
+      "globalTypeScript": "NOTRUN",
+      "lintBuildSuites": "NOTRUN",
+      "auditScript": "NOTRUN: invokes prohibited global TypeScript/helper",
+      "apiVerificationScript": "NOTRUN: helper execution prohibited; bounded source contract trace used instead",
+      "preservationScript": "NOTRUN: helpers and original-source comparison outside assignment",
+      "GitDockerInstallsServers": "NOTRUN"
+    }
+  },
+  "requiredSharedChanges": [
+    {
+      "name": "EvidencePanel source-state and bound date formatting",
+      "existingOwner": "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+      "states": ["initial", "paused", "fatal-without-data", "resolved-empty", "retained-refresh-failure"],
+      "usedBy": ["ChargingForensicsPage"],
+      "dependsOn": ["existing InsightPanel/source-state contract", "existing useDateFormat"],
+      "findingIds": ["CF-01", "CF-02"],
+      "note": "Feature-local shared component; no global primitive redesign proposed."
+    },
+    {
+      "name": "Explicit bounded-export completeness",
+      "existingOwner": "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+      "states": ["complete", "safety-bound-reached"],
+      "usedBy": ["ChargingForensicsPage CSV", "ChargingForensicsPage JSON"],
+      "dependsOn": ["current pagination endpoint"],
+      "findingIds": ["CF-05"]
+    },
+    {
+      "name": "Currency minor-unit source contract",
+      "existingOwner": "internal\\database\\advancedintelligence\\source_repository.go",
+      "states": ["recorded two-digit currency", "recorded non-two-digit currency", "unknown currency"],
+      "usedBy": ["ChargingForensicsPage recorded-cost column and packet"],
+      "dependsOn": ["recorded cost_decimal/cost_currency semantics"],
+      "findingIds": ["CF-06"],
+      "note": "Source agreement report only; query/model/ingestion were not modified."
+    },
+    {
+      "name": "Evidence sample singular/plural",
+      "existingOwner": "web\\src\\i18n\\en\\locale-advanced-intelligence.json",
+      "states": ["one sample", "other sample counts"],
+      "usedBy": ["EvidencePanel", "ChargingForensicsPage mobile evidence"],
+      "dependsOn": ["existing split catalog ownership"],
+      "findingIds": ["CF-07"]
+    }
+  ],
+  "duplicatedPatterns": [],
+  "competingImplementations": [],
+  "priority": "Address truthful source-state and export completeness plus currency contract before full-page acceptance; retain source-supported capabilities and existing controls.",
+  "evidenceLimits": [
+    "All issues and reproductions are source-derived; none is a real-session/browser/request reproduction.",
+    "No prior Phase6 report was consulted or reused.",
+    "No acceptance claim follows from inherited mocked tests, lexical zero counts or present shared-component imports.",
+    "Source files can change concurrently; hashes identify the five inspected direct-file snapshots, not a locked repository revision.",
+    "Shared DataTable source changed between read-only observations; only its stable mobile-only allDetails/opt-in desktop expansion contract was relied on, not a current shared gate or line-stable runtime receipt.",
+    "Actual supported-runtime/TypeScript/build/lint/tests, native host, authentication, keyboard, contrast and full-page acceptance are explicitly deferred.",
+    "No global or unselected suite, helper, server, extension, browser, identity, mutation, Git or Docker operation was performed."
+  ],
+  "filesRead": [
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".gitignore",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\A11Y_GUIDELINES.md",
+    "docs\\TABLE_GUIDELINES.md",
+    "docs\\MOBILE_GUIDELINES.md",
+    "docs\\I18N_GUIDELINES.md",
+    "docs\\features\\catalogue-advanced-intelligence.md",
+    "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.tsx",
+    "web\\src\\features\\advanced-intelligence\\pages\\ChargingForensicsPage.test.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\InsightPanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\components\\EvidencePanel.tsx",
+    "web\\src\\features\\advanced-intelligence\\formatters.ts",
+    "web\\src\\features\\advanced-intelligence\\chargingForensicsExport.ts",
+    "web\\src\\api\\hooks\\useAdvancedIntelligence.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\types\\advancedIntelligence.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useDateFormat.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\lib\\routeRegistry.ts",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\i18n\\en\\locale-advanced-intelligence.json",
+    "web\\src\\i18n\\en\\locale-charging.json",
+    "web\\src\\i18n\\en.json",
+    "internal\\api\\router.go",
+    "internal\\handler\\v1\\advancedintelligence\\handler.go",
+    "internal\\domain\\advancedintelligence\\survival_security_charging.go",
+    "internal\\app\\advancedintelligencesvc\\survival_security_charging.go",
+    "internal\\database\\advancedintelligence\\source_repository.go"
+  ],
+  "release": {
+    "workerState": "STOPPED_AND_RELEASED",
+    "reportWritesReleased": true,
+    "logWritesReleased": true,
+    "commandsReleased": true,
+    "ongoingCommands": 0,
+    "postReturnWrites": false,
+    "parentLoopsOrSchedulesFollowed": false
+  }
+}

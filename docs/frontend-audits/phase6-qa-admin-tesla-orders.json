@@ -1,0 +1,855 @@
+{
+  "schema_version": 1,
+  "item": "phase6-qa-admin-tesla-orders",
+  "result": "DONE_REPORT_ONLY",
+  "qa_acceptance": "NOT_ACCEPTED",
+  "evidence_kind": "read-only source inspection and scoped text scans; no mounted application evidence",
+  "clock": {
+    "creation_at": "2026-10-13T16:33:28.066Z",
+    "first_clock_observed_at": "2026-10-13T16:33:43.8408623Z",
+    "evidence_collection_completed_at": "2026-10-13T16:40:13.0021158Z",
+    "return_target_at": "2026-10-13T16:53:28.066Z",
+    "hard_deadline_at": "2026-10-13T16:58:28.066Z",
+    "maximum_command_seconds": 480,
+    "final_document_validation": {
+      "status": "PASS",
+      "level": "document structure, citation ranges, finding links and ten source hashes only",
+      "validated_at": "2026-10-13T16:45:29.7790879Z",
+      "command_exit_code": 0,
+      "shell_id": "4767",
+      "bad_checks": 0,
+      "invalid_citation_ranges": 0,
+      "source_hash_mismatches": 0,
+      "unresolved_finding_links": 0
+    }
+  },
+  "authority": {
+    "queue": "migration-queue.md:191",
+    "route_alias_as_recorded_in_queue": "/tesla-orders",
+    "fresh_route_mount_acceptance": "NOTRUN",
+    "rolling_qa_contract": "migration-queue.md:137-180",
+    "accepted_source_dependency": "migration-queue.md:1545",
+    "read_instructions": [
+      "docs\\orchestrator-loop.md",
+      "docs\\frontend-design-contract.md:1-540",
+      "docs\\frontend-design-contract.md:541-625",
+      "docs\\frontend-mission.md:1-250",
+      "docs\\frontend-mission.md:525-790",
+      "docs\\frontend-mission.md:921-1120",
+      "docs\\frontend-mission.md:1415-1488",
+      "docs\\session-handoff.md:1-140",
+      ".github\\instructions\\react-frontend.instructions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md"
+    ],
+    "interpretation": "Current SI cutover/design contract takes precedence over older mixed-source-unit examples. No measurement fields, backend handlers, queries or unit converters were edited.",
+    "historical_receipts": {
+      "source_commit_as_recorded_in_queue": "29d0984c4eacc29c6d0c1739d9e85f52a5eb5935",
+      "historical_tests": "15/15 source tests recorded in queue, NOT rerun or freshly accepted here",
+      "historical_lint_and_scans": "Recorded in dependency row only, not reused as a fresh pass",
+      "historical_native": "Previous mounted diagnostics encountered real 429/501/503/404; not runtime acceptance",
+      "historical_typecheck": "Handoff records prior literal npx tsc --noEmit exit0; not rerun and not asserted as a fresh result"
+    }
+  },
+  "scope": {
+    "repository": "D:\\repos\\teslasync",
+    "working_directory": "D:\\repos\\teslasync\\web",
+    "versioned_write": "docs\\frontend-audits\\phase6-qa-admin-tesla-orders.json",
+    "ignored_write": "web\\logs\\phase6-qa-admin-tesla-orders.log",
+    "ignored_log_evidence": ".gitignore:80 logs/ pattern; Git was not invoked",
+    "application_writes": [],
+    "test_writes": [],
+    "catalog_configuration_writes": [],
+    "read_only_entry": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx",
+    "read_only_relevant_dependencies": [
+      "web\\src\\features\\admin\\components\\tesla-orders\\index.ts",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountBriefStatus.ts",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts",
+      "web\\src\\api\\hooks\\useUser.ts",
+      "web\\src\\api\\hooks\\_toastHelpers.ts",
+      "web\\src\\api\\dataState.ts",
+      "web\\src\\api\\client.ts",
+      "web\\src\\hooks\\useDateFormat.ts",
+      "web\\src\\lib\\dateFormat.ts",
+      "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx",
+      "web\\src\\components\\layout\\PageContainer.tsx",
+      "web\\src\\components\\feedback\\DataSourceNotice.tsx",
+      "web\\src\\components\\feedback\\EmptyState.tsx",
+      "web\\src\\components\\ui\\DataTable.tsx",
+      "web\\src\\hooks\\useStatusAnnouncer.ts",
+      "internal\\api\\router.go"
+    ],
+    "prohibited_activity_performed": [],
+    "privacy": "Only source declarations and hypothetical status/date/filter inputs were inspected. No browser, API, real account data, VIN value, order identifier, paid action, production identity, preference save or mutation was used."
+  },
+  "status_semantics": {
+    "PASS": "The stated narrow source property or text scan was actually inspected; never a native/application/test pass.",
+    "FAIL": "A deterministic source mechanism violates the stated source contract. Reproduction steps are proposed, not executed.",
+    "NOTRUN": "No execution/acceptance evidence was collected for this check.",
+    "candidate": "Source risk with an unresolved upstream contract, runtime condition or composed/native consequence; not promoted to a confirmed application defect."
+  },
+  "checks": [
+    {
+      "id": "five-section-preservation",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:121",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:134",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:141",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:168",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:189"
+      ],
+      "result": "Summary, status breakdown, delivery outlook, board and detail table are present in four layout bands. Data does not gate the whole page."
+    },
+    {
+      "id": "initial-loading",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:54-61",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:121-123",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx:46-48"
+      ],
+      "result": "Initial discriminator selects section skeletons; KPI receives loading and null stats rather than fabricated counts. Native loading geometry is NOTRUN."
+    },
+    {
+      "id": "initial-error-and-read-retry",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:57",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:63-65",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx:49-60",
+        "web\\src\\api\\dataState.ts:192-211"
+      ],
+      "result": "No-data failure owns QueryError and read refetch; only fatalError replaces a section. Error panels retain surrounding shells."
+    },
+    {
+      "id": "empty-versus-filtered-empty",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:77-87",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx:63-71",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:196"
+      ],
+      "result": "Account-wide empty copy distinguishes synced from unsynced using fetched_at; filtered no-match has separate copy. Unknown/malformed envelopes are a separate candidate, not an authoritative-empty pass."
+    },
+    {
+      "id": "retained-refresh-error",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\api\\dataState.ts:225-236",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:46-61",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:115-116",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:79-80",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:117-120",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:181-185",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:249-275"
+      ],
+      "result": "Retained orders remain ready while the source notice says cached/refresh failed and exposes read retries. No generic refresh-error gate erases data."
+    },
+    {
+      "id": "paused-read-source",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\api\\dataState.ts:180",
+        "web\\src\\api\\dataState.ts:208",
+        "web\\src\\api\\dataState.ts:239-246",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:80-81",
+        "web\\src\\components\\feedback\\DataSourceNotice.tsx:166-169"
+      ],
+      "result": "Paused is separate from server failure. Retained reads become stale without fatalError; initial paused reads keep unknown/loading values with a paused source notice. Offline mutation behavior is NOTRUN."
+    },
+    {
+      "id": "unknown-summary-totals",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:121",
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx:23-38"
+      ],
+      "result": "Summary count rawValues remain undefined when no valid orders array is available. Successful-array totals are local array counts; backend full-result completeness is NOTRUN, not assumed."
+    },
+    {
+      "id": "snapshot-period-and-date-formatting",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\useAccountSnapshotPeriod.ts:8-16",
+        "web\\src\\hooks\\useDateFormat.ts:72-87",
+        "web\\src\\lib\\dateFormat.ts:65-73",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:146"
+      ],
+      "result": "Snapshot provenance explicitly is not a date-range total; valid sync timestamp uses shared locale/timezone formatting. Unrenderable row dates use the shared dash fallback. Delivery-outlook unknown semantics FAIL separately."
+    },
+    {
+      "id": "delivery-unknown-versus-none",
+      "status": "FAIL",
+      "level": "source",
+      "finding": "F1",
+      "evidence": [
+        "web\\src\\api\\hooks\\useUser.ts:152",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:168-183",
+        "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx:110-112"
+      ]
+    },
+    {
+      "id": "next-delivery-lifecycle",
+      "status": "FAIL",
+      "level": "source",
+      "finding": "F2",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:94",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:173-183"
+      ]
+    },
+    {
+      "id": "known-status-label-localization",
+      "status": "FAIL",
+      "level": "source",
+      "finding": "F3",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:120-126",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:36",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:128-134"
+      ]
+    },
+    {
+      "id": "status-display-filter-agreement",
+      "status": "FAIL",
+      "level": "source",
+      "finding": "F4",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:65-70",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:134",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:120-126"
+      ]
+    },
+    {
+      "id": "central-initial-load-announcement-wiring",
+      "status": "FAIL",
+      "level": "source",
+      "finding": "F5",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:108-117",
+        "web\\src\\components\\layout\\PageContainer.tsx:136-143",
+        "web\\src\\hooks\\useStatusAnnouncer.ts:290-307"
+      ]
+    },
+    {
+      "id": "localized-table-accessible-name",
+      "status": "FAIL",
+      "level": "source",
+      "finding": "F6",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:185-199",
+        "web\\src\\components\\ui\\DataTable.tsx:929-930",
+        "web\\src\\components\\ui\\DataTable.tsx:1447",
+        "web\\src\\components\\ui\\DataTable.tsx:1471"
+      ]
+    },
+    {
+      "id": "unknown-and-known-status-text-not-color-alone",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:76-82",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:91",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:121",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:56-58",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx:111-113"
+      ],
+      "result": "Other/missing statuses have neutral treatment, dash or textual raw status; visible buckets and row badges are not color-only. Exact lifecycle vocabulary remains a candidate."
+    },
+    {
+      "id": "header-refresh-single-flight-and-feedback",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:68-74",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:91-103",
+        "web\\src\\api\\hooks\\useUser.ts:180-185",
+        "web\\src\\api\\hooks\\_toastHelpers.ts:91-110"
+      ],
+      "result": "Same-page reentry is synchronously guarded; header pending state is loading/disabled/busy. Mutation success invalidates orders and emits a localized success toast; failure emits a localized error toast. No action was performed and fresh GET completion is not promised by the mutation toast."
+    },
+    {
+      "id": "source-accessible-names-and-basic-semantics",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:120",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:130",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx:31-39",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:40-45",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:62-105",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:179-181"
+      ],
+      "result": "Sections, named list, card group/definition list, decorative-icon hiding and search aria-label are supplied. This is not a computed accessibility-tree, keyboard or screen-reader pass."
+    },
+    {
+      "id": "mobile-header-refresh-intent",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:90-100"
+      ],
+      "result": "Header refresh declares min-h-11/min-w-11 below md and wrapLabel. Actual hit rectangles, clipping, focus and pointer activation are NOTRUN."
+    },
+    {
+      "id": "get-hook-router-method-path",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\api\\hooks\\useUser.ts:166-171",
+        "internal\\api\\router.go:3642",
+        "internal\\api\\router.go:3647",
+        "web\\src\\api\\client.ts:90-93"
+      ],
+      "result": "GET /tesla/user/orders matches route nesting; signal is forwarded; no client prefix or query parameter is supplied."
+    },
+    {
+      "id": "refresh-hook-router-method-path",
+      "status": "PASS",
+      "level": "source",
+      "evidence": [
+        "web\\src\\api\\hooks\\useUser.ts:173-185",
+        "internal\\api\\router.go:3642",
+        "internal\\api\\router.go:3648"
+      ],
+      "result": "POST /tesla/user/orders/refresh matches the router's rate-limited POST. Backend capability/auth/business behavior was not executed."
+    },
+    {
+      "id": "scoped-guideline-text-scans",
+      "status": "PASS",
+      "level": "executed text scan only",
+      "evidence": [
+        "web\\logs\\phase6-qa-admin-tesla-orders.log",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx:77"
+      ],
+      "result": "Six requested pattern categories have zero true matches in the ten explicit files after correcting case-insensitive shared Button/Input false positives. One computed percentage inline width is permitted. No general all-guidelines or TypeScript pass is asserted."
+    },
+    {
+      "id": "si-and-source-console-patterns",
+      "status": "PASS",
+      "level": "executed text scan only",
+      "evidence": [
+        "web\\logs\\phase6-qa-admin-tesla-orders.log",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:46-49"
+      ],
+      "result": "Zero calls to the listed deprecated unit converters, zero explicit any annotations and zero console logging calls in the ten scoped source files. Shared date preferences, not legacy unit conversion, are used. Endpoint SLO/span behavior is outside assigned router-only inspection."
+    },
+    {
+      "id": "typescript",
+      "status": "NOTRUN",
+      "command": "npx tsc --noEmit",
+      "evidence": [
+        "migration-queue.md:137-150",
+        "docs\\session-handoff.md:74-88"
+      ],
+      "reason": "Report-only worker scope forbids full gates and rerunning unchanged passing checks. Prior typecheck receipts are historical, not a fresh pass."
+    },
+    {
+      "id": "tests-lint-build",
+      "status": "NOTRUN",
+      "evidence": [
+        "migration-queue.md:1545",
+        "docs\\orchestrator-loop.md:129-135"
+      ],
+      "reason": "No implementation/test edits and no passing test reruns. No test discovery or runner was invoked; no full suite, build or lint was run."
+    },
+    {
+      "id": "api-runtime-and-backend-payload-shape",
+      "status": "NOTRUN",
+      "evidence": [
+        "web\\src\\api\\hooks\\useUser.ts:144-163",
+        "internal\\api\\router.go:3642-3648"
+      ],
+      "reason": "API calls and identities prohibited. Route method/path agreement is proven separately; Go handler/model JSON shape, full-result completeness, fetched_at semantics, auth and status vocabulary are not proven from router registration."
+    },
+    {
+      "id": "catalog-resolution-and-translation-matrix",
+      "status": "NOTRUN",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:39",
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx:23-45"
+      ],
+      "reason": "Visible page-owned labels generally use t with fallbacks. Catalog inspection/integration and mounted locale checks were not in assigned page/import/hook/router scope. F3/F6 are source-proven untranslated paths, independent of catalog contents."
+    },
+    {
+      "id": "fresh-original-baseline-comparison",
+      "status": "NOTRUN",
+      "evidence": [
+        "migration-queue.md:1545",
+        "web\\logs\\phase6-qa-admin-tesla-orders.log"
+      ],
+      "reason": "Current page and component line counts were executed; original source count/section comparison remains historical because Git and original baseline retrieval are prohibited."
+    },
+    {
+      "id": "native-responsive-matrix",
+      "status": "NOTRUN",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx:33",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:198"
+      ],
+      "reason": "No browser grant; no browser operation. All widths, narrow allocated containers and filtered-mobile detail reachability remain unverified."
+    },
+    {
+      "id": "native-accessibility-and-theme-matrix",
+      "status": "NOTRUN",
+      "evidence": [
+        "docs\\frontend-design-contract.md:518-540",
+        "docs\\frontend-design-contract.md:609-618"
+      ],
+      "reason": "Keyboard/focus, screen reader, touch targets, composed contrast, dark/light/custom, forced-colors, RTL, 200% text and reduced-motion/low-bandwidth checks were not performed."
+    },
+    {
+      "id": "native-source-state-and-action-feedback",
+      "status": "NOTRUN",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:41-99",
+        "web\\src\\api\\hooks\\useUser.ts:173-185"
+      ],
+      "reason": "No mounted loading/error/empty/retained/paused/refresh-success/failure scenario, connectivity transition or mutation. No live-only/offline-queue/capability acceptance."
+    }
+  ],
+  "confirmed_source_findings": [
+    {
+      "id": "F1",
+      "priority": "P2",
+      "title": "Unknown delivery dates are presented as no scheduled delivery",
+      "primary_evidence": "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx:110-112",
+      "supporting_evidence": [
+        "web\\src\\api\\hooks\\useUser.ts:152",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:168-183",
+        "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx:35-38"
+      ],
+      "mechanism": "delivery_date is nullable. Missing/invalid/past dates leave nextDelivery null, but the outlook unconditionally translates null into None scheduled. The summary correctly preserves its next-delivery rawValue as unknown, making the two sections disagree about the same missing fact.",
+      "reproduction": "Proposed source-case only, NOT executed: provide one PENDING order with delivery_date:null. The reducer leaves nextDelivery:null; the outlook selects None scheduled even though the delivery fact is unknown.",
+      "expected": "Represent unknown/unconfirmed delivery facts distinctly from a proven absence of upcoming scheduled deliveries.",
+      "narrow_followup": "Assign the delivery derivation and outlook owner a bounded unknown-versus-none correction; retain the summary's missing-value semantics and all five sections.",
+      "runtime_reproduced": false
+    },
+    {
+      "id": "F2",
+      "priority": "P2",
+      "title": "Cancelled orders can determine the next delivery",
+      "primary_evidence": "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:173-183",
+      "supporting_evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:94",
+        "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx:101-112"
+      ],
+      "mechanism": "The reducer counts cancellation separately but chooses the minimum future delivery timestamp from every row, without checking lifecycle. A cancelled row with the earliest future timestamp becomes the displayed next delivery.",
+      "reproduction": "Proposed source-case only, NOT executed: at a clock before 2030-01-01, give CANCELLED with delivery_date 2030-01-01T12:00:00Z and PENDING with 2030-01-02T12:00:00Z. The source chooses the cancelled row's timestamp.",
+      "expected": "Do not claim a terminal cancelled row is an upcoming handover; preserve the upstream record and explicitly define active delivery eligibility.",
+      "narrow_followup": "Same bounded delivery-derivation owner as F1; cover cancellation/terminal rows without replacing status contracts.",
+      "runtime_reproduced": false
+    },
+    {
+      "id": "F3",
+      "priority": "P2",
+      "title": "Known row status labels bypass localization",
+      "primary_evidence": "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:120-126",
+      "supporting_evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:36",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:43-45",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:128-134",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx:112"
+      ],
+      "mechanism": "formatOrderStatus transforms the raw string using replacement/lowercasing but has no translator. Both row badge text and the card accessible name receive that English-derived output, while bucket labels separately use t.",
+      "reproduction": "Proposed source-case only, NOT executed: choose a non-English locale and status DELIVERED or READY_FOR_DELIVERY. The formatter still returns Delivered or Ready for delivery regardless of translator/catalog.",
+      "expected": "Localize supported known statuses and preserve unknown source values without inventing a translated lifecycle or silently recasing user-owned text.",
+      "narrow_followup": "Assign the existing status formatter/card/table owners a known-status display mapping and report exact catalog needs to its serialized owner.",
+      "runtime_reproduced": false
+    },
+    {
+      "id": "F4",
+      "priority": "P3",
+      "title": "Text filtering uses raw status codes rather than displayed status text",
+      "primary_evidence": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:65-70",
+      "supporting_evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:134",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:120-126"
+      ],
+      "mechanism": "The external free-text filter explicitly searches raw status strings. Its display replaces underscores with spaces. Therefore an exact visible status phrase can eliminate the row that displays that phrase.",
+      "reproduction": "Proposed source-case only, NOT executed: display a READY_FOR_DELIVERY row, then enter ready for delivery in Filter orders. Raw ready_for_delivery does not include the space-separated query; the row is removed.",
+      "expected": "Search displayed/localized supported status text as well as stable raw values, keeping model/VIN/order-ID filtering and original source data.",
+      "narrow_followup": "Bounded OrdersTable filter normalization correction, coordinated with F3's status-label mapping.",
+      "runtime_reproduced": false
+    },
+    {
+      "id": "F5",
+      "priority": "P2",
+      "title": "Section-local loading is not wired to the shared load announcement",
+      "primary_evidence": "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:108-117",
+      "supporting_evidence": [
+        "web\\src\\components\\layout\\PageContainer.tsx:136-143",
+        "web\\src\\components\\layout\\PageContainer.tsx:163",
+        "web\\src\\hooks\\useStatusAnnouncer.ts:290-307"
+      ],
+      "mechanism": "The page passes query/dataSources but omits loading, busy and its own load-announcement hook. PageContainer's announcement derives solely from Boolean(loading), not query. It therefore receives false throughout the initial query, so the shared hook cannot observe a loading-to-settled edge. Source notices still announce failure/paused states; this finding does not claim all page announcements are absent.",
+      "reproduction": "Proposed source-case only, NOT executed: inspect a successful initial query transition from pending to ready. PageLayout props keep loading undefined before and after; PageContainer passes false both times; wasLoading.current && !isLoading is never true.",
+      "expected": "Announce meaningful initial completion through the existing owner without using PageContainer loading to hide the independently rendered sections or duplicating source-notice announcements.",
+      "narrow_followup": "Assign only TeslaOrdersPage's announcement/busy wiring and its authorized covering test; shared PageContainer/announcer remain read-only.",
+      "runtime_reproduced": false
+    },
+    {
+      "id": "F6",
+      "priority": "P3",
+      "title": "Table accessible name is an untranslated internal identifier",
+      "primary_evidence": "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:185-199",
+      "supporting_evidence": [
+        "web\\src\\components\\ui\\DataTable.tsx:929-930",
+        "web\\src\\components\\ui\\DataTable.tsx:1447",
+        "web\\src\\components\\ui\\DataTable.tsx:1471"
+      ],
+      "mechanism": "OrdersTable supplies name=\"tesla-orders\" and no caption. DataTable prioritizes caption ?? name ?? tableId for both aria-label and visually hidden caption. Localizing the enclosing panel heading does not replace that table name.",
+      "reproduction": "Proposed source-case only, NOT executed: render in a non-English locale and inspect the table's accessible-name inputs. The selected value remains tesla-orders.",
+      "expected": "Supply a localized human-readable caption while retaining the stable name/tableId persistence identities.",
+      "narrow_followup": "Bounded OrdersTable caption adoption; do not rename tableId or storage identities.",
+      "runtime_reproduced": false
+    }
+  ],
+  "candidates": [
+    {
+      "id": "C1",
+      "status": "NOTRUN",
+      "title": "Board minimum track width may exceed narrow allocated space",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx:33",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:34",
+        "web\\src\\components\\layout\\layout-reference\\LayoutCard.tsx:63"
+      ],
+      "mechanism": "minmax(18rem,1fr) cannot shrink below 18rem; at a 16px root that is 288px, and 200% root/text scaling can increase the minimum. Panel and shell allocations may be narrower.",
+      "required_proof": "Native allocated-width/scrollWidth and focus/content captures at 320px and narrow containers, normal/scaled text. Actual shell gutters and composed overflow were not measured; no native overflow failure is asserted."
+    },
+    {
+      "id": "C2",
+      "status": "NOTRUN",
+      "title": "Filtered table hides four detail columns on mobile",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx:198",
+        "web\\src\\components\\ui\\DataTable.tsx:724-725",
+        "web\\src\\components\\ui\\DataTable.tsx:1386",
+        "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx:62-114"
+      ],
+      "mechanism": "Only model/status remain table-visible below md. No mobilePresentation or row expansion is supplied. The separate unfiltered board preserves order ID, VIN, delivery and positive upgrade fields, so this is not proven page-wide data deletion.",
+      "required_proof": "Native filtered-row detail reachability for large lists, repeated models and long identifiers; determine whether board access meets the intended filtered-table interaction before assigning a narrow mobile adapter fix."
+    },
+    {
+      "id": "C3",
+      "status": "NOTRUN",
+      "title": "Substring status classifier can imply delivery for unrecognized statuses",
+      "evidence": [
+        "web\\src\\api\\hooks\\useUser.ts:151",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:91-108"
+      ],
+      "mechanism": "AWAITING_DELIVERY or DELIVERY_SCHEDULED would reach includes('DELIVER') and become delivered unless an earlier token matches. This conditional transformation is source-visible, but the router proves no upstream status vocabulary.",
+      "required_proof": "An authorized synthetic contract fixture representing an actually supported upstream status; do not invent production statuses, contact Tesla or classify this as an observed account defect."
+    },
+    {
+      "id": "C4",
+      "status": "NOTRUN",
+      "title": "Missing/malformed orders shape can collapse to false empty or throw outside section boundaries",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:46-50",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:59",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:121",
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:163",
+        "web\\src\\api\\hooks\\useUser.ts:159-163"
+      ],
+      "mechanism": "orders:null/missing uses [] for section empty but null stats for the brief; truthy nonarrays reach .filter before the summary's Array.isArray guard. Null rows are dropped by stats but not board/table. These inputs are outside the declared TeslaOrder[] shape.",
+      "required_proof": "Backend JSON contract or an authorized malformed-payload fixture. No handler/model inspection beyond router was authorized; actual server nullability/completeness remains unknown."
+    },
+    {
+      "id": "C5",
+      "status": "NOTRUN",
+      "title": "Date-only/same-day and time-passing delivery semantics are unresolved",
+      "evidence": [
+        "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts:170-179",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:50",
+        "web\\src\\lib\\dateFormat.ts:65-73"
+      ],
+      "mechanism": "Date.parse comparisons use an instant clock; YYYY-MM-DD parses at UTC midnight and may cease to qualify during its calendar day or display on a prior local day. Memoization recomputes nextDelivery only when the orders reference changes. The backend's actual delivery date granularity is not established.",
+      "required_proof": "Authorized upstream date-format contract and synthetic frozen-clock/timezone cases; retain user's timezone/locale without guessing that a business calendar date is a timestamp."
+    },
+    {
+      "id": "C6",
+      "status": "NOTRUN",
+      "title": "Empty-panel refresh controls lack local pending feedback",
+      "evidence": [
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:84-87",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:166",
+        "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx:187",
+        "web\\src\\components\\feedback\\EmptyState.tsx:79-81"
+      ],
+      "mechanism": "Imperative EmptyState action has label/onClick only, so these refresh buttons cannot receive disabled/loading props. The page single-flight ref protects requests, and the header does show pending feedback; therefore duplicate network actions are not inferred.",
+      "required_proof": "Authorized synthetic interaction/announcement review to determine whether feedback is sufficiently reachable from each empty CTA. No mutation was executed."
+    }
+  ],
+  "native_matrix": {
+    "status": "NOTRUN",
+    "captures": [],
+    "browser_operations": 0,
+    "api_operations": 0,
+    "mutations": 0,
+    "widths": {
+      "320": "NOTRUN",
+      "375": "NOTRUN",
+      "390": "NOTRUN",
+      "430": "NOTRUN",
+      "768": "NOTRUN",
+      "1024": "NOTRUN",
+      "1280": "NOTRUN",
+      "1440": "NOTRUN",
+      "1920": "NOTRUN",
+      "2560": "NOTRUN"
+    },
+    "other_checks": {
+      "narrow_allocated_container": "NOTRUN",
+      "dark_light_custom_theme": "NOTRUN",
+      "forced_colors": "NOTRUN",
+      "rtl_long_translations": "NOTRUN",
+      "text_scaling_200_percent": "NOTRUN",
+      "keyboard_focus_screen_reader": "NOTRUN",
+      "touch_targets_and_hits": "NOTRUN",
+      "composed_contrast": "NOTRUN",
+      "reduced_motion_low_bandwidth": "NOTRUN",
+      "loading_error_empty_retained_paused_runtime": "NOTRUN",
+      "refresh_success_error_feedback_runtime": "NOTRUN"
+    }
+  },
+  "executed_scans": {
+    "exact_ten_file_scope": [
+      "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx",
+      "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts",
+      "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx",
+      "web\\src\\api\\hooks\\useUser.ts"
+    ],
+    "counts": {
+      "static_inline_css_variable_matched_lines": 0,
+      "raw_lowercase_form_table_html_matched_lines": 0,
+      "direct_vendor_import_matched_lines": 0,
+      "old_api_import_matched_lines": 0,
+      "double_api_prefix_matched_lines": 0,
+      "camelcase_query_parameter_matched_lines": 0,
+      "explicit_any_annotation_matched_lines": 0,
+      "console_logging_call_matched_lines": 0,
+      "listed_deprecated_unit_converter_call_matched_lines": 0,
+      "allowed_dynamic_percentage_inline_styles": 1
+    },
+    "patterns": {
+      "static_inline_css_variable": "style=\\{\\{[^\\r\\n]*var\\(--",
+      "raw_html": "<(button|input|textarea|select|table)\\b",
+      "direct_vendor_import": "from ['\\\"](recharts|react-leaflet|framer-motion)['\\\"]",
+      "old_api_import": "from ['\\\"]\\.\\./(\\.\\./)?api['\\\"]",
+      "double_api_prefix": "request[^\\r\\n]*['\\\"]/api/v1",
+      "camelcase_query_parameter": "[?&](vehicleId|driveId|sessionId|chargingId)=",
+      "explicit_any_annotation": "(:|<|,)\\s*any\\b",
+      "console_logging_call": "console\\.(log|info|warn|error|debug)\\s*\\(",
+      "deprecated_unit_converter_call": "\\b(convertDistance|convertSpeed|convertTemp|convertEfficiency|convertPressure|fmtDistance|fmtSpeed|fmtTemp|fmtPressure)\\s*\\("
+    },
+    "limitations": "Narrow line-oriented regex evidence only, not a parser-wide guideline, exhaustive hardcoded-string or semantic typecheck result.",
+    "corrections_retained": [
+      "Shell rg command failed exit1 because rg was not on PATH; no scan succeeded in that attempt and nothing was installed.",
+      "PowerShell Select-String default case-insensitivity initially returned2 shared Button/Input matches. CaseSensitive replacement returned0 raw lower-case elements.",
+      "Initial1127line composition included204line nonrendered stats helper. Rendered page+components is923; both raw counts are retained.",
+      "Initial document citation validation exit1 found useAccountSnapshotPeriod.ts:8-18 beyond the17line file. Corrected to8-16 and corrected nullable delivery_date/status, LayoutCard and .gitignore exact locations. Corrected document validation exited0."
+    ]
+  },
+  "line_and_section_evidence": {
+    "page_lines": 196,
+    "rendered_imported_component_lines": 727,
+    "page_plus_rendered_components_lines": 923,
+    "nonrendered_stats_helper_lines": 204,
+    "current_lines_including_stats_helper": 1127,
+    "inherited_original_page_lines": 188,
+    "inherited_original_composed_lines": 915,
+    "fresh_original_baseline_comparison": "NOTRUN",
+    "current_section_invocations": 5,
+    "current_layout_bands": 4,
+    "page_glass_panel_openings": 0,
+    "page_chart_container_openings": 0,
+    "page_layout_card_openings": 2,
+    "explanation": "Zero page-local GlassPanel/ChartContainer is not deletion: breakdown/outlook/card descendants retain shared panels; the thin page uses two LayoutCards and an OperationalBrief. Current counts are actual; old counts/section parity are inherited queue receipts, not a fresh original-source comparison."
+  },
+  "source_snapshot_sha256": {
+    "web\\src\\features\\admin\\pages\\TeslaOrdersPage.tsx": "1929B23A0BB569756FBDDA3A5F6F8C0679797FAB58B3EE33D8174263F7FB7B73",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrdersSectionState.tsx": "1B76C8499E84E23395B9E54E9293161DE431DFF07E733D73B031B6236BF551DE",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrdersTable.tsx": "117F4FB8470A6DB55F8307278843398F875D6D7AC34B82594D5B2DA0A951EEF5",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrdersBoard.tsx": "FC9874B008F1A7805AD7A92142E6756B0E9DDF4E8A3D4E5C2256F248343BAD15",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrderCard.tsx": "38FA43704FF8FE48CF1A1C6CFBA5C39CBAB41CCD172764FC14E35F186F198C9B",
+    "web\\src\\features\\admin\\components\\tesla-orders\\OrderStatusBreakdown.tsx": "8123FE75BE00DD651F0D29D09DB621B8EDBA8CBB4CFA59DC7FAB28785F2508A0",
+    "web\\src\\features\\admin\\components\\tesla-orders\\DeliveryOutlookPanel.tsx": "FA09217E5F34E79457635F6A93A3CB6F7DBDB39E5A35551E401F955D2E66125C",
+    "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts": "5EA8DFB7E63342FB8B9BD50D51B52331388FC7685FC5E083FA64F92C637618D5",
+    "web\\src\\features\\admin\\components\\statstrip-tesla-account-privacy\\OrdersOperationalBrief.tsx": "B0FD6C87A19A6230D401A8D33BD2CA1C3978FDAA522776E03E1E81B2EA377626",
+    "web\\src\\api\\hooks\\useUser.ts": "15625474CF8C6C50B62468FAD3E109D2973C78F068460EF48DBE8D909E4092B1"
+  },
+  "commands_and_results": [
+    {
+      "id": "C-clock-and-existing-artifact-inspection",
+      "command": "Get-Date -Format o; Get-ChildItem -Path 'D:\\repos\\teslasync\\.github\\prompts' -Directory | Select-Object -ExpandProperty FullName; Get-ChildItem -Path 'D:\\repos\\teslasync\\docs\\frontend-audits' -Filter '*phase6*tesla*orders*' | Select-Object FullName,Length; Get-ChildItem -Path 'D:\\repos\\teslasync\\logs' -Filter '*phase6*tesla*orders*' | Select-Object FullName,Length",
+      "exit_code": 0,
+      "shell_id": "4682",
+      "result": "Actual initial clock retained; root logs probe was read-only. Authorized ignored log uses web\\logs per rolling contract."
+    },
+    {
+      "id": "C-shell-rg-attempt",
+      "command": "$hits=@(& rg --line-number --no-heading --glob '*.{ts,tsx}' -- $entry.Value $paths 2>&1)",
+      "bindings": "$paths is exact_ten_file_scope joined to repository; first $entry.Value is static_inline_css_variable pattern",
+      "exit_code": 1,
+      "shell_id": "4732",
+      "result": "The term 'rg' is not recognized as a name of a cmdlet, function, script file, or executable program.",
+      "check_status": "NOTRUN",
+      "reason": "Executable missing; no audit counts produced by this failed shell attempt."
+    },
+    {
+      "id": "C-built-in-scans-hashes-sections",
+      "commands": [
+        "$hits=@(Select-String -LiteralPath $paths -Pattern $entry.Value -ErrorAction Stop)",
+        "(Get-Content -LiteralPath $p).Count",
+        "(Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash",
+        "Select-String -LiteralPath $paths[0] -Pattern '<OrdersOperationalBrief|<OrderStatusBreakdown|<DeliveryOutlookPanel|<OrdersBoard|<OrdersTable'",
+        "Select-String -LiteralPath $paths[0] -Pattern \"<$tag\\b\""
+      ],
+      "bindings": "$paths is exact_ten_file_scope joined to repository; $entry iterates the first eight patterns; $p iterates those paths; $tag is GlassPanel, ChartContainer, LayoutCard",
+      "exit_code": 0,
+      "shell_id": "4734",
+      "result": "Actual counts/hashes and five section hits retained; raw HTML initial2case-insensitive matches corrected separately."
+    },
+    {
+      "id": "C-case-sensitive-correction-and-routes",
+      "commands": [
+        "Select-String -CaseSensitive -LiteralPath $paths -Pattern '<(button|input|textarea|select|table)\\b'",
+        "Select-String -CaseSensitive -LiteralPath $paths[-1] -Pattern '/tesla/user/orders'",
+        "Select-String -CaseSensitive -LiteralPath (Join-Path $root 'internal\\api\\router.go') -Pattern 'r.Route\\(\"/tesla/user\"|r.Get\\(\"/orders\"|Post\\(\"/orders/refresh\"'"
+      ],
+      "bindings": "$paths is exact_ten_file_scope joined to repository; $root is D:\\repos\\teslasync",
+      "exit_code": 0,
+      "shell_id": "4742",
+      "result": "Raw HTML0; GET/POST exact path/method agreement, no query params. No request executed."
+    },
+    {
+      "id": "C-source-findings-evidence-and-si",
+      "commands": [
+        "Select-String -CaseSensitive -LiteralPath $p -Pattern $s.Pattern",
+        "Select-String -CaseSensitive -LiteralPath ($files|ForEach-Object{Join-Path $base $_}) -Pattern '\\b(convertDistance|convertSpeed|convertTemp|convertEfficiency|convertPressure|fmtDistance|fmtSpeed|fmtTemp|fmtPressure)\\s*\\('"
+      ],
+      "bindings": "Exact evidence-file/pattern pairs and every expanded file:line output are in the ignored log; $base is D:\\repos\\teslasync\\web\\src; $files is the same ten source files relative to that base.",
+      "exit_code": 0,
+      "shell_id": "4750",
+      "result": "Exact source mechanism citations retained; listed deprecated converter calls0. No runner or native action."
+    },
+    {
+      "id": "C-preliminary-document-validation",
+      "commands": [
+        "Get-Content -Raw -LiteralPath $report | ConvertFrom-Json -ErrorAction Stop",
+        "Check each cited file exists and its last cited line does not exceed (Get-Content -LiteralPath $p).Count",
+        "Compare Get-FileHash -Algorithm SHA256 of all ten source_snapshot_sha256 entries"
+      ],
+      "exit_code": 1,
+      "shell_id": "4763",
+      "result": "JSON parsed; PASS16/FAIL6/NOTRUN8; source hashes unchanged; one out-of-range document citation caused a real validation failure. Own report correction applied, not hidden or labeled passing."
+    },
+    {
+      "id": "C-corrected-document-validation",
+      "commands": [
+        "Get-Content -Raw -LiteralPath $report | ConvertFrom-Json -ErrorAction Stop",
+        "Check PASS/FAIL/NOTRUN statuses, evidence presence, unique citation file/line ranges, all ten source_snapshot_sha256 entries and FAIL-to-finding links"
+      ],
+      "exit_code": 0,
+      "shell_id": "4767",
+      "result": "PASS16/FAIL6/NOTRUN8; six confirmed source findings and six candidates; invalid citations0/hash mismatches0/unresolved finding links0; native NOTRUN. Document validation only."
+    },
+    {
+      "id": "C-built-in-rg-source-scan",
+      "tool": "functions.rg",
+      "pattern": "style=\\{\\{|<(button|input|textarea|select|table)\\b|from ['\"](recharts|react-leaflet|framer-motion)['\"]|from ['\"]\\.\\./(\\.\\./)?api['\"]|vehicleId=|request[^\\r\\n]*['\"]/api/v1",
+      "paths": "exact_ten_file_scope",
+      "glob": "*.{ts,tsx}",
+      "exit_code": null,
+      "result": "Tool output contained exactly one match: OrderStatusBreakdown.tsx:77 computed percentage width. Tool did not expose a numeric process exit; do not invent one."
+    }
+  ],
+  "not_run_commands": [
+    {
+      "command": "bash .github\\skills\\audit-violations\\audit.sh <assigned-file>",
+      "status": "NOTRUN",
+      "reason": "Includes whole-web TypeScript; report-only/no-passing-rerun contract forbids that step. Skill read; actual scoped scans recorded instead."
+    },
+    {
+      "command": "bash .github\\skills\\verify-api-hooks\\verify.sh <hook-file>",
+      "status": "NOTRUN",
+      "reason": "Expands route scanning into other mounted modules beyond assigned router; no helper execution. Actual two order-hook routes were individually checked against router.go."
+    },
+    {
+      "command": "npx tsc --noEmit",
+      "status": "NOTRUN",
+      "reason": "No source change; full gate/passing rerun prohibited."
+    },
+    {
+      "command": "Vitest/lint/build/full suites/Docker",
+      "status": "NOTRUN",
+      "reason": "No source/test changes and no passing tests rerun; prohibited worker activity."
+    }
+  ],
+  "test_execution": {
+    "status": "NOTRUN",
+    "discovered": null,
+    "executed": 0,
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "exact_test_names": [],
+    "reason": "No test discovery/runner; source-case reproduction proposals are not executed tests, and historical15passing tests are not a fresh pass."
+  },
+  "summary": {
+    "individual_checks": 30,
+    "source_or_scan_pass_checks": 16,
+    "source_fail_checks": 6,
+    "not_run_checks": 8,
+    "confirmed_source_findings": 6,
+    "candidates_requiring_further_evidence": 6,
+    "native_pass_claims": 0,
+    "fresh_test_typecheck_build_pass_claims": 0,
+    "report_delivery_is_not_page_acceptance": true
+  },
+  "needs": [
+    "Orchestrator may assign narrow delivery-derivation/outlook fixes for F1/F2; these are imported child owners, not this report worker's write scope.",
+    "Assign existing status formatter/card/table localization and matching filter/caption corrections for F3/F4/F6, with serialized canonical catalog ownership.",
+    "Assign page-only initial-load announcement/busy wiring for F5 without reintroducing all-page loading/error gates.",
+    "Keep C1-C6 as candidates until their specified synthetic contract/native evidence exists; do not fabricate upstream status/date/shape contracts.",
+    "Authorized read-only synthetic native QA and parent-owned fresh gates remain required; no paid/order mutations or real identities."
+  ],
+  "release": {
+    "effective": "at terminal DONE return after document validation",
+    "all_claims_released": true,
+    "report_and_log_claims_released": true,
+    "source_claims": "none held; all application reads complete",
+    "browser_claims": "none acquired",
+    "ongoing_shells": 0,
+    "background_agents_or_servers": 0,
+    "post_return_writes": false,
+    "statement": "ALL claims released on return. No post-return writes, commands, browser/API activity or retained work."
+  }
+}

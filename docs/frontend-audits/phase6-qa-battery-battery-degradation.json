@@ -1,0 +1,403 @@
+{
+  "schema_version": 1,
+  "task": "phase6-qa-battery-battery-degradation",
+  "result": "DONE_SOURCE_ONLY_QA_WITH_FINDINGS",
+  "requested_at": "2026-10-13T13:43:10.871-07:00",
+  "repository_root": "D:\\repos\\teslasync",
+  "page": "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+  "route": "/battery-degradation",
+  "acceptance": {
+    "source_review_completed": true,
+    "all_checks_pass": false,
+    "runtime_accepted": false,
+    "native_accepted": false,
+    "full_page_accepted": false,
+    "queue_status_changed": false,
+    "source_or_tests_changed": false,
+    "meaning": "Completion is delivery of this bounded source review, not acceptance of the page or resolution of its findings."
+  },
+  "initial_completion_check": {
+    "report_lookup": "glob phase6-qa-battery-battery-degradation.json in docs\\frontend-audits: No files matched the pattern.",
+    "log_lookup": "glob phase6-qa-battery-battery-degradation.log in web\\logs: No files matched the pattern.",
+    "queue_evidence": "migration-queue.md:322 registers the exact phase6 task as [ ]; migration-queue.md:1717 records phase5-page-battery-battery-degradation as [x].",
+    "duplicate_task_started": false,
+    "parent_owns": ["statuses", "queue", "dispatch", "commit"]
+  },
+  "historical_receipts": [
+    {
+      "source": "migration-queue.md:1717",
+      "queue_timestamp": "2026-10-12T14:32:17.5538780Z",
+      "commit": "1d5d31abfb0e3f5586b6603b656ac7b6fb84846c",
+      "recorded_acceptance": "SOURCE ONLY",
+      "recorded_scope": "770 to 824 page lines; 962 to 1017 composed lines; ten sections; recorded lint/style zero; final test attempt stopped at external catalog startup with zero cases; native capture blocked.",
+      "not_reexecuted": true,
+      "limit": "This is the exact historical queue receipt, not a fresh lint, catalog, runtime, native or behavioral result. The timestamp is the queue's timestamp column, not an independently measured acceptance time."
+    },
+    {
+      "source": "docs\\frontend-audits\\audit-page-062.json:280-300",
+      "recorded_sha256": "053993D0307F5BD48457E8B81A63D96018788E2C51313A0FD397FA030A8BB101",
+      "recorded_scope": "Historical 770-line page and 962-line presentation closure; ten sections, six groups.",
+      "limit": "Historical baseline only; this review did not compute current source hashes or revalidate that historical hash."
+    }
+  ],
+  "inspected_scope": {
+    "method": "Read-only view/glob/rg source inspection. No shell commands or executable QA scripts.",
+    "production_page_and_feature_support": [
+      "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:1-824",
+      "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:1-105",
+      "web\\src\\features\\battery\\components\\battery-degradation-modernization\\DegradationGrid.tsx:1-30",
+      "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx:1-58"
+    ],
+    "existing_tests_read_not_run": [
+      "web\\src\\features\\battery\\pages\\BatteryDegradationPage.test.tsx:1-700",
+      "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationPage.test.tsx:1-265",
+      "web\\src\\features\\battery\\components\\battery-degradation-modernization\\preservation.check.cjs:1-178"
+    ],
+    "direct_support_read_or_targeted_search": [
+      "web\\src\\api\\hooks\\useEnergy.ts:76-84",
+      "web\\src\\types\\energy.ts:118-208",
+      "web\\src\\api\\client.ts:73-94,263-268,343-365",
+      "web\\src\\api\\dataState.ts:1-330",
+      "web\\src\\hooks\\useDataState.ts:1-65",
+      "web\\src\\hooks\\useSelectedVehicle.ts:1-181",
+      "web\\src\\hooks\\useUnits.ts:1-216",
+      "web\\src\\hooks\\useNumberFormatting.ts:1-50",
+      "web\\src\\hooks\\useSettings.ts:1-147",
+      "web\\src\\hooks\\useOperationalMetrics.tsx:1-24",
+      "web\\src\\lib\\operationalMetrics.tsx:1-53",
+      "web\\src\\lib\\unitConversion.ts:130-139,241-248,324-360,459-467",
+      "web\\src\\lib\\dateFormat.ts:1-250",
+      "web\\src\\lib\\constants.ts:62-64",
+      "web\\src\\lib\\workspaceScope.ts:1-181",
+      "web\\src\\App.tsx:73,855",
+      "web\\src\\lib\\routeRegistry.ts:64",
+      "web\\src\\lib\\routeLoaders.ts:28",
+      "web\\src\\lib\\routePrefetch.ts:58",
+      "web\\src\\components\\feedback\\StaleRefreshWarning.tsx:1-128",
+      "web\\src\\components\\feedback\\ActionableEmptyState.tsx:1-162",
+      "web\\src\\lib\\emptyStateGuidance.ts:90-104",
+      "web\\src\\components\\data-display\\DataFreshness.tsx:1-250,263-320",
+      "web\\src\\components\\layout\\layout-reference\\ChartCard.tsx:1-48",
+      "web\\src\\components\\charts\\EmbeddedChart.tsx:1-41",
+      "web\\src\\components\\charts\\ChartAnnotationLayer.tsx:1-39",
+      "web\\src\\components\\charts\\ChartContainer.tsx:targeted annotation/toolbar/error/data-column searches",
+      "web\\src\\api\\hooks\\useAnnotations.ts:20-165",
+      "web\\src\\api\\settings.ts:24",
+      "web\\src\\api\\hooks\\useVehicles.ts:73-77"
+    ],
+    "backend_route_and_wire_definition_closure": [
+      "internal\\api\\router.go:97,1076,3210,3702,3750-3755,3919-3920",
+      "internal\\api\\batterydegradation\\dtos.go:1-140",
+      "internal\\api\\batterydegradation\\handler.go:1-300,311-1220",
+      "internal\\api\\batterydegradation\\calculations.go:1-265"
+    ],
+    "instructions_and_baseline": [
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md:1-230",
+      ".github\\skills\\audit-violations\\audit.sh",
+      "migration-queue.md:322,1717",
+      "docs\\frontend-audits\\audit-page-062.json:1-50,270-335"
+    ],
+    "exclusions": "No sibling battery QA, catalog contents, real vehicle/battery values, API traffic, browser/native inspection, backend measurements, agents, orchestration, Docker, Discord, helper/custom/extension tools or source edits."
+  },
+  "sections_and_preservation": {
+    "count_method": "Actual rg pattern ^, output_mode=count, on exactly the four production presentation files; counts are matched source lines, not AST or browser measurements.",
+    "current_lines": {
+      "page": 824,
+      "BatteryDegradationStats": 105,
+      "DegradationGrid": 30,
+      "BatteryEvidenceBrief": 58,
+      "composed_total": 1017
+    },
+    "baseline_lines_historical": {"page": 770, "composed_total": 962},
+    "comparison": "824 > 70% of 770; 1017 > 70% of 962. Current composed total is 55 lines above the recorded baseline. Counts alone do not establish runtime equivalence.",
+    "current_source_markers": {"LayoutCard": 8, "GlassPanel": 5, "ChartCard": 1, "EmbeddedChart": 1, "ChartContainer_direct": 0, "numbered_groups": 6},
+    "historical_source_markers": {"LayoutCard": 8, "GlassPanel": 5, "ChartCard": 1, "EmbeddedChart": 1, "numbered_groups": 6},
+    "retained_section_count": 10,
+    "sections": [
+      {"name": "Battery health summary", "lines": "BatteryDegradationPage.tsx:269-282", "retained": "Four metrics, descriptions and evidence review; independent loading/error/no-vehicle/paused shell."},
+      {"name": "Battery health gauge", "lines": "BatteryDegradationPage.tsx:291-336", "retained": "Finite SOH guard, thresholds, help, unknown placeholder and refetch action."},
+      {"name": "Health trend and projection", "lines": "BatteryDegradationPage.tsx:340-436", "retained": "Actual/projected lines, low/high band, 80/70 reference lines, annotations, persisted legend, brush, toolbar/export and accessible data columns."},
+      {"name": "Prediction", "lines": "BatteryDegradationPage.tsx:448-479", "retained": "Minimum-snapshot explanation, 80% target, years/date and four fit metrics."},
+      {"name": "Charging habits impact", "lines": "BatteryDegradationPage.tsx:482-510", "retained": "Fast count ratio, deep-discharge count, stress-specific guidance and own placeholder."},
+      {"name": "Range loss", "lines": "BatteryDegradationPage.tsx:521-598", "retained": "Both series, display units, accessible original/current columns, legend, tooltip and own placeholder."},
+      {"name": "Risk factors", "lines": "BatteryDegradationPage.tsx:601-647", "retained": "Returned factors, score bars, names, labels, details and own placeholder."},
+      {"name": "Recommendations", "lines": "BatteryDegradationPage.tsx:658-680", "retained": "All returned prose and own placeholder."},
+      {"name": "Battery health factors", "lines": "BatteryDegradationPage.tsx:683-751", "retained": "Charge habits, temperature reason/score and cycle-depth/DoD subcards always have shells."},
+      {"name": "Degradation history", "lines": "BatteryDegradationPage.tsx:757-817", "retained": "All five SI-backed columns, filters/sorting, stable identity, mobile metadata, pagination, empty explanation and governed recovery link."}
+    ],
+    "no_whole_page_data_gate": "PageLayout and all ten section shells are outside a single data && or empty={!data} gate. Conditional sub-content and chart/table placeholders are source-visible, not evidence of mounted rendering."
+  },
+  "contracts_and_positive_mechanisms": {
+    "route": "App.tsx:855 registers battery-degradation in SafeRoute; routeLoaders.ts:28 imports this exact page; routeRegistry.ts:64 and routePrefetch.ts:58 agree.",
+    "main_hook": "useEnergy.ts:76-84 uses GET /analytics/battery-health?vehicle_id=<string id>, queryKey ['battery-health-analytics', vehicleId], enabled vehicleId !== null, abort signal, STALE_TIMES.ANALYTICS and retry:false. Router.go:3920 mounts Health under /api/v1 at router.go:3210. The similarly named /analytics/battery-degradation route is not the page's data source.",
+    "url_and_parameter_checks": "The inspected main-hook request literal has no /api/v1 prefix and uses vehicle_id. Annotation buildQuery at useAnnotations.ts:66-73 emits vehicle_id/scope/from/to; requests at 85,120,137,154 match router.go:3750-3755. Settings getSettings at api\\settings.ts:24 matches router.go:3702. No request was made.",
+    "types": "energy.ts:151-181 agrees with Health DTO field names, including capacity_wh, range_m, odometer_m and nullable temperature score/reason. TypeScript generics are not runtime payload validation; evidence/window/nullability semantic gaps are reported below.",
+    "vehicle": "Page:93-97 consumes useSelectedVehicle and stringifies its effective id; workspaceScope enables vehicle and disables range for this route. useSelectedVehicle.ts:50-87 prefers path/query/store/first known vehicle, rejects invalid ids and returns a separate cache operand. No duplicate local picker.",
+    "units": "Page:116-120 keeps meters in the source and converts chart/table values with convertDistanceFromSI; useUnits derives distance from settings at 133-153. Capacity uses formatEnergy, which rejects null/nonfinite at unitConversion.ts:459-467. useNumberFormatting subscribes to saved number preferences. The special KPI energy precision=1 is an explicit source override, while table energy uses the shared preference. Core displayed Wh/m fields remain SI on the wire.",
+    "trust": "Page:98-110 requests inferred provenance with 24h maxAge; deriveDataState at api\\dataState.ts:194-289 retains data after errors/pauses and exposes fatalError only without data. Page:261-268 displays independent stale/paused feedback; all fatal errors receive retry. Initial loading does not assert resolved-empty history; no-vehicle has a distinct message.",
+    "retries": "No automatic analytics retry because useEnergy.ts:82 sets retry:false. Explicit retries/refetches exist in QueryError panels, trend ChartCard, freshness chip, stale warning and missing-SOH action. StaleRefreshWarning.ts:105-119 disables its retry while refreshing. This is source wiring only, not exercised deduplication/cancellation/cache behavior.",
+    "null_vs_zero": "Shared stats receive raw values; ageLabel rejects invalid age but retains supplied zero. Gauge explicitly requires finite SOH at page:309. Range chart explicitly requires finite meters at page:126-132. Empty fast+slow sample produces an unknown ratio at page:167-170 rather than 0/0. Backend loss of missingness remains a finding.",
+    "source_a11y_and_mobile": "Summary section has aria-label at page:271; DegradationGrid.tsx:19-27 creates named sections and CardGrid placement with min-w-0. Both charts provide ariaLabel and dataColumns; help target has min-h-11/min-w-11; decorative icons have aria-hidden. History source has named table, mobile cards, all five mobile roles and displayValue at page:767-789. These are semantics and responsive intent, not contrast, focus, overflow or native acceptance.",
+    "actions": [
+      "Health help at page:295-299 and unknown-SOH refresh at 330-332.",
+      "Trend toolbar/export, annotations, hidden-series state and brush at page:340-434.",
+      "Range legend and visible data rows at page:529-590.",
+      "OperationalBrief details delegated by BatteryEvidenceBrief.tsx:33-55.",
+      "Table filters/sort/mobile quick-view intent/pagination at page:765-797.",
+      "Governed empty recovery at page:809-813 uses emptyStateGuidance.ts:90-104, link /charging."
+    ],
+    "existing_test_evidence_limit": "Both existing suites were read, not run. They author cases for loading, zero/missing values, vehicle operand, SI display, retained errors, retries, mobile detail focus and section preservation. Page tests stub i18n/units/selection and chart behavior; the second suite mocks analytics and selection and injects ResizeObserver. Neither source nor historical startup-zero-cases receipt establishes that production payload semantics or present catalog/native behavior pass."
+  },
+  "summary": {
+    "deterministic_source_findings": 17,
+    "severity_counts": {"high": 5, "medium": 11, "low": 1},
+    "runtime_or_measurement_candidates": 6,
+    "sections_retained_in_source": 10,
+    "source_pattern_matches_in_four_file_presentation_closure": 0,
+    "executed_shell_commands": 0,
+    "executed_test_cases": 0
+  },
+  "findings": [
+    {
+      "id": "BD-01", "severity": "high", "title": "Absent capacity evidence is serialized as a measured zero SOH/capacity",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:543-562,627-629,831-874", "internal\\api\\batterydegradation\\dtos.go:107-108", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:309-326", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:64-75"],
+      "mechanism": "No valid history and unavailable/invalid live signals leave currentCapacityWh and currentSOH at zero. Nonnullable DTO numbers serialize those defaults as 0, and the finite guard accepts them: the UI can show 0%/Degraded and zero capacity even though no pack-capacity measurement exists.",
+      "bounded_follow_up": "Health response availability for current_soh/estimated_capacity_wh, its no-evidence branches, corresponding energy types and this page's unknown-state handling. Preserve genuinely supplied zero; do not guess capacity.",
+      "limit": "Conditional source path proven; no assertion that a real vehicle currently takes it."
+    },
+    {
+      "id": "BD-02", "severity": "high", "title": "Empty denominators still yield optimal habits and perfect cycle-depth scores",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:355-399,571-583,632-638,745-747,1054-1089", "internal\\api\\batterydegradation\\calculations.go:241-260", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:167-174,489-505,696-749"],
+      "mechanism": "percentage returns 0 for totalCount<=0; habit scoring starts at 100 and stress defaults Low. Missing drive DoD stays the summary struct's 0, producing cycleDepthScore=100. The banner ratio correctly remains unknown, but other panels can call the same empty sample optimal, zero full-charge exposure, and excellent habits. Generated fallback recommendations also praise habits without a sample.",
+      "bounded_follow_up": "Expose valid charge/DoD denominators and unavailable scores in this Health contract; gate only dependent values/advice, retaining all shells and actual zero counts.",
+      "limit": "No database query or empty production sample was executed."
+    },
+    {
+      "id": "BD-03", "severity": "high", "title": "Missing thermal evidence becomes a fabricated 25 C risk detail",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:589-600,1035-1038", "internal\\api\\batterydegradation\\calculations.go:179-195", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:624-636,716-729"],
+      "mechanism": "Health substitutes avgTempC=25 when no thermal average exists and still computes a temperature risk. temperatureExposure separately returns null for absent/fewer-than-ten samples. Consequently the risk card can state Average cell temperature: 25.0 C/Low while the temperature health-factor card says unavailable.",
+      "bounded_follow_up": "Carry thermal sample availability into computeRiskFactors and the Health thermal DTO; keep unknown temperature risk neutral instead of asserting a default observation."
+    },
+    {
+      "id": "BD-04", "severity": "high", "title": "Temperature-risk badge reverses the physical sign",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:1035-1051", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:47-51,719-729"],
+      "mechanism": "Backend temperatureExposure is risk: <=30 C yields 10, >45 C yields 90. The health-factor badge uses the high-is-good scoreVariant, coloring 90 success and 10 danger, while adjacent copy says lower is better. Risk-factor cards elsewhere use the correct low-is-good thresholds.",
+      "bounded_follow_up": "Only the temperature health-factor badge's severity mapping and its boundary cases; do not invert charge-habit or cycle-depth scoring."
+    },
+    {
+      "id": "BD-05", "severity": "high", "title": "Flat/improving fits can predict reaching 80% in approximately zero years",
+      "evidence": ["internal\\api\\batterydegradation\\calculations.go:14-19,37-41,60-73", "internal\\api\\batterydegradation\\dtos.go:16-20", "internal\\api\\batterydegradation\\handler.go:584-587", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:455-470", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:35-40"],
+      "mechanism": "HasEnoughData becomes true before fit-identifiability checking. A nonnegative slope, degenerate timestamps, or past threshold leaves nonnullable years_to_80_pct at 0. The page gates only on has_enough_data and treats zero as a finite crossing time. Both the backend summary and fit KPI apply abs(slope), so improving fits are also presented as positive degradation.",
+      "bounded_follow_up": "Prediction fit-validity/crossing-availability/sign contract and its consumers in this page/stats; preserve signed fitted evidence and distinguish no future crossing, already below threshold and insufficient fit."
+    },
+    {
+      "id": "BD-06", "severity": "medium", "title": "Nominal capacity estimate provenance is hidden behind rated/usable-capacity terminology",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:477-483,543-562,627-629,1114-1157", "internal\\api\\batterydegradation\\dtos.go:109,127", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:65-79,96-103"],
+      "mechanism": "The SOH denominator is a VIN/model estimate or 75000 Wh default, not an established original-rated pack measurement. Current capacity is independently estimated from recent charge aggregates/live energy divided by SOC. The wire exposes original_capacity_wh and capacity_source but this presentation does not consume them; help says usable/rated capacity and capacity derived from SOH. Generic estimate caveat is useful but omits which nominal assumption drives the ratio.",
+      "bounded_follow_up": "Display exact capacity_source/original_capacity_wh evidence in the existing brief/help and distinguish nominal assumption from observed estimator; actual calibration remains candidate BD-C01."
+    },
+    {
+      "id": "BD-07", "severity": "medium", "title": "Battery age is observation-window age, not verified pack age",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:566,1019-1032", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:84-88"],
+      "mechanism": "batteryAgeMonths chooses the earliest retained history/first charging/first drive timestamp. It does not use manufacture, installation or replacement date, and returns 0 with no history. The UI labels it Battery age. This can materially understate older/replaced packs and feeds cycle-rate estimates.",
+      "bounded_follow_up": "Name and provenance of this observation duration in the Health response and existing age metric; do not infer true pack age from telemetry start."
+    },
+    {
+      "id": "BD-08", "severity": "medium", "title": "Cycle/DoD help describes different quantities from the backend",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:355-375,567-570,632-633", "internal\\api\\batterydegradation\\dtos.go:112-113", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:52-62", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:172-174"],
+      "mechanism": "Backend total_cycles is integer round(sum charge energy/nominal capacity); the frontend comments/help describe fractional full-pack equivalents. Avg DoD is an unweighted average SOC drop per drive, not depth per charge/discharge cycle as help says. Valid drive count and throughput basis are not exposed alongside these modeled wear metrics.",
+      "bounded_follow_up": "Align only these two Health metric definitions, precision/type and sample explanations; do not silently relabel per-drive SOC changes as full battery cycles."
+    },
+    {
+      "id": "BD-09", "severity": "medium", "title": "Original range is the first retained sample; missing history signals become zero",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:311-352,667-700", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:125-132,192-198,236-241,539-548,569"],
+      "mechanism": "History is at most the latest 180 qualifying daily samples, ascending. The frontend takes history[0].range_m as a constant Original range, so it is not an original/new-pack baseline. SQL coalesces missing range/odometer to 0 and accepts arbitrarily earlier signal readings before day end; finite zero is then plotted/formatted as observed range/odometer.",
+      "bounded_follow_up": "Relabel the retained comparison baseline and preserve missingness/sample timestamp in the range/odometer history contract; do not replace a missing baseline with a nominal invented range."
+    },
+    {
+      "id": "BD-10", "severity": "medium", "title": "Projection join copies an old observation into a later row labeled Actual health",
+      "evidence": ["web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:136-159,354,406-415", "internal\\api\\batterydegradation\\calculations.go:76-95"],
+      "mechanism": "The first projection is dated from current server month. Page proj[0].health is assigned the last historical SOH even if that observation predates the month. The accessible/exported Actual health column now contains the old observation at a new date, not merely a visual continuity marker.",
+      "bounded_follow_up": "Separate graphical join coordinates from exported/accessible observed data in projectionChartData; retain actual observation date and do not fabricate a new health sample."
+    },
+    {
+      "id": "BD-11", "severity": "medium", "title": "95% confidence wording overstates the implemented approximate prediction interval",
+      "evidence": ["internal\\api\\batterydegradation\\calculations.go:56-64,101-107", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:343,403"],
+      "mechanism": "The interval uses sqrt(1+1/n+xDev^2/ssx), a prediction-interval expression, with fixed multiplier 2 for n<=30 and 1.96 otherwise. For the allowed n=3 fit, it is not the 95% Student-t interval with n-2 degrees of freedom. UI/ARIA name it 95% confidence without describing approximation or denominator.",
+      "bounded_follow_up": "Clarify this exact interval's terminology and sample basis or correct multiplier/model contract; empirical calibration is separately unmeasured in BD-C01."
+    },
+    {
+      "id": "BD-12", "severity": "medium", "title": "Dated analytics have no workspace-range/both-bounds contract",
+      "evidence": ["web\\src\\lib\\workspaceScope.ts:23-78,158-181", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:93-97", "web\\src\\api\\hooks\\useEnergy.ts:76-84", "internal\\api\\batterydegradation\\handler.go:311-410,412-440"],
+      "mechanism": "Actual /battery-degradation route is range:false/vehicle:true. Page does not consume useRangeState and hook supplies only vehicle_id. Health ignores from/to: capacity has a 180-row bound, charge/drive summary is lifetime, thermal summary is fixed 90 days and recent charging analysis is limited to 100 sessions. Thus rolling/custom/shared-timezone date bounds do not scope these sections.",
+      "bounded_follow_up": "Parent must decide whether this page is explicitly lifetime/bounded history or a workspace-range owner. If adopting the latter, separately claim only workspace route registration, page/hook both-bound/cache operands and Health query bounds. Do not add a duplicate date picker or client-only filtering.",
+      "limit": "This is a source contract/policy gap, not a newly introduced regression or endpoint mismatch; this QA authorizes no endpoint changes."
+    },
+    {
+      "id": "BD-13", "severity": "medium", "title": "UTC date-only observations are rendered through browser-timezone instants",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:693", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:129,138,149,187-189,193,774,780", "web\\src\\lib\\dateFormat.ts:41-67", "web\\src\\hooks\\useSettings.ts:47-49"],
+      "mechanism": "Backend dates are YYYY-MM-DD UTC day keys. formatDate parses them with new Date and uses toLocaleDateString without the configured timezone/locale options. In a browser zone west of UTC a day key displays as the previous calendar day. Projection months/predicted dates are separately rendered raw, so date representations are inconsistent and bypass saved display-timezone settings.",
+      "bounded_follow_up": "Use the existing calendar-day/date-preference boundary for this page's history/table labels and distinguish projection month keys; no source timestamps should be shifted or rewritten.",
+      "limit": "Conditional platform/date mechanism identified; no browser timezone scenario was executed."
+    },
+    {
+      "id": "BD-14", "severity": "medium", "title": "Retained data warning is correct globally but evidence briefs still claim available readings",
+      "evidence": ["web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:98-110,261-264,280,470", "web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:23-31,90-103", "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx:21-22,41-49"],
+      "mechanism": "BatteryEvidenceBrief supports retained=true and corresponding warning label/tone. BatteryDegradationStats accepts only data/loading/prediction and never forwards retained state from healthState. After failed/paused refresh, data remains visible with the correct page warning but each populated evidence brief defaults to Available source readings.",
+      "bounded_follow_up": "Forward the existing retained/trust classification through the two direct degradation stats call sites and adapter; retain payload, shared status owner and global warning."
+    },
+    {
+      "id": "BD-15", "severity": "medium", "title": "Null-array safety does not validate malformed rows, scores or wire collections",
+      "evidence": ["web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:125-158,167-174,208-219,611-624,697-723", "web\\src\\api\\hooks\\useEnergy.ts:79", "web\\src\\api\\client.ts:263-268", "web\\src\\types\\energy.ts:151-181"],
+      "mechanism": "Type assertions and ?? [] do not reject a non-array history/projections/risk_factors or null row. .map/property access/rf.name.replace can throw. Nonfinite history SOH takes danger rather than neutral; nonfinite health-factor scores and unknown stress enums similarly take a semantic verdict. Negative/out-of-domain range/SOH/counts are not consistently guarded. The gauge/range finite guards are useful but not a complete payload boundary.",
+      "bounded_follow_up": "Validate only the consumed BatteryHealthAnalytics nested arrays/rows/numeric domains and render unknown values neutrally; preserve valid zero and independent panel shells. No generalized shared validator rewrite.",
+      "limit": "Malformed payload acceptance paths are source-visible; neither production malformed traffic nor a crash was observed."
+    },
+    {
+      "id": "BD-16", "severity": "medium", "title": "Server-authored risk prose and recommendations bypass translation",
+      "evidence": ["internal\\api\\batterydegradation\\calculations.go:165-173,189-195,210-228,239-260", "web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:623-636,667-670"],
+      "mechanism": "Static UI labels use t, including translated risk identities. But rf.label, rf.detail and recommendation strings are rendered raw, while the backend constructs English prose and Celsius text. The risk temperature detail therefore also ignores a saved Fahrenheit display preference.",
+      "bounded_follow_up": "This Health response's recommendation/risk message codes, typed measurement operands and page translation/display boundary only; no catalog-wide campaign. Existing human-readable fallback content must remain.",
+      "technical_identifier_exemption": "capacity_source, risk names and insufficient_data reason are technical identifiers; their untranslated spelling alone is not counted as an English-prose violation."
+    },
+    {
+      "id": "BD-17", "severity": "low", "title": "Unused charging-habits energy field is kWh on the otherwise SI Health wire",
+      "evidence": ["internal\\api\\batterydegradation\\handler.go:602-610", "internal\\api\\batterydegradation\\dtos.go:72", "web\\src\\types\\energy.ts:133"],
+      "mechanism": "Health divides summary.avgEnergyWh by 1000 before serializing avg_energy_per_session. The opaque wire name/type does not declare Wh and its value is kWh, unlike capacity_wh/ac_energy_wh/dc_energy_wh. This page does not display the field, so no current rendered capacity conversion bug is asserted.",
+      "bounded_follow_up": "Parent-owned separate SI contract correction for this one field and explicitly identified consumers; no broad battery/telemetry migration in this QA."
+    }
+  ],
+  "runtime_or_measurement_candidates": [
+    {
+      "id": "BD-C01", "requires": "Backend/physical measurement and model evaluation",
+      "scope": "Validate daily energy divided by daily SOC swing, median-of-eight capacity, nominal VIN/model capacity, observation/sample weighting and regression interval calibration against independently known capacity/health.",
+      "source_anchor": "internal\\api\\batterydegradation\\handler.go:311-324,543-562,990-1016; calculations.go:21-107",
+      "not_claimed": "No measured degradation, true pack capacity, model accuracy or calibrated uncertainty acceptance."
+    },
+    {
+      "id": "BD-C02", "requires": "Browser/native accessibility and viewport inspection",
+      "scope": "Only /battery-degradation at phone/desktop widths and supported themes; section layout, long localized prose, table mobile details, focus entry/return, tap targets, contrast and chart/export keyboard operation.",
+      "source_anchor": "BatteryDegradationPage.tsx:295-299,529-553,765-789; DegradationGrid.tsx:7-27",
+      "not_claimed": "No native, full-page, visual, keyboard or assistive-technology acceptance."
+    },
+    {
+      "id": "BD-C03", "requires": "Browser interaction with bounded mock annotations/export",
+      "scope": "Confirm annotation visibility/date alignment and query error feedback, add/delete/cancel, legend URL restoration, brush selection and exported data/image. Page passes identity timestamp x values to a categorical formatted-date/month axis; visibility is not established.",
+      "source_anchor": "BatteryDegradationPage.tsx:354-359,372-383,433; ChartAnnotationLayer.tsx:16-25; ChartContainer.tsx:391-406",
+      "not_claimed": "No annotation mutation, download or behavior was performed."
+    },
+    {
+      "id": "BD-C04", "requires": "Controlled network/cache timing observation",
+      "scope": "Distinguish HTTP receipt age from latest contributing telemetry/cagg time, and inspect manual-refetch/browser/server cache freshness without real battery payload capture.",
+      "source_anchor": "useEnergy.ts:81; constants.ts:64; handler.go:24-32,897-936,957-972; DataFreshness.tsx:152-159",
+      "not_claimed": "15-minute query freshness and 5-minute server/private HTTP cache settings are source-visible; actual cache bypass, cagg refresh cadence and data recency are unmeasured."
+    },
+    {
+      "id": "BD-C05", "requires": "Bounded controlled runtime preference/vehicle transitions",
+      "scope": "Exercise vehicle switching, paused/initial/refetch errors and saved distance/precision/locale/timezone changes, including settings-load failure. useUnits consumes default settings while unavailable; the page does not expose settingsState.",
+      "source_anchor": "useSelectedVehicle.ts:65-87; useSettings.ts:81-115; useUnits.ts:133-153; BatteryDegradationPage.tsx:98-120",
+      "not_claimed": "No observed cross-vehicle cache leakage, stale preference defect, retry deduplication or settings persistence failure."
+    },
+    {
+      "id": "BD-C06", "requires": "Vehicle-specific warranty/product evidence",
+      "scope": "Check whether the generic 80% warranty reference is valid for each supported vehicle/pack/region; source alone does not supply a warranty contract.",
+      "source_anchor": "BatteryDegradationPage.tsx:375-380",
+      "not_claimed": "No warranty eligibility, legal/product threshold or vehicle-specific coverage established."
+    }
+  ],
+  "actual_checks": [
+    {
+      "id": "CHECK-01", "kind": "glob/rg read-only registration and duplicate check",
+      "result": "Registered pending task, accepted dependency and absent report/log found before work.",
+      "raw_output": [
+        "No files matched the pattern.",
+        "No files matched the pattern.",
+        "D:\\repos\\teslasync\\migration-queue.md:322:| [ ] | 6 | phase6-qa-battery-battery-degradation | read-only-finished-page-QA | docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json | phase5-page-battery-battery-degradation | 0 | - | - | Next acceptedBatteryDegradationPage/directsupport QA; modeled/measured/capacity/SoH/sampledenominators/SI/physicalsign/preference/timezone/range/vehicle/trust/null-vs-zero/sections/actions/sourcea11y/i18n. Sole report/logwrites; exactsourcefindings separatefromruntime/native candidates, no source/tests/catalog/backend/realbatterydata/API/browser/fullsuite/helpers or remigration. |"
+      ]
+    },
+    {
+      "id": "CHECK-02", "kind": "rg", "pattern": "^", "output_mode": "count",
+      "scope": "Exactly page, BatteryDegradationStats, DegradationGrid and BatteryEvidenceBrief production files.",
+      "raw_output": [
+        "D:\\repos\\teslasync\\web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx:58",
+        "D:\\repos\\teslasync\\web\\src\\features\\battery\\components\\battery-degradation-modernization\\BatteryDegradationStats.tsx:105",
+        "D:\\repos\\teslasync\\web\\src\\features\\battery\\components\\battery-degradation-modernization\\DegradationGrid.tsx:30",
+        "D:\\repos\\teslasync\\web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:824"
+      ]
+    },
+    {
+      "id": "CHECK-03", "kind": "rg scoped source pattern audit",
+      "pattern": "style\\s*=|<(?:button|input|textarea|select|table)\\b|from\\s+['\"](?:recharts|react-leaflet|framer-motion|\\.\\./api|\\.\\./\\.\\./api)['\"]|\\bany\\b|text-neon-",
+      "scope": "Exactly the same four production presentation files; shared implementation internals/tests excluded.",
+      "raw_output": "No matches found.",
+      "result": "Zero matching source lines for this combined pattern, not zero total semantic findings or a full audit pass."
+    },
+    {
+      "id": "CHECK-04", "kind": "rg source section count",
+      "raw_output": [
+        "LayoutCard pattern: D:\\repos\\teslasync\\web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:8",
+        "GlassPanel pattern: D:\\repos\\teslasync\\web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:5",
+        "ChartCard/EmbeddedChart/ChartContainer combined pattern: D:\\repos\\teslasync\\web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:2",
+        "Numbered group pattern: D:\\repos\\teslasync\\web\\src\\features\\battery\\pages\\BatteryDegradationPage.tsx:6"
+      ],
+      "result": "Ten semantic source sections retained; shared ChartContainer delegation inspected, not mounted."
+    },
+    {
+      "id": "CHECK-05", "kind": "Source route/hook/wire/manual review",
+      "raw_output": [
+        "D:\\repos\\teslasync\\web\\src\\lib\\routeLoaders.ts:28:export const BatteryDegradation = () => import('../features/battery/pages/BatteryDegradationPage')",
+        "D:\\repos\\teslasync\\internal\\api\\router.go:3919:\t\tr.Get(\"/analytics/battery-degradation\", batteryDegradationHandler.Predict)",
+        "D:\\repos\\teslasync\\internal\\api\\router.go:3920:\t\tr.Get(\"/analytics/battery-health\", batteryDegradationHandler.Health)"
+      ],
+      "result": "Actual main endpoint and supported annotation/settings paths agree with router registrations. Prefix/parameter, state, units, scientific semantics, scope, i18n, mobile/a11y intent and actions inspected; findings separate from runtime candidates."
+    },
+    {
+      "id": "CHECK-06", "kind": "Existing test and preservation-script source review",
+      "result": "Read-only inspection; no tests or preservation checks executed.",
+      "limit": "Test headings/comments and fixture assertions are authored intent, not passing results or fresh behavioral evidence."
+    },
+    {
+      "id": "CHECK-07", "kind": "Artifact persistence/readback",
+      "result": "Report and log created with apply_patch only; exact-path text readback completed. rg counted 17 finding IDs, 6 candidate IDs and severity records 5 high/11 medium/1 low. Exact pattern ^ reconfirmed the four presentation line counts.",
+      "raw_output": [
+        "Finding IDs: D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json:17",
+        "Candidate IDs: D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json:6",
+        "High severity: D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json:5",
+        "Medium severity: D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json:11",
+        "Low severity: D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json:1"
+      ],
+      "limit": "No executable JSON parser, source hash, git diff or schema validator was run; JSON structure reviewed as source text."
+    }
+  ],
+  "inspection_errors_and_recovery": [
+    "Unbounded view of react-frontend.instructions.md and audit-page-062.json reported file too large; explicit source ranges were read instead.",
+    "Initial glob for *battery*degrad*.go returned no files because backend uses batterydegradation\\handler.go/dtos.go/calculations.go; router import/constructor established the exact package.",
+    "Initial .ts lookups for useOperationalMetrics and operationalMetrics failed because files are .tsx; exact .tsx files located and read.",
+    "metric-reference.ts and the same-name direct file glob were absent; no shared metric-engine completeness claim was made. Direct operationalMetrics adapter read instead.",
+    "Lowercase annotation filename glob returned no files; capitalized ChartAnnotationLayer.tsx was located and read."
+  ],
+  "NOTRUN": [
+    {"check": "Audit skill audit.sh", "reason": "Inspected only; it invokes TypeScript and executable helper scripts forbidden by this source-only assignment."},
+    {"check": "npx tsc --noEmit / lint / build / unit/component tests / preservation.check.cjs / full suite", "reason": "Explicitly prohibited. No fresh compiler, lint, build or test pass claimed."},
+    {"check": "API calls, battery data, DB queries, aggregate measurements and fleet commands", "reason": "Explicitly prohibited; backend definitions were read, not executed."},
+    {"check": "Browser / native / screenshots / runtime accessibility / mobile interactions", "reason": "Explicitly prohibited; only source mechanisms and existing test intent reviewed."},
+    {"check": "Current catalog content, catalog validity, translated locale rendering", "reason": "No catalog inspection/execution or fresh current-catalog proof; technical identifiers exempted explicitly."},
+    {"check": "Docker, Discord, helper/custom/extension tools, agents and scheduled loops", "reason": "Explicitly prohibited and not used."},
+    {"check": "Current source hashes, executable JSON/schema parse, git status/diff/commit", "reason": "No shell commands; parent owns commit/status integration. Historical hashes are not fresh hashes."}
+  ],
+  "claims_and_release": {
+    "sole_write_claims": [
+      "D:\\repos\\teslasync\\docs\\frontend-audits\\phase6-qa-battery-battery-degradation.json",
+      "D:\\repos\\teslasync\\web\\logs\\phase6-qa-battery-battery-degradation.log"
+    ],
+    "source_read_claim": "Released on final return; no source write claim acquired.",
+    "report_log_claims": "Released on final return after readback.",
+    "command_claims": "None acquired; no shell/test/browser process started.",
+    "parent_status_ownership_preserved": true,
+    "post_return_writes": false,
+    "terminal_contract": "ALL source/report/log/commands CLAIMS RELEASED; NO POST-RETURN WRITES."
+  }
+}

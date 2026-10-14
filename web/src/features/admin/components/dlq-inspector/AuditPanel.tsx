@@ -8,7 +8,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Badge, Caption, DataTable, Text, type Column } from '@/components/ui';
+import { Badge, Caption, DataTable, Text, type Column, type MobileDataTablePresentation } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import type {
@@ -19,7 +19,7 @@ import type {
 interface AuditPanelProps {
   rows?: DLQReplayAuditRecord[] | null;
   loading: boolean;
-  scopedDlqId?: number | null;
+  scopedDlqId?: DLQReplayAuditRecord['dlq_id'] | null;
 }
 
 const RESULT_VARIANT: Record<DLQReplayResult, 'success' | 'danger' | 'warning' | 'neutral'> = {
@@ -42,7 +42,9 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       filterValue: (row) => row.replayed_at ?? null,
       header: t('admin.dlq.audit.cols.replayedAt', 'Replayed at'),
       visibleOnMobile: true,
-      render: (row) => <TimeStamp value={row.replayed_at} format="absolute" />,
+      render: (row) => row.replayed_at
+        ? <TimeStamp value={row.replayed_at} format="absolute" />
+        : <Text size="xs" color="muted">—</Text>,
     },
     {
       key: 'actor',
@@ -60,7 +62,7 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       filterValue: (row) => row.dlq_id ?? null,
       align: 'right',
       header: t('admin.dlq.audit.cols.dlqId', 'DLQ ID'),
-      render: (row) => <Text mono size="xs">{row.dlq_id}</Text>,
+      render: (row) => <Text mono size="xs">{row.dlq_id ?? '—'}</Text>,
     },
     {
       key: 'result',
@@ -69,7 +71,7 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
       visibleOnMobile: true,
       render: (row) => (
         <Badge variant={RESULT_VARIANT[row.result] ?? 'neutral'}>
-          {row.result}
+          {row.result || '—'}
         </Badge>
       ),
     },
@@ -101,6 +103,34 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
     },
     ],
     [t],
+  );
+
+  const mobilePresentation = useMemo<MobileDataTablePresentation<DLQReplayAuditRecord>>(
+    () => ({
+      roles: {
+        actor: 'title',
+        dlq_id: 'primary',
+        result: 'badge',
+        replayed_at: 'meta',
+        dst_topic: 'meta',
+        error: 'meta',
+        trace_id: 'hidden',
+      },
+      displayValue: (row, key) => {
+        switch (key) {
+          case 'replayed_at': return row.replayed_at || null;
+          case 'actor': return row.actor || null;
+          case 'dlq_id': return row.dlq_id ?? null;
+          case 'result': return row.result || null;
+          case 'dst_topic': return row.dst_topic || null;
+          case 'error': return row.error || null;
+          case 'trace_id': return row.trace_id || null;
+          default: return null;
+        }
+      },
+      state: loading && safeRows.length === 0 ? { kind: 'loading' } : { kind: 'ready' },
+    }),
+    [loading, safeRows.length],
   );
 
   if (!loading && safeRows.length === 0) {
@@ -137,7 +167,8 @@ export function AuditPanel({ rows, loading, scopedDlqId }: AuditPanelProps) {
           : t('admin.dlq.audit.empty.title', 'No replay attempts yet')
       }
       pagination={{ defaultPageSize: 25, pageSizeOptions: [25, 50, 100] }}
-      mobileColumns={['replayed_at', 'actor', 'result']}
+      mobileColumns={['replayed_at', 'actor', 'dlq_id', 'result', 'dst_topic', 'error', 'trace_id']}
+      mobilePresentation={mobilePresentation}
     />
   );
 }

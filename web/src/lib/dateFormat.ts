@@ -21,7 +21,7 @@
  * like "NaN:NaN" or "Invalid Date". Callers should NOT pre-guard.
  */
 
-import { fmtNumber, isFiniteNumber } from './numberFormat'
+import { fmtNumber, getGlobalLocale, isFiniteNumber } from './numberFormat'
 
 /** Universal placeholder returned by every formatter for unrenderable input. */
 const FALLBACK = '—'
@@ -116,22 +116,42 @@ export function formatTime(iso: string | Date | null | undefined, opts?: FormatO
   return cachedTimeFormatter(opts).format(d)
 }
 
-/** Relative time: "3 min ago", "2 hours ago", "yesterday" */
+/**
+ * Locale-aware elapsed time: "3m ago" or "in 2h", then an absolute date
+ * after seven days. Uses the selected formatter locale unless overridden.
+ * English keeps its existing "just now" label for the first past minute.
+ */
 export function formatRelative(iso: string | Date | null | undefined, opts?: FormatOptions): string {
   if (!iso) return '—'
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
-  const now = Date.now()
-  const diff = now - d.getTime()
-  const seconds = Math.floor(diff / 1000)
-  if (seconds < 60) return 'just now'
+  const diff = d.getTime() - Date.now()
+  const seconds = Math.floor(Math.abs(diff) / 1000)
+  const locale = intlLocale(opts) ?? getGlobalLocale()
+  const relativeOptions = {
+    style: 'narrow',
+    numeric: seconds < 60 ? 'auto' : 'always',
+  } as const
+  let formatter: Intl.RelativeTimeFormat
+  try {
+    formatter = new Intl.RelativeTimeFormat(locale, relativeOptions)
+  } catch {
+    formatter = new Intl.RelativeTimeFormat('en-US', relativeOptions)
+  }
+  if (diff <= 0 && seconds < 60) {
+    if (formatter.resolvedOptions().locale.startsWith('en')) return 'just now'
+    return formatter.format(0, 'second')
+  }
+  // A future instant within the next second must not collapse to "now".
+  if (seconds < 60) return formatter.format(Math.max(1, seconds), 'second')
+  const direction = diff > 0 ? 1 : -1
   const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 60) return formatter.format(direction * minutes, 'minute')
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return formatter.format(direction * hours, 'hour')
   const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  return formatDate(iso, opts)
+  if (days < 7) return formatter.format(direction * days, 'day')
+  return formatDate(iso, { ...opts, locale: formatter.resolvedOptions().locale })
 }
 
 /**

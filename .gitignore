@@ -126,3 +126,5 @@ REDESIGN-NOTES.md
 # transient commit-message files used by R-phase recipe
 commit_msg.txt
 commit_msg*.txt
+
+state/

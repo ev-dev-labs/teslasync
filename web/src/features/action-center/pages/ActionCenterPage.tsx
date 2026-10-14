@@ -76,8 +76,9 @@ export default function ActionCenterPage() {
   usePageTitle(t('actionCenter.page.title', 'Action center'));
 
   useEffect(() => {
-    // Materialize the inherited selection so Copy link does not depend on the recipient's preference.
-    if (vehicleScope !== 'fleet' && !urlVehicle && vehicleId != null) {
+    // Materialize inherited or rejected URL scope so Copy link uses the effective selection.
+    // Numeric comparison preserves valid URL IDs; intentional fleet scope stays page-local.
+    if (vehicleScope !== 'fleet' && vehicleId != null && Number(urlVehicle) !== vehicleId) {
       setUrl({ vehicle_id: String(vehicleId) });
     }
   }, [vehicleScope, urlVehicle, vehicleId, setUrl]);

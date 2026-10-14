@@ -278,24 +278,24 @@ export interface AuditChainVerifyResponse {
 
 // ---------- GDPR export ----------------------------------------------------
 
-export type GDPRArtifactStatus =
-  | 'queued'
-  | 'running'
-  | 'complete'
-  | 'failed'
-  | 'expired';
-
+/**
+ * Persisted bundle manifest, returned directly by gdprexportsvc.Service.Get.
+ * Mirrors internal/database/gdpr.Artifact, not the export-job lifecycle.
+ * A manifest is inserted after bundle creation; it carries no job status,
+ * format, user identity, completion/error state or promised download URL.
+ */
 export interface GDPRExportArtifact {
   id: string;
-  user_id?: string | null;
-  status: GDPRArtifactStatus;
-  format: string;
-  bytes?: number | null;
-  sha256?: string | null;
-  storage?: string | null;
-  download_url?: string | null;
+  export_job_id: string;
+  vehicle_id: number;
+  /** Known persisted kinds are local_fs and s3; retain unknown source values. */
+  storage_kind: string;
+  storage_path: string;
+  sha256: string;
+  byte_count: number;
   created_at: string;
-  completed_at?: string | null;
-  expires_at?: string | null;
-  error?: string | null;
+  expires_at: string;
+  /** Go omits a nil pointer; explicit null is also treated as no timestamp. */
+  downloaded_at?: string | null;
+  download_count: number;
 }

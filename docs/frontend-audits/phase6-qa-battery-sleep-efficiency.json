@@ -1,0 +1,1221 @@
+{
+  "item": "phase6-qa-battery-sleep-efficiency",
+  "reportVersion": 1,
+  "outcome": "SOURCE_QA_DONE_WITH_FINDINGS",
+  "pageQaAccepted": false,
+  "page": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+  "routes": [
+    "/sleep-efficiency"
+  ],
+  "purpose": "Read-only source QA of historical sleep/idle evidence, not physical sleep or current vehicle/FSM validation.",
+  "primaryGoal": "Keep destination counts, duration support, SOC drain, contextual projections and source trust distinct across all fourteen mounted regions.",
+  "ownership": {
+    "writeOnly": [
+      "docs\\frontend-audits\\phase6-qa-battery-sleep-efficiency.json",
+      "logs\\phase6-qa-battery-sleep-efficiency.log"
+    ],
+    "queueIntegrationDispatchHealthOwner": "parent only",
+    "sourceTestsCatalogSharedBackendChanges": "NONE",
+    "release": "ALL report/log/JSON/commands RELEASED; NO POSTRETURN WRITES"
+  },
+  "duplicateFirst": {
+    "queue": "migration-queue.md",
+    "readyRow": 330,
+    "readyStatusObserved": "[ ]",
+    "prerequisiteRow": 1753,
+    "literalPrerequisite": "phase5-page-battery-sleep-efficiency",
+    "prerequisiteStatusObserved": "[x]",
+    "exactReportExistedAtStart": false,
+    "exactLogExistedAtStart": false,
+    "priorPhase6DuplicateFound": false,
+    "historicalAudit": "docs\\frontend-audits\\audit-page-074.json is historical phase0 source evidence, not a previous phase6 QA receipt.",
+    "exitCode": 0
+  },
+  "budget": {
+    "requestReceivedLocal": "2026-10-13T14:58:58.61-07:00",
+    "actualFirstCommandLocal": "2026-10-13T14:59:15.323147-07:00",
+    "targetMinutes": 20,
+    "hardLimitMinutes": 25,
+    "clockReset": false,
+    "maximumRequestedCommandWaitSeconds": 30,
+    "individualCommandLimitSeconds": 480,
+    "reportCreatedByLocal": "2026-10-13T15:10:57.8682933-07:00",
+    "elapsedSecondsAtValidation": 844.518
+  },
+  "authority": {
+    "read": [
+      "docs\\frontend-design-contract.md:1-240,240-535,483-622",
+      "docs\\frontend-mission.md:1-520,529-599,704-850,921-1081,1115-1148,1416-1487",
+      "docs\\frontend-worker-conventions.md",
+      ".github\\instructions\\frontend-si-cutover.instructions.md",
+      ".github\\instructions\\react-frontend.instructions.md:1-550",
+      ".github\\instructions\\unit-conversion.instructions.md",
+      ".github\\instructions\\observability.instructions.md",
+      ".github\\skills\\audit-violations\\audit.sh",
+      ".github\\skills\\verify-api-hooks\\verify.sh"
+    ],
+    "precedence": "Current SI-only/display-boundary, restrained design and independent trust contracts govern; obsolete neon/mixed-source-unit examples do not authorize legacy conversions.",
+    "guidanceLoaded": [
+      "audit-violations",
+      "verify-api-hooks"
+    ],
+    "auditWrapper": "NOTRUN: invokes global TypeScript, explicitly forbidden here.",
+    "verifyWrapper": "NOTRUN: global route/hook walking exceeds consumed-method-only scope.",
+    "observability": "No frontend RUM bootstrap, telemetry instrumentation, PII logging or backend modification was introduced."
+  },
+  "evidenceLimits": [
+    "Source reading and narrow builtin pattern/path comparisons ONLY; no executed production behavior.",
+    "TSC, full/scoped build, tests, lint, browser, native UI, capture, HTTP/API requests, Docker, Git, installs, helpers, extensions, servers and subagents NOTRUN.",
+    "Historical six authored regressions remain NOTRUN here; neither tests nor their pass status were freshly inspected/executed.",
+    "No real-vehicle evidence, physical sleep, complete occupancy reconstruction, current FSM operation or active-active FSM claim.",
+    "Backend handler/repository/query bodies were not inspected; only three consumed route registrations were compared. Producer behavior, SQL bounds, units beyond documented frontend types, authorization and totals remain unverified.",
+    "No catalog walk, catalog acceptance, fresh test acceptance, native acceptance or complete page/application acceptance is inferred from source presence.",
+    "Unknown/empty/zero, invalid input, model context and measured evidence are not interchangeable.",
+    "Historical source hash/line totals differ from this snapshot. Concurrent/authorized producer provenance cannot be inferred without parent-owned integration evidence.",
+    "Early PowerShell redirection accidentally replaced earlier log output; actual tool-history outputs/exits were observed. The correction is disclosed in the log, and decisive bounded scans/pins are recorded again with proper append redirection."
+  ],
+  "dataSources": [
+    {
+      "id": "sleep",
+      "hook": "useSleepEfficiency",
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "lines": [
+        146,
+        174
+      ],
+      "method": "GET",
+      "requestPath": "/analytics/sleep",
+      "registeredPath": "/api/v1/analytics/sleep",
+      "routePins": [
+        "internal\\api\\router.go:3210",
+        "internal\\api\\router.go:3917"
+      ],
+      "routeMethodComparison": "MATCH",
+      "parameters": [
+        "vehicle_id",
+        "days",
+        "start",
+        "end"
+      ],
+      "operands": "String(selected vehicleId), inclusive UTC calendar days or default 30, useRangeState.start/end from URL from/to.",
+      "queryKey": [
+        "sleep-efficiency",
+        "vehicleId",
+        "days",
+        "startDate or empty string",
+        "endDate or empty string"
+      ],
+      "enablement": "vehicleId !== null",
+      "cancellation": "queryFn AbortSignal passed through request options",
+      "payload": "SleepEfficiencyData; no hook-side display conversion",
+      "trust": "Page useDataState(..., provenance historical) distinguishes initial failure from retained refresh failure/paused refresh.",
+      "limit": "Method/path match is not response, server filter, producer unit, authorization or runtime verification."
+    },
+    {
+      "id": "vehicles",
+      "hook": "useSelectedVehicle -> useVehicles",
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "lines": [
+        73,
+        80
+      ],
+      "method": "GET",
+      "requestPath": "/vehicles",
+      "routePins": [
+        "internal\\api\\router.go:3210",
+        "internal\\api\\router.go:3362-3363"
+      ],
+      "routeMethodComparison": "MATCH collection route /vehicles + /",
+      "trust": "Independent vehicle-list query, safeArray normalization, FAST staleTime; selection URL > store > first known vehicle.",
+      "limit": "SelectedVehicleResult exposes list/selection, not the vehicle query's loading/fatal/refresh/paused trust state; no vehicle-list success inferred from a no-selection prompt."
+    },
+    {
+      "id": "preferences",
+      "hook": "useUnits/useFormatting/useOperationalMetrics -> useSettings -> getSettings",
+      "file": "web\\src\\api\\settings.ts",
+      "lines": [
+        24,
+        24
+      ],
+      "method": "GET",
+      "requestPath": "/settings",
+      "routePins": [
+        "internal\\api\\router.go:3210",
+        "internal\\api\\router.go:3702"
+      ],
+      "routeMethodComparison": "MATCH; not vehicle-specific /vehicles/{id}/settings at router line 3491",
+      "trust": "Independent settings query ['settings'], five-minute staleTime, retry 1, defaults when unavailable; settingsState/pricingState exist but this page consumes only formatters.",
+      "limit": "Default formatting is not confirmed saved preference/currency evidence. getSettings does not accept queryFn AbortSignal."
+    },
+    {
+      "id": "scope",
+      "hook": "useRangeState/useProductPreferences",
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "lines": [
+        298,
+        333
+      ],
+      "routeScope": "workspaceScope.ts:64,156-170 enables range and vehicle for /sleep-efficiency; App.tsx:901 mounts route",
+      "urlKeys": [
+        "from",
+        "to",
+        "time_scope"
+      ],
+      "ownership": "Existing header/mobile workspace controls; no competing local picker found.",
+      "semantics": "Header ownership ignores page persistKey; rolling/live and local-calendar exclusive instants computed at useRangeState.ts:660-693.",
+      "consumptionMismatch": "SleepEfficiencyPage.tsx:46-60 consumes start/end dates, not precise startInstant/endInstantExclusive/timezone."
+    }
+  ],
+  "sourceAnalysis": {
+    "domainOwner": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+    "transitionCounts": "parseStateRow:412-438 requires nonempty normalized state, safe nonnegative integer count AND valid nonnegative minutes. buildStateAnalysis:440-546 uses first valid normalized state row, guarded sums, count shares, represented count and normalized entropy. Unknown nonempty state names remain visible.",
+    "sleepDuration": "analyzeSleepEfficiency:1005-1029 requires positive total dwell; asleep/total ratio is recomputed, reported percentage checked in [0,100], difference remains signed. Zero/missing time-to-sleep withheld without sample companion; no physical sleep claim.",
+    "events": "parseEventRow:566-632 requires timezone-suffixed parseable times, end >= start, no future against frozen mount clock, positive duration, safe nonnegative id, bounded SOC/loss, nonnegative rate and boolean Sentry. It does NOT reconcile timestamps/duration, SOC loss or dose/rate.",
+    "accounting": "Five state categories and six event categories are mutually exclusive by first matching validation reason. First valid id wins before newest-first sorting; directory caps 50 never affect all-valid-row summaries.",
+    "availability": "buildAvailability:853-948 has seven evidence gates; buildBreadth:950-972 awards 1 available / 0.5 partial and rounds to /100. This is source support, not confidence, coverage percentage or accuracy.",
+    "sentry": "buildSentryGroup:731-761 chooses first positive-count row per boolean mode. Metrics remain individually nullable; both count-bearing groups gate comparison even if all averages are missing.",
+    "projection": "buildSentryAnalysis:775-842 combines rate (% SOC/hour), capacity Wh / 1000 and 730 hours into local kWh, then price per kWh into currency. Positive capacity and nonnegative price are context, not measured energy. On-minus-off is clamped at zero, not a signed difference.",
+    "immutability": "Input arrays copied/derived and output recursively frozen at freezeDeep:974-981; no API cache payload rewriting.",
+    "rawSI": "Types explicitly document battery_capacity_wh in Wh and outside_temp/avg_temp in Celsius. Existing sleep duration fields are minutes/hours and rate fields lack explicit dimensional type comments; do not relabel them seconds or W without an authorized producer cutover.",
+    "preferences": "Capacity calls formatEnergy(Wh); event temperature calls formatTemperature(Celsius). Numeric formatters subscribe to preference changes. Local month projection still formats kWh directly, event times use browser defaults and currency symbol defaults can be unlabeled.",
+    "measurementLimits": "Summed event SOC losses are percentage-point totals, not total measured Wh; event-count Sentry share is not duration-weighted exposure; group rate difference is descriptive, not causal; valid-input checks cannot establish complete independent measured evidence."
+  },
+  "regions": [
+    {
+      "id": "evidence",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+      "line": 96,
+      "frame": "LayoutCard",
+      "states": "Always allocated; QueryError owns initial retry; seven OperationalBrief metrics have raw/null gates and loading suppression; no-vehicle alert. Retained flag covers refresh error only.",
+      "actions": [
+        "initial query retry",
+        "existing OperationalBrief review surface"
+      ],
+      "units": "Count, percent, duration seconds at numeric bridge, source breadth /100, explicit UTC date label.",
+      "findings": [
+        "Q05",
+        "Q06",
+        "Q07"
+      ]
+    },
+    {
+      "id": "transition-destinations",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDestinationChart.tsx",
+      "line": 76,
+      "frame": "ChartContainer",
+      "states": "SectionBody shared states; positive count rows only, otherwise explicit no-count explanation.",
+      "actions": [
+        "shared image export/copy",
+        "CSV when exportData nonempty",
+        "accessible data table"
+      ],
+      "units": "count/share, not duration",
+      "findings": [
+        "Q10",
+        "Q12"
+      ]
+    },
+    {
+      "id": "transition-composition",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionCompositionPanel.tsx",
+      "line": 23,
+      "frame": "GlassPanel",
+      "states": "SectionBody; valid rows shown including unknown state badges; missing denominator caption is dash, bar geometry receives zero.",
+      "actions": [],
+      "units": "Count-based share only; no occupancy claim.",
+      "findings": [
+        "Q11"
+      ]
+    },
+    {
+      "id": "dwell-duration",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DwellDurationChart.tsx",
+      "line": 74,
+      "frame": "ChartContainer",
+      "states": "SectionBody; positive dwell gate controls data/export arrays; zero minutes retained as rows, not reconstructed evidence.",
+      "actions": [
+        "shared image export/copy",
+        "CSV when positive dwell data exists",
+        "accessible data table"
+      ],
+      "units": "reconstructed minutes and duration share",
+      "findings": [
+        "Q10",
+        "Q12",
+        "Q17"
+      ]
+    },
+    {
+      "id": "efficiency-diagnostics",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencyDiagnostics.tsx",
+      "line": 21,
+      "frame": "GlassPanel",
+      "states": "SectionBody; requires positive dwell; reported/recomputed/difference null-safe, explanatory withheld state otherwise.",
+      "actions": [],
+      "units": "percentage and signed percentage-point difference",
+      "findings": []
+    },
+    {
+      "id": "transition-diversity",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDiversityDiagnostics.tsx",
+      "line": 22,
+      "frame": "GlassPanel",
+      "states": "SectionBody; positive total counts gate dominance/entropy/represented/asleep-share diagnostics.",
+      "actions": [],
+      "units": "dimensionless entropy 0-1 and count/share; explicitly not efficiency",
+      "findings": []
+    },
+    {
+      "id": "sentry-comparison",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryComparisonChart.tsx",
+      "line": 96,
+      "frame": "ChartContainer",
+      "states": "SectionBody; both positive-count groups gate chart/export; count-bearing zero is retained, nullable means missing.",
+      "actions": [
+        "shared image export/copy",
+        "CSV for complete count-bearing pair",
+        "legend hiddenSeries for both bars",
+        "accessible data table"
+      ],
+      "units": "% SOC/hour and SOC percentage use one unlabeled Y axis",
+      "findings": [
+        "Q10",
+        "Q12",
+        "Q15",
+        "Q16"
+      ]
+    },
+    {
+      "id": "state-directory",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\StateEvidenceDirectory.tsx",
+      "line": 58,
+      "frame": "LayoutCard",
+      "states": "SectionBody; capped included rows or explicit no-valid-rows explanation; all six fields assigned mobile roles.",
+      "actions": [
+        "existing DataTable interaction/persistence pipeline; no local mutation"
+      ],
+      "units": "count/share/total_minutes with source destination semantics",
+      "findings": [
+        "Q11"
+      ]
+    },
+    {
+      "id": "sentry-projection",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryProjectionContext.tsx",
+      "line": 45,
+      "frame": "GlassPanel",
+      "states": "SectionBody; independent capacity/price context nullable; projection unavailable without rates/capacity, incomplete pair warning.",
+      "actions": [],
+      "units": "Wh display converter; local kWh, price/kWh, currency, % SOC/hour; 730-hour model not bill",
+      "findings": [
+        "Q02",
+        "Q08",
+        "Q17"
+      ]
+    },
+    {
+      "id": "drain-profile",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DrainEventProfile.tsx",
+      "line": 28,
+      "frame": "GlassPanel",
+      "states": "SectionBody; at least one validated event gates six aggregate metrics; all valid rows before cap.",
+      "actions": [],
+      "units": "hours, summed SOC loss, median % SOC/hour, count-based Sentry share, temperature availability share",
+      "findings": [
+        "Q13",
+        "Q14"
+      ]
+    },
+    {
+      "id": "event-directory",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\DrainEventDirectory.tsx",
+      "line": 89,
+      "frame": "LayoutCard",
+      "states": "SectionBody; latest fifty validated events or explicit exclusion explanation; all eight fields assigned mobile roles.",
+      "actions": [
+        "loaded-row value filters",
+        "pagination/mobile load-more through DataTable"
+      ],
+      "units": "timestamps, hours, SOC start/end/loss, % SOC/hour, boolean Sentry, Celsius through temperature preference formatter",
+      "findings": [
+        "Q09",
+        "Q13",
+        "Q14"
+      ]
+    },
+    {
+      "id": "availability",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx",
+      "line": 74,
+      "frame": "GlassPanel",
+      "states": "SectionBody; seven explicit source/status/reason rules; success/warning/neutral plus text, not color alone.",
+      "actions": [
+        "column resize/reorder/visibility explicitly disabled"
+      ],
+      "units": "evidence availability, not measured quantity/confidence",
+      "findings": [
+        "Q03",
+        "Q15"
+      ]
+    },
+    {
+      "id": "range-coverage",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx",
+      "line": 151,
+      "frame": "GlassPanel",
+      "states": "SectionBody; requested dates/period/vehicle identity/caps/frozen clock plus eleven mutually exclusive accounting rows.",
+      "actions": [
+        "existing DataTable layout interactions; no producer repair action"
+      ],
+      "units": "UTC date strings, calendar-day count, row counts and technical identifiers; not complete temporal coverage",
+      "findings": [
+        "Q01",
+        "Q04",
+        "Q07",
+        "Q14"
+      ]
+    },
+    {
+      "id": "methodology",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepMethodologyPanel.tsx",
+      "line": 14,
+      "frame": "GlassPanel",
+      "states": "Always renders independently of query state; two explanatory blocks, nonclaims callout and invalid frozen-clock warning.",
+      "actions": [],
+      "units": "Documented counts/minutes/UTC/Wh-price context; future collection gates, not a producer runtime receipt.",
+      "findings": [
+        "Q17"
+      ]
+    }
+  ],
+  "states": {
+    "sourcePin": "SleepEfficiencyPage.tsx:76-106,145-188; SleepEfficiencySectionBody.tsx:20-74",
+    "initialLoading": "Selected unresolved nonpaused query -> contextual skeletons; overview loading status suppresses numeric readings.",
+    "noVehicle": "Sleep query disabled, all fourteen shells allocated; passive source guidance and overview selection alert. Vehicle query failure vs fleet-empty not distinguished by page.",
+    "initialFailure": "Fatal error only with no retained sleep payload; overview retry remains reachable, other headings/passive error guidance survive.",
+    "initialPaused": "Page AlertBanner and localized Refresh action, min-h-11 below md; no invented sleep-health conclusion.",
+    "retainedRefreshError": "Analysis/sections retain payload; shared stale warning nonblocking; overview retained=true.",
+    "retainedPaused": "deriveDataState retained+paused -> stale and refresh blocked; page warning renders but overview retained=false (Q05).",
+    "empty": "Section-specific absent evidence bodies; durations/time-to-sleep withhold placeholders; missing state collection still conflated with returned-empty count (Q07).",
+    "partial": "Availability independently tracks source gates; it is one sleep endpoint, not seven independent network requests. Positive Sentry counts do not assure metric completeness (Q15).",
+    "widgetFailure": "Every allocated section wrapped in its own SectionErrorBoundary with technical name SleepEfficiency:<stable id>; source isolation exists, not an exercised exception recovery receipt.",
+    "pageGate": "PageLayout delegates PageContainer; page passes query but no loading/error/empty replacing children. PageContainer.tsx:243-255 does not remove this page's section grid solely because query.error is set.",
+    "runtimeAllStates": "NOTRUN"
+  },
+  "actions": {
+    "page": [
+      "HelpTooltip methodology text and localized ariaLabel at page:138-144",
+      "Query retry -> sleepQuery.refetch at page:101-103 / overview:100",
+      "Paused-source Refresh -> same retry at page:162-178",
+      "Inherited header/mobile workspace vehicle/range controls, not additional page selectors"
+    ],
+    "charts": {
+      "sourcePins": [
+        "ChartContainer.tsx:470-487",
+        "ChartContainer.tsx:721-735",
+        "ChartContainer.tsx:892-940"
+      ],
+      "export": "Default exportable !== false enables shared PNG/SVG/copy; CSV only when exportData nonempty. Page supplies data/export arrays, not server full-result exports.",
+      "legend": "Only Sentry has chartKey and both Bar.hide operands forwarded from hiddenSeries; persistent ID sleep-efficiency-sentry-comparison unchanged.",
+      "fullscreen": "No explicit fullscreen prop supplied by these three specialists; do not claim a rendered fullscreen action.",
+      "annotations": "No annotations config supplied; no annotation CRUD inferred.",
+      "limitations": "Source-only action wiring; none clicked or exercised. Missing frame loading/error/empty flags can expose exports during inner unavailable/loading bodies."
+    },
+    "tables": [
+      "battery:sleep-state-evidence: six fields; capped fifty included states",
+      "battery:sleep-drain-events: eight fields; value filters and pagination; capped fifty included events, not full-result export",
+      "battery:sleep-availability: three fields, layout controls disabled; mobile evidence reason currently hidden",
+      "battery:sleep-source-accounting: three fields, eleven source categories; mobile count currently hidden"
+    ],
+    "mutations": "No vehicle wake/command/repair or producer write action on this source page; no mutation performed."
+  },
+  "i18n": {
+    "status": "Consumed source inspected; catalog/locale runtime NOTRUN",
+    "mechanism": "Human labels, help, errors, action names and metric templates use t(..., fallback); interpolation and shared number formatters mostly retained.",
+    "technicalIdentifierExemptions": [
+      "Stable section ids, data-testid names, query keys, tableId and chartKey",
+      "SectionErrorBoundary technical diagnostic name SleepEfficiency:<id>",
+      "Unknown producer state label passed through rather than fabricated translation",
+      "Explicit source identifiers total_minutes, period_days, vehicle_id, fsm_transitions.to_state",
+      "Dash for unavailable and symbolic arrows/units inside localized templates"
+    ],
+    "notProven": "Catalog existence/completeness, plurals, locale output, RTL and long translations. No catalog was read or modified.",
+    "preferenceMismatch": "Event dateFormat has browser-default locale/timezone without supplied options (Q09)."
+  },
+  "sourceAccessibility": {
+    "status": "SOURCE ONLY; keyboard/focus/screen-reader/composed-contrast/OS forced-colors acceptance NOTRUN",
+    "evidence": [
+      "Named CardGrid role group; actual semantic section wrappers keep stable ordering.",
+      "Chart localized ariaLabel/dataColumns and shared accessible Table alternatives exist when gated data is nonempty.",
+      "Loading overview/SectionBody roles have localized names; decorative feature icons marked aria-hidden.",
+      "Unknown/availability/Sentry badges use text as well as hue.",
+      "Paused Refresh has wrapLabel/min-h-11 below md; actual target width/focus clipping not measured.",
+      "SleepSectionPlacement uses existing FadeIn with no per-section decorative stagger; FadeIn.tsx:24-36 respects existing reduced-motion preference.",
+      "DataTable mobile omission of reason/count is a source reachability defect, not simply a visual concern."
+    ],
+    "candidates": "ChartContainer role img/group and outer busy/empty flags are not tied to inner query state; composed status announcement/toolbar suppression requires authorized accessibility QA.",
+    "needs": [
+      "keyboard and retry",
+      "chart menu/legend focus",
+      "OperationalBrief review drawer",
+      "table filters/mobile details",
+      "forced colors",
+      "light/dark/custom contrast",
+      "RTL and 200% text"
+    ]
+  },
+  "mobileAllocations": {
+    "status": "SOURCE ONLY; all viewport/native captures NOTRUN",
+    "owner": "CardGrid.tsx:26-40 uses measured allocated width and packCardRows; SleepSectionPlacement.tsx:14-18 applies placement span/min-w-0.",
+    "allocation": "Six full-width sections and eight half-width sections, stable order; internal specialist grids still use viewport sm/xl classes and require narrow allocated-width review.",
+    "stateDirectory": "All six fields mapped to mobile title/primary/meta/badge roles.",
+    "eventDirectory": "All eight fields mapped to mobile roles; recency included only in desktop start renderer, not mobile displayValue text.",
+    "availability": "Reason omitted from mobile allow-list with no mobilePresentation or row detail; DataTable.tsx:742-743 applies hidden md:table-cell.",
+    "accounting": "Essential count omitted from mobile allow-list with no mobilePresentation; same shared hidden-cell mechanism.",
+    "requiredWidths": [
+      320,
+      375,
+      390,
+      430,
+      768,
+      1024,
+      1280,
+      1440,
+      1920,
+      2560
+    ],
+    "requiredAdditional": [
+      "narrow allocated containers on wide viewports",
+      "long state identifiers",
+      "long UTC/frozen clock strings",
+      "RTL",
+      "200% text",
+      "open menus/drawers",
+      "safe areas"
+    ],
+    "acceptance": "NOTRUN; responsive classes and source presence are not overflow/touch/visual acceptance."
+  },
+  "findings": [
+    {
+      "id": "Q01",
+      "classification": "confirmed-source",
+      "severity": "high",
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "line": 46,
+      "rule": "MDC-032 precise workspace bounds",
+      "mechanism": "Page consumes start/end calendar dates, analysis treats UTC midnight dates, hook sends start/end; shared range's rolling/local-time startInstant/endInstantExclusive never reach this query/key.",
+      "sourceDerivedRepro": "NOTRUN: select 24h or a non-UTC/DST custom date window; compare useRangeState.ts:660-693 instant operands against page:46-60/hook:146-174 date operands. Request loses rolling precision/timezone semantics.",
+      "fix": "Parent-authorized coordinated page/hook/producer range contract supporting both exclusive instant bounds; retain explicit calendar disclosure until coordinated. Do not silently pass RFC3339 strings into date-only analysis.",
+      "fixOwner": "integration: range/hook/producer owners plus assigned page owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q02",
+      "classification": "confirmed-source",
+      "severity": "high",
+      "file": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+      "line": 815,
+      "rule": "MDC-033 signed descriptive difference",
+      "mechanism": "Math.max(0, on.avgDrainRate - off.avgDrainRate) destroys a valid negative difference while projection panel labels it On-minus-off and Descriptive group difference.",
+      "sourceDerivedRepro": "NOTRUN: positive count groups with on rate 1, off rate 2 and positive capacity yield displayed difference 0 instead of -1 percentage-point/hour by inspection.",
+      "fix": "Domain owner distinguishes signed on-minus-off from any explicitly named nonnegative excess metric, preserving raw groups and sign. Existing clamp is historical behavior; do not change without assigned coordinated ownership.",
+      "fixOwner": "battery domain/integration owner; page label owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q03",
+      "classification": "confirmed-source",
+      "severity": "high",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx",
+      "line": 98,
+      "rule": "MDC-043 every field reachable on mobile",
+      "mechanism": "mobileColumns source/status excludes reason; no mobilePresentation/detail; columnVisibility=false prevents recovery. DataTable.tsx:742-743 hides the reason cell below md.",
+      "sourceDerivedRepro": "NOTRUN: below md, inspect one unavailable row; source/status remain, evidence rule cannot be reached through supplied mobile/detail props.",
+      "fix": "Reuse existing mobilePresentation roles for source/status/full reason without changing rule order/identity.",
+      "fixOwner": "assigned sleep feature-component owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q04",
+      "classification": "confirmed-source",
+      "severity": "high",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx",
+      "line": 279,
+      "rule": "MDC-043 accounting measurement preservation",
+      "mechanism": "mobileColumns source/category excludes count, no mobilePresentation/detail; hidden shared cell removes essential counts from all eleven categories below md.",
+      "sourceDerivedRepro": "NOTRUN: below md compare state invalid_count or event future category; corresponding numeric row count is absent from supplied mobile presentation.",
+      "fix": "Existing mobile adapter source title/category metadata/count primary; preserve all eleven categories and number formatting.",
+      "fixOwner": "assigned sleep feature-component owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q05",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+      "line": 115,
+      "rule": "MDC-026 retained paused source trust",
+      "mechanism": "retained Boolean(refreshError) excludes cached paused state. deriveDataState marks retained+paused stale; page warns but BatteryEvidenceBrief says available and neutral instead of retained.",
+      "sourceDerivedRepro": "NOTRUN: cached payload, fetchStatus paused, error null; compare page:147-161 warning with overview retained=false and brief:41-49 available status.",
+      "fix": "Forward explicit source trust/retained state through existing feature adapter; preserve payload and separately label paused/refresh failure.",
+      "fixOwner": "assigned page/overview adapter owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q06",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "line": 32,
+      "rule": "MDC-026 no evidence availability from scope text",
+      "mechanism": "hasReadings checks any value metric; overview always supplies selected-window text even without response. Nonloading no-vehicle/initial-paused overview can announce Available source readings due solely to a scope label.",
+      "sourceDerivedRepro": "NOTRUN: valid calendar range, no sleep payload, no vehicle or paused request; window text remains a value while measured source metrics are null.",
+      "fix": "Feature adapter status derives from real response/trust/evidence support, not descriptive scope text; retain scope and selection/paused explanations.",
+      "fixOwner": "battery brief integration owner plus overview owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q07",
+      "classification": "confirmed-source",
+      "severity": "high",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+      "line": 37,
+      "rule": "MDC-026 unknown collection is not measured zero",
+      "mechanism": "hasResponse=true for any nonnull object; missing/null state_distribution normalized to [] and totalCount 0. Overview emits raw count 0 merely from object presence; missing arrays and authoritative empty arrays are indistinguishable.",
+      "sourceDerivedRepro": "NOTRUN: resolved payload {} or {state_distribution:null}; analysis:995-1007 yields zero valid totals; overview renders transition count 0 despite absent source field.",
+      "fix": "Track collection presence/validation separately from authoritative empty result and use null unavailable raw metric when source absent; preserve genuine zero counts in valid supplied rows.",
+      "fixOwner": "battery analysis/type integration owner plus overview",
+      "confidence": "high"
+    },
+    {
+      "id": "Q08",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "line": 75,
+      "rule": "MDC-026 independent preference/currency trust",
+      "mechanism": "Only formatCurrency is consumed, pricingState/settingsUnavailable discarded. Formatter chooses fallback $ while settings source is unavailable; displayed sleep-response price/cost gets an unconfirmed symbol with no preference-source warning.",
+      "sourceDerivedRepro": "NOTRUN: valid sleep price/projection, settings query initially failed or paused without data; useFormatting.ts:39-44 supplies $ and page has only sleep trust.",
+      "fix": "Use existing settings trust alongside sleep trust; label formatting fallback or withhold currency identity without erasing valid sleep numeric context. Do not invent an ISO currency or replacement settings cache.",
+      "fixOwner": "assigned page adapter and existing settings/formatting integration owners",
+      "confidence": "high"
+    },
+    {
+      "id": "Q09",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\DrainEventDirectory.tsx",
+      "line": 39,
+      "rule": "MDC-044 saved locale/timezone display",
+      "mechanism": "Start/end desktop and mobile call formatDateTime(timestamp) without options; dateFormat.ts:54-62 defaults browser locale/timezone, not saved user/vehicle preference. No displayed timezone clarifies mismatch with UTC scope labels.",
+      "sourceDerivedRepro": "NOTRUN: saved timezone/locale differs from browser; timestamps remain browser-rendered because no locale/tz operands supplied.",
+      "fix": "Reuse preference-aware date formatting/timezone owner and explicit display context; preserve absolute instants and local-calendar scope. Shared 12/24h capability requires integration review, not local formatter invention.",
+      "fixOwner": "assigned event-directory owner and date preference integration owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q10",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDestinationChart.tsx",
+      "line": 119,
+      "rule": "MDC-010/MDC-034 preference-preserving restrained palette",
+      "mechanism": "Four fixed fill literals in three charts (#00f0ff, #a855f7, #f59e0b, #a855f7) bypass existing chart palette preference. Destination cyan is fluorescent source value, not merely semantic body text.",
+      "sourceDerivedRepro": "NOTRUN: change saved chart_palette/theme; literal Bar fills remain unchanged by inspection.",
+      "fix": "Authorized chart/feature owner adopts existing restrained palette/series identity APIs; preserve saved palette ids and all raw series.",
+      "fixOwner": "existing chart palette integration owner plus three feature chart owners",
+      "confidence": "high"
+    },
+    {
+      "id": "Q11",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+      "line": 422,
+      "rule": "Independent count/duration evidence",
+      "mechanism": "parseStateRow validates total_minutes before retaining a valid count. Missing/invalid duration causes whole row exclusion, destroying otherwise usable destination counts even though UI states counts/durations are independent.",
+      "sourceDerivedRepro": "NOTRUN: row {state:'asleep',count:7,total_minutes:null}; invalid_minutes category excludes all 7 counts, rather than retaining count support and withholding duration.",
+      "fix": "Coordinate domain/source accounting with independently nullable count/duration evidence and transparent exclusions; retain first-valid dedup semantics and reject truly invalid counts.",
+      "fixOwner": "battery domain analysis/type integration owner",
+      "confidence": "high"
+    },
+    {
+      "id": "Q12",
+      "classification": "confirmed-source",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DwellDurationChart.tsx",
+      "line": 75,
+      "rule": "MDC-026/MDC-034 source-aware frame actions",
+      "mechanism": "All three ChartContainers receive no loading/error/empty frame flags; query/evidence states live only inside SectionBody. Shared showExportMenu/controlsUnavailable rely on frame flags, so image export/copy remains enabled while inner chart is loading/unavailable/error.",
+      "sourceDerivedRepro": "NOTRUN: initial loading or dwell unavailable; compare SectionBody skeleton/EmptyState to ChartContainer.tsx:478-484 flags defaulting false and export menu:721-728.",
+      "fix": "Forward actual initial and section-evidence state into canonical frame while keeping shell/body explanations and retained refresh payload/exports; do not blank neighbors.",
+      "fixOwner": "assigned three sleep chart component owners",
+      "confidence": "high"
+    },
+    {
+      "id": "Q13",
+      "classification": "candidate-needs-producer-contract",
+      "severity": "high",
+      "file": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+      "line": 582,
+      "rule": "Sleep/idle drain dose/time/sign consistency",
+      "mechanism": "Validation checks individual ranges but not duration vs timestamps, start-end SOC vs battery_lost, loss vs drain_rate*duration, noncharging parked context or overlap. Accepted rows can support contradictory drain summaries.",
+      "sourceDerivedRepro": "NOTRUN: legal SOC start70/end75, reported lost5, one-hour timestamps, duration10 and rate50 all pass individual guards if id/time/Sentry valid.",
+      "fix": "Authorized producer/domain owner defines independent vs derived measurements, tolerances, signed charging/recalibration handling, overlap and exposure coverage; disclose contradictions rather than silently reinterpret/reject valid signed physics.",
+      "fixOwner": "sleep producer/domain integration owner",
+      "confidence": "high on acceptance mechanism; producer physical semantics unverified"
+    },
+    {
+      "id": "Q14",
+      "classification": "candidate-needs-scope-clock-policy",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "line": 62,
+      "rule": "Historical analysis clock versus refreshed current evidence",
+      "mechanism": "Frozen Date.now is captured once on mount and reused for later query payloads/range changes. Valid newly completed current-day events after mount are classified future; recency never advances.",
+      "sourceDerivedRepro": "NOTRUN: stay mounted, refetch an event ending after mount but before refetch; parseEventRow:576-579 compares against old frozen clock and excludes it as future.",
+      "fix": "Parent/domain owner chooses explicit analysis-as-of semantics and labels scope, or binds a frozen clock to each accepted response/window; preserve deterministic calculations and historical reproducibility.",
+      "fixOwner": "battery analysis/page integration owner",
+      "confidence": "high on mechanism; intended frozen historical policy requires decision"
+    },
+    {
+      "id": "Q15",
+      "classification": "candidate-needs-metric-completeness-contract",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+      "line": 794,
+      "rule": "Independent Sentry sources and model-vs-measured trust",
+      "mechanism": "Both positive counts set comparisonAvailable and availability 'available' regardless of null average metrics. Group first-valid-row selection has no duplicate accounting; count/exposure weighting and observation coverage are unknown.",
+      "sourceDerivedRepro": "NOTRUN: on/off counts1 and all averages null -> complete comparison status and blank nullable bars, not metric-level partial support.",
+      "fix": "Preserve count-bearing zero, expose individual metric validity and group/exposure provenance; clarify sample-vs-time weighting and duplicates at producer owner. Never turn availability into causal Sentry effect.",
+      "fixOwner": "sleep producer/domain integration owner plus availability/chart adapters",
+      "confidence": "high on count-only gating; aggregation contract unverified"
+    },
+    {
+      "id": "Q16",
+      "classification": "candidate-visual-dimensional-review",
+      "severity": "medium",
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryComparisonChart.tsx",
+      "line": 126,
+      "rule": "MDC-034 distinct rate and dose dimensions",
+      "mechanism": "One Y axis is shared by %/hour drain rate and % SOC loss; labels name units but do not make bar heights dimensionally comparable. Duration/count exist only in data alternative.",
+      "sourceDerivedRepro": "NOTRUN: rate1 %/hour, loss10% over10h yields unequal bar heights for physically related quantities on the same axis.",
+      "fix": "Authorized chart owner uses existing chart boundaries to separate explicitly unit-labeled rate and dose dimensions or distinct axes; preserve all fields/series/data alternatives.",
+      "fixOwner": "assigned Sentry chart owner with domain visualization review",
+      "confidence": "high on shared axis; composed readability NOTRUN"
+    },
+    {
+      "id": "Q17",
+      "classification": "candidate-authorized-producer-drift",
+      "severity": "medium",
+      "file": "web\\src\\types\\energy.ts",
+      "line": 263,
+      "rule": "SI canonical contract and historical producer assertions",
+      "mechanism": "Consumed types still carry total_minutes, time_to_sleep_avg_min, duration_hours and local kWh projection fields while methodology asserts current zero-minute producer behavior. Historical report pins router3874; current route3917 and page hash differ. Frontend type comments are not a fresh producer receipt.",
+      "sourceDerivedRepro": "NOTRUN: compare current consumed type names/calculation operands/methodology:45-71 against any authorized producer cutover receipt. None is available within this scope; do not infer seconds/Wh or current placeholders from names alone.",
+      "fix": "Parent verifies authorized producer JSON/unit/boundary drift and coordinates types/domain/page labels without dual adapters; retain known Wh/Celsius input and explicit context. Update current-producer wording only on verified evidence.",
+      "fixOwner": "parent-owned SI/producer/hook/type integration owner",
+      "confidence": "high on source drift/legacy names; actual backend state UNKNOWN"
+    }
+  ],
+  "requiredSharedChanges": [
+    {
+      "name": "Precise sleep range producer contract",
+      "owners": [
+        "web\\src\\api\\hooks\\useEnergy.ts",
+        "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+        "sleep producer owner not inspected"
+      ],
+      "needs": "both exact instant bounds, timezone/range identity, authoritative coverage, coordinated SI shape",
+      "usedBy": [
+        "SleepEfficiencyPage fourteen sections"
+      ],
+      "dependsOn": [
+        "parent-owned producer/boundary evidence and existing queued ownership"
+      ],
+      "dispatch": "NOT performed"
+    },
+    {
+      "name": "Independent sleep/settings/vehicle source trust",
+      "owners": [
+        "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+        "web\\src\\hooks\\useSettings.ts",
+        "web\\src\\hooks\\useSelectedVehicle.ts"
+      ],
+      "needs": "retained/paused/unavailable source status and explicit formatting fallback without erasing usable sleep evidence",
+      "usedBy": [
+        "sleep overview",
+        "sleep projection",
+        "workspace selection"
+      ],
+      "dependsOn": [
+        "existing trust API; parent assignment"
+      ],
+      "dispatch": "NOT performed"
+    },
+    {
+      "name": "Existing chart palette/date display integration",
+      "owners": [
+        "existing chart palette preference owner, not walked",
+        "web\\src\\lib\\dateFormat.ts",
+        "three sleep chart and event-directory owners"
+      ],
+      "needs": "restrained preference-aware colors, locale/timezone/12-24h display, consistent frame source flags",
+      "usedBy": [
+        "three sleep charts",
+        "event directory"
+      ],
+      "dependsOn": [
+        "existing category APIs; no new formatter/theme/cache engine"
+      ],
+      "dispatch": "NOT performed"
+    }
+  ],
+  "preservation": {
+    "historical": {
+      "receipt": "docs\\frontend-audits\\audit-page-074.json",
+      "sourceHash": "7477fcf06395b89c85d20ab7516b6de37361bd70d7e747b2bf953af2a9967313",
+      "pageLines": 195,
+      "pagePlusMountedSectionLines": 2332,
+      "sections": 14,
+      "charts": 3,
+      "authoredTests": 6,
+      "testsStatus": "NOTRUN historical; no fresh test validation",
+      "acceptance": "SOURCE ONLY"
+    },
+    "current": {
+      "sourceHash": "51d3200d4d8ecd54f2a643ab25fc409084e601758e5edc1626dbc274e3ca5d79",
+      "pageLines": 190,
+      "pagePlusMountedSectionLines": 2307,
+      "regionCount": 14,
+      "chartCount": 3,
+      "glassPanelCount": 8,
+      "layoutCardCount": 3,
+      "scannedFeatureFiles": 21,
+      "scannedFeatureLines": 3728
+    },
+    "comparison": "2307/2332 = 98.93% of historical page-plus-mounted-section snapshot; >=70% line threshold only, not original-Git comparison or behavioral/visual acceptance. Fourteen allocated regions/three chart source frames retained.",
+    "mustPreserve": [
+      "Every region, explanatory shell and independent query/evidence state",
+      "Raw Wh/Celsius inputs, valid numeric zeros and signed differences; no legacy helper adoption",
+      "Count versus duration semantics, known/unknown state labels, nullable metrics",
+      "First-valid deduplication, caps, full-valid-row summaries and eleven exclusion categories",
+      "All table/chart identities, source alternatives, exports/legend/filter/pagination actions",
+      "User preferences, URL/workspace ownership, cancellation/query identity",
+      "Historical six authored regressions without inventing an executed result"
+    ],
+    "sourceChangesByThisWorker": 0,
+    "authorizedProducerDrift": "Historical/current hash and line differences recorded; provenance and producer semantics belong to parent. No attempted revert, baseline regeneration or attribution."
+  },
+  "scans": {
+    "method": "PowerShell Select-String -CaseSensitive and case-sensitive .NET regex, exact twenty-one consumed production feature files only; URLs inspected only inside three consumed request methods.",
+    "staticCssVariableStyleMatchedLines": 0,
+    "rawInteractiveHtmlMatchedLines": 0,
+    "directVendorImportMatchedLines": 0,
+    "oldApiImportMatchedLines": 0,
+    "neonBodyTextMatchedLines": 0,
+    "fixedChartHexMatchedLines": 4,
+    "legacyConverterCallMatchedLines": 0,
+    "untypedAnyMatchedLines": 0,
+    "doublePrefixMatches": 0,
+    "camelCaseQueryMatches": 0,
+    "consumedRouteComparisons": 3,
+    "scanExitCode": 0,
+    "interpretation": "Command completion/zero narrow matches do not mean all violations absent. Four chart-color source matches and semantic findings remain; TSC explicitly NOTRUN."
+  },
+  "notRun": {
+    "tsc": "NOTRUN gate-only",
+    "auditWrapper": "NOTRUN compiler/global scope",
+    "apiVerifyWrapper": "NOTRUN global scope",
+    "tests": "NOTRUN no test changes/authorization",
+    "lint": "NOTRUN forbidden",
+    "build": "NOTRUN gate-only",
+    "nativeBrowserCapture": "NOTRUN forbidden",
+    "backendHttpApi": "NOTRUN forbidden",
+    "fullPageAcceptance": "NOTRUN",
+    "physicalSleepRealVehicleCurrentFsm": "NOTRUN/NOT CLAIMED"
+  },
+  "filesRead": [
+    "migration-queue.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\frontend-mission.md",
+    "docs\\frontend-worker-conventions.md",
+    "docs\\frontend-audits\\audit-page-074.json",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    ".github\\instructions\\unit-conversion.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\skills\\audit-violations\\audit.sh",
+    ".github\\skills\\verify-api-hooks\\verify.sh",
+    "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\index.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\index.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\StateEvidenceDirectory.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\DrainEventDirectory.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepSectionPlacement.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDestinationChart.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionCompositionPanel.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\DwellDurationChart.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencyDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDiversityDiagnostics.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryComparisonChart.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryProjectionContext.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\DrainEventProfile.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepMethodologyPanel.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencySectionBody.tsx",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\types.ts",
+    "web\\src\\features\\battery\\components\\sleep-efficiency\\labels.ts",
+    "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+    "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+    "web\\src\\api\\hooks\\useEnergy.ts",
+    "web\\src\\api\\hooks\\useVehicles.ts",
+    "web\\src\\api\\settings.ts",
+    "web\\src\\api\\client.ts",
+    "web\\src\\api\\dataState.ts",
+    "web\\src\\types\\energy.ts",
+    "web\\src\\hooks\\useRangeState.ts",
+    "web\\src\\hooks\\useSelectedVehicle.ts",
+    "web\\src\\hooks\\useUnits.ts",
+    "web\\src\\hooks\\useFormatting.ts",
+    "web\\src\\hooks\\useNumberFormatting.ts",
+    "web\\src\\hooks\\useDataState.ts",
+    "web\\src\\hooks\\useSettings.ts",
+    "web\\src\\hooks\\useProductPreferences.ts",
+    "web\\src\\hooks\\useOperationalMetrics.tsx",
+    "web\\src\\lib\\workspaceScope.ts",
+    "web\\src\\lib\\dateFormat.ts",
+    "web\\src\\lib\\unitConversion.ts",
+    "web\\src\\App.tsx",
+    "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+    "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+    "web\\src\\components\\layout\\PageContainer.tsx",
+    "web\\src\\components\\ui\\DataTable.tsx",
+    "web\\src\\components\\charts\\ChartContainer.tsx",
+    "web\\src\\components\\motion\\FadeIn.tsx",
+    "internal\\api\\router.go"
+  ],
+  "summary": {
+    "regions": 14,
+    "charts": 3,
+    "findings": 17,
+    "confirmedSourceFindings": 12,
+    "candidatesRequiringOwnerEvidence": 5,
+    "needed": "Parent-owned range/SI/producer/sign/trust integration; assigned mobile/chart/date adapters; later authorized runtime/a11y/mobile QA.",
+    "fullPageOrNativeAcceptance": false
+  },
+  "sourcePins": [
+    {
+      "file": "web\\src\\features\\battery\\pages\\SleepEfficiencyPage.tsx",
+      "lines": 190,
+      "sha256": "51d3200d4d8ecd54f2a643ab25fc409084e601758e5edc1626dbc274e3ca5d79",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\index.ts",
+      "lines": 19,
+      "sha256": "6859044dc9dbc63275faaea5e87b004b4f70c1ad2f5b55808ebdda21c8626d27",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\index.ts",
+      "lines": 4,
+      "sha256": "b4911b2cf88a7c2cc3d2b35565e9c2659c2d9ca3df2eb5ef57aea5864b342d1f",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepEvidenceOverview.tsx",
+      "lines": 127,
+      "sha256": "7399aba7005b09b03c937e9f4687fd5f95f885c143d5459fb9c250de98cd7459",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\StateEvidenceDirectory.tsx",
+      "lines": 101,
+      "sha256": "c65b13f8f51216b98025d55b63bd3419e1bff79f0d4ea539589b4a13d8607430",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\DrainEventDirectory.tsx",
+      "lines": 136,
+      "sha256": "c28904008989c2a86d2a02150e4ef50f4ee50e19c77acabc957a8874160768e7",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency-modernization\\SleepSectionPlacement.tsx",
+      "lines": 20,
+      "sha256": "f2bb9a46ad40268903d46ca1ffd818d2246cabf333496f38ed62d6c996e45163",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDestinationChart.tsx",
+      "lines": 139,
+      "sha256": "417163e5757f23d2c5b8ea3e4dbda6e6e5d6a8ef62d83d5be0753f39fe82ccfa",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionCompositionPanel.tsx",
+      "lines": 105,
+      "sha256": "e41e2316063fafaa52b939ebd4f0de5b0feb226545b793ee3c1f0a9e58dc5cfa",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DwellDurationChart.tsx",
+      "lines": 137,
+      "sha256": "b083145e1f6ba31647412814db124ac5e1857707a84d3aeb8fe4e01bbf60d817",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencyDiagnostics.tsx",
+      "lines": 143,
+      "sha256": "bc8b0ad87e8fb0bac80012605cc49ff1dd76d2a5e4e0db8f08432516da55c71b",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\TransitionDiversityDiagnostics.tsx",
+      "lines": 136,
+      "sha256": "028a589c13bedf9b2104a89f9ba399ef73283e5621b201a9d6929c20aa545798",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryComparisonChart.tsx",
+      "lines": 177,
+      "sha256": "fdef3e73893a447dc9975023306747caf76cbf97404b8bcb9a4676dc1a518064",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SentryProjectionContext.tsx",
+      "lines": 196,
+      "sha256": "7c8ea25620e98224b0ad0a0bc4c4fa46b8d8530df6a021ac275c68ca670c6221",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DrainEventProfile.tsx",
+      "lines": 178,
+      "sha256": "a161b231121d1a2f5d70faab0819ffd90772929fe2e99cc8f37f08dde7d800f7",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\DataAvailabilityMatrix.tsx",
+      "lines": 109,
+      "sha256": "b6d336a89895e0702ea095ff4b17009b5c0090983994c26afaaff1bc4a661495",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\RangeSourceCoverage.tsx",
+      "lines": 297,
+      "sha256": "a31cfb06b808473e310850b35bead15447ec38ae952b61b90a9f5e07b763f0b0",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepMethodologyPanel.tsx",
+      "lines": 136,
+      "sha256": "45a4e2b030f31edb54ae1c6708235dacf4201d10ccfd383ad1a128a356322b7b",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\SleepEfficiencySectionBody.tsx",
+      "lines": 74,
+      "sha256": "156f612920fcce66d525e9ccfd6e4d9fc3859100075bff857e2f7d6e03beb05f",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\types.ts",
+      "lines": 22,
+      "sha256": "c35efd7a2b4217fa207f0af21663914b97abdf581f578a78f11b9130e78aaab6",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\sleep-efficiency\\labels.ts",
+      "lines": 183,
+      "sha256": "26f6147eb4d44620235c7e234f72d361a6bd2c79d56c82f200ae21ade93ef678",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\components\\operationalbrief-all\\BatteryEvidenceBrief.tsx",
+      "lines": 58,
+      "sha256": "b8bfbdbbaf32e7be98597ceb3478346da3aca2e5438a5ee8e48f8a40dcb00d7a",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\features\\battery\\lib\\sleepEfficiencyAnalysis.ts",
+      "lines": 1064,
+      "sha256": "5e35743257b6e642534fd23272c28bed22138c9f0f6a963100135bacf89fa35d",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useEnergy.ts",
+      "lines": 456,
+      "sha256": "3f688e068cbec48fafc1ba1a32e5f63090622c0232ce565b3be5d39cdba10a01",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\api\\hooks\\useVehicles.ts",
+      "lines": 1898,
+      "sha256": "1d7ae8f07fd26c99622e84be1e6e80b6e7c92e0fb6f17964d06de4017d634d4b",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\api\\settings.ts",
+      "lines": 133,
+      "sha256": "ca29e09f902efc13d6c97d735bfc824871b73fa147af6a7ee98de572f1b25817",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\api\\client.ts",
+      "lines": 458,
+      "sha256": "a9ec99b561c05b73cbbc805f28d770a4e7e132c5cfd8ae8f740e1393311f59a5",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\api\\dataState.ts",
+      "lines": 434,
+      "sha256": "21fb454b3c1f01608169f3f3887911de97f7c754663cc001236ebfde58211761",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\types\\energy.ts",
+      "lines": 469,
+      "sha256": "387590144bbe3c531e37484c4c95411f8cf5b9d28759249db9e534035a9b52c3",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useRangeState.ts",
+      "lines": 694,
+      "sha256": "bf267c5a8b69d0fff866ba9b9491b15f03e516fc8599424af881ba08579f2bea",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useSelectedVehicle.ts",
+      "lines": 174,
+      "sha256": "c52768ea42f3e8dd34399f1372a09eb3f70d6c6cb2dddbc41790a6d30e7c4ae3",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useUnits.ts",
+      "lines": 194,
+      "sha256": "b90452309357b88fe27edf878a943ff46cf9083015592d1587997b5c0f4a8b14",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useFormatting.ts",
+      "lines": 106,
+      "sha256": "76b8dcc6c2eb27ed9f2e8526bec7d77bb1e369ca6e71a7eb38cdba5897a5ec29",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useNumberFormatting.ts",
+      "lines": 47,
+      "sha256": "e32c23df1cb2001d54d324e2e0a7be6077720a26820a1cf2ac6c81358aca2ad7",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useDataState.ts",
+      "lines": 65,
+      "sha256": "785bd47e706b066874bec8999d51093982e93b9680b8dec16bddc023dc57fb9b",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useSettings.ts",
+      "lines": 146,
+      "sha256": "f0dddd38c53e59a7103f9ee3160263017654f77ac5001c7eb0d941816b9fdca3",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useProductPreferences.ts",
+      "lines": 38,
+      "sha256": "2f6dd2ac3e6492fa0de6ab60ce1a0f5bf9b626551b1c3caf876b58781e10f276",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\hooks\\useOperationalMetrics.tsx",
+      "lines": 24,
+      "sha256": "b94754ab501d0894b95b46fe87f8879d6eefd03feabba07c98abef12cf09f554",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\lib\\workspaceScope.ts",
+      "lines": 168,
+      "sha256": "aeb8c01d410f2377aa5fd713de1a678a0360acf647a9c882f03e46c80efdfcd7",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\lib\\dateFormat.ts",
+      "lines": 462,
+      "sha256": "30eeb276813505d3cee3d0b1df38a7b13fc97dce388a0c5b2c3c86c902f62f64",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\lib\\unitConversion.ts",
+      "lines": 500,
+      "sha256": "5584045f063774de76f9dea32303c3ec3819f9cd47c95b2c467ef2cb87814fce",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\App.tsx",
+      "lines": 919,
+      "sha256": "10669c20207b9da28a7691107c23bcb6e7f2105bd17bd472aefd92399f1a517c",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\CardGrid.tsx",
+      "lines": 44,
+      "sha256": "7003a02baede8079ba897b91a0c84b68a0ea5ecca5607587dd23f5210d0148cf",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\components\\layout\\layout-reference\\PageLayout.tsx",
+      "lines": 17,
+      "sha256": "7b7ef06a05fe4a97ab0cfbc8e989901db0ffca898dec7d4f5cd796536b4dca3b",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\components\\layout\\PageContainer.tsx",
+      "lines": 259,
+      "sha256": "4b718ac20f8a473a3c59b6dbd7031d9bb686e2c3ad93b25ddb94523eea074b4a",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\components\\ui\\DataTable.tsx",
+      "lines": 1707,
+      "sha256": "a9c394d5830620a8606b85cd376ed748c6f30ab0df70a250accbd4a9093ff282",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\components\\charts\\ChartContainer.tsx",
+      "lines": 1006,
+      "sha256": "6ac14784e96c7d61b8cae879b7be39ca7b9a54c520f02ef8260845b1d3fd9694",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "web\\src\\components\\motion\\FadeIn.tsx",
+      "lines": 39,
+      "sha256": "8624fff5c039500e35b04dd4a53d3697a7186a92bdc922bb2a8e1f69001da32f",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    },
+    {
+      "file": "internal\\api\\router.go",
+      "lines": 5363,
+      "sha256": "343c14289a528167e82bed42c43b25c7437288462a2775c6249e242c9bff6d5c",
+      "scope": "Consumed declarations/regions only; whole-file hash is lineage pin, not whole-file QA"
+    }
+  ],
+  "documentValidation": {
+    "status": "PASS OWN DOCUMENT CONSISTENCY ONLY",
+    "jsonParse": "PASS",
+    "uniqueRegionAndFindingIds": "PASS",
+    "regionCitations": "PASS",
+    "sourcePinsChecked": 49,
+    "sourceHashDrift": 0,
+    "sourceLineCountConsistency": "PASS",
+    "preservationArithmetic": "PASS",
+    "findings": 17,
+    "confirmedSourceFindings": 12,
+    "candidates": 5,
+    "exitCode": 0,
+    "notApplicationValidation": true,
+    "validatedAtLocal": "2026-10-13T15:13:02.5176506-07:00"
+  }
+}

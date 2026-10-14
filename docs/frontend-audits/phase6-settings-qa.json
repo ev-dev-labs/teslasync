@@ -247,5 +247,236 @@
     "rawOutput": "JSON_PARSE=PASS\nSTATUS=PARTIAL_NOT_ACCEPTED\nCONFIRMED_ISSUES=1\nOWNED_PAGE_CLOSED=True\n2026-10-13T15:55:57.8496043Z",
     "scope": "JSON parse only, before adding this validation/timebox metadata; not application validation."
   },
-  "delivery": "Report-only partial evidence and one confirmed label issue. No full-matrix/page acceptance. Application, catalog, global, helper, queue and handoff files remained read-only to this worker."
+  "delivery": "Report-only partial evidence and one confirmed label issue. No full-matrix/page acceptance. Application, catalog, global, helper, queue and handoff files remained read-only to this worker.",
+  "nativeContinuation2": {
+    "status": "PARTIAL_NOT_ACCEPTED",
+    "assignmentReceivedAt": "2026-10-13T18:15:54.752Z",
+    "firstRecordedClock": "2026-10-13T18:17:06.9672508Z",
+    "nativeGuardInstalledAt": "2026-10-13T18:21:19.843Z",
+    "lastNativeRecordedClock": "2026-10-13T18:26:00.872Z",
+    "browserClosedBeforeClock": "2026-10-13T18:26:39.6311587Z",
+    "timebox": "The preferred ten-minute target was exceeded. Browser closure was confirmed by 10m44.879s after the supplied assignment clock, before the unchanged twenty-minute return and twenty-five-minute hard deadlines. Final report validation clock is in the ignored validation log; no timebox reset.",
+    "preservation": {
+      "acceptedReportCommit": "1a1b06e33, supplied authority; no Git command run",
+      "acceptedReportSha256": "10f5206b57db45209c433ef334d206c5e6b992924412201b46e35a6f56c0ce08",
+      "acceptedReportByteCopy": "web\\logs\\phase6-settings-native-continuation.original.json",
+      "policy": "Append this section only. All prior fields, chronology, guard-gap disclosure, actual 1441 desktop measurements, original captures, issue reproduction, other console candidates and NOTRUN findings remain historical evidence without alteration or retroactive certification.",
+      "sourceLabelOwner": "User reports owner released at 17:38:51Z with twenty-four passing scoped tests; existing release log was read, not rerun. Parent owns source intake/acceptance."
+    },
+    "authority": {
+      "provider": "Exclusive native Chrome DevTools MCP grant in this assignment",
+      "skills": ["chrome-devtools", "a11y-debugging"],
+      "read": [
+        "Entire existing docs\\frontend-audits\\phase6-settings-qa.json",
+        "docs\\frontend-design-contract.md responsive, accessibility, privacy, evidence and bounded-worker requirements",
+        "docs\\session-handoff.md current native lifecycle and prior fixture/guard conventions",
+        "Checkpoint 026 Settings partial-report, guard-gap and provider-release chronology",
+        "Exact migration-queue.md Settings pilot and timezone-label entries, read-only",
+        "web\\src\\features\\settings\\components\\GeneralSettings.tsx timezone field",
+        "web\\src\\features\\settings\\components\\SettingField.tsx",
+        "web\\logs\\phase6-fix-settings-timezone-label.log release/preservation receipt",
+        ".github\\instructions\\react-frontend.instructions.md and observability.instructions.md",
+        "a11y-debugging native DOM/keyboard reference snippets",
+        ".gitignore existing logs/ rule"
+      ],
+      "writableTrackedScope": ["docs\\frontend-audits\\phase6-settings-qa.json"],
+      "newIgnoredLogsPrefix": "web\\logs\\phase6-settings-native-continuation.",
+      "noApplicationTestsCatalogOrGlobalWrites": true,
+      "noPlaywrightHelpersNewToolsExtensionsGitDockerServersOrDirectApiRequests": true
+    },
+    "previewAndSafety": {
+      "url": "http://localhost:5173/settings?vehicle_id=4#general",
+      "ownedPageId": 4,
+      "isolatedContext": "phase6-settings-qa-20261013",
+      "existingContextReused": true,
+      "guardBeforeSpaMount": "Opened an owned about:blank tab in the released Settings context, then used native navigate_page initScript before the one Settings mount. Read-only request/form guard uses same-origin localhost:5173 GET/HEAD/OPTIONS only; WebSocket/beacon/form mutation paths blocked. Storage.prototype setItem/removeItem/clear are guarded, with only the two existing fixture/acknowledgement values permitted.",
+      "permittedLocalStorageWrites": {
+        "teslasync-selected-vehicle": "4",
+        "teslasync:changelog:seen-version": "0.7.0"
+      },
+      "guardPersistenceObserved": "Same non-configurable wrapper references, document token and original installation timestamp survived every native window resize and label/keyboard operation. Final installationStillOriginal=true. No emulation, reload, second navigation or guard-loss interval observed during this continuation.",
+      "persistentGuardScope": "CURRENT DOCUMENT ONLY. This is not a browser-wide firewall or a proof for future documents, workers, native subresources, cookies, IndexedDB or storage named-property assignments. No unconditional whole-session/server/browser-storage no-write claim. Original attempt's guard gap remains uncertified.",
+      "finalNativeCounters": {
+        "clock": "2026-10-13T18:26:00.872Z",
+        "permittedRequests": 193,
+        "blockedRequests": 0,
+        "blockedSockets": 2,
+        "blockedStorageWrites": 53,
+        "permittedFixtureWrites": 2,
+        "blockedFormSubmissions": 0
+      },
+      "counterScope": "Instrumented JavaScript entry points only; allowed calls are natural mounted-SPA reads, not manually requested API probes. Fifty-three observed storage method writes were blocked, not silently treated as successful preference changes.",
+      "intentionalPreferenceOrDraftChanges": false,
+      "timezoneValueStayedEmpty": true,
+      "privacy": "No roster/VIN/name response was requested or retained. Pre-capture checks found zero visible VIN-pattern matches, no open roster/menu/listbox and only generic account-control text; native snapshots and captures contained Settings labels/sample-data notice, not real identity. These checks are bounded, not a universal PII certification.",
+      "sourceStability": "No source commit/stability certification or class-to-native-geometry substitution. GeneralSettings and shared field source were read-only; mounted current label behavior is the native proof."
+    },
+    "actualViewportChecks": [
+      {
+        "clock": "2026-10-13T18:22:42.679Z",
+        "requestedWindow": [1439, 935],
+        "actualViewport": [1439, 935],
+        "documentWidth": 1439,
+        "documentScrollWidth": 1439,
+        "visualViewportWidth": 1439,
+        "visualViewportScale": 1,
+        "purpose": "Bounded desktop sizing probe; does not replace original actual 1441 evidence."
+      },
+      {
+        "clock": "2026-10-13T18:23:05.671Z",
+        "requestedWindow": [1440, 936],
+        "actualViewport": [1440, 936],
+        "documentWidth": 1440,
+        "documentScrollWidth": 1440,
+        "visualViewportWidth": 1440,
+        "visualViewportScale": 1,
+        "result": "Genuine 1440 document and viewport in this continuation; no horizontal page overflow in the inspected General state."
+      },
+      {
+        "clock": "2026-10-13T18:24:38.739Z",
+        "requestedWindow": [375, 844],
+        "actualViewport": [500, 844],
+        "documentWidth": 500,
+        "documentScrollWidth": 500,
+        "visualViewportWidth": 500,
+        "visualViewportScale": 1,
+        "pointerCoarse": false,
+        "touchPoints": 0,
+        "result": "375 NOTRUN: native window resizing bottoms out at actual 500 in this browser. No device emulation attempted because the prior run proved it discarded the document guard. This is a narrow desktop-pointer context, not a 375px/touch/mobile acceptance pass."
+      }
+    ],
+    "timezoneLabelNativeChecks": {
+      "desktopAccessibleTree": "Native take_snapshot: textbox \"My time zone override\"; separate unchanged IANA guidance StaticText. Previously the textbox was named only by the example placeholder.",
+      "narrowAccessibleTree": "At actual 500x844, native take_snapshot: textbox \"My time zone override\" focusable focused; same IANA guidance remains.",
+      "association": {
+        "visibleLabel": "My time zone override",
+        "htmlFor": "settings-timezone-user",
+        "inputId": "settings-timezone-user",
+        "controlLabelsCount": 1,
+        "labelControlIsActualInput": true,
+        "type": "text",
+        "disabled": false,
+        "readOnly": false,
+        "placeholder": "e.g. America/Los_Angeles (leave blank for browser default)"
+      },
+      "nativeVisibleLabelClicks": [
+        {
+          "clock": "2026-10-13T18:23:25.999Z",
+          "viewport": [1440, 936],
+          "providerAction": "click uid 5_145, the visible label StaticText",
+          "activeElementIsTimezoneInput": true,
+          "labelControlsEnabledEditableInput": true,
+          "valueStillEmpty": true,
+          "focusVisible": true,
+          "outlineStyle": "solid",
+          "outlineWidth": "2px"
+        },
+        {
+          "clock": "2026-10-13T18:25:42.315Z",
+          "viewport": [500, 844],
+          "providerAction": "click uid 5_145, the same visible label in the narrow layout",
+          "activeElementIsTimezoneInput": true,
+          "valueStillEmpty": true,
+          "focusVisible": true,
+          "inputWidth": 412,
+          "inputHeight": 43,
+          "fivePointInputHits": [true, true, true, true, true]
+        }
+      ],
+      "keyboard": {
+        "method": "Native press_key Tab and Shift+Tab, no text entry or control-value changes",
+        "tabClock": "2026-10-13T18:23:59.057Z",
+        "tabFromTimezone": "Help for electricity-cost button; focus-visible=true",
+        "shiftTabClock": "2026-10-13T18:24:11.892Z",
+        "shiftTabReturnedToTimezone": true,
+        "returnedInputFocusVisible": true,
+        "returnedInputInsideViewport": true,
+        "scope": "Immediate local forward/backward reachability only, not a full-page keyboard/trap/AT acceptance."
+      },
+      "guidance": {
+        "text": "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",
+        "nativeStaticTextPresent": true,
+        "placeholderPreserved": true,
+        "clockAfterNeededFieldCentering": "2026-10-13T18:25:25.926Z",
+        "actualViewport": [500, 844],
+        "guidanceTop": 623,
+        "guidanceBottom": 659,
+        "footerTop": 676,
+        "guidanceCenterHit": true,
+        "clearOfFooter": true,
+        "ariaDescribedby": null,
+        "helperId": null,
+        "limitation": "Guidance remains visible and in the accessibility tree but is not programmatically linked as the textbox description. No screen-reader guidance-announcement claim; no shared component or callsite change made."
+      },
+      "result": "The original specific visible-label/accessible-name/focus defect is no longer reproduced on the mounted current source at actual 1440 and 500. This narrow native confirmation does not delete its accepted historical reproduction, certify the source suite, or accept the entire Settings pilot."
+    },
+    "boundedGlobalAndNaturalStateObservations": {
+      "documentLanguage": "en",
+      "title": "Settings — TeslaSync",
+      "viewportMeta": "width=device-width, initial-scale=1.0, viewport-fit=cover",
+      "mainCount": 1,
+      "h1Count": 1,
+      "positiveTabindexCount": 0,
+      "naturalStates": [
+        "Mounted General preferences with existing empty timezone override",
+        "Existing stale Settings freshness label",
+        "Existing Fleet Telemetry/Tesla API degraded banner",
+        "Existing synthetic sample-data notice"
+      ],
+      "notClaimed": "No exhaustive heading/landmark/contrast/exception/console, source-state honesty, persisted preference or retained/offline acceptance."
+    },
+    "newCandidatesNotPromotedToAcceptedDefects": [
+      {
+        "id": "timezone-guidance-unlinked-description",
+        "evidence": "Actual helper exists and is readable as separate StaticText, but aria-describedby and helper id are absent.",
+        "classification": "Preserved existing guidance semantics, not an introduced label-fix regression. Assistive-technology announcement not tested; parent owns any follow-up."
+      },
+      {
+        "id": "timezone-narrow-input-43px",
+        "evidence": "Actual 500x844 mounted input is 412x43px with five successful native DOM hit points. Desktop 1440 input height is also 43px.",
+        "classification": "MDC-043 below-md 44px target candidate only. Actual 375/touch geometry could not safely be established; no 375px failure/pass fabricated, no source/class-only inference or repair performed."
+      }
+    ],
+    "defaultCaptures": [
+      {
+        "provider": "chrome-devtools take_screenshot",
+        "capture": "Focused editable timezone input only, uid 5_146",
+        "actualCssViewport": [1440, 936],
+        "filePath": null,
+        "hash": null,
+        "limitation": "Default inline element crop; not a whole-page geometry or unclipped focus-ring/contrast proof."
+      },
+      {
+        "provider": "chrome-devtools take_screenshot",
+        "capture": "Identity-free narrow Settings viewport with named focused timezone input and preserved visible guidance",
+        "actualCssViewport": [500, 844],
+        "requestedNativeWindow": [375, 844],
+        "filePath": null,
+        "hash": null,
+        "limitation": "Actual provider image inspected; no custom screenshot path or retained image/hash. It is 500px context evidence, never a 375px capture claim."
+      }
+    ],
+    "notRun": [
+      "Genuine new 375px viewport/document: native resize returned 500px; guard-losing emulation prohibited",
+      "Offline/retained/error/retry/slow-network injection: no persistent guard guarantee for emulator-created documents or network bypass, no mocks or API probes",
+      "Zoom/200% text, RTL, forced-colors, reduced-motion and alternate saved modes: no new permission to change saved/browser preferences or discard the guard",
+      "Typing, draft persistence, save/autosave, reset confirm, disconnect/replay/destructive/paid/export actions",
+      "Full keyboard traversal, dialogs/traps, assistive technology, exhaustive contrast/focus visibility and Lighthouse navigation",
+      "Remaining full ten-width/other-category/state matrix",
+      "Original eight-category, search, maximum-scroll and reset-Cancel checks were not rerun",
+      "TypeScript/build/lint/audits/API-router verification/full tests: report-only assignment, application and tests read-only",
+      "Git, Docker, servers, helpers, scripts/extensions/new tools, catalog/source edits and parent intake/dispatch"
+    ],
+    "closure": {
+      "ownedPage4Closed": true,
+      "closePageRawResult": "Note: the previously selected page was closed. Page 2 is now selected. Pages: 2 about:blank [selected].",
+      "preExistingPage2Untouched": true,
+      "browserProviderClaimReleased": true,
+      "noBrowserHandlesOrBackgroundCommandsRemainOwned": true,
+      "reportLogAndCommandClaimsReleasedAtReturn": true,
+      "postReturnWrites": "NONE; final validation/logging completes before returning this worker result.",
+      "validationLog": "web\\logs\\phase6-settings-native-continuation.validation.log"
+    },
+    "delivery": "Report-only bounded native continuation. Specific timezone visible-label naming/focus confirmed; genuine 1440 measured, requested375 actually500 disclosed, new candidates retained and forbidden state cases NOTRUN. Original accepted report and safety gap preserved. Full Settings/Phase6 acceptance remains incomplete."
+  }
 }

@@ -87,7 +87,8 @@ export function InsightPanel({
           errorRecovery={{ onRetry: retry }}
           emptyContent={emptyBody}
         >
-          {empty && (!retained || (Array.isArray(dataState.data) && dataState.data.length === 0)) ? emptyBody : children}
+          {/* The caller owns emptiness, including successful empty envelopes retained during refresh. */}
+          {empty ? emptyBody : children}
         </SourceContent>
       </LayoutCard>
     </div>
