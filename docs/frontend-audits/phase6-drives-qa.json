@@ -1,0 +1,286 @@
+{
+  "schema_version": 1,
+  "item": "phase4-pilot-drives-list",
+  "phase": 6,
+  "status": "PARTIAL_NOTRUN_SAFE_ORIGINAL_FIXTURE_UNAVAILABLE",
+  "application_acceptance": "NOT_ACCEPTED",
+  "report_delivery_is_not_native_acceptance": true,
+  "actor": "24c7ceee-59ed-421c-8170-515c1c63b2db",
+  "owned_files": [
+    "docs\\frontend-audits\\phase6-drives-qa.json",
+    "web\\logs\\phase4-pilot-drives-list.log"
+  ],
+  "assignment": {
+    "existing_queue_row": "phase4-pilot-drives-list",
+    "queue_reservation_utc": "2026-10-14T05:24:00Z",
+    "assignment_clock_utc": "2026-10-14T05:24:03.764Z",
+    "effective_return_deadline_utc": "2026-10-14T05:44:00Z",
+    "effective_hard_deadline_utc": "2026-10-14T05:49:00Z",
+    "earlier_queue_deadline_wins": true,
+    "initial_log_deadline_correction": "Initial log used the assignment clock's +20/+25 deadlines, 3.764 seconds later than the queue reservation. Effective deadlines here retain the earlier queue clock; neither clock nor budget was reset.",
+    "phases0_through5": "CLOSED; no remigration or new campaign",
+    "prior_attempts": "Retain original one actual partial native QA and uncharged external failures; this worker does not edit queue attempt accounting."
+  },
+  "scope": {
+    "sole_preview": "http://localhost:5173",
+    "intended_unchanged_route": "/drives?vehicle_id=4&from=2026-10-08&to=2026-10-13",
+    "original_fixture_vehicle_id": 4,
+    "original_fixture_drive_ids": [190, 191],
+    "application_route_navigated": false,
+    "scope_broadened_or_dates_changed_to_find_data": false,
+    "current_source_commit": "NOT_INSPECTED; Git prohibited; historical receipt commit is not a current runtime revision.",
+    "independent_docker_worker": "5590146 deployment/seed worker left untouched; no stack inspection, polling, seed, deployment change or assumption about its outcome."
+  },
+  "retained_original_receipt": {
+    "path": "docs\\frontend-audits\\phase4-pilot-drives-native-20261013.json",
+    "sha256_before": "7404fe4122caee3315d9fd9e351eb9afff9a136de6b5ae1a8fbe1d05e264afa0",
+    "sha256_after": "7404fe4122caee3315d9fd9e351eb9afff9a136de6b5ae1a8fbe1d05e264afa0",
+    "after_verified_utc": "2026-10-14T05:28:47.099Z",
+    "original_status": "PARTIAL_NOT_ACCEPTED",
+    "historical_source_commit": "cfe5b74989a2c6ca833cc9f831bbbcd086d804bd",
+    "historical_started_utc": "2026-10-13T13:49:35.093Z",
+    "historical_closed_utc": "2026-10-13T14:08:44.805Z",
+    "historical_duration_seconds": 1149.712,
+    "unchanged_original_results_not_repeated": {
+      "ten_matching_document_and_viewport_widths": [320, 375, 390, 430, 768, 1024, 1280, 1440, 1920, 2560],
+      "saved_scheme_and_layout": "Light / Minimal only",
+      "evidence_branch": "Mobile cards below1024; desktop table at1024+",
+      "fixture": "Completed190 and ongoing191 both rendered",
+      "timezone": "Browser America/Los_Angeles; selected vehicle America/New_York",
+      "original_padded_drive_request": "/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000",
+      "original_fsd_start": "2026-10-08T04:00:00.000Z",
+      "original_fsd_end_exclusive": "2026-10-14T04:00:00.000Z",
+      "keyboard_preview": "Explicit Quick view Enter opened; focus inside; Escape closed; original trigger focus restored.",
+      "preview_fields": ["1h 35m", "195 km", "36 kWh", "95% to 41%", "187 Wh/km", "B"],
+      "preview_related_context": "Drive's own Oct9 day, not whole workspace window",
+      "settled_search": "Actual combobox nonmatch removed evidence rows while preserving brief/overview/range; settled clear restored both rows.",
+      "retained_nonpassing_proxies": [
+        "Row Enter did not open preview; explicit Quick view succeeded. No row-Enter defect established.",
+        "Wrong searchbox role timed out30s; corrected to actual combobox.",
+        "Transient250ms search clear showed zero rows, later restored both; not a settled reset defect.",
+        "No document overflow does not prove contained trend reachability."
+      ]
+    },
+    "original_findings_preserved_not_reassessed": [
+      "phase6-native-drives-count-caption",
+      "phase6-native-drives-preview-mobile-target",
+      "phase6-native-drives-trend-control-allocation"
+    ],
+    "new_execution_does_not_clear_original_resource_or_acceptance_limits": true
+  },
+  "captures": {
+    "new_images": 0,
+    "new_capture_paths": [],
+    "original_default_pngs_present_and_hash_verified": [
+      {
+        "path": "web\\.playwright-mcp\\page-2026-10-13T13-50-13-864Z.png",
+        "width": 1440,
+        "height": 936,
+        "bytes": 136624,
+        "sha256": "979bcb725edcb255097ae92907ae78cb6ccddc3ee7ad2053cae3d1bbbf52a40a"
+      },
+      {
+        "path": "web\\.playwright-mcp\\page-2026-10-13T14-01-56-445Z.png",
+        "width": 375,
+        "height": 844,
+        "bytes": 48304,
+        "sha256": "f10b009001ea5c65cfeb5f0c98ae60d42af5c7570042cfe5af3cace6f5c48964"
+      }
+    ],
+    "policy": "Original default paths and capture budgets unchanged. No new screenshots, traces, video, export, custom capture path or baseline replacement.",
+    "helper_budget": "Original helper two attempts plus one rescue remain exhausted; no helper retry, repair, new helper or budget reset.",
+    "new_capture_allowance": "No extra numerical allowance inferred or consumed.",
+    "visual_acceptance": "NOTRUN in this continuation; PNG integrity is retention evidence, not fresh visual acceptance."
+  },
+  "excluded_from_this_worker": {
+    "native_preview44px_proof": "Owned by lock1 actor8c4f5ba2-a9f9-4057-8993-127e4a39d39a; no preview geometry, clicks, focus flows or fine-pointer cases repeated.",
+    "accepted_caption_trend_preview_source": "READONLY; no re-review, implementation or unchanged passing tests repeated.",
+    "locks2_and3": "Dashboard and Settings remain separate owners; no browser/context/process interaction with those workers."
+  },
+  "safety": {
+    "installed_runner": "@playwright/test native Playwright API, inline bounded command; no helper file authored",
+    "browser_channel": "msedge",
+    "browser_version": "155.0.4283.45",
+    "node_version": "v26.8.1",
+    "downloads_or_installs": 0,
+    "fresh_owned_context": true,
+    "guards_installed_utc": "2026-10-14T05:26:10.589Z",
+    "guards_before_first_navigation": true,
+    "allowed_origin": "http://localhost:5173",
+    "allowed_methods": ["GET", "HEAD", "OPTIONS"],
+    "api_allowlist": [
+      "/api/v1/vehicles/4",
+      "/api/v1/vehicles/4/",
+      "/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000",
+      "/api/v1/drives/?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000"
+    ],
+    "all_other_requests": "Aborted before any application boot; no response fulfillment.",
+    "service_workers": "block",
+    "websocket_guard": "Installed at context level before navigation; zero sockets requested.",
+    "explicit_fresh_context_storage": {
+      "teslasync-selected-vehicle": "4",
+      "teslasync:changelog:seen-version": "0.7.0"
+    },
+    "device_read_utc": "2026-10-14T05:26:10.710Z",
+    "actual_setup_device_read": {
+      "viewport": [1440, 936],
+      "coarse_pointer": false,
+      "fine_pointer": true,
+      "max_touch_points": 10,
+      "configured_has_touch": false,
+      "configured_is_mobile": false
+    },
+    "device_limit": "Setup read from guarded fresh context only; host reports10 touch points despite hasTouch:false. No physical-device, touch absence or populated desktop acceptance inferred.",
+    "browser_timezone": "America/Los_Angeles",
+    "locale": "en-US",
+    "network_counts_for_entire_owned_preflight_context": {
+      "allowed": 2,
+      "blocked": 0,
+      "blocked_writes": 0,
+      "blocked_external": 0,
+      "blocked_other_reads": 0,
+      "websockets_blocked": 0
+    },
+    "nonfixture_roster_identity_location_or_data_requests": 0,
+    "response_bodies_stored_or_logged": false,
+    "only_sanitized_presence_shape_and_count_retained": true,
+    "safe_fixture_identity_verified": false,
+    "business_writes_sent": 0,
+    "mocks_or_fulfillments": 0,
+    "production_data_or_dom_injected": false,
+    "server_preferences_changed": false
+  },
+  "actual_observations": [
+    {
+      "name": "fixture4-identity-presence-only",
+      "request": "GET http://localhost:5173/api/v1/vehicles/4",
+      "observed_utc": "2026-10-14T05:26:10.757Z",
+      "http_status": 404,
+      "safe_drill4_verified": false
+    },
+    {
+      "name": "unchanged-original-fixture4-drive-window",
+      "request": "GET http://localhost:5173/api/v1/drives?vehicle_id=4&start=2026-10-01&end=2026-10-14&limit=1000",
+      "observed_utc": "2026-10-14T05:26:10.806Z",
+      "http_status": 200,
+      "is_array": true,
+      "row_count": 0,
+      "original_completed190_present": false,
+      "original_ongoing191_present": false,
+      "empty_array_is_not_a_populated_fixture_or_application_pass": true
+    }
+  ],
+  "blocker": {
+    "status": "PARTIAL_NOTRUN",
+    "exact": "Safe original DRILL4 identity GET404; unchanged padded original drive query GET200/[]; no safe populated original fixture to execute the remaining matrix.",
+    "http500_observed": 0,
+    "http500_limit": "Only two availability GETs; no application resource500 check, prior failure clearance or backend health claim.",
+    "cause": "UNKNOWN; does not establish a page, hook, router, seed or deployment implementation defect.",
+    "narrow_confirmed_repair_needs": [
+      "Existing runtime/fixture owner must verify authorized DRILL4 identity and original completed190/ongoing191 availability through the sole5173 preview backend.",
+      "Once genuinely verified, parent may resume only this existing pending row's remaining matrix with a real browser lock and unchanged guards/capture/helper budgets.",
+      "No source fix inferred from these availability observations; do not synthesize replacement rows, broaden range/scope or fetch a nonfixture roster."
+    ],
+    "independent_deployment_outcome": "NOT_INSPECTED / NOT_ASSUMED",
+    "availability_retry_or_poll_loop": false
+  },
+  "remaining_original_matrix": [
+    {"name": "other_saved_layout_modes", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "dark_light_saved_custom_themes", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "workspace_scope_and_remaining_bounds_core_flows", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "remaining_keyboard_navigation_and_unclipped_focus", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "rtl_and_long_localized_content", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "200_percent_text_and_browser_zoom", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "forced_colors_open_states", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "composed_text_ui_and_focus_contrast", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "semantic_accessibility_and_axe", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "lighthouse_performance_accessibility", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "retained_refresh_failure_offline_retry", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "initial_loading_error_authoritative_empty_disabled", "status": "NOTRUN_MATRIX; API[] alone is not mounted empty-state acceptance"},
+    {"name": "reduced_motion_and_low_bandwidth", "status": "NOTRUN_SAFE_POPULATED_FIXTURE_UNAVAILABLE"},
+    {"name": "extreme_zero_negative_valid_huge_null_long_large_dataset", "status": "NOTRUN; safe existing fixture/harness only, no production injection"}
+  ],
+  "commands": [
+    {
+      "handle": "drives-qa-start",
+      "command": "PowerShell Add-Content owned log; Get-FileHash original receipt; Test-Path original PNGs; curl.exe --silent --max-time 15 --output NUL --write-out '%{http_code}' http://localhost:5173",
+      "exit": 0,
+      "shared_preview_http": 200,
+      "limit_seconds": 15,
+      "limit_note": "HTTP200 is preview responsiveness only, not backend/native readiness."
+    },
+    {
+      "handle": "drives-qa-integrity",
+      "command": "PowerShell original receipt JSON read, Get-FileHash SHA256 original receipt and both original PNGs; Get-Item byte lengths; node --version; append exact retained identities to owned log",
+      "exit": 0,
+      "original_png_hash_matches": 2
+    },
+    {
+      "handle": "drives-qa-edge-preflight",
+      "command": "node --input-type=module - (inline stdin); chromium.launch({channel:'msedge',headless:true,timeout:30000}); fresh guarded context; native page.goto of only the two original fixture availability endpoints; finally context.close and browser.close",
+      "started_utc": "2026-10-14T05:26:10.089Z",
+      "ended_utc": "2026-10-14T05:26:11.075Z",
+      "duration_seconds": 0.986,
+      "watchdog_ms": 180000,
+      "navigation_timeout_ms": 20000,
+      "exit": 2,
+      "raw_log": "web\\logs\\phase4-pilot-drives-list.log",
+      "raw_markers": ["NATIVE_RESULT_BEGIN", "NATIVE_RESULT_END"],
+      "native_populated_measurements": 0,
+      "tests_discovered_executed_passed_failed_skipped": [0, 0, 0, 0, 0],
+      "zero_discovery_not_a_pass": true
+    },
+    {
+      "handle": "drives-qa-report-validation",
+      "command": "python - (inline stdin); json.loads owned report/raw preflight; assert guard/status/release chronology; hashlib.sha256 immutable original receipt and both PNGs; struct.unpack PNG IHDR dimensions; assert earlier return deadline and14 NOTRUN matrix groups",
+      "exit": 0,
+      "completed_utc": "2026-10-14T05:28:47.099Z",
+      "original_receipt_hash_unchanged": true,
+      "png_integrity_passes": 2,
+      "raw_log": "web\\logs\\phase4-pilot-drives-list.log",
+      "result_is_document_integrity_only": true
+    }
+  ],
+  "validation_limits": {
+    "typescript": "NOTRUN: evidence-only assignment, source/tests READONLY; no new compiler/full checks allowed.",
+    "lint_violations_line_counts_sections_hook_revalidation": "NOTRUN: no source/hook changes; do not repeat accepted source measures.",
+    "tests_build_full_suites_phase_gates": "NOTRUN",
+    "native_mounted_application_matrix": "NOTRUN; availability preflight is not a page pass.",
+    "original_pngs": "Actual identities/bytes/hashes verified; original images neither replaced nor recaptured.",
+    "report_json_and_retained_integrity": "Actual exit0 at2026-10-14T05:28:47.099Z; raw report/native matching and unchanged original receipt/two PNGs verified. Final post-metadata JSON parse and release recorded in owned log; not application acceptance.",
+    "git_pr_merge": "NOTRUN / PROHIBITED"
+  },
+  "release": {
+    "browser_lock": "4/4",
+    "context_closed_utc": "2026-10-14T05:26:10.826Z",
+    "browser_closed_and_lock_released_utc": "2026-10-14T05:26:11.075Z",
+    "owned_open_pages": 0,
+    "running_native_commands": 0,
+    "no_browser_work_after_release": true,
+    "browser_release_seconds_from_assignment": 127.311,
+    "browser_release_seconds_from_queue_reservation": 131.075,
+    "report_log_command_claims": "Released after final bounded JSON/integrity verification; exact UTC is recorded in owned log and final return. No post-return writes.",
+    "all_source_tests_helpers_catalog_config_queue_git": "READONLY throughout"
+  },
+  "files_read": [
+    "docs\\orchestrator-loop.md (full)",
+    "migration-queue.md (exact existing row, dependency, excluded lock1 row)",
+    "docs\\frontend-design-contract.md (full)",
+    "docs\\frontend-mission.md (full)",
+    "docs\\frontend-inventory.md (authority and evidence definitions)",
+    "docs\\frontend-worker-conventions.md (full)",
+    "docs\\session-handoff.md (current handoff and original pilot/privacy/budget sections)",
+    "docs\\privacy.md (full)",
+    "docs\\frontend-audits\\phase4-pilot-drives-native-20261013.json (full, hash)",
+    "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json (retained evidence and scope exclusion only)",
+    "web\\.playwright-mcp\\page-2026-10-13T13-50-13-864Z.png (hash/bytes only)",
+    "web\\.playwright-mcp\\page-2026-10-13T14-01-56-445Z.png (hash/bytes only)",
+    "web\\scripts\\frontend-qa.mjs (existing guard/budget/config APIs; no invocation or edit)",
+    "web\\playwright.config.ts",
+    "web\\e2e\\README.md",
+    ".github\\instructions\\react-frontend.instructions.md (applicable frontend architecture)",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    "internal\\api\\router.go:3350-3390,3500-3527 (route registration only)"
+  ]
+}
