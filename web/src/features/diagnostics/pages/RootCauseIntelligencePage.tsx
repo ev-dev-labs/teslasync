@@ -11,6 +11,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useDataState } from '@/hooks/useDataState';
+import { combineDataStates } from '@/api/dataState';
 import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 import { useRootCauseWorkspace } from '../hooks/useRootCauseWorkspace';
 import { EvidenceSourceNotice } from '../components/EvidenceSourceNotice';
@@ -48,10 +49,15 @@ export default function RootCauseIntelligencePage() {
   const range = useRangeState();
   const workspace = useRootCauseWorkspace(vehicleId, range);
   const signalsState = useDataState(workspace.signalsQuery, { provenance: 'historical' });
-  const evidenceState = useDataState({
+  const aggregateEvidenceState = useDataState({
     ...workspace.evidenceBundle,
     data: workspace.evidenceBundle.data.length > 0 ? workspace.evidenceBundle.data : undefined,
   }, { provenance: 'historical', partial: workspace.evidenceBundle.isError });
+  const evidenceState = {
+    ...aggregateEvidenceState,
+    ...combineDataStates(workspace.evidenceBundle.sources.map(({ state }) => state)),
+    retry: aggregateEvidenceState.retry,
+  };
 
   const onRetry = useCallback(() => {
     workspace.signalsQuery.refetch();
@@ -172,6 +178,8 @@ export default function RootCauseIntelligencePage() {
         <SignalWindowPicker
           catalog={workspace.catalog}
           signalsLoading={workspace.signalsQuery.isLoading && !signalsState.hasData}
+          signalsPending={signalsState.status === 'initial'}
+          signalsRefreshBlocked={signalsState.isRefreshBlocked}
           signalsError={signalsState.fatalError}
           onRetrySignals={() => workspace.signalsQuery.refetch()}
           focalSignal={workspace.focalSignal}

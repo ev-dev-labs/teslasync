@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { onlineManager, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState, type DataStateSource } from '@/api/dataState';
 import type { SignalEvidenceBundleResult } from '@/api/hooks/useTelemetry';
@@ -112,7 +112,151 @@ afterEach(() => {
   setGlobalLocale(initialLocale);
   vi.restoreAllMocks();
   vi.useRealTimers();
+  onlineManager.setOnline(true);
   localStorage.removeItem(SHARED_RANGE_STORAGE_KEY);
+});
+
+describe('root-cause deferred catalog and evidence sources', () => {
+  it.each(['fetching', 'paused'] as const)('keeps an initial %s catalog unknown rather than empty', (fetchStatus) => {
+    const input = workspace({ data: history('Soc') });
+    mocks.workspace.mockReturnValue({
+      ...input,
+      catalog: [],
+      signalsQuery: {
+        data: undefined, isPending: true, isLoading: fetchStatus === 'fetching',
+        isFetching: fetchStatus === 'fetching', fetchStatus, refetch: input.signalsQuery.refetch,
+      },
+    });
+    renderPage();
+    expect(screen.queryByText('No telemetry signals have been recorded for this vehicle yet.')).not.toBeInTheDocument();
+    if (fetchStatus === 'paused') {
+      expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+      expect(input.signalsQuery.refetch).toHaveBeenCalledTimes(1);
+      expect(input.evidenceBundle.refetch).not.toHaveBeenCalled();
+    }
+    expect(screen.getByTestId('root-cause-summary')).toHaveTextContent('48');
+  });
+
+  it('shows an authoritative empty catalog only after success', () => {
+    const input = workspace({ data: history('Soc') });
+    mocks.workspace.mockReturnValue({
+      ...input, catalog: [],
+      signalsQuery: { ...input.signalsQuery, data: [], isSuccess: true },
+    });
+    renderPage();
+    expect(screen.getByText('No telemetry signals have been recorded for this vehicle yet.')).toBeInTheDocument();
+  });
+
+  it('keeps a paused initial evidence aggregate unknown without announcing active loading or failure', () => {
+    const input = workspace({ isPending: true, fetchStatus: 'paused' });
+    input.evidenceBundle.data = [];
+    input.evidenceBundle.sources = input.evidenceBundle.sources.slice(0, 1);
+    input.evidenceBundle.isPending = true;
+    input.evidenceBundle.fetchStatus = 'paused';
+    mocks.workspace.mockReturnValue(input);
+    renderPage();
+    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    const brief = screen.getByTestId('root-cause-summary');
+    expect(brief).not.toHaveTextContent('Signal evidence available');
+    for (const id of ['root-cause-quality', 'root-cause-overall-score', 'root-cause-effect', 'root-cause-hypotheses', 'root-cause-focal-samples']) {
+      expect(brief.querySelector(`[data-operational-metric="${id}"]`)).toHaveAttribute('data-value-state', 'missing');
+    }
+    expect(mocks.announcement).toHaveBeenCalledWith(expect.objectContaining({ isLoading: false, isError: false }));
+    const source = document.querySelector<HTMLElement>('[data-signal-source="Soc"]')!;
+    expect(source).toHaveAttribute('data-source-status', 'initial');
+    fireEvent.click(within(source).getByRole('button', { name: 'Retry' }));
+    expect(input.retryFocal).toHaveBeenCalledTimes(1);
+    expect(input.evidenceBundle.refetch).not.toHaveBeenCalled();
+  });
+
+  it('preserves a retained catalog through a paused refresh and recovery', () => {
+    const input = workspace({ data: history('Soc') });
+    mocks.workspace.mockReturnValue({
+      ...input, signalsQuery: { ...input.signalsQuery, fetchStatus: 'paused' },
+    });
+    const { rerender } = renderPage();
+    expect(screen.getByRole('combobox', { name: 'Focal signal' })).toHaveValue('Soc');
+    const warning = screen.getByTestId('stale-refresh-warning');
+    expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
+    fireEvent.click(within(warning).getByRole('button', { name: 'Refresh' }));
+    expect(input.signalsQuery.refetch).toHaveBeenCalledTimes(1);
+    expect(input.evidenceBundle.refetch).not.toHaveBeenCalled();
+    mocks.workspace.mockReturnValue(input);
+    rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><RootCauseIntelligencePage /></MemoryRouter></QueryClientProvider>);
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Focal signal' })).toHaveValue('Soc');
+  });
+
+  it('threads paused initial history through the real workspace and aggregate, then recovers with measured zero', async () => {
+    onlineManager.setOnline(false);
+    const request = vi.spyOn(apiClient, 'request').mockResolvedValue(history('Soc', 0));
+    const actual = await vi.importActual<typeof import('../hooks/useRootCauseWorkspace')>('../hooks/useRootCauseWorkspace');
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => actual.useRootCauseWorkspace(4), {
+      wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    act(() => result.current.setFocalSignal('Soc'));
+    await waitFor(() => expect(result.current.evidenceBundle.fetchStatus).toBe('paused'));
+    expect(result.current.evidenceBundle.isPending).toBe(true);
+    expect(result.current.evidenceBundle.isLoading).toBe(false);
+    expect(result.current.evidenceBundle.data).toEqual([]);
+    expect(result.current.evidenceBundle.sources[0]!.state).toMatchObject({
+      status: 'initial', hasData: false, isRefreshBlocked: true, fatalError: null,
+    });
+    expect(request).not.toHaveBeenCalled();
+    act(() => onlineManager.setOnline(true));
+    await waitFor(() => expect(result.current.evidenceBundle.isPending).toBe(false));
+    expect(result.current.evidenceBundle.fetchStatus).toBe('idle');
+    expect(result.current.analysis.quality.focalSampleCount).toBe(48);
+    expect(result.current.evidenceBundle.sources[0]!.state).toMatchObject({
+      status: 'ok', hasData: true, isRefreshBlocked: false,
+    });
+    client.clear();
+  });
+
+  it('retains independently cached histories after refresh failure and clears the failure on retry', async () => {
+    const raw = history('Soc', 0);
+    const request = vi.spyOn(apiClient, 'request').mockImplementation(async (url) =>
+      history(String(url).includes('/Soc/') ? 'Soc' : 'PackVoltage'));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useSignalEvidenceBundle(4, ['Soc', 'PackVoltage'], 72), {
+      wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    await waitFor(() => expect(result.current.data).toHaveLength(2));
+    request.mockRejectedValueOnce(new Error('Focal refresh failed'));
+    await act(async () => { await result.current.sources[0]!.state.retry?.(); });
+    await waitFor(() => expect(result.current.sources[0]!.state.refreshError?.message).toBe('Focal refresh failed'));
+    expect(result.current.sources[0]!.state.fatalError).toBeNull();
+    expect(result.current.data[0]!.response.data[0]!.value).toBe(0);
+    expect(result.current.sources[1]!.state.status).toBe('ok');
+    request.mockClear().mockResolvedValue(raw);
+    act(() => result.current.sources[0]!.state.retry?.());
+    await waitFor(() => expect(result.current.sources[0]!.state.refreshError).toBeNull());
+    expect(request).toHaveBeenCalledTimes(1);
+    expect(request.mock.calls[0]![0]).toContain('/Soc/history');
+    expect(result.current.sources[0]!.state.status).toBe('ok');
+    client.clear();
+  });
+
+  it('distinguishes active history loading from a successfully empty history', async () => {
+    let resolveHistory!: (value: SignalHistoryResponse) => void;
+    vi.spyOn(apiClient, 'request').mockImplementation(() => new Promise<SignalHistoryResponse>((resolve) => {
+      resolveHistory = resolve;
+    }));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const { result } = renderHook(() => useSignalEvidenceBundle(4, ['Soc'], 72), {
+      wrapper: ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+    expect(result.current).toMatchObject({ isPending: true, isLoading: true, fetchStatus: 'fetching', data: [] });
+    expect(result.current.sources[0]!.state).toMatchObject({ status: 'initial', hasData: false, isRefreshBlocked: false });
+    await act(async () => resolveHistory({ ...history('Soc'), count: 0, data: [] }));
+    await waitFor(() => expect(result.current.isPending).toBe(false));
+    expect(result.current).toMatchObject({ isLoading: false, fetchStatus: 'idle' });
+    expect(result.current.sources[0]!.state).toMatchObject({ status: 'unavailable', hasData: true, isRefreshBlocked: false });
+    expect(result.current.data[0]!.response.data).toEqual([]);
+    client.clear();
+  });
 });
 
 describe('root-cause shared analysis window', () => {

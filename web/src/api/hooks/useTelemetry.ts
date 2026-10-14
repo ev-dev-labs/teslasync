@@ -16,8 +16,10 @@ export const telemetryKeys = {
   signalHistory: (vehicleId: number, signal: string, hours: number) => ['signal-history', vehicleId, signal, hours] as const,
   signalAnalysisHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
     ['signal-analysis-history', vehicleId, signal, hours, limit] as const,
-  signalEvidenceHistory: (vehicleId: number, signal: string, hours: number, limit: number) =>
-    ['signal-evidence-history', vehicleId, signal, hours, limit] as const,
+  signalEvidenceHistory: (vehicleId: number, signal: string, hours: number, limit: number, from?: string, to?: string) =>
+    from === undefined && to === undefined
+      ? ['signal-evidence-history', vehicleId, signal, hours, limit] as const
+      : ['signal-evidence-history', vehicleId, signal, hours, limit, from, to] as const,
   signalLog: (vehicleId: number, signal: string, hours: number, page: number) => ['signal-log', vehicleId, signal, hours, page] as const,
   signalDiff: (vehicleId: number, signal: string, from: string, to: string) => ['signal-diff', vehicleId, signal, from, to] as const,
   signalDiffServer: (vehicleId: number, atA: string, atB: string, signalsCsv: string) =>
@@ -53,6 +55,11 @@ export interface SignalEvidenceBundleSeries {
   response: SignalHistoryResponse;
 }
 
+export interface SignalEvidenceWindow {
+  startInstant: string;
+  endInstantExclusive: string;
+}
+
 export interface SignalEvidenceBundleSource {
   signal: string;
   state: DataState<SignalHistoryResponse>;
@@ -62,6 +69,8 @@ export interface SignalEvidenceBundleResult {
   data: SignalEvidenceBundleSeries[];
   sources: SignalEvidenceBundleSource[];
   isLoading: boolean;
+  isPending?: boolean;
+  fetchStatus?: 'fetching' | 'paused' | 'idle';
   isFetching: boolean;
   isError: boolean;
   error: Error | null;
@@ -234,6 +243,7 @@ export function useSignalEvidenceBundle(
   signalNames: readonly string[],
   hours: number,
   limit = 10_000,
+  window?: SignalEvidenceWindow,
 ): SignalEvidenceBundleResult {
   const boundedHours = Number.isFinite(hours)
     ? Math.max(1, Math.min(24 * 365, Math.floor(hours)))
@@ -252,10 +262,14 @@ export function useSignalEvidenceBundle(
         signalName,
         boundedHours,
         boundedLimit,
+        window?.startInstant,
+        window?.endInstantExclusive,
       ),
       queryFn: ({ signal }: { signal: AbortSignal }) =>
         request<SignalHistoryResponse>(
-          `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?hours=${boundedHours}&limit=${boundedLimit}`,
+          `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?${window
+            ? `from=${encodeURIComponent(window.startInstant)}&to=${encodeURIComponent(window.endInstantExclusive)}`
+            : `hours=${boundedHours}`}&limit=${boundedLimit}`,
           { signal },
         ),
       enabled: vehicleId > 0,
@@ -278,6 +292,10 @@ export function useSignalEvidenceBundle(
           : [{ signal: normalizedSignals[index]!, response: result.data }],
       ),
       isLoading: results.some((result) => result.isLoading),
+      isPending: results.some((result) => result.isPending),
+      fetchStatus: results.some((result) => result.fetchStatus === 'fetching')
+        ? 'fetching'
+        : results.some((result) => result.fetchStatus === 'paused') ? 'paused' : 'idle',
       isFetching: results.some((result) => result.isFetching),
       isError: results.some((result) => result.isError),
       error: results.find((result) => result.error != null)?.error ?? null,
