@@ -691,7 +691,11 @@ describe('SearchPage restrained migration', () => {
       expect(explanation).toHaveTextContent('Search request paused');
       expect(explanation).toHaveTextContent('No response has been received, so result counts are unknown.');
       expect(explanation).not.toHaveTextContent(/offline|failed/i);
-      expect(metricCard('Total results').querySelector('[data-operational-value]')).toBeNull();
+      const total = metricCard('Total results');
+      expect(total).toHaveAttribute('data-value-state', 'missing');
+      expect(total.querySelector('[data-operational-value]')).toHaveTextContent(/^—$/);
+      expect(metricCard('Categories')).toHaveAttribute('data-value-state', 'missing');
+      expect(metricCard('Top match')).toHaveTextContent('Unknown');
       expect(screen.queryByText('No results')).not.toBeInTheDocument();
       expect(screen.queryByText('Updating…')).not.toBeInTheDocument();
       expect(screen.getByRole('searchbox', { name: 'Search query' })).toHaveValue('model');
