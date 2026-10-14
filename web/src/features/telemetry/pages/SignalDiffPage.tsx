@@ -31,7 +31,7 @@ import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
 import { downloadCSV, objectsToCSV } from '@/lib/csvExport';
 import { typography } from '@/lib/tokens';
 
@@ -97,6 +97,7 @@ export default function SignalDiffPage() {
   const [atB, setAtB] = useUrlString('b', defaultAtB);
 
   // Filters
+  const setUrlBatch = useUrlBatch();
   const [signalFilter, setSignalFilter] = useUrlString('q', '');
   const [activeCategoryRaw, setActiveCategoryRaw] = useUrlString('cat', '');
   const activeCategory = activeCategoryRaw || null;
@@ -375,10 +376,7 @@ export default function SignalDiffPage() {
           error={diffState.fatalError}
           onRetry={() => refetch()}
           filterActive={filterActive}
-          onClearFilters={() => {
-            setSignalFilter('');
-            setActiveCategory(null);
-          }}
+          onClearFilters={() => setUrlBatch({ q: null, cat: null })}
           pinnedSignals={pinnedSignals}
         />
       </FadeIn>

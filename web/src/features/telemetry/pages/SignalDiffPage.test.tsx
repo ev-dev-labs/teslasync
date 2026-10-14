@@ -27,7 +27,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../components/operationalbrief-all/metricPreferencesTestSetup';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import english from '@/i18n/en.json';
 
@@ -176,6 +176,7 @@ vi.mock('../components/SignalDiffBreakdown', () => ({
     pinnedState?: { hasData: boolean; fatalError: unknown; refreshError: unknown };
     error?: unknown;
     onRetry?: () => void;
+    onClearFilters?: () => void;
   }) => (
     <div
       data-testid="signal-diff-breakdown"
@@ -190,6 +191,9 @@ vi.mock('../components/SignalDiffBreakdown', () => ({
     >
       <button type="button" onClick={() => props.onRetry?.()}>
         stub-breakdown-retry
+      </button>
+      <button type="button" onClick={() => props.onClearFilters?.()}>
+        stub-clear-filters
       </button>
     </div>
   ),
@@ -253,6 +257,11 @@ function diffResponse(rows: SignalDiffRow[]): SignalDiffServerResponse {
 // the diff query is "enabled" and the empty-state guard can fire.
 const ROUTE = '/telemetry/signal-diff?vehicle=7&a=2024-01-01T00:00&b=2024-01-01T01:00';
 
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location-search">{location.search}</output>;
+}
+
 function renderPage(route = ROUTE) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -262,6 +271,7 @@ function renderPage(route = ROUTE) {
       <ToastProvider>
         <MemoryRouter initialEntries={[route]}>
           <SignalDiffPage />
+          <LocationProbe />
         </MemoryRouter>
       </ToastProvider>
     </QueryClientProvider>,
@@ -566,6 +576,33 @@ describe('SignalDiffPage', () => {
 
     await waitFor(() => expect(kpiValueText('Visible after filter')).toBe('4'));
     expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-filter-active', 'false');
+  });
+
+  it('clears both filters atomically while preserving the comparison and unrelated URL state', async () => {
+    renderPage(`${ROUTE}&q=missing&cat=battery&keep=retained`);
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-rows', '0');
+    fireEvent.click(screen.getByRole('button', { name: 'stub-select-one' }));
+    const comparison = diffArgs.mock.lastCall?.[0];
+    diffArgs.mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: 'stub-clear-filters' }));
+
+    await waitFor(() => expect(kpiValueText('Visible after filter')).toBe('4'));
+    const params = new URLSearchParams(screen.getByTestId('location-search').textContent ?? '');
+    expect(params.has('q')).toBe(false);
+    expect(params.has('cat')).toBe(false);
+    expect(params.get('vehicle')).toBe('7');
+    expect(params.get('a')).toBe('2024-01-01T00:00');
+    expect(params.get('b')).toBe('2024-01-01T01:00');
+    expect(params.get('keep')).toBe('retained');
+    expect(screen.getByLabelText('Filter signals')).toHaveValue('');
+    expect(screen.getByRole('button', { name: 'Battery' })).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-filter-active', 'false');
+    expect(screen.getByTestId('signal-diff-table')).toHaveAttribute('data-selected', 'battery_level');
+    expect(screen.getByTestId('signal-diff-breakdown')).toHaveAttribute('data-rows', '4');
+    expect(kpiValueText('Numeric changes')).toBe('2');
+    expect(kpiValueText('Changed signals')).toBe('4');
+    for (const [args] of diffArgs.mock.calls) expect(args).toEqual(comparison);
   });
 
   it('surfaces the bulk toolbar on selection and wires CSV export + alert-rule nav', async () => {
