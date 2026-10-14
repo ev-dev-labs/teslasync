@@ -2323,7 +2323,6 @@
       "overallRisk": "A Beta-Bayesian estimate, not a count of confirmed failures. Every signal used (missing end SoC, a stalled charge rate, a power collapse, an early abort) is circumstantial — each has an innocent explanation too. This number is a probability, weighted by how much evidence exists, never a verdict."
     },
     "chargerHealth": {
-      "detail": "Sites are grouped by place name where one is known, and otherwise by a rounded coordinate cell, so the same physical stall is recognised across visits even when the reported address wobbles slightly. AC and DC are labelled separately because their expected power differs by an order of magnitude.",
       "iconLabel": "More info about site grouping",
       "sites": "Each location is judged only against itself. Comparing a home wall box to a Supercharger would be meaningless, so instead every site establishes its own demonstrated ceiling from its cleanest past sessions, and recent sessions are measured against that. Sessions that sat mostly above the taper threshold are excluded, because a slow charge from 80 % is physics, not a fault."
     },
