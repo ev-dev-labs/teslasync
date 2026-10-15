@@ -134,3 +134,16 @@ Not started. TypeScript baseline: 41 errors at HEAD, 38 now (none added).
 ## Step 3 — close out
 
 Not started.
+
+## Handoff verification (2026-10-15)
+
+- Verified the unfinished `PhysicsLedgerPage.test.tsx` and
+  `VehicleListPage.test.tsx` changes. Corrected the timezone regression to use
+  the saved vehicle/user timezone behavior and restored an explicit numeric
+  string measurement case; both page suites pass (**118 tests**).
+- Verified the committed `useDialogFocus.ts` visibility change with both hook
+  suites (**36 tests**). No further hook change was needed.
+- The linked vehicle work items remain pending for their broader implementation
+  audits; test success alone does not close those items. Next, continue with the
+  remaining vehicle clusters, then vehicle-systems, charging, system,
+  notifications, settings, battery, and the rest.

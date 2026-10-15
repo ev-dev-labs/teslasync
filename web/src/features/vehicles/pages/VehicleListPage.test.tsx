@@ -1645,7 +1645,6 @@ describe('VehicleListPage — field and independent source qualification', () =>
     ['NaN', Number.NaN],
     ['positive infinity', Number.POSITIVE_INFINITY],
     ['negative infinity', Number.NEGATIVE_INFINITY],
-    // A numeric string is parsed as a measurement by the shared knownNumber policy.
   ])('does not manufacture measured zero from %s readings', (_label, input) => {
     mockVehicles.mockReturnValue(qr({ data: [V1] }));
     mockFleetStates.mockReturnValue(qr({ data: [{
@@ -1664,6 +1663,23 @@ describe('VehicleListPage — field and independent source qualification', () =>
     expect(within(grid).getAllByText('—').length).toBeGreaterThanOrEqual(4);
     expect(within(grid).queryByText('0.00 kW')).toBeNull();
     expect(screen.getByTestId('fleet-battery-unknown')).toHaveTextContent('Not reported');
+  });
+
+  it('parses numeric strings as reported measurements instead of treating them as missing', () => {
+    mockVehicles.mockReturnValue(qr({ data: [V1] }));
+    mockFleetStates.mockReturnValue(qr({ data: [resolvedEntry(V1, {
+      ...S1,
+      battery_level: '0',
+      rated_range: '0',
+      odometer: '0',
+      charger_power: '0',
+    })] }));
+    renderPage();
+
+    expect(screen.getByTestId('fleet-current-summary').querySelector(
+      '[data-operational-metric="fleet-average-battery"]',
+    )).toHaveAttribute('data-value-state', 'value');
+    expect(cardGrid()).toHaveTextContent('0.00 kW');
   });
 
   it.each([0, -12.375, 12.375])('retains raw signed and fractional readings (%s) independently of display precision', (input) => {

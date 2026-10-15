@@ -82,6 +82,19 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: useSelectedVehicleMock,
 }));
 
+vi.mock('@/lib/timezone', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: (mode: 'vehicle' | 'user' | 'utc' = 'vehicle') =>
+      actual.resolveTimezone(
+        mode,
+        useSelectedVehicleMock().vehicle?.timezone,
+        settingsMock.timezone_user,
+      ),
+  };
+});
+
 vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: vi.fn(),
 }));
