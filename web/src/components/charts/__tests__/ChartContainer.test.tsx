@@ -125,7 +125,9 @@ describe('ChartContainer chartKey + ChartLegend toggle (Phase-46/67)', () => {
       render(
         <QueryClientProvider client={qc}>
           <MemoryRouter>
+            {/* chart-a11y:no-table Annotation overlay fixture has no plotted points to tabulate. */}
             <ChartContainer title="Battery spread" ariaLabel="Battery spread"
+              ariaDescription="Measured battery spread remains 0 mV; annotations are shown as a separate overlay."
               annotations={{ vehicleId: 7, scope: 'battery' }} exportable={false}>
               {({ annotations }) => <div data-testid="battery-series">
                 Measured spread: 0 mV <span data-testid="overlay-count">{annotations.length}</span>
