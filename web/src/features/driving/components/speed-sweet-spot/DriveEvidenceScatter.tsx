@@ -129,7 +129,7 @@ export function DriveEvidenceScatter({
         onRetry={state.onRetry}
         empty={false}
         height={390}
-        exportable={resolved && !state.error && !state.isLoading && rows.length > 0}
+        exportable={Boolean(resolved) && !state.error && !state.isLoading && rows.length > 0}
         exportFilename="speed-sweet-spot-drive-evidence"
         exportData={rows}
         data={!resolved || state.error ? [] : rows}

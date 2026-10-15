@@ -104,7 +104,7 @@ export function MonthlyOperatingContext({
         onRetry={state.onRetry}
         empty={false}
         height={360}
-        exportable={resolved && !state.error && !state.isLoading && rows.length > 0}
+        exportable={Boolean(resolved) && !state.error && !state.isLoading && rows.length > 0}
         exportFilename="speed-sweet-spot-monthly"
         exportData={rows}
         data={!resolved || state.error ? [] : rows}

@@ -94,7 +94,7 @@ export function SpeedBandCoverage({
         onRetry={state.onRetry}
         empty={false}
         height={330}
-        exportable={resolved && !state.error && !state.isLoading && rows.length > 0}
+        exportable={Boolean(resolved) && !state.error && !state.isLoading && rows.length > 0}
         exportFilename="speed-sweet-spot-coverage"
         exportData={rows}
         data={!resolved || state.error ? [] : rows}
