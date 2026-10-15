@@ -80,7 +80,7 @@ describe('computeReplayMarkers', () => {
     ];
     const out = computeReplayMarkers(positions);
     expect(out.filter((m) => m.kind === 'regen-peak')).toEqual([
-      { at: 0.5, kind: 'regen-peak', label: 'Regen peak' },
+      { at: 0.5, kind: 'regen-peak' },
     ]);
     expect(out.some((m) => m.kind === 'charge-start' || m.kind === 'charge-stop')).toBe(false);
     expect(out.find((m) => m.kind === 'start')?.at).toBe(0);
@@ -97,7 +97,7 @@ describe('computeReplayMarkers', () => {
         pos({ secondsFromStart: 90, power: -3, speed, batteryLevel: 73 }),
       ]);
       expect(out.filter((m) => m.kind === 'regen-peak')).toEqual([
-        { at: 2 / 3, kind: 'regen-peak', label: 'Regen peak' },
+        { at: 2 / 3, kind: 'regen-peak' },
       ]);
       expect(out.some((m) => m.kind === 'charge-start' || m.kind === 'charge-stop')).toBe(false);
     },
@@ -110,9 +110,9 @@ describe('computeReplayMarkers', () => {
       pos({ secondsFromStart: 120, power: null, batteryLevel: 18 }),
     ]);
     expect(out).toEqual([
-      { at: 0, kind: 'start', label: 'Start' },
-      { at: 0.5, kind: 'low-soc', label: 'Battery <20%' },
-      { at: 1, kind: 'stop', label: 'End' },
+      { at: 0, kind: 'start' },
+      { at: 0.5, kind: 'low-soc' },
+      { at: 1, kind: 'stop' },
     ]);
   });
 

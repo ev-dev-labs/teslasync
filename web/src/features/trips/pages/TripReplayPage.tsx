@@ -40,6 +40,7 @@ import {
   nearestMarker,
   type ReplayMarker,
 } from '@/features/driving/lib/replayMarkers';
+import { replayMarkerLabel } from '@/features/driving/lib/replayMarkerLabel';
 import type { DrivePosition } from '@/types/driving';
 import { TripReplayMap } from '@/features/trips/components/TripReplayMap';
 import { TripReplayReadout } from '@/features/trips/components/TripReplayReadout';
@@ -264,10 +265,10 @@ export default function TripReplayPage() {
     () => replayMarkers.map((m) => ({
       at: m.at,
       kind: m.kind,
-      label: m.label,
+      label: replayMarkerLabel(t, fmtInt, m.kind, m.count),
       count: m.count,
     })),
-    [replayMarkers],
+    [replayMarkers, t, fmtInt],
   );
 
   /* ---- URL deep-linking: ?at=0.42&play=1 (debounced 300ms) ---- */

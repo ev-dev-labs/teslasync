@@ -1739,6 +1739,15 @@
       "stationaryRouteBody": "Only one GPS coordinate was recorded for this drive, so the route can't be drawn. The trip statistics, speed, and elevation timeline above the scrubber are unaffected.",
       "stationaryRouteTitle": "Route can't be plotted"
     },
+    "markers": {
+      "chargeStart": "Charge start",
+      "chargeStop": "Charge stop",
+      "fastSegment": "Fast segment",
+      "lowSoc": "Low battery",
+      "regenPeak": "Regen peak",
+      "start": "Start",
+      "stop": "End"
+    },
     "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
     "refresh": "Refresh replay data",
     "stat": {

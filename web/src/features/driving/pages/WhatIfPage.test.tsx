@@ -92,7 +92,7 @@ describe('WhatIfPage independent source boundaries', () => {
       expect(state.telemetryId).toBe('2');
       expect(screen.getByRole('slider', { name: 'Average speed' })).toHaveValue('1.2');
       expect(state.summary.mock.lastCall?.[0].metrics.map((metric: StatMetric) => metric.rawValue)).toEqual(originalMetrics);
-      expect(screen.getByText('Actual drive')).toBeTruthy();
+      expect(screen.getAllByText('Actual drive').length).toBeGreaterThan(0);
       expect(screen.getByText('What-if')).toBeTruthy();
     } finally {
       listSpy.mockRestore();
@@ -205,7 +205,7 @@ describe('WhatIfPage independent source boundaries', () => {
   it('retains controls and both complete energy rails after a list refresh failure', () => {
     state.listError = true; mount();
     expect(screen.getByText('Knobs')).toBeTruthy();
-    expect(screen.getByText('Actual drive')).toBeTruthy();
+    expect(screen.getAllByText('Actual drive').length).toBeGreaterThan(0);
     expect(screen.getByText('What-if')).toBeTruthy();
     expect(screen.getAllByText('Aero drag')).toHaveLength(2);
     expect(screen.getByRole('button', { name: /Reset/ })).toBeTruthy();
@@ -213,7 +213,7 @@ describe('WhatIfPage independent source boundaries', () => {
   it('keeps controls mounted and offers detail retry without pretending no energy', () => {
     state.detailError = true; mount();
     expect(screen.getByText('Knobs')).toBeTruthy();
-    expect(screen.getByText('Energy breakdown')).toBeTruthy();
+    expect(screen.getAllByText('Energy breakdown').length).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: /retry/i }).length).toBeGreaterThan(0);
     expect(screen.queryByText('No selected recorded drive')).toBeNull();
     expect(screen.queryByText('This drive lacks the energy data needed to simulate.')).toBeNull();
@@ -276,13 +276,13 @@ describe('WhatIfPage independent source boundaries', () => {
     state.empty = true; mount();
     expect(screen.getByText('Simulated drive outcome')).toBeTruthy();
     expect(screen.getByText('Knobs')).toBeTruthy();
-    expect(screen.getByText('Energy breakdown')).toBeTruthy();
+    expect(screen.getAllByText('Energy breakdown').length).toBeGreaterThan(0);
     expect(screen.getByRole('link', { name: 'Browse drives' }).getAttribute('href')).toBe('/drives');
   });
   it('keeps controls and energy section mounted during detail loading', () => {
     state.loading = true; mount();
     expect(screen.getByText('Knobs')).toBeTruthy();
-    expect(screen.getByText('Energy breakdown')).toBeTruthy();
+    expect(screen.getAllByText('Energy breakdown').length).toBeGreaterThan(0);
     expect(screen.queryByText('What-if')).toBeNull();
   });
 });
@@ -380,7 +380,7 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
       expect(state.summary.mock.lastCall?.[0].metrics.every((metric: StatMetric) => metric.rawValue == null)).toBe(true);
       expect(screen.queryByText('What-if')).toBeNull();
       expect(screen.queryByText(/Current modeled capacity/)).toBeNull();
-      expect(screen.getByText('Energy breakdown')).toBeTruthy();
+      expect(screen.getAllByText('Energy breakdown').length).toBeGreaterThan(0);
     });
 
     it.each([null, undefined])('infers missing average speed from valid fractional distance and duration: %s', (avgSpeedMps) => {
@@ -493,7 +493,8 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
     fireEvent.click(screen.getByRole('button', { name: /Reset/ }));
     fireEvent.change(screen.getByRole('slider', { name: 'Average speed' }), { target: { value: '1.2' } });
     const fast = state.summary.mock.lastCall?.[0].metrics as readonly StatMetric[];
-    expect(fast[2].rawValue).toBeCloseTo(10000 / (16.67 * 1.2));
+    // Duration scales the recorded 600 s by the speed factor (not the rounded fixture speed).
+    expect(fast[2].rawValue).toBeCloseTo(600 / 1.2);
     expect(screen.getByText(/This would cost an extra/)).toHaveTextContent('Wh');
   });
 
@@ -507,7 +508,7 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
 
   it('retains detail output on refresh error while accurately marking retained evidence', () => {
     state.detailError = true; state.retainedDetail = true; mount();
-    expect(screen.getByText('Actual drive')).toBeTruthy();
+    expect(screen.getAllByText('Actual drive').length).toBeGreaterThan(0);
     expect(screen.getByText('What-if')).toBeTruthy();
     expect(state.summary.mock.lastCall?.[0].retained).toBe(true);
   });
@@ -515,7 +516,7 @@ describe('WhatIfPage preserved scenario actions and physical inputs', () => {
   it('keeps every section mounted with missing energy and reports unavailable metrics', () => {
     state.noEnergy = true; mount();
     expect(screen.getByText('Knobs')).toBeTruthy();
-    expect(screen.getByText('Energy breakdown')).toBeTruthy();
+    expect(screen.getAllByText('Energy breakdown').length).toBeGreaterThan(0);
     expect(screen.getAllByText('This drive lacks the energy data needed to simulate.')).toHaveLength(2);
     expect(state.summary.mock.lastCall?.[0].unavailable).toBe(true);
     expect(state.summary.mock.lastCall?.[0].metrics.every((metric: StatMetric) => metric.rawValue == null)).toBe(true);

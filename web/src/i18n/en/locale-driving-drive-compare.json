@@ -61,6 +61,11 @@
       }
     }
   },
+  "advancedIntelligence": {
+    "panel": {
+      "paused": "The initial evidence query is paused; no empty result is inferred."
+    }
+  },
   "battery": {
     "delta": {
       "aria": "Battery {{from}}% to {{to}}%",

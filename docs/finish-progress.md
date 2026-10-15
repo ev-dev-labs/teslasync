@@ -100,6 +100,7 @@ Order: feature by feature, by primary-file cluster.
 | Speed sweet spot | f03/f04/f05 | exportable coerced to boolean |
 | Driving rhythm / dynamics | rhythm f01/f03/f04, dynamics f03/04/05/07 | exact-instant window, truthful time-semantics copy |
 | Drive compare | f01/f05/f07 | neutral paused state instead of endless loading |
+| What-if / share / journey / replay markers | wi-003/006/007, drive-detail f03, jf-02, trips f10 | pure marker model + localized plural labels |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
@@ -110,9 +111,8 @@ labels without i18n init and was not announced (now role=alert).
 
 ### Next up (driving, then other features)
 
-what-if
-(003/006/007) → misc (ShareDriveDialog f03, ElapsedComposition 02, replayMarkers
-f10). Then vehicles (62), vehicle-systems (45), charging (48), system (47),
+Driving is complete except explorer exp03. Next: trips (rest of the trip-replay
+items), then vehicles (62), vehicle-systems (45), charging (48), system (47),
 notifications, settings, battery, and the rest.
 
 ## Known open issues (left failed in state.json)

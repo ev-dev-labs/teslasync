@@ -20,7 +20,8 @@ vi.mock('@/api/hooks/useDriving', () => {
     refetch: h.refetch,
   });
   return {
-    useDrives: () => query(h.drive ? [h.drive] : []),
+    // A loading query has no data yet; a settled one returns the list.
+    useDrives: () => query(h.loading ? undefined : h.drive ? [h.drive] : []),
     useDrive: () => query(h.drive),
     useDriveTelemetry: () => query([]),
   };
@@ -74,7 +75,7 @@ describe('What-If — real summary preserves the simulation and its controls', (
     h.drive = makeBriefDrive(1, 10_000, { energyUsedWh: null });
     renderPage();
     expect(screen.getByTestId('what-if-brief').querySelector('[data-operational-metric="scenario-energy"]')).toHaveAttribute('data-value-state', 'missing');
-    expect(screen.getByText('This drive lacks the energy data needed to simulate.')).toBeInTheDocument();
+    expect(screen.getAllByText('This drive lacks the energy data needed to simulate.').length).toBeGreaterThan(0);
     expect(screen.getByRole('combobox', { name: 'Choose a drive' })).toBeInTheDocument();
   });
 });

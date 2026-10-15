@@ -27,7 +27,7 @@ export interface ReplayMarker {
   /** Normalized 0..1 position along the trip timeline. */
   at: number;
   kind: ReplayMarkerKind;
-  /** Optional label shown in the marker tooltip. */
+  /** Optional caller label; the domain model emits kind/count only and presentation localizes. */
   label?: string;
   /** Optional href — clicking the marker can route somewhere instead of seeking. */
   href?: string;
@@ -97,25 +97,7 @@ function collapseBucket(bucket: ReplayMarker[], kind: ReplayMarkerKind): ReplayM
     at: midAt,
     kind,
     count: bucket.length,
-    label: `${bucket.length} ${kindLabel(kind)}`,
   };
-}
-
-function kindLabel(kind: ReplayMarkerKind): string {
-  switch (kind) {
-    case 'fast-segment':
-      return 'fast segments';
-    case 'regen-peak':
-      return 'regen peaks';
-    case 'charge-start':
-      return 'charge starts';
-    case 'charge-stop':
-      return 'charge stops';
-    case 'low-soc':
-      return 'low SoC';
-    default:
-      return kind;
-  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -149,8 +131,8 @@ export function computeReplayMarkers(positions: DrivePosition[]): ReplayMarker[]
 
   // Single position OR zero-duration drive — only emit start/stop.
   if (positions.length < 2 || totalMs <= 0) {
-    const out: ReplayMarker[] = [{ at: 0, kind: 'start', label: 'Start' }];
-    if (positions.length > 1) out.push({ at: 1, kind: 'stop', label: 'End' });
+    const out: ReplayMarker[] = [{ at: 0, kind: 'start' }];
+    if (positions.length > 1) out.push({ at: 1, kind: 'stop' });
     return out;
   }
 
@@ -161,8 +143,8 @@ export function computeReplayMarkers(positions: DrivePosition[]): ReplayMarker[]
   };
 
   const markers: ReplayMarker[] = [
-    { at: 0, kind: 'start', label: 'Start' },
-    { at: 1, kind: 'stop', label: 'End' },
+    { at: 0, kind: 'start' },
+    { at: 1, kind: 'stop' },
   ];
 
   /* ---- Fast segments: contiguous runs where speed > p95 for >=10s ---- */
@@ -193,7 +175,7 @@ export function computeReplayMarkers(positions: DrivePosition[]): ReplayMarker[]
       }
     }
     for (const mid of fastSegMidpoints) {
-      markers.push({ at: mid, kind: 'fast-segment', label: 'Fast segment' });
+      markers.push({ at: mid, kind: 'fast-segment' });
     }
   }
 
@@ -207,7 +189,7 @@ export function computeReplayMarkers(positions: DrivePosition[]): ReplayMarker[]
     for (let i = 0; i < positions.length; i++) {
       const pw = positions[i].power;
       if (pw != null && -pw >= regenThreshold && pw < REGEN_THRESHOLD_KW) {
-        markers.push({ at: normalize(i), kind: 'regen-peak', label: 'Regen peak' });
+        markers.push({ at: normalize(i), kind: 'regen-peak' });
       }
     }
   }
@@ -216,7 +198,7 @@ export function computeReplayMarkers(positions: DrivePosition[]): ReplayMarker[]
   for (let i = 0; i < positions.length; i++) {
     const soc = positions[i].batteryLevel;
     if (soc != null && soc < LOW_SOC_PCT) {
-      markers.push({ at: normalize(i), kind: 'low-soc', label: `Battery <${LOW_SOC_PCT}%` });
+      markers.push({ at: normalize(i), kind: 'low-soc' });
       break;
     }
   }
