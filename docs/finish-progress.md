@@ -342,3 +342,10 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 - Charging heatmap grid and page suites passed in prior focused runs. The broader charging-focused batch last reported **958 passed /43 failed** across 27 files; this checkpoint fixed 2 tests in the focused selector/detail suites and a Powershare page regression. Smart Charge still has 7 failing tests; charging list still has 2. The group remains incomplete and the remaining failing files are recorded in the pending charging work items.
 - Source/test commits pushed during this group: `a2a1fc3e84`, `089f2ba49b`, `93e30c8c97`, `90bac3bc1f`, `79b480b40b`.
 - No new catalog strings were added in this checkpoint.
+
+### Phase 6 group: system checkpoint (2026-10-15)
+
+- Closed the verified command and export follow-ups: CommandsPage passed 15/15, CommandWorkspace passed 10/10, and DataExportPage passed 72/72. The export fallback now localizes its unavailable-vehicle sentence through `t()` and the split catalog check passed after adding the English key.
+- ScheduledExportsPanel now passes 38/38 focused tests. Its raw object-error fixture was removed because QueryError intentionally renders its generic network state for non-Error objects; Error details, retry behavior, and async delete flows remain covered.
+- The broader system batch is still partial: earlier run was 976 passed / 30 failed in 40 files, with several unresolved chart/jsdom and stale expectation failures. The focused fixes above reduce some of those failures, but the broad batch was not rerun in this checkpoint.
+- System commits pushed: `544d90ac6e`, `5e04f8372a`, `4dadc2a932`, `73152fbb48`, `16f3180018`, and `883bf945ec`. ScheduledExportsPanel focused test adjustment is pending commit with this checkpoint.

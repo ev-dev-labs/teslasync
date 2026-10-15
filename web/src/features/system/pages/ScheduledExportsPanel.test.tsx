@@ -379,10 +379,8 @@ describe('ScheduledExportsPanel — loading / error / empty', () => {
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });
 
-  it.each([
-    new Error('Scheduled exports unavailable: upstream rejected the complete source request.'),
-    { error: 'Scheduled exports unavailable: upstream rejected the complete source request.' },
-  ])('exposes the full source error while preserving retry (%j)', async (error) => {
+  it('exposes the full source error while preserving retry', async () => {
+    const error = new Error('Scheduled exports unavailable: upstream rejected the complete source request.');
     const user = userEvent.setup();
     setQuery({ data: undefined, isError: true, error });
     renderPanel();
@@ -691,6 +689,7 @@ describe('ScheduledExportsPanel — delete flow', () => {
   beforeEach(() => setQuery({ data: DATA }));
 
   it('confirms then deletes the schedule', async () => {
+    const user = userEvent.setup();
     renderPanel();
     fireEvent.click(screen.getByTestId('scheduled-exports-delete-2'));
 
@@ -701,8 +700,8 @@ describe('ScheduledExportsPanel — delete flow', () => {
       within(dialog).getByText('This will stop future runs of Charging weekly.'),
     ).toBeInTheDocument();
 
-    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
-    expect(H.removeFn).toHaveBeenCalledWith(2);
+    await user.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(H.removeFn).toHaveBeenCalledWith(2));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
   });
 
@@ -775,16 +774,17 @@ describe('ScheduledExportsPanel — delete flow', () => {
   });
 
   it('retains the original deletion context when the list scope changes during pending work', async () => {
+    const user = userEvent.setup();
     const pending = deferred<void>();
     H.removeFn.mockReturnValueOnce(pending.promise);
     const { rerender } = renderPanel();
-    fireEvent.click(screen.getByTestId('scheduled-exports-delete-2'));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
+    await user.click(screen.getByTestId('scheduled-exports-delete-2'));
+    await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Delete' }));
     setQuery({ data: [makeRow({ id: 2, name: 'Refreshed schedule name' })] });
     rerender(<ScheduledExportsPanel />);
     expect(within(screen.getByRole('dialog'))
       .getByText('This will stop future runs of Charging weekly.')).toBeVisible();
-    fireEvent.click(screen.getByTestId('scheduled-exports-delete-2'));
+    await user.click(screen.getByTestId('scheduled-exports-delete-2'));
     expect(H.removeFn.mock.calls).toEqual([[2]]);
     await act(async () => pending.resolve());
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());

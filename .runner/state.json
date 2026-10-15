@@ -14884,11 +14884,11 @@
       "web\\src\\features\\system\\pages\\CommandsPage.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-commands-f11 | Missing dependencies blocked test execution and typecheck; restoration attempts failed | done so far: updated web\\src\\features\\system\\pages\\CommandsPage.tsx and web\\src\\features\\system\\pages\\CommandsPage.test.tsx Attempt 2: FAILED | fix-system-commands-f11 | Missing dependencies prevent verification; restoration attempts failed | done so far: inspected existing implementation and coverage; no source files changed",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-commands-f11 | Missing dependencies blocked test execution and typecheck; restoration attempts failed | done so far: updated web\\src\\features\\system\\pages\\CommandsPage.tsx and web\\src\\features\\system\\pages\\CommandsPage.test.tsx Attempt 2: FAILED | fix-system-commands-f11 | Missing dependencies prevent verification; restoration attempts failed | done so far: inspected existing implementation and coverage; no source files changed | System checkpoint 2026-10-15: focused verification passed; CommandsPage 15/15; source commit 544d90ac6e.",
+    "Commit": "883bf945ec",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -14899,11 +14899,11 @@
       "web\\src\\features\\system\\components\\command-center\\CommandWorkspace.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-system-commands-f13 | verification blocked by missing dependencies and EPERM during restoration | done so far: updated CommandWorkspace.tsx and added regressions in CommandWorkspace.test.tsx Attempt 2: FAILED | fix-system-commands-f13 | verification blocked by incomplete dependencies and ENOENT during restoration | done so far: confirmed existing fix and focused regressions; no source changes",
-    "Commit": "",
+    "Notes": " Attempt 1: FAILED | fix-system-commands-f13 | verification blocked by missing dependencies and EPERM during restoration | done so far: updated CommandWorkspace.tsx and added regressions in CommandWorkspace.test.tsx Attempt 2: FAILED | fix-system-commands-f13 | verification blocked by incomplete dependencies and ENOENT during restoration | done so far: confirmed existing fix and focused regressions; no source changes | System checkpoint 2026-10-15: focused verification passed; CommandWorkspace 10/10; source commit 544d90ac6e.",
+    "Commit": "883bf945ec",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -14935,11 +14935,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
-    "Commit": "",
+    "Notes": " | System checkpoint 2026-10-15: focused verification passed; DataExportPage 72/72; split catalog check passed; source commit 883bf945ec.",
+    "Commit": "883bf945ec",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
