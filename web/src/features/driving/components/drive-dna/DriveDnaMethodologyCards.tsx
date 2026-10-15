@@ -58,7 +58,7 @@ export function DriveDnaMethodologyCards() {
           <Text as="li" variant="bodySm">
             {t(
               'driveDna.method.powerBoundary',
-              'The legacy response power value is kW and is multiplied by exactly 1,000 once at the model boundary to canonical W.',
+              'Response power is already canonical watts (pack voltage × current) and is used without rescaling.',
             )}
           </Text>
           <Text as="li" variant="bodySm">

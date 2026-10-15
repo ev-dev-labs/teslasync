@@ -41,20 +41,20 @@ export function TopTransitionMatrix({
     cell.status === 'unsupported_origin'
       ? t(
           'destinationTransitions.matrix.cellUnsupportedAria',
-          '{{from}} to {{to}}: {{count}} observed; origin is below the support gate',
+          '{{from}} to {{to}}: {{value}} observed; origin is below the support gate',
           {
             from,
             to: cell.toLabel,
-            count: countLabel(cell.count),
+            value: countLabel(cell.count),
           },
         )
       : t(
           'destinationTransitions.matrix.cellAria',
-          '{{from}} to {{to}}: {{count}} observed, {{share}} of accepted outgoing transitions',
+          '{{from}} to {{to}}: {{value}} observed, {{share}} of accepted outgoing transitions',
           {
             from,
             to: cell.toLabel,
-            count: countLabel(cell.count),
+            value: countLabel(cell.count),
             share: destinationPercent(
               cell.observedConditionalShare,
               locale,
@@ -117,12 +117,12 @@ export function TopTransitionMatrix({
                     className="flex w-36 shrink-0 flex-col justify-center rounded-lg bg-[var(--surface-2)] p-2"
                     role="rowheader"
                   >
-                    <Text variant="bodySm">{row.fromLabel}</Text>
-                    <Text variant="caption">
+                    <Text as="div" variant="bodySm">{row.fromLabel}</Text>
+                    <Text as="div" variant="caption">
                       {t(
                         'destinationTransitions.matrix.outgoing',
-                        '{{count}} outgoing',
-                        { count: countLabel(row.outgoingTransitions) },
+                        '{{value}} outgoing',
+                        { value: countLabel(row.outgoingTransitions) },
                       )}
                     </Text>
                   </div>

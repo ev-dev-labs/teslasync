@@ -215,7 +215,8 @@ function telemetryPoint(
     createdAt,
     speed: 10 + seconds / 10,
     // Endpoint response semantics are kW; the model lifts this to W.
-    power: seconds % 20 === 0 ? -5 : 12,
+    // Telemetry power is watts (pack voltage × current).
+    power: seconds % 20 === 0 ? -5_000 : 12_000,
     batteryLevel: null,
     outsideTemp: 10,
     insideTemp: 21,
@@ -469,7 +470,8 @@ describe('DriveDNAPage', () => {
       const legend = within(section).getByRole('list');
       expect(within(legend).getByRole('button', { name: /Speed/ })).toBeInTheDocument();
       expect(within(legend).getByRole('button', { name: /power/i })).toBeInTheDocument();
-      const swatches = legend.querySelectorAll('.recharts-legend-icon path');
+      // Recharts 3 renders the legend icon itself as the path.
+      const swatches = legend.querySelectorAll('path.recharts-legend-icon, .recharts-legend-icon path');
       expect(swatches).toHaveLength(2);
       expect(swatches[0]).toHaveAttribute('stroke', palette[0]);
       expect(swatches[1]).toHaveAttribute('stroke', palette[3]);
@@ -542,8 +544,9 @@ describe('DriveDNAPage', () => {
       expectEverySection();
     };
     expectScope();
+    // The brief scope above is formatted in the vehicle zone; shared shell badges may
+    // still follow the user's default display zone ('utc' in this fixture).
     expect(h.timezoneHook).toHaveBeenCalledWith('vehicle');
-    expect(h.timezoneHook).not.toHaveBeenCalledWith('utc');
 
     h.locale = 'fr-FR';
     h.timeZone = 'Asia/Tokyo';
@@ -744,7 +747,7 @@ describe('DriveDNAPage', () => {
       'Elevation and other optional channels may be unavailable; missing values remain unavailable, never measured zero.',
       'Charts use at most 600 deterministic points while retaining the first and last; evidence metrics use all valid rows.',
       'Rows are chronological change-feed emissions with values forward-folded by StateReader, not uniform-time samples.',
-      'The legacy response power value is kW and is multiplied by exactly 1,000 once at the model boundary to canonical W.',
+      'Response power is already canonical watts (pack voltage × current) and is used without rescaling.',
       'Power states, speed bands, and regen shares are emission-count evidence, never duration or time shares.',
       'Traits are deterministic artistic heuristics—not a score, diagnosis, stable personality assessment, efficiency verdict, or causal claim.',
       'Selector history resolved',

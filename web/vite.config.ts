@@ -143,7 +143,8 @@ export default defineConfig({
   plugins: [
     // See the `isVitest` note above (CLEAN-02).
     ...(isVitest ? [] : [react()]),
-    verifyEnglishCatalogSplit,
+    // Build/dev guard only: unit tests never consume the split catalog output.
+    ...(isVitest ? [] : [verifyEnglishCatalogSplit]),
     VitePWA({
       // Mocked browser suites intercept every API request. Omitting the worker
       // prevents Workbox from bypassing those fixtures; production builds and

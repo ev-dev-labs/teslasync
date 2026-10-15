@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import { chartTokens } from '@/lib/tokens';
 vi.mock('@/components/charts', async () => ({
   ...await vi.importActual<typeof import('@/components/charts')>('@/components/charts'),
+  ...(await import('@/test/chartTestDoubles')).inertCartesianParts,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
   AreaChart: ({ children, data }: { children: ReactNode; data: ChartDataPoint[] }) =>
     <div data-testid="power-plot" data-values={JSON.stringify(data.map((point) => point.power))}>{children}</div>,
@@ -25,6 +26,7 @@ vi.mock('@/hooks/useChartExport', () => ({
   useChartExport: () => ({ chartRef: { current: null }, exportPNG: vi.fn(), exportSVG: vi.fn(), copyToClipboard: vi.fn(), exporting: false }),
 }));
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }), useCreateAnnotation: () => ({ mutate: vi.fn() }), useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
 function show(points: ChartDataPoint[]) {

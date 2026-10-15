@@ -78,7 +78,10 @@ const { optimizerMock, vehiclesMock, settingsMock } = vi.hoisted(() => ({
   settingsMock: vi.fn(),
 }));
 vi.mock('@/hooks/useSettings', () => ({ useSettings: () => settingsMock() }));
-vi.mock('@/hooks/useDateFormat', () => ({
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({
   useDateFormat: () => ({
     formatTime: (value: string | Date) => {
       const hour = value instanceof Date ? value.getHours() : Number(value.slice(11, 13));
@@ -87,7 +90,16 @@ vi.mock('@/hooks/useDateFormat', () => ({
         : `${hour % 12 || 12} AM`.replace('AM', hour >= 12 ? 'PM' : 'AM');
     },
   }),
-}));
+}))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
 vi.mock('react-i18next', async () => {

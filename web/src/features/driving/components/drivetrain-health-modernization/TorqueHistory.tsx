@@ -4,13 +4,15 @@ import {
   CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend, AREA_DEFAULTS,
 } from '@/components/charts';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
-import { chartTokens, typography } from '@/lib/tokens';
+import { chartTokens } from '@/lib/tokens';
+import { getChartFontFamily, getChartFontSize } from '@/lib/chartTypography';
 import { PreservedChartFrame } from './PreservedChartFrame';
 import type { MotorHistoryChartProps } from './chartTypes';
 
-const torqueAxisTick = { fill: chartTokens.axisStroke, className: typography.role.caption };
-
 export function TorqueHistory({ rows, state, loading }: MotorHistoryChartProps) {
+  // Recharts drops a custom tick className, so scale the SVG text attributes
+  // directly (same scalable typography as the other drivetrain charts).
+  const torqueAxisTick = { fill: chartTokens.axisStroke, fontSize: getChartFontSize(), fontFamily: getChartFontFamily() };
   const { t } = useTranslation();
   const { fmtNumber } = useNumberFormatting();
   const torque = (value: unknown) =>

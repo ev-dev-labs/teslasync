@@ -43,6 +43,12 @@
       "driveCoverageUnknown": "Drive sample coverage is unavailable independently of the speed profile.",
       "description": "Recorded speed statistics and eligible-drive counts; efficiency evidence comes from a separate drive query.",
       "provenance": "Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage."
-    }
+    },
+    "typical": "Typical",
+    "efficiencyBands": "Efficiency bands",
+    "bandLabel": "{{label}}: {{range}}",
+    "bandBelow": "below {{max}} {{unit}}",
+    "bandBetween": "{{min}}–{{max}} {{unit}}",
+    "bandAtLeast": "{{min}} {{unit}} or more"
   }
 }

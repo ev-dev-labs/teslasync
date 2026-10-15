@@ -63,6 +63,9 @@ import { request } from '@/api/client'
 import { ThemeProvider, useTheme, modeCategoryOrder } from './ThemeProvider'
 import { themeCategories } from './themePresets'
 
+// test-setup.ts softens useTheme for bare renders; this file owns the real guard.
+vi.unmock('@/components/ui/ThemeProvider')
+
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 
 // ── Controllable window.matchMedia (jsdom ships none) ──

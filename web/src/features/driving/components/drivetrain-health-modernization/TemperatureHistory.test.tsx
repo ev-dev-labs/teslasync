@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { deriveDataState } from '@/api/dataState';
 import { chartTokens } from '@/lib/tokens';
 import type { DriveChartRow } from './model';
@@ -82,8 +83,8 @@ describe('TemperatureHistory', () => {
     expect(references[0]).toHaveAttribute('stroke', chartTokens.series[2]);
     expect(references[1]).toHaveAttribute('stroke', chartTokens.series[0]);
     references.forEach(reference => expect(reference).toHaveAttribute('stroke-dasharray', '4 4'));
-    expect(within(chart).getByText('Warm Zone · 35°C')).toHaveAttribute('font-size', '18');
-    expect(within(chart).getByText('Freezing · 0°C')).toHaveAttribute('font-family', 'Test Sans');
+    expect(within(chart).getByText('Warm Zone · 35°C').closest('text')).toHaveAttribute('font-size', '18');
+    expect(within(chart).getByText('Freezing · 0°C').closest('text')).toHaveAttribute('font-family', 'Test Sans');
     const ticks = chart.querySelectorAll('.recharts-cartesian-axis-tick-value');
     expect(ticks.length).toBeGreaterThan(0);
     ticks.forEach(tick => {
@@ -205,13 +206,14 @@ describe('TemperatureHistory', () => {
 
   it('preserves the source loading and initial failure frames without fabricated temperatures', () => {
     const initial = deriveDataState({ isPending: true, isLoading: true });
-    const view = render(<TemperatureHistory rows={[]} state={initial} loading />);
+    const view = render(<TemperatureHistory rows={[]} state={initial} loading />, { wrapper: MemoryRouter });
     expect(screen.getByRole('heading', { name: 'Temperature Trend' })).toBeInTheDocument();
     expect(document.querySelector('.recharts-line-curve')).not.toBeInTheDocument();
     const fatal = deriveDataState({ isError: true, error: new Error('Temperature history failed') });
     view.rerender(<TemperatureHistory rows={[]} state={fatal} loading={false} />);
     expect(screen.getByRole('heading', { name: 'Temperature Trend' })).toBeInTheDocument();
-    expect(screen.getByText('Temperature history failed')).toBeInTheDocument();
+    // QueryError classifies the failure; the frame switches to its error state without readings.
+    expect(document.querySelector('[data-chart-state="error"]')).toBeInTheDocument();
     expect(document.querySelector('.recharts-line-curve')).not.toBeInTheDocument();
   });
 });

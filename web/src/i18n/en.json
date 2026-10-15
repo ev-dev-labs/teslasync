@@ -4252,7 +4252,9 @@
       "aria": "Bar chart of drive DNA signal distribution",
       "colCount": "Count",
       "colLabel": "Signal",
-      "title": "Drive DNA distribution"
+      "title": "Drive DNA distribution",
+      "emissionValue_one": "{{value}} emission",
+      "emissionValue_other": "{{value}} emissions"
     },
     "coverage": {
       "returnedRows": "Rows returned",
@@ -4310,7 +4312,7 @@
       "chartBound": "Charts use at most {{limit}} deterministic points while retaining the first and last; evidence metrics use all valid rows.",
       "interpretationTitle": "Interpretation guardrails",
       "changeFeed": "Rows are chronological change-feed emissions with values forward-folded by StateReader, not uniform-time samples.",
-      "powerBoundary": "The legacy response power value is kW and is multiplied by exactly 1,000 once at the model boundary to canonical W.",
+      "powerBoundary": "Response power is already canonical watts (pack voltage × current) and is used without rescaling.",
       "countBasis": "Power states, speed bands, and regen shares are emission-count evidence, never duration or time shares.",
       "noClaim": "Traits are deterministic artistic heuristics—not a score, diagnosis, stable personality assessment, efficiency verdict, or causal claim."
     },
@@ -19918,7 +19920,10 @@
         "good": "good",
         "warning": "warning",
         "critical": "critical"
-      }
+      },
+      "selectedStatisticsBounds": "Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}",
+      "completedStatisticsPopulation": "Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.",
+      "separateHistoryPolicies": "Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics."
     },
     "frontMotorTemp": "Front motor temp",
     "rearMotorTemp": "Rear motor temp",
@@ -20040,7 +20045,16 @@
     "powerOutputAria": "Per-drive peak and regen motor power output history area chart",
     "statorTempHistoryAria": "Front, rear-left and rear-right motor stator temperature history line chart",
     "tempHistoryAria": "Outside temperature trend line chart per recent drive",
-    "torqueHistoryAria": "Motor inverter torque output history area chart"
+    "torqueHistoryAria": "Motor inverter torque output history area chart",
+    "health": {
+  "good": "Good",
+  "warning": "Warning",
+  "critical": "Critical"
+},
+    "motorStateValue": {
+  "overheating": "Overheating",
+  "idle": "Idle"
+}
   },
   "dynamics": {
     "modernization": {
@@ -21380,7 +21394,13 @@
       "driveCoverageUnknown": "Drive sample coverage is unavailable independently of the speed profile.",
       "description": "Recorded speed statistics and eligible-drive counts; efficiency evidence comes from a separate drive query.",
       "provenance": "Speed-profile aggregate and returned vehicle drives; the server does not declare complete drive coverage."
-    }
+    },
+    "typical": "Typical",
+    "efficiencyBands": "Efficiency bands",
+    "bandLabel": "{{label}}: {{range}}",
+    "bandBelow": "below {{max}} {{unit}}",
+    "bandBetween": "{{min}}–{{max}} {{unit}}",
+    "bandAtLeast": "{{min}} {{unit}} or more"
   },
   "geofences": {
     "validation": {
@@ -29705,10 +29725,10 @@
     "matrix": {
       "aria": "Counts and observed outgoing shares in the top destination transition matrix",
       "belowGate": "Below gate",
-      "cellAria": "{{from}} to {{to}}: {{count}} observed, {{share}} of accepted outgoing transitions",
-      "cellUnsupportedAria": "{{from}} to {{to}}: {{count}} observed; origin is below the support gate",
+      "cellAria": "{{from}} to {{to}}: {{value}} observed, {{share}} of accepted outgoing transitions",
+      "cellUnsupportedAria": "{{from}} to {{to}}: {{value}} observed; origin is below the support gate",
       "origin": "Origin",
-      "outgoing": "{{count}} outgoing",
+      "outgoing": "{{value}} outgoing",
       "subtitle": "Counts among the most visited states; shares retain each origin’s full accepted denominator, and dashed cells mark origins below the three-transition support gate.",
       "title": "Top transition matrix"
     },

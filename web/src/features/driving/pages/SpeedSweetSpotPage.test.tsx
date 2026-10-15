@@ -776,7 +776,9 @@ describe('SpeedSweetSpotPage', () => {
     useDrivesMock.mockReturnValue(paused);
     const { rerender } = render(<SpeedSweetSpotPage />);
 
-    const notice = screen.getByRole('status');
+    // Chart sections announce their own unavailable state; target the page-level paused notice.
+    const notice = screen.getAllByRole('status').find((el) => el.hasAttribute('data-refresh-blocked'));
+    if (!notice) throw new Error('paused notice not rendered');
     expect(notice).toHaveTextContent('Speed Sweet Spot');
     expect(notice).toHaveTextContent('The initial evidence query is paused; no empty result is inferred.');
     expect(notice).not.toHaveTextContent(/offline|network|failed|empty window/i);

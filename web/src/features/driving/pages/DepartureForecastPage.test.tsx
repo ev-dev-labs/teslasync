@@ -789,8 +789,10 @@ describe('DepartureForecastPage', () => {
     expect(screen.getAllByText(/in 1 h 30 min/).length).toBeGreaterThan(0);
     const tableBeforeRefresh = within(screen.getByTestId('departure-next-24')).getByRole('table').textContent;
 
+    // A prior Thursday at an otherwise empty hour inside the next-24h window, so the
+    // refreshed history must visibly change the modeled table.
     h.history = query({
-      data: [...weekdayCommute(12), driveAt('2026-05-13T08:05:00.000Z')],
+      data: [...weekdayCommute(12), driveAt('2026-05-07T10:05:00.000Z')],
     });
     view.rerenderPage();
     assertAnchor(FROZEN_NOW);
@@ -910,7 +912,7 @@ describe('DepartureForecastPage', () => {
     expect(screen.getByTestId('departure-refresh-error')).toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(1);
-    expect(within(screen.getByTestId('departure-kpis')).getByText('Retained evidence')).toBeInTheDocument();
+    expect(within(screen.getByTestId('departure-kpis')).getByText('Retained source')).toBeInTheDocument();
   });
 
   it('shows no prior-only peak, horizon, or marker for empty history', () => {

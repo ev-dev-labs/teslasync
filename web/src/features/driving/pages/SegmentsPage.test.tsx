@@ -53,9 +53,13 @@ vi.mock('@/hooks/useDateFormat', () => ({
 vi.mock('@/hooks/useSelectedVehicle', () => ({
   useSelectedVehicle: () => ({ vehicleId: state.vehicleId }),
 }));
-vi.mock('@/hooks/useUnits', () => ({
-  useUnits: () => ({ formatDistance: (meters: number) => `${meters} m` }),
-}));
+vi.mock('@/hooks/useUnits', async (importActual) => {
+  const actual = await importActual<typeof import('@/hooks/useUnits')>();
+  return {
+    ...actual,
+    useUnits: () => ({ ...actual.useUnits(), formatDistance: (meters: number) => `${meters} m` }),
+  };
+});
 vi.mock('@/components/forms', () => ({
   VehicleSelect: () => <div>Vehicle select</div>,
 }));
@@ -83,6 +87,11 @@ vi.mock('@/components/motion', () => ({
 vi.mock('@/components/charts', async (importActual) => ({
   ...await importActual<typeof import('@/components/charts')>(),
   ResponsiveContainer: ({ children }: { children: ReactNode }) => <>{children}</>,
+  // The chart wrappers below are DOM doubles, so cartesian children that need
+  // Recharts context are inert here.
+  XAxis: () => null,
+  Area: () => null,
+  ChartGradient: () => null,
   LineChart: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   Line: (props: ComponentProps<typeof import('@/components/charts').Line>) => {
     state.elapsedLine(props);
@@ -179,6 +188,21 @@ function renderPage(path = '/segments') {
 }
 
 describe('SegmentsPage pagination', () => {
+  it('selects segments with native toggle buttons that keep Tab, Enter and Space semantics', () => {
+    renderPage();
+    const list = screen.getByRole('group', { name: 'Route segments' });
+    const card = within(list).getByRole('button', { name: 'Open leaderboard for Route 1' });
+    expect(card.tagName).toBe('BUTTON');
+    expect(card).toHaveAttribute('type', 'button');
+    expect(card).not.toHaveAttribute('role');
+    expect(card).toHaveAttribute('aria-pressed', 'false');
+    expect(card).not.toHaveAttribute('aria-selected');
+    card.focus();
+    expect(card).toHaveFocus();
+    fireEvent.click(card);
+    expect(within(list).getByRole('button', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   beforeEach(() => {
     state.vehicleId = 7;
     state.segments = Array.from({ length: 25 }, (_, index) => segment(index + 1));
@@ -223,7 +247,7 @@ describe('SegmentsPage pagination', () => {
       split_deltas: [], winner_drive_id: 102, margin_s: 1,
     };
     const view = renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'By efficiency' }));
     const table = screen.getByRole('table');
     const firstRow = within(table).getAllByRole('row')[1];
@@ -268,7 +292,7 @@ describe('SegmentsPage pagination', () => {
       delta_to_best_s: index, is_pr: index === 0,
     }));
     renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     const table = screen.getByRole('table');
     for (const id of [101, 102, 103]) {
       for (const letter of ['A', 'B']) {
@@ -360,7 +384,7 @@ describe('SegmentsPage pagination', () => {
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
     expect(screen.queryByText(/No segments yet/)).not.toBeInTheDocument();
     expect(screen.getByText('Leaderboard')).toBeInTheDocument();
-    expect(screen.getByText('Time gap (A vs B)')).toBeInTheDocument();
+    expect(screen.getByText('Time gap (A vs B)', { selector: '[data-card-title]' })).toBeInTheDocument();
 
     state.segmentFetchStatus = 'paused';
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
@@ -383,7 +407,7 @@ describe('SegmentsPage pagination', () => {
     state.leaderboardHasData = false;
     state.leaderboardFetchStatus = 'fetching';
     const view = renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     expect(screen.queryByText('No ranked attempts on this segment yet.')).not.toBeInTheDocument();
     expect(screen.queryByText('Refresh paused')).not.toBeInTheDocument();
 
@@ -468,7 +492,7 @@ describe('SegmentsPage pagination', () => {
       winner_drive_id: 1, margin_s: 1,
     };
     const view = renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     const brief = screen.getByTestId('segment-ghost-brief');
     expect(within(brief).getByText('Source available')).toBeInTheDocument();
 
@@ -503,19 +527,19 @@ describe('SegmentsPage pagination', () => {
     expect(screen.getByText('Leaderboard')).toBeInTheDocument();
     expect(screen.getAllByText('Ghost Race').length).toBeGreaterThan(0);
     expect(screen.getByTestId('segment-ghost-brief')).toBeInTheDocument();
-    expect(screen.getByText('Elapsed time along the route')).toBeInTheDocument();
-    expect(screen.getByText('Time gap (A vs B)')).toBeInTheDocument();
+    expect(screen.getByText('Elapsed time along the route', { selector: '[data-card-title]' })).toBeInTheDocument();
+    expect(screen.getByText('Time gap (A vs B)', { selector: '[data-card-title]' })).toBeInTheDocument();
     expect(screen.getByText('Select a route segment to view its ranked attempts.')).toBeInTheDocument();
     expect(screen.getByText('Choose an A and a B attempt from the leaderboard to start the race.')).toBeInTheDocument();
   });
 
   it('retains selected segments and leaderboard rows through independent failed refreshes', () => {
     const view = renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     state.segmentError = new Error('segment refresh failed');
     state.leaderboardError = new Error('leaderboard refresh failed');
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('No ranked attempts on this segment yet.')).toBeInTheDocument();
     const warnings = screen.getAllByTestId('stale-refresh-warning');
     expect(warnings).toHaveLength(2);
@@ -528,33 +552,33 @@ describe('SegmentsPage pagination', () => {
     state.leaderboardError = null;
     view.rerender(<MemoryRouter><SegmentsPage /></MemoryRouter>);
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('shows twelve segments per page and navigates through every result', () => {
     renderPage();
-    const list = screen.getByRole('listbox', { name: 'Route segments' });
-    expect(within(list).getAllByRole('option')).toHaveLength(12);
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 1' })).toBeInTheDocument();
+    const list = screen.getByRole('group', { name: 'Route segments' });
+    expect(within(list).getAllByRole('button', { name: /^Open leaderboard for / })).toHaveLength(12);
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
     expect(screen.getByText('Showing 1–12 of 25')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
-    expect(within(list).getAllByRole('option')).toHaveLength(12);
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 13' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'Open leaderboard for Route 1' })).not.toBeInTheDocument();
+    expect(within(list).getAllByRole('button', { name: /^Open leaderboard for / })).toHaveLength(12);
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 13' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open leaderboard for Route 1' })).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Last page' }));
-    expect(within(list).getAllByRole('option')).toHaveLength(1);
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 25' })).toBeInTheDocument();
+    expect(within(list).getAllByRole('button', { name: /^Open leaderboard for / })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 25' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Next page' })).toBeDisabled();
     expect(screen.getByText('Showing 25–25 of 25')).toBeInTheDocument();
   });
 
   it('clears the selected leaderboard and ghost when the page changes', () => {
     renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-selected', 'true');
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 1' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByText('No ranked attempts on this segment yet.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
@@ -564,21 +588,21 @@ describe('SegmentsPage pagination', () => {
 
   it('honors a shared page URL and clamps it after the result count shrinks', async () => {
     const page = renderPage('/segments?page=3');
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 25' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 25' })).toBeInTheDocument();
     state.segments = Array.from({ length: 13 }, (_, index) => segment(index + 1));
     page.rerender(<MemoryRouter initialEntries={['/segments?page=3']}><SegmentsPage /></MemoryRouter>);
     await waitFor(() => expect(screen.getByText('Showing 13–13 of 13')).toBeInTheDocument());
-    expect(screen.getByRole('option', { name: 'Open leaderboard for Route 13' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open leaderboard for Route 13' })).toBeInTheDocument();
   });
 
   it('returns to the first page and clears the race when the vehicle changes', async () => {
     const page = renderPage('/segments?page=2');
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 13' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 13' }));
     expect(screen.getByText('No ranked attempts on this segment yet.')).toBeInTheDocument();
     state.vehicleId = 8;
     page.rerender(<MemoryRouter initialEntries={['/segments?page=2']}><SegmentsPage /></MemoryRouter>);
     await waitFor(() =>
-      expect(screen.getByRole('option', { name: 'Open leaderboard for Route 1' })).toBeInTheDocument());
+      expect(screen.getByRole('button', { name: 'Open leaderboard for Route 1' })).toBeInTheDocument());
     expect(screen.getByRole('button', { name: 'Previous page' })).toBeDisabled();
     expect(screen.queryByText('No ranked attempts on this segment yet.')).not.toBeInTheDocument();
   });
@@ -657,7 +681,7 @@ describe('SegmentsPage pagination', () => {
       expect(within(chart).getByTestId('chart-tooltip-values')).toHaveTextContent(value);
     }
     expect(screen.getByText('Below the line, Attempt A is ahead; above it, Attempt B leads.')).toBeInTheDocument();
-    expect(screen.getByText('Elapsed time along the route')).toBeInTheDocument();
+    expect(screen.getByText('Elapsed time along the route', { selector: '[data-card-title]' })).toBeInTheDocument();
   });
 
   it('shows measured zero and signed fractional gaps in the leaderboard', () => {
@@ -672,7 +696,7 @@ describe('SegmentsPage pagination', () => {
       is_pr: index === 0,
     }));
     renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     expect(screen.getByText('0.00s')).toBeInTheDocument();
     expect(screen.getByText('−1.25s')).toBeInTheDocument();
     expect(screen.getByText('+1.25s')).toBeInTheDocument();
@@ -743,7 +767,7 @@ describe('SegmentsPage pagination', () => {
       delta_to_best_s: 0, is_pr: true,
     }];
     renderPage();
-    fireEvent.click(screen.getByRole('option', { name: 'Open leaderboard for Route 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Open leaderboard for Route 1' }));
     const table = screen.getByRole('table');
     for (const label of ['#', 'Date', 'Time', 'Wh/km', 'Δ to best', 'Race']) {
       expect(within(table).getByRole('columnheader', { name: label })).not.toHaveClass('hidden');
@@ -777,7 +801,7 @@ describe('SegmentsPage pagination', () => {
     }));
     state.efficiencyRows = [...state.leaderboardRows].reverse();
     renderPage();
-    const segmentOption = screen.getByRole('option', { name: 'Open leaderboard for Route 1' });
+    const segmentOption = screen.getByRole('button', { name: 'Open leaderboard for Route 1' });
     segmentOption.focus();
     await user.keyboard('{Enter}');
     const efficiency = screen.getByRole('button', { name: 'By efficiency' });

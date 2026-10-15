@@ -54,6 +54,13 @@ export function isValidLatLng(lat: unknown, lng: unknown): boolean {
   return true;
 }
 
+/** True iff the pair is a usable GPS fix: a valid coordinate that is not the
+ *  exact (0, 0) pair Tesla reports before the receiver has a fix. A single
+ *  zero latitude or longitude stays a real measurement. */
+export function isGpsFix(lat: unknown, lng: unknown): boolean {
+  return isValidLatLng(lat, lng) && !(lat === 0 && lng === 0);
+}
+
 /** True iff `positions` contains at least two valid coordinates separated by
  *  ≥ {@link MIN_MEANINGFUL_ROUTE_METERS}. Used by trip-replay / drive-detail
  *  maps to decide whether they have a real route to plot or only a single

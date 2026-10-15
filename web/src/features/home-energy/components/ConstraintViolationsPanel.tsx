@@ -47,8 +47,9 @@ export function ConstraintViolationsPanel({ violations }: ConstraintViolationsPa
 
   function describe(v: Violation): string {
     const reasonTemplate = v.reason ? REASON_TEMPLATES[v.reason.id] : undefined;
-    const detail = reasonTemplate && v.reason
-      ? t(reasonTemplate.key, reasonTemplate.fallback, 'args' in v.reason ? v.reason.args : {})
+    const reasonArgs: Record<string, unknown> = v.reason && 'args' in v.reason ? v.reason.args : {};
+    const detail = reasonTemplate
+      ? t(reasonTemplate.key, reasonTemplate.fallback, reasonArgs)
       : t('homeEnergy.violation.reasons.unspecified', 'Review the plan inputs for invalid values.');
     return t(VIOLATION_TEMPLATES[v.code], FALLBACKS[v.code], {
       vehicleName: v.vehicleName ?? t('homeEnergy.violation.unknownVehicle', 'A vehicle'),

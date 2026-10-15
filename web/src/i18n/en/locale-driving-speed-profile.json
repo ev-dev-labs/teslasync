@@ -581,6 +581,10 @@
   },
   "speedProfile": {
     "avgSpeed": "Avg speed",
+    "bandAtLeast": "{{min}} {{unit}} or more",
+    "bandBelow": "below {{max}} {{unit}}",
+    "bandBetween": "{{min}}–{{max}} {{unit}}",
+    "bandLabel": "{{label}}: {{range}}",
     "better": "better",
     "brief": {
       "description": "Recorded speed statistics and eligible-drive counts; efficiency evidence comes from a separate drive query.",
@@ -597,6 +601,7 @@
     "drivesAnalyzed": "{{count}} drives analysed",
     "effVsSpeed": "Efficiency vs speed",
     "effVsSpeedAria": "Per-drive efficiency versus speed scatter plot",
+    "efficiencyBands": "Efficiency bands",
     "efficient": "Efficient",
     "eligibleDrives": "Eligible drives",
     "envelope": "Speed envelope",
@@ -616,7 +621,8 @@
     "speed": "Speed",
     "subtitle": "Speed distribution and driving pattern analysis",
     "summaryAria": "Speed summary metrics",
-    "title": "Speed profile"
+    "title": "Speed profile",
+    "typical": "Typical"
   },
   "timeMachine": {
     "ageFresh": "Fresh"

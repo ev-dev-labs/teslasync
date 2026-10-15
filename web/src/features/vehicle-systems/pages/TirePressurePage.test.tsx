@@ -153,7 +153,10 @@ vi.mock('@/api/client', async (importOriginal) => {
 
 /* ── App hooks the page reads (kept minimal — only what the page consumes). ─ */
 
-vi.mock('@/hooks/useDateFormat', async () => {
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (async () => {
   const { useMemo } = await import('react');
   const { formatDateTime } = await import('@/lib/dateFormat');
   return {
@@ -163,6 +166,15 @@ vi.mock('@/hooks/useDateFormat', async () => {
         formatDateTime: (value: string | Date | null | undefined) => formatDateTime(value, { locale, tz }),
       }), [locale, tz]);
     },
+  };
+})();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
   };
 });
 

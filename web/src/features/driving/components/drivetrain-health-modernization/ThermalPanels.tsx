@@ -49,12 +49,15 @@ export function ThermalPanels({
         <div className="grid min-w-0 grid-cols-1 gap-4 @sm:grid-cols-2">
           {sensors.map(sensor => {
             const band = temperatureBand(sensor.value, sensor.maxTemp);
-            return <div key={sensor.key} className="min-w-0 space-y-2">
+            const bandLabel = t(`drivetrain.modernization.band.${band}`, band);
+            return <div key={sensor.key} className="min-w-0 space-y-2" data-testid={`thermal-gauge-${sensor.key}`}>
               <LinearGauge label={t(sensor.labelKey, sensor.label)}
                 preserveReadingAndScale
                 value={sensor.value == null ? null : sensor.value / sensor.maxTemp * 100}
-                min={0} max={100} unit="%" status={t(`drivetrain.modernization.band.${band}`, band)}
+                min={0} max={100} unit="%" status={bandLabel}
                 tone={band === 'unknown' ? 'neutral' : band === 'critical' ? 'danger' : band === 'warning' ? 'warning' : 'success'} />
+              {/* The band is printed as text so the gauge tone is never the only cue. */}
+              <Text as="p" variant="caption" data-band={band}>{bandLabel}</Text>
               <Text as="p" variant="bodySm">
                 {formatTemperature(sensor.value)} · {t('drivetrain.ofMax', 'of max')} {formatTemperature(sensor.maxTemp)}
               </Text>
@@ -72,13 +75,14 @@ export function ThermalPanels({
         <div className="space-y-4">
           {sensors.map(sensor => {
             const band = temperatureBand(sensor.value, sensor.maxTemp);
-            return <div key={sensor.key} className="min-w-0">
+            const bandLabel = t(`drivetrain.modernization.band.${band}`, band);
+            return <div key={sensor.key} className="min-w-0" data-testid={`thermal-load-${sensor.key}`}>
               <LinearGauge label={t(sensor.labelKey, sensor.label)}
                 preserveReadingAndScale
                 value={sensor.value == null ? null : sensor.value / sensor.maxTemp * 100} max={100} unit="%"
                 tone={band === 'unknown' ? 'neutral' : band === 'critical' ? 'danger' : band === 'warning' ? 'warning' : 'success'}
-                status={t(`drivetrain.modernization.band.${band}`, band)} />
-              <Text as="p" variant="bodySm">{formatTemperature(sensor.value)}</Text>
+                status={bandLabel} />
+              <Text as="p" variant="bodySm">{formatTemperature(sensor.value)} · <span data-band={band}>{bandLabel}</span></Text>
             </div>;
           })}
         </div>

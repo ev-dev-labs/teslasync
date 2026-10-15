@@ -38,6 +38,7 @@ vi.mock('@/hooks/useChartExport', () => ({
   }),
 }));
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [] }),
   useCreateAnnotation: () => ({ mutate: vi.fn() }),
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
@@ -53,7 +54,7 @@ vi.mock('./index', async () => {
     ...actual,
     useDriveDetailData: () => ({
       drive: state.drive, vehicle: null, isLoading: false,
-      driveQuery: { data: state.drive ?? undefined, error: state.error, isError: !!state.error, dataUpdatedAt: 1000 },
+      driveQuery: { data: state.drive ?? undefined, error: state.error, isError: !!state.error, isSuccess: !state.error, dataUpdatedAt: 1000 },
       stats: state.drive ? statsFixture() : null, chartData: state.chartData, routeSource: [], trail: [],
       startPos: undefined, endPos: undefined, centerPos: [0, 0], speedSegments: [], speedHistData: [],
     }),
@@ -107,7 +108,7 @@ describe('Continuous drive report with real summary, journey, energy, cost and c
     expect(screen.getAllByTestId('drive-detail-summary')).toHaveLength(1);
     if (record === 'recorded') {
       for (const heading of [
-        'Drive overview', 'SOC % over time', 'Speed histogram',
+        'Drive overview', 'SOC % over time', 'Speed histogram (km/h)',
         'Power profile', 'Elevation profile', 'Temperatures', 'Tire pressure during drive',
       ]) {
         expect(screen.getByRole('heading', { name: heading })).toBeVisible();

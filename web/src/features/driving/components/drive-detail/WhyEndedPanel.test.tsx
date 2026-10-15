@@ -120,7 +120,8 @@ vi.mock('@/components/ui', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/Typography', () => ({
+vi.mock('@/components/ui/Typography', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/ui/Typography')>(),
   PanelTitle: ({ children }: any) => <h3>{children}</h3>,
 }));
 

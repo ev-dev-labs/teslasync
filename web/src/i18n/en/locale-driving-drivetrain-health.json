@@ -312,6 +312,11 @@
     "drivesLabel": "Drives",
     "freezing": "Freezing",
     "frontMotor": "Front Motor",
+    "health": {
+      "critical": "Critical",
+      "good": "Good",
+      "warning": "Warning"
+    },
     "healthCrit": "Drivetrain overheating",
     "healthGood": "Drivetrain healthy",
     "healthScore": "Health score",
@@ -335,6 +340,7 @@
         "warning": "warning"
       },
       "charts": "Motor, temperature and power history charts",
+      "completedStatisticsPopulation": "Server statistics cover all completed drives for the selected vehicle whose start falls within the selected bounds, not just the returned drive subset.",
       "detailsAndAdvice": "Temperature, power and health recommendations",
       "driveRecords": "Included drive records",
       "driveSubset": "Recent drives within the selected range",
@@ -364,6 +370,8 @@
       "reading": "Reading",
       "recordScope": "These details contain every field of the plotted records, including unknown signals. Motor history retains source order; drives retain chronological order and the existing 30-record cap.",
       "scorePolicy": "Status-to-score policy: good 95%, warning 60%, critical 25%. This is a rating, not a measured percentage.",
+      "selectedStatisticsBounds": "Drive start: {{start}} (inclusive) to {{end}} (exclusive) · {{timezone}}",
+      "separateHistoryPolicies": "Motor history uses the existing unbounded 200-snapshot request in source order, independent of the selected range. Drive charts and power use the last 30 returned drives within the selected range; this subset is separate from the full completed-drive statistics.",
       "snapshot": "Latest health response",
       "snapshotNotLive": "A health response is a snapshot; it does not establish an active telemetry connection.",
       "statorAliases": "Existing Stator, Rear-Left and Rear-Right series map to front motor, rear motor and inverter temperature respectively. These aliases do not identify additional motors.",
@@ -377,6 +385,10 @@
     },
     "motorDetails": "Motor details",
     "motorState": "Motor state",
+    "motorStateValue": {
+      "idle": "Idle",
+      "overheating": "Overheating"
+    },
     "motorStatus": "Motor status",
     "motorTempFront": "Front motor temp",
     "motorTempRear": "Rear motor temp",

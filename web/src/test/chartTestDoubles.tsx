@@ -81,3 +81,18 @@ export const chartTestDoubles = {
   ChartLegend: ChartLegendTestDouble,
   ChartTooltip: ChartTooltipTestDouble,
 };
+
+/**
+ * Recharts cartesian children (axes, grid, tooltip, legend, brush) require the
+ * chart context. Tests that replace the chart container with a DOM double can
+ * spread these to keep the real children inert instead of throwing.
+ */
+export const inertCartesianParts = {
+  XAxis: () => null,
+  YAxis: () => null,
+  ZAxis: () => null,
+  CartesianGrid: () => null,
+  Tooltip: () => null,
+  Legend: () => null,
+  Brush: () => null,
+};

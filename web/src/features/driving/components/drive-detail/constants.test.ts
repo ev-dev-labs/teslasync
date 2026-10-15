@@ -24,16 +24,18 @@ import {
   SPEED_SEGMENT_MED_MPS,
   SPEED_SEGMENT_HIGH_MPS,
 } from './constants';
+import { chartTokens } from '@/lib/tokens';
 import { useDriveDetailData } from './useDriveDetailData';
 
 /** Exact mph → m/s factor, re-derived here so the test never imports the SUT's copy. */
 const MPS_PER_MPH = 1609.344 / 3600;
 
 /** The literal hex colours the real segment painter assigns per band. */
-const GREEN = '#10b981';
-const CYAN = '#00f0ff';
-const AMBER = '#f59e0b';
-const RED = '#ef4444';
+// Speed bands use the restrained chart series tokens (slow → fastest).
+const GREEN = chartTokens.series[1];
+const CYAN = chartTokens.series[0];
+const AMBER = chartTokens.series[2];
+const RED = chartTokens.series[3];
 
 /* ── Controllable mock state, hoisted above the vi.mock factories ─────────── */
 const mocks = vi.hoisted(() => ({

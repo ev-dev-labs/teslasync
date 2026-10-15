@@ -26,6 +26,7 @@ vi.mock('@/components/ai/AIBatteryHealthForecastNarrative', () => ({
     <div data-testid="test-ai-vehicle-scope" data-vehicle-id={vehicleId} />,
 }));
 vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotations: () => ({ data: [], isPending: false, isLoading: false, isFetching: false, isError: false, error: null, fetchStatus: 'idle', dataUpdatedAt: 0, refetch: vi.fn() }),
   useChartAnnotationsAsData: () => ({ annotations: [], isLoading: false }),
   useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
   useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),

@@ -14,9 +14,21 @@ const dateState = vi.hoisted(() => ({
   formatter: undefined as DateFormatter | undefined,
   formatDistance: (v: number) => `${v} m`,
 }));
-vi.mock('@/hooks/useDateFormat', () => ({
+vi.mock('@/hooks/useDateFormat', async (importOriginal) => {
+  // wrapped-real-hook: keep every real formatter, override only what this file controls.
+  const actual = await importOriginal<typeof import('@/hooks/useDateFormat')>();
+  const overrides = await (() => ({
   useDateFormat: () => ({ formatDateShort: dateState.formatter }),
-}));
+}))();
+  return {
+    ...actual,
+    ...overrides,
+    useDateFormat: (...args: Parameters<typeof actual.useDateFormat>) => ({
+      ...actual.useDateFormat(...args),
+      ...overrides.useDateFormat(...args),
+    }),
+  };
+});
 
 const state = vi.hoisted(() => ({ driveOverrides: {} as Partial<Drive>, telemetry: [] as DriveTelemetryPoint[], vehicleId: 1 as number | undefined, listLoading: false, listPaused: false, listMissing: false, detailPaused: false, detailRefreshing: false, firstId: 1, zeroEnergy: false, listError: false, detailError: false, telemetryError: false, empty: false, loading: false, noEnergy: false, unknownSoc: false, retainedDetail: false, twoDrives: false, detailId: '', telemetryId: '', summary: vi.fn(), detailRetry: vi.fn(), telemetryRetry: vi.fn() }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: () => ({ vehicleId: state.vehicleId }) }));
