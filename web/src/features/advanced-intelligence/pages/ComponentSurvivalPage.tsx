@@ -19,10 +19,38 @@ import { useDateFormat } from '@/hooks/useDateFormat';
 import { typography } from '@/lib/tokens';
 
 const PAGE_SIZE = 12;
+// BuildComponentSurvival evaluates probability at 365 days, independently of its percentile horizons.
+const MODEL_HORIZON_DAYS = 365;
 
 export default function ComponentSurvivalPage() {
   const { fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
+  const componentLabel = (value: string) => {
+    switch (value) {
+      case 'hv_battery': return t('advancedIntelligence.survival.components.hv_battery', 'High-voltage battery');
+      case 'tires': return t('advancedIntelligence.survival.components.tires', 'Tires');
+      case 'brakes': return t('advancedIntelligence.survival.components.brakes', 'Brakes');
+      case 'charging_system': return t('advancedIntelligence.survival.components.charging_system', 'Charging system');
+      default: return value;
+    }
+  };
+  const interventionLabel = (value: string) => {
+    switch (value) {
+      case 'complete battery inspection': return t('advancedIntelligence.survival.interventions.battery', 'Complete battery inspection');
+      case 'complete tire inspection and alignment': return t('advancedIntelligence.survival.interventions.tires', 'Complete tire inspection and alignment');
+      case 'complete brake inspection': return t('advancedIntelligence.survival.interventions.brakes', 'Complete brake inspection');
+      case 'inspect charging equipment and inlet': return t('advancedIntelligence.survival.interventions.charging', 'Inspect charging equipment and inlet');
+      default: return value;
+    }
+  };
+  const qualityLabel = (value: string) => {
+    switch (value) {
+      case 'sufficient': return t('advancedIntelligence.brief.quality.sufficient', 'Sufficient evidence');
+      case 'limited': return t('advancedIntelligence.brief.quality.limited', 'Limited evidence');
+      case 'insufficient': return t('advancedIntelligence.brief.quality.insufficient', 'Insufficient evidence');
+      default: return value;
+    }
+  };
   const { vehicleId } = useSelectedVehicle();
   const units = useUnits();
   const { formatDateTime } = useDateFormat();
@@ -71,10 +99,10 @@ export default function ComponentSurvivalPage() {
                 <div className="mb-4 flex min-w-0 flex-wrap items-center justify-between gap-3">
                   <div className="flex min-w-0 max-w-full items-center gap-2">
                     <Icon icon={Activity} size="lg" className={typography.color.secondary} aria-hidden={true} />
-                    <Text as="h3" variant="subhead" className="min-w-0 break-words">{item.component}</Text>
+                    <Text as="h3" variant="subhead" className="min-w-0 break-words">{componentLabel(item.component)}</Text>
                   </div>
                   <Badge variant={item.data_quality.status === 'sufficient' ? 'success' : 'warning'}>
-                    {item.data_quality.status}
+                    {qualityLabel(item.data_quality.status)}
                   </Badge>
                 </div>
                 <StatStrip variant="embedded"
@@ -92,6 +120,9 @@ export default function ComponentSurvivalPage() {
                       metricId: 'percent', occurrenceId: 'survival-probability',
                       rawValue: item.survival_probability_pct,
                       label: t('advancedIntelligence.survival.probability', 'Survival probability'),
+                      context: `${t('advancedIntelligence.resilience.horizon', 'Modeled survival horizon')}: ${t(
+                        'operations.scope.days', '{{count}} days', { count: MODEL_HORIZON_DAYS },
+                      )}`,
                       display: { formatter: raw => ({ value: fmtNumber(raw), unit: '%' }) },
                     },
                     {
@@ -119,7 +150,7 @@ export default function ComponentSurvivalPage() {
                     risk.probability_pct != null ? (
                       <MetricBar
                         key={risk.risk}
-                        label={`${risk.risk} · ${t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}`}
+                        label={`${componentLabel(risk.risk)} · ${t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}`}
                         value={risk.probability_pct}
                         max={100}
                         color={CHART_COLORS[0]}
@@ -129,7 +160,7 @@ export default function ComponentSurvivalPage() {
                     ) : (
                       <div key={risk.risk} className="flex min-w-0 flex-wrap items-center justify-between gap-3 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-2">
                         <Text as="span" variant="bodySm" className="min-w-0 break-words">
-                          {risk.risk} · {t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}
+                          {componentLabel(risk.risk)} · {t('advancedIntelligence.survival.evidenceCount', '{{count}} evidence', { count: risk.evidence_count })}
                         </Text>
                         <Text as="span" variant="bodySm" color="muted">
                           {t('advancedIntelligence.survival.risks.unsupported', 'Unsupported')}
@@ -147,7 +178,7 @@ export default function ComponentSurvivalPage() {
                     {t('advancedIntelligence.survival.intervention', 'Intervention sensitivity')}
                   </Text>
                   <Text as="p" variant="bodySm">
-                    {item.intervention_sensitivity.intervention}: {fmtNumber(
+                    {interventionLabel(item.intervention_sensitivity.intervention)}: {fmtNumber(
                       item.intervention_sensitivity.assumed_hazard_delta_pct,
                     )}% · {t('advancedIntelligence.survival.adjustedP50', 'adjusted P50 {{value}}', {
                       value: units.formatDuration(item.intervention_sensitivity.adjusted_p50_s),
@@ -183,8 +214,8 @@ export default function ComponentSurvivalPage() {
         >
           <div className="space-y-6">
             {items.map(item => (
-              <section key={item.component} aria-label={item.component} className="min-w-0 space-y-3 break-words">
-                <Text as="p" variant="subhead">{item.component}</Text>
+              <section key={item.component} aria-label={componentLabel(item.component)} className="min-w-0 space-y-3 break-words">
+                <Text as="p" variant="subhead">{componentLabel(item.component)}</Text>
                 <Text as="p" variant="caption">
                   {t('advancedIntelligence.brief.generated', 'Result generated: {{date}}', {
                     date: formatDateTime(item.generated_at),

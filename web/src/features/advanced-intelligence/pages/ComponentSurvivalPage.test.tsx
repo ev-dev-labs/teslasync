@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createInstance, type i18n } from 'i18next';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { DataStateSource } from '@/api/dataState';
@@ -13,6 +14,21 @@ const state = vi.hoisted(() => ({
   query: {} as DataStateSource<AdvancedPage<ComponentSurvival>>,
   read: vi.fn(),
   retry: vi.fn(),
+  translations: null as i18n | null,
+}));
+
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (key: string, fallbackOrOptions?: string | Record<string, unknown>, options?: Record<string, unknown>) => {
+      const values = typeof fallbackOrOptions === 'string' ? options : fallbackOrOptions;
+      const fallback = typeof fallbackOrOptions === 'string' ? fallbackOrOptions : String(values?.defaultValue ?? key);
+      if (state.translations) return state.translations.t(key, { ...values, defaultValue: fallback });
+      return fallback.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(values?.[name] ?? ''));
+    },
+    i18n: { language: 'en', changeLanguage: vi.fn() },
+  }),
+  Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  initReactI18next: { type: '3rdParty', init: vi.fn() },
 }));
 
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
@@ -50,11 +66,108 @@ function componentArticle(name: string) {
 beforeEach(() => {
   vi.clearAllMocks();
   state.vehicleId = 7;
+  state.translations = null;
   state.query = { fetchStatus: 'idle', refetch: state.retry };
   window.localStorage.clear();
 });
 
 describe('Component survival page scoped adoption', () => {
+  it('uses locale translations for recognized labels and preserves unknown raw display values', async () => {
+    state.translations = createInstance();
+    await state.translations.init({
+      lng: 'fr',
+      fallbackLng: false,
+      resources: {
+        fr: { translation: {
+          advancedIntelligence: {
+            survival: {
+              components: { hv_battery: 'Batterie haute tension', tires: 'Pneus' },
+              interventions: { battery: 'Inspection de la batterie' },
+            },
+            brief: { quality: { sufficient: 'Preuves suffisantes' } },
+          },
+        } },
+      },
+    });
+    populate([{
+      ...survival,
+      component: 'hv_battery',
+      data_quality: { ...survival.data_quality, status: 'sufficient' },
+      competing_risks: [
+        { risk: 'tires', probability_pct: 0, evidence_count: 0 },
+        { risk: 'unknown-source-risk', probability_pct: null, evidence_count: 1 },
+      ],
+      intervention_sensitivity: {
+        ...survival.intervention_sensitivity, intervention: 'complete battery inspection',
+      },
+    }, survival]);
+    const original = structuredClone(state.query.data);
+    renderPage();
+    const article = componentArticle('Batterie haute tension');
+    expect(within(article).getByText('Preuves suffisantes')).toBeInTheDocument();
+    expect(within(article).getByRole('progressbar', { name: 'Pneus · 0 evidence' }))
+      .toHaveAttribute('aria-valuenow', '0');
+    expect(within(article).getByText('unknown-source-risk · 1 evidence')).toBeInTheDocument();
+    expect(within(article).getByText('Inspection de la batterie: -10.00% · adjusted P50 —')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Batterie haute tension' })).toBeInTheDocument();
+    expect(within(componentArticle('front-bearing')).getByText(/modeled service only:/)).toBeInTheDocument();
+    expect(state.query.data).toEqual(original);
+  });
+
+  it.each([
+    ['hv_battery', 'High-voltage battery', 'complete battery inspection', 'Complete battery inspection', 'sufficient', 'Sufficient evidence'],
+    ['tires', 'Tires', 'complete tire inspection and alignment', 'Complete tire inspection and alignment', 'limited', 'Limited evidence'],
+    ['brakes', 'Brakes', 'complete brake inspection', 'Complete brake inspection', 'insufficient', 'Insufficient evidence'],
+    ['charging_system', 'Charging system', 'inspect charging equipment and inlet', 'Inspect charging equipment and inlet', 'limited', 'Limited evidence'],
+  ] as const)('translates recognized %s labels without changing source identities or values', (
+    component, label, intervention, interventionText, status, statusText,
+  ) => {
+    populate([{
+      ...survival,
+      component,
+      data_quality: { ...survival.data_quality, status },
+      competing_risks: [
+        { risk: component, probability_pct: 0, evidence_count: 0 },
+        { risk: component, probability_pct: null, evidence_count: 1 },
+        { risk: 'unrecognized-source-risk', probability_pct: null, evidence_count: 0 },
+      ],
+      intervention_sensitivity: { ...survival.intervention_sensitivity, intervention },
+    }]);
+    const original = structuredClone(state.query.data);
+    renderPage();
+    const article = componentArticle(label);
+    expect(within(article).getByText(statusText)).toBeInTheDocument();
+    expect(within(article).getByRole('progressbar', { name: `${label} · 0 evidence` }))
+      .toHaveAttribute('aria-valuenow', '0');
+    expect(within(article).getByText(`${label} · 1 evidence`)).toBeInTheDocument();
+    expect(within(article).getByText('unrecognized-source-risk · 0 evidence')).toBeInTheDocument();
+    expect(within(article).getByText(`${interventionText}: -10.00% · adjusted P50 —`)).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: label })).getByText(label)).toBeInTheDocument();
+    expect(state.query.data).toEqual(original);
+  });
+
+  it.each([null, 0, 83.25])('identifies the fixed model horizon for probability %s without changing percentile horizons', probability => {
+    populate([{ ...survival, survival_probability_pct: probability }]);
+    const original = structuredClone(state.query.data);
+    renderPage();
+    const article = componentArticle('front-bearing');
+    const probabilityTile = within(article).getByText('Survival probability').closest<HTMLElement>('[data-stat]');
+    if (!probabilityTile) throw new Error('Missing survival probability metric');
+    expect(within(probabilityTile).getByText('Modeled survival horizon: 365 days'))
+      .toHaveAttribute('data-stat-context');
+    expect(probabilityTile).toHaveAttribute('data-state', probability == null ? 'missing' : 'value');
+    if (probability != null) {
+      expect(within(probabilityTile).getByText(probability.toFixed(2))).toBeInTheDocument();
+    }
+    expect(article.querySelectorAll('[data-stat-context]')).toHaveLength(1);
+    expect(article.querySelectorAll('[data-stat]')).toHaveLength(4);
+    expect(within(article).getByText('0.00 h')).toBeInTheDocument();
+    expect(within(article).getByText('2.00 h')).toBeInTheDocument();
+    expect(within(article).queryByRole('spinbutton')).not.toBeInTheDocument();
+    expect(state.read).toHaveBeenLastCalledWith(7, 12, 0);
+    expect(state.query.data).toEqual(original);
+  });
+
   it('preserves SI horizons, unknown estimates, ordered zero and unsupported risks and signed modeled sensitivity', () => {
     populate();
     const original = structuredClone(state.query.data);
