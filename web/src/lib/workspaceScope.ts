@@ -59,7 +59,6 @@ export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/logbook',
   '/media-player',
   '/me/activity',
-  '/notifications',
   '/notifications/archived',
   '/notifications/inbox',
   '/parking',
