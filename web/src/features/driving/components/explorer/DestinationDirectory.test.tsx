@@ -150,8 +150,9 @@ describe('DestinationDirectory number formatting', () => {
     expect(rows.map((row) => column.filterValue?.(row))).toEqual([1000.4, 999.6]);
     await user.click(screen.getByRole('button', { name: 'Visits filter' }));
     const filter = screen.getByRole('dialog', { name: 'Visits filter' });
-    expect(within(filter).getByText('1000.4')).toBeVisible();
-    expect(within(filter).getByText('999.6')).toBeVisible();
+    // Filter options group by the visible label; both raw operands stay in that one option.
+    expect(within(filter).getByText('1,000')).toBeVisible();
+    expect(within(filter).getByText('2')).toBeVisible();
   });
 });
 
