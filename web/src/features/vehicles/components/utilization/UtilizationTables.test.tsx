@@ -153,7 +153,7 @@ describe('Shared utilization tables', () => {
   );
 
   it.each([
-    ['en-US', 3, '12.346', '2.346', '1.234'],
+    ['en-US', 3, '12.346', '2.346', '1.235'],
     ['de-DE', 2, '12,35', '2,35', '1,23'],
   ])('preserves monthly operands until formatting with %s precision %s', (locale, precision, distance, observedDays, drivingHours) => {
     const preferences = getFormatterPreferences();

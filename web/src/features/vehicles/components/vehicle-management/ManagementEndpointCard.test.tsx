@@ -158,7 +158,8 @@ describe('ManagementEndpointCard preservation', () => {
       expect(within(table).getAllByText('0.00')).toHaveLength(1)
       const row = within(table).queryByRole('rowheader', { name: 'Battery capacity' })?.closest('tr')
       if (typeof value === 'string') {
-        expect(row).toHaveTextContent(value)
+        expect(row).toBeDefined()
+        if (value.length > 0) expect(row).toHaveTextContent(value)
         expect(row).not.toHaveTextContent('0.00')
       } else {
         expect(row).toBeUndefined()

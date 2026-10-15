@@ -586,7 +586,7 @@ describe('VehicleTwin', () => {
     else fireEvent.error(photo);
     await waitFor(() => expect(container.querySelectorAll('[data-wheel-spinner]'))
       .toHaveLength(variant === 'photo' ? 2 : 0));
-    const amber = 'rgba(251,191,36,0.78)';
+    const amber = 'var(--semantic-warning)';
     const frontLamp = () => container.querySelector('ellipse[cx="90"][cy="180"]');
     const rearLamps = () => container.querySelectorAll('path[d="M 538.5 141 C 543 140.5 547 143 548.5 146.5 C 549.5 150 549 153.5 547 155.5 C 544 156.2 540.5 154.5 539 151.5 C 537.8 148 538 144 538.5 141 Z"]');
     for (const turnSignal of ['off', 'left', 'right', 'both', null] as const) {

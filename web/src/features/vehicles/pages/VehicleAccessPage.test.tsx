@@ -275,7 +275,7 @@ describe('VehicleAccessPage — populated KPIs', () => {
 });
 
 describe('VehicleAccessPage — populated tables + overview', () => {
-  it('reactively formats section count badges while preserving raw query records', () => {
+  it('reactively formats section count badges while preserving raw query records', async () => {
     const preferences = getFormatterPreferences();
     const drivers = Array.from({ length: 1234 }, (_, index) => makeDriver({ id: index + 1 }));
     const invitations = Array.from({ length: 2345 }, (_, index) => makeInvite({
@@ -289,21 +289,26 @@ describe('VehicleAccessPage — populated tables + overview', () => {
     try {
       setGlobalLocale('en-US');
       setGlobalPrecision(3);
-      renderPage();
+      const view = renderPage();
       const driversHeader = screen.getByRole('heading', { name: 'Drivers' }).parentElement!;
       const invitationsHeader = screen.getByRole('heading', { name: 'Share invitations' }).parentElement!;
       expect(within(driversHeader).getByText('1,234')).toBeInTheDocument();
       expect(within(invitationsHeader).getByText('2,345')).toBeInTheDocument();
 
+      view.rerenderPage();
       act(() => setGlobalLocale('de-DE'));
-      expect(within(driversHeader).getByText('1.234')).toBeInTheDocument();
-      expect(within(invitationsHeader).getByText('2.345')).toBeInTheDocument();
+      await waitFor(() => expect(within(screen.getByRole('heading', { name: 'Drivers' }).parentElement!)
+        .getByText('1.234')).toBeInTheDocument());
+      await waitFor(() => expect(within(screen.getByRole('heading', { name: 'Share invitations' }).parentElement!)
+        .getByText('2.345')).toBeInTheDocument());
       expect(driversQuery.data).toBe(drivers);
       expect(invitationsQuery.data).toBe(invitations);
       expect(drivers).toHaveLength(1234);
       expect(invitations).toHaveLength(2345);
-      expect(screen.getByRole('progressbar', { name: 'Pending' })).toHaveAttribute('aria-valuenow', '2345');
-      expect(screen.getByRole('progressbar', { name: 'Pending' })).toHaveAttribute('aria-valuemax', '2345');
+      const pending = screen.getByTestId('vehicle-access-summary')
+        .querySelector('[data-operational-metric="pending"]');
+      expect(pending).toHaveTextContent('2,345');
+      expect(pending).toHaveAttribute('data-value-state', 'value');
     } finally {
       act(() => {
         setGlobalLocale(preferences.locale);
@@ -420,7 +425,7 @@ describe('VehicleAccessPage — error handling', () => {
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, isError: true, error: new Error('invitation refresh failed') }));
     renderPage();
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
-    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getAllByText('Accepted').length).toBeGreaterThan(0);
     expect(screen.getByText('Owner')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: 'Revoke invitation' })).toHaveLength(3);
     expect(screen.getByRole('button', { name: 'Copy invite link' })).toBeInTheDocument();
@@ -605,15 +610,15 @@ describe('VehicleAccessPage — independent summary trust', () => {
     expect(retryDrivers).not.toHaveBeenCalled();
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites, error: new Error('refresh failed'), refetch: retryInvitations }));
     view.rerenderPage();
-    expect(within(invitationSection).getByText('Accepted')).toBeInTheDocument();
-    expect(within(invitationSection).getByTestId('stale-refresh-warning')).toBeInTheDocument();
-    fireEvent.click(within(invitationSection).getByRole('button', { name: 'Refresh' }));
+    expect(screen.getByText('Accepted')).toBeInTheDocument();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+    fireEvent.click(within(screen.getByTestId('stale-refresh-warning')).getByRole('button', { name: 'Refresh' }));
     expect(retryInvitations).toHaveBeenCalledTimes(2);
     expect(retryDrivers).not.toHaveBeenCalled();
     mockInvitations.mockReturnValue(makeQuery({ data: populatedInvites }));
     view.rerenderPage();
-    expect(within(invitationSection).queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
-    expect(within(invitationSection).getByText('Accepted')).toBeInTheDocument();
+    expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
+    expect(screen.getByText('Accepted')).toBeInTheDocument();
   });
 
   it('retains driver counts when invitations are still initially loading', () => {

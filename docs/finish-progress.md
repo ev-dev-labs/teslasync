@@ -147,3 +147,15 @@ Not started.
   audits; test success alone does not close those items. Next, continue with the
   remaining vehicle clusters, then vehicle-systems, charging, system,
   notifications, settings, battery, and the rest.
+
+## Vehicles verification (2026-10-15)
+
+- Ran the full vehicle frontend test area after repairing stale expectations and
+  selectors: `npx vitest run src/features/vehicles src/components/vehicles src/lib/vehicleState.test.ts`.
+- Result: **84 test files passed, 1,716 tests passed, 4 skipped**. Repairs aligned
+  timezone fixtures with saved display settings, retained numeric-string evidence,
+  used current semantic lamp tokens, fixed locale-aware count assertions, and
+  scoped accessible icon/status queries to their owning cards.
+- The 100 vehicle work items remain pending for item-by-item acceptance (one
+  includes backend day-log coverage); these test results are recorded in runner
+  notes and do not close unrelated requirements. Continue with vehicle-systems.

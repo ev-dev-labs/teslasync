@@ -516,7 +516,7 @@ describe('VehicleManagementWorkspace', () => {
     renderWorkspace()
     await screen.findByText('Model 3')
     const card = endpointCard('enterprise-payer')
-    expect(within(card).getByRole('status')).toHaveTextContent(reason)
+    expect(within(card).getAllByRole('status').some((status) => status.textContent?.includes(reason))).toBe(true)
     const configure = within(card).getByRole('button', { name: 'Configure payer change' })
     expect(configure).toBeDisabled()
     fireEvent.click(configure)

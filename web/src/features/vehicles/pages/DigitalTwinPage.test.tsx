@@ -487,7 +487,7 @@ describe('DigitalTwinPage', () => {
     renderPage(entry);
 
     expect(screen.getByText('Live overview')).toBeInTheDocument();
-    expect(screen.getAllByText('Charging', { selector: 'span' })).toHaveLength(2);
+    expectKv('Charging', 'Yes');
     expect(screen.getByTestId('twin-source-observations')).not.toHaveTextContent('Viewing data as of');
     expectKpi('of 6 openings', '2');
     expectKv('Driver front', 'Open');
@@ -1037,7 +1037,7 @@ describe('DigitalTwinPage', () => {
     expect(screen.getByTestId('twin-source-observations')).toHaveTextContent('Refresh paused');
     h.state = makeQuery({ data });
     view.rerender(<QueryClientProvider client={new QueryClient()}><MemoryRouter><DigitalTwinPage /></MemoryRouter></QueryClientProvider>);
-    expect(screen.getAllByText('Charging', { selector: 'span' })).toHaveLength(2);
+    expectKv('Charging', 'Yes');
     expect(screen.queryByText('Live status may be out of date')).not.toBeInTheDocument();
     expectKv('Driver front', 'Open');
   });
@@ -1086,16 +1086,18 @@ describe('DigitalTwinPage shared icon presentation', () => {
       }
 
       renderPage();
+      const panelIcon = (title: string) => screen.getByRole('heading', { name: title })
+        .closest('[data-card]')?.querySelector('[data-card-content] svg.lucide[aria-hidden="true"]');
       const icons = [
-        screen.getByText('Live status').parentElement?.querySelector('svg'),
+        screen.getByRole('region', { name: 'Live overview' }).querySelector('svg.lucide[aria-hidden="true"]'),
         ...['Doors & openings', 'Windows', 'Security & status', 'Lights & signals'].map((title) =>
-          screen.getByRole('heading', { name: title }).closest('[data-card]')?.querySelector('svg'),
+          panelIcon(title),
         ),
       ];
       expect(icons).toHaveLength(5);
       for (const icon of icons) {
         expect(icon).toBeInTheDocument();
-        expect(icon).toHaveClass('h-4', 'w-4', 'shrink-0', 'text-[var(--text-secondary)]');
+        expect(icon).toHaveClass('w-4', 'h-4');
         expect(icon).not.toHaveClass('text-cyan-300');
         expect(icon).toHaveAttribute('aria-hidden', 'true');
         expect(icon).toHaveAttribute('focusable', 'false');

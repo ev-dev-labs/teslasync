@@ -61,7 +61,7 @@ const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
 function renderTab(vehicleId = 42) {
   const qc = new QueryClient({
     defaultOptions: {
-      queries: { retry: false, gcTime: 0 },
+      queries: { retry: false, gcTime: 60_000 },
       mutations: { retry: false },
     },
   })
@@ -207,7 +207,7 @@ describe('VehicleSettingsTab — row rendering', () => {
     for (const key of ['nickname', 'mute_until', 'charge_cost_tariff_id', 'units_distance', 'units_temperature', 'units_energy']) {
       const field = screen.getByTestId(`vehicle-settings-input-${key}`)
       expect(field).toHaveClass('min-h-11', 'md:min-h-10')
-      expect(screen.getByLabelText(`vehicleSettings.keys.${key}.label`)).toBe(field)
+      expect(screen.getByLabelText(key)).toBe(field)
       for (const action of ['save', 'reset']) {
         const button = screen.getByTestId(`vehicle-settings-${action}-${key}`)
         expect(button).toHaveClass('min-h-11', 'md:min-h-9', 'h-auto', 'whitespace-normal')

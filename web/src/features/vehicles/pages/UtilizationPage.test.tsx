@@ -589,7 +589,7 @@ describe('UtilizationPage source coverage', () => {
     }
     fireEvent.click(within(screen.getByTestId('utilization-trend')).getByRole('button', { name: 'Retry' }));
     expect(refetch).toHaveBeenCalledTimes(1);
-    expect(summaryMock.mock.calls.at(-1)![0].days).toEqual([]);
+    expect(summaryMock).not.toHaveBeenCalled();
     drivesMock.mockReturnValue(query({
       data: [{ ...eligibleDrive(), durationS: 0, distanceM: 0, energyUsedWh: 0 }],
     }));

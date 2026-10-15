@@ -142,7 +142,7 @@ describe('seven unique vehicle-detail production summary bands', () => {
     }
     expect(screen.getByRole('meter', { name: 'Battery' })).toHaveAttribute('aria-valuenow', '50');
     expect(screen.getByRole('button', { name: 'Open Autopilot' })).toBeInTheDocument();
-    expect(screen.getByText(/50% → 80%.*22.50 kWh needed/)).toBeInTheDocument();
+    expect(document.body).toHaveTextContent(/50(?:\.00)?%.*80(?:\.00)?%.*22\.50 kWh needed/);
     expect(screen.getByText('Test site')).toBeInTheDocument();
     expect(screen.getByText('No charging telemetry available')).toBeInTheDocument();
     expect(tile('Speed', band('vehicle-quick-stats-summary'))).toHaveTextContent('Parked');
@@ -205,7 +205,7 @@ describe('seven unique vehicle-detail production summary bands', () => {
     {
       id: 'vehicle-next-charge-summary', title: 'Charging options', source: 'Next charge decision',
       fields: ['Home now', 'Wait window', 'Supercharger'],
-      values: ['$8.20', '$6.10', '$12.34', 'Test site', '50% → 80% · 22.50 kWh needed', 'Wait for off-peak'],
+      values: ['$8.20', '$6.10', '$12.34', 'Test site', 'Wait for off-peak'],
     },
     {
       id: 'vehicle-live-overview-summary', title: 'Range and charging', source: 'Live vehicle state',
@@ -249,6 +249,9 @@ describe('seven unique vehicle-detail production summary bands', () => {
     expect(detail.getByRole('heading', { name: 'Operational metrics' })).toBeInTheDocument();
     for (const label of fields) expect(detail.getByText(label)).toBeInTheDocument();
     for (const value of values) expect(detail.getAllByText(value).length).toBeGreaterThan(0);
+    if (title === 'Charging options') {
+      expect(drawer).toHaveTextContent(/50(?:\.00)?%.*80(?:\.00)?%.*22\.50 kWh needed/);
+    }
     expect(detail.getByText('Not scored')).toBeInTheDocument();
     expect(detail.queryByText('On track')).not.toBeInTheDocument();
     expect(detail.queryByText('Historical')).not.toBeInTheDocument();
