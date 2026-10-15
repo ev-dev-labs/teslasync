@@ -181,7 +181,7 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     }
     expect(screen.queryByRole('table', { name: 'Slowest delivery records' })).not.toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('0 attempts with usable latency');
+    expect(screen.getByRole('dialog')).toHaveTextContent('0 deliveries have usable latency measurements.');
   });
 
   it.each([
@@ -215,10 +215,22 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
     expect(screen.getAllByText('2 samples · 50.00% tail')).toHaveLength(2);
     fireEvent.click(within(screen.getByTestId('notification-latency-brief')).getByRole('button', { name: 'Review details' }));
-    expect(screen.getByRole('dialog')).toHaveTextContent('2 attempts with usable latency');
+    expect(screen.getByRole('dialog')).toHaveTextContent('2 deliveries have usable latency measurements.');
     expect(screen.getByRole('dialog')).toHaveTextContent('50.00% slower than 4 seconds');
   });
 
+  it('uses singular whole-sentence copy for one measured delivery', () => {
+    const delivery: NotificationLog = {
+      id: 1, channel_id: 1, alert_id: null, title: 'Delivery', message: '',
+      status: 'sent', severity: 'warn', error: '', latency_ms: 500,
+      created_at: '2026-08-04T12:00:00Z', sent_at: null,
+    };
+    state.logs = [delivery];
+    render(<MemoryRouter><NotificationLatencyPanel /></MemoryRouter>);
+    const brief = screen.getByTestId('notification-latency-brief');
+    fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
+    expect(screen.getByRole('dialog')).toHaveTextContent('1 delivery has a usable latency measurement.');
+  });
   it.each([
     { satisfied: 0, value: '0.000', tone: 'warning' },
     { satisfied: 16, value: '0.800', tone: 'warning' },
@@ -328,7 +340,7 @@ describe('NotificationLatencyPanel shared delivery table', () => {
     expect(within(table).queryByText('Invalid delivery')).not.toBeInTheDocument();
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
     const drawer = screen.getByRole('dialog');
-    expect(drawer).toHaveTextContent('2 attempts with usable latency');
+    expect(drawer).toHaveTextContent('2 deliveries have usable latency measurements.');
     expect(drawer).not.toHaveTextContent('measured deliveries');
   });
 

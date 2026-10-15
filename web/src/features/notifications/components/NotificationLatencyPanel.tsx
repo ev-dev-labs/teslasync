@@ -96,10 +96,10 @@ export function NotificationLatencyPanel() {
     { metricId: 'latency', occurrenceId: 'latency-p95', rawValue: source.hasData && summary.p95Ms != null ? summary.p95Ms / 1000 : null,
       label: t('notificationLatency.kpis.p95', 'p95 latency'),
       display: { formatter: raw => ({ value: fmtNumber(raw * 1000), unit: 'ms' }) },
-      context: <><TimerReset className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationLatency.kpis.samples', '{{count}} attempts with usable latency', {
+      context: <><TimerReset className="h-5 w-5 text-[var(--text-muted)]" aria-hidden="true" />{t('notificationLatency.kpis.samples', '{{count}} delivery has a usable latency measurement.', {
         count: summary.count,
-        defaultValue_one: '{{count}} attempt with usable latency',
-        defaultValue_other: '{{count}} attempts with usable latency',
+        defaultValue_one: '{{count}} delivery has a usable latency measurement.',
+        defaultValue_other: '{{count}} deliveries have usable latency measurements.',
       })}</> },
     { metricId: 'latency', occurrenceId: 'latency-p99', rawValue: source.hasData && summary.p99Ms != null ? summary.p99Ms / 1000 : null,
       label: t('notificationLatency.kpis.p99', 'p99 latency'),

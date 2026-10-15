@@ -11649,6 +11649,8 @@
       "notificationLatency.kpis.p95",
       "notificationLatency.kpis.p99",
       "notificationLatency.kpis.samples",
+      "notificationLatency.kpis.samples_one",
+      "notificationLatency.kpis.samples_other",
       "notificationLatency.kpis.tail",
       "notificationLatency.kpis.trimmed",
       "notificationLatency.slowest.derived",
