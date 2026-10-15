@@ -1,5 +1,128 @@
 {
   "schemaVersion": 1,
+  "prerequisiteRecheck": {
+    "item": "phase4-pilot-dashboard",
+    "baselineUTC": "2026-10-14T15:10:07.160Z",
+    "status": "BLOCKED_CALLER_FIXTURE_AND_PRIVACY_AUTHORITY",
+    "completionCheck": "Not already complete: migration-queue.md:2124 still marks this item [b]; work-items.json:216-222 retains the blocked original obligation; the retained native report remains PARTIAL_NOT_ACCEPTED.",
+    "authorityReviewed": [
+      ".runner\\prompts\\phase4-pilot-dashboard.md",
+      "docs\\frontend-design-contract.md:1-220,408-511",
+      "docs\\frontend-worker-conventions.md",
+      "docs\\session-handoff.md:1-200,1020-1090",
+      "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json",
+      "migration-queue.md:2124",
+      "work-items.json:216-222",
+      ".github\\instructions\\observability.instructions.md"
+    ],
+    "remainingPrerequisites": [
+      "Explicit Dashboard caller-only authorization to supersede Synthetic4 with canonical synthetic vehicle2, including the matching guard allowlist, assertions and same-origin context. The binding diagnosis explicitly grants no browser/storage/acceptance authority.",
+      "Explicit privacy authority for the populated Dashboard's roster/fleet, saved layouts, modes and settings sources; the scoped fixture identity diagnosis does not authorize these broader reads.",
+      "Original execution/resource authority and unchanged budgets must remain intact. Guarded Lighthouse additionally requires an already-installed supported dependency; the earlier missing-dependency observation was not retested."
+    ],
+    "decision": "No application repair is established. Do not change the seed, surrogate IDs, proxy, hooks, deployment or server. Native QA remains NOTRUN; no degraded-shell substitute, fixture rebinding or permission inferred from this assignment.",
+    "newExecution": {
+      "nativeMatrixChecksExecuted": 0,
+      "browserLaunches": 0,
+      "apiRequests": 0,
+      "newCaptures": 0,
+      "sourceOrTestEdits": 0,
+      "gitCommands": 0,
+      "nestedAgents": 0,
+      "serverOrDockerOperations": 0,
+      "installsOrBrowserDownloads": 0,
+      "attemptsCharged": 0,
+      "applicationChecks": "NOTRUN: report-only blocked-prerequisite review; no assigned source/test changes. Page line, section and hook comparisons are N/A."
+    },
+    "preservationValidation": {
+      "retainedReportNormalizedSha256": "7ab37369768a656d3dc4948593f4a1d424d8e6e281fba38457e7b9e45063dd80",
+      "bindingEvidenceSha256": "4a862cebd5086398d3cabfa76c33b3dfd211a8bfa0b36fd23497da7a690bbf4b",
+      "method": "Scoped Node validator removes only prerequisiteRecheck and compares the complete normalized pre-edit report hash; checks the unchanged binding evidence hash, exact blocked queue/export authority and zero new execution. Actual assertion counts, exit and validation UTC are appended to web\\logs\\phase4-pilot-dashboard.log.",
+      "limit": "Report integrity is not prerequisite authorization or native/application acceptance. All other fields, including latestPrerequisiteReview, remain prior-run evidence."
+    },
+    "result": "FAILED: explicit Dashboard fixture rebinding and populated-source privacy authority remain ungranted. Only this additive report and the permitted ignored log changed."
+  },
+  "latestPrerequisiteReview": {
+    "item": "phase4-pilot-dashboard",
+    "reviewBaselineUTC": "2026-10-14T15:08:27.825Z",
+    "status": "BLOCKED_CALLER_FIXTURE_AND_PRIVACY_AUTHORITY",
+    "completionCheck": "Not already complete: migration-queue.md:2124 retains [b], the original report is PARTIAL_NOT_ACCEPTED, and work-items.json:216-222 still exports this blocked original obligation.",
+    "scope": "Prerequisite reconciliation only. Every other top-level field below is the unchanged retained prior-run receipt, including its clocks, runtime observations, hashes and release claims; none is a fresh measurement.",
+    "resolvedDiagnosis": {
+      "evidence": "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json",
+      "evidenceSha256": "4a862cebd5086398d3cabfa76c33b3dfd211a8bfa0b36fd23497da7a690bbf4b",
+      "evidenceStatus": "DONE_READONLY_DIAGNOSIS_FIXTURE_CALLER_MAPPING_REQUIRED",
+      "interpretation": "The existing diagnosis identifies stale historical surrogate IDs, not a demonstrated proxy mismatch, missing canonical seed or Dashboard source defect.",
+      "historicallyVerifiedFixtureMap": {
+        "canonicalModel3VehicleId": 2,
+        "completedDriveId": 3,
+        "ongoingDriveId": 4
+      },
+      "historicalHttpEvidence": "The binding owner's 2026-10-14T06:10:40.9928271Z receipt records 16 scoped API GETs, 16 HTTP200 responses and command exit0. These reads were not repeated here and are not current runtime or native acceptance.",
+      "originalFailurePreserved": "The retained Dashboard GET /api/v1/vehicles/4 HTTP404/exit2 is unchanged; vehicle2 evidence does not turn that failed vehicle4 probe into a pass.",
+      "neededApplicationRepair": "NONE established: do not change proxy, hooks, seed, database IDs, deployment or server."
+    },
+    "remainingAuthority": [
+      {
+        "owner": "Parent runtime/QA orchestration",
+        "authorityEvidence": "docs\\session-handoff.md:140-142; fixture-binding report precise_needed_owners[0].authorization_needed; current assignment and work-items.json:217 still require Synthetic4.",
+        "need": "Explicitly approve a superseding Dashboard caller-only synthetic vehicle2 context, matching guard allowlist and assertions, while retaining all historical fixture4 evidence and release0.7.0 acknowledgement. The diagnosis alone is not permission to rebind.",
+        "resolution": "NOT_GRANTED in the inspected assignment/authority; no replacement browser context, storage writes or browser slot assumed."
+      },
+      {
+        "owner": "Existing fixture/privacy authority",
+        "authorityEvidence": "Retained report conditionalOwners[0]; binding report preview_binding_evidence.limit and precise_needed_owners[0].remote_override_boundary.",
+        "need": "Authorize the strictly synthetic populated Dashboard's required roster/fleet, saved layouts/modes/settings sources and same-origin context before acceptance; a scoped vehicle identity GET does not authorize broader reads or real preferences.",
+        "resolution": "NOT_GRANTED; no unscoped API reads, private response inspection, fabricated data, response rewriting or degraded-shell acceptance."
+      },
+      {
+        "owner": "Original native QA and performance environment owners",
+        "authorityEvidence": "Current prompt preserves spent original/helper/native budgets; retained dependencies.lighthouse and conditionalOwners[2].",
+        "need": "Continue only missing original native requirements after safe scope and execution authority are supplied. Guarded Lighthouse additionally needs an already-installed supported dependency; its prior missing-dependency observation is historical, not freshly retested.",
+        "resolution": "No budget reset, helper repair, installation, browser download or unguarded performance launch."
+      }
+    ],
+    "newExecution": {
+      "nativeMatrixChecksExecuted": 0,
+      "nativeMatrixChecksPassed": 0,
+      "nativeMatrixChecksFailed": 0,
+      "browserLaunches": 0,
+      "apiRequests": 0,
+      "newCaptures": 0,
+      "sourceOrTestEdits": 0,
+      "gitCommands": 0,
+      "nestedAgents": 0,
+      "serverOrDockerOperations": 0,
+      "installsOrBrowserDownloads": 0,
+      "attemptsCharged": 0,
+      "remainingOriginalMatrix": "NOTRUN; the retained remainingOriginalNeeds and missingOriginalResults remain open.",
+      "typeScriptLintBuildTests": "NOTRUN: report-only prerequisite reconciliation; no source changes or assigned covering tests. No zero-collection PASS.",
+      "pageLineSectionHookAudit": "N/A: no page, component or hook changed."
+    },
+    "preservationValidation": {
+      "retainedReportContentSha256Before": "4c3a10b80996788ddb8b62940afcf4ea3b6b3e62d92947003e0e1e853aa2f82e",
+      "method": "Scoped Node JSON validator removes only latestPrerequisiteReview, compares the original normalized report hash, and verifies the three separately retained evidence-file SHA256 pins; actual output and exit appended to web\\logs\\phase4-pilot-dashboard.log.",
+      "baselineCommandExit": 0,
+      "completionLimit": "Report reconciliation is not prerequisite authorization, whole-pilot acceptance or a current application pass."
+    },
+    "filesRead": [
+      ".runner\\prompts\\phase4-pilot-dashboard.md",
+      "docs\\frontend-design-contract.md (authority, architecture and relevant preservation rules)",
+      "docs\\session-handoff.md (current authority and retained Dashboard native notes)",
+      "docs\\frontend-worker-conventions.md",
+      "docs\\orchestrator-loop.md (worker/orchestrator authority context)",
+      "docs\\frontend-mission.md (non-negotiable principles)",
+      ".github\\instructions\\react-frontend.instructions.md (architecture and workspace rules)",
+      ".github\\instructions\\frontend-si-cutover.instructions.md (preservation and SI rules)",
+      ".github\\instructions\\observability.instructions.md",
+      "migration-queue.md (exact blocked Dashboard and completed binding rows)",
+      "work-items.json (exact original blocked Dashboard task)",
+      "docs\\frontend-audits\\phase6-dashboard-qa.json",
+      "docs\\frontend-audits\\phase4-pilot-dashboard-native-20261013.json (retained native context)",
+      "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json"
+    ],
+    "result": "FAILED: precise fixture diagnosis is available, but explicit Dashboard caller-only rebinding and populated-source privacy authority remain blockers. Only this additive report and the permitted ignored log changed."
+  },
   "item": "phase4-pilot-dashboard",
   "type": "deferred-read-only-pilot-QA",
   "status": "PARTIAL_NOT_ACCEPTED",

@@ -262,6 +262,63 @@
     "report_log_command_claims": "Released after final bounded JSON/integrity verification; exact UTC is recorded in owned log and final return. No post-return writes.",
     "all_source_tests_helpers_catalog_config_queue_git": "READONLY throughout"
   },
+  "prerequisite_review_20261014": {
+    "reviewed_utc": "2026-10-14T15:08:27.8658856Z",
+    "scope": "Resolve only documented prerequisites and authority; no native execution or source remigration.",
+    "status": "BLOCKED_EXPLICIT_CALLER_REBINDING_AUTHORIZATION",
+    "existing_item_complete": false,
+    "historical_report_sha256_before_additive_review": "850a651bd9ccbd073ceb8f6599000bd3997d502a73cd8a44b7347cb7b45318ff",
+    "historical_report_fields_preserved": true,
+    "completed_external_diagnosis": {
+      "receipt": "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json",
+      "sha256": "4a862cebd5086398d3cabfa76c33b3dfd211a8bfa0b36fd23497da7a690bbf4b",
+      "receipt_status": "DONE_READONLY_DIAGNOSIS_FIXTURE_CALLER_MAPPING_REQUIRED",
+      "queue_disposition": "migration-queue.md:2614 marks the diagnosis complete, not this pilot's acceptance.",
+      "historical_observation": "The diagnosis reports synthetic Model3 vehicle2, completed drive3 and ongoing drive4, with16 scoped HTTP200 reads. It attributes old4/190/191 failures to stale caller IDs, not a demonstrated proxy mismatch.",
+      "fresh_runtime_availability": "NOTRUN; historical diagnosis was read, not repeated.",
+      "application_or_proxy_repair_authorized": false
+    },
+    "remaining_authority": {
+      "required_owner": "Parent runtime/QA orchestration",
+      "exact_grant_needed": "Explicit caller-only authorization for this existing phase4-pilot-drives-list continuation to select canonical synthetic Model3 vehicle2 and expect completed drive3/ongoing drive4 in a fresh guarded same-origin5173 context, preserving original NewYork date bounds and historical4/190/191 evidence.",
+      "authority_evidence": [
+        "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json:precise_needed_owners requires parent approval and explicitly grants no browser lock or storage-fixture write.",
+        "docs\\session-handoff.md:140-142 says any native caller rebinding requires its own explicit safe scope.",
+        "migration-queue.md:2127 retains this item as blocked with synthetic4 scope; the exported work-items.json entry likewise remains BLOCKED.",
+        ".runner\\prompts\\phase4-pilot-drives-list.md retains synthetic4 scope and forbids inventing authority or renewing budgets."
+      ],
+      "grant_found_in_current_assignment_or_read_receipts": false,
+      "historical_browser_lock4_is_current_grant": false,
+      "budgets": "Original one partial native attempt and exhausted helper budgets remain unchanged; external availability failures are not charged.",
+      "after_explicit_grant_only": "Obtain a current exclusive browser slot, verify canonical synthetic identity and completed/null-ended rows through5173 with local readonly guards before application navigation, then continue only the original missing matrix. Do not broaden dates, synthesize data, rerun accepted cases, or include the separate preview-target owner's proof."
+    },
+    "current_review_execution": {
+      "browser_launches": 0,
+      "browser_locks_acquired": 0,
+      "network_requests": 0,
+      "new_captures": 0,
+      "native_measurements": 0,
+      "tests_discovered": 0,
+      "tests_executed": 0,
+      "zero_execution_is_not_pass": true,
+      "source_config_seed_docker_queue_git_changes": 0,
+      "typescript_lint_build_hook_section_and_line_count_checks": "NOTRUN; report-only prerequisite review, no source changes or full checks authorized.",
+      "application_acceptance": "NOT_ACCEPTED",
+      "open_owned_browser_or_background_processes": 0
+    },
+    "files_read": [
+      ".runner\\prompts\\phase4-pilot-drives-list.md",
+      "docs\\frontend-design-contract.md:1-190,530-610 and relevant evidence references",
+      "docs\\frontend-worker-conventions.md:1-190",
+      "docs\\session-handoff.md:1-220 and scoped pilot/fixture references",
+      "docs\\frontend-audits\\phase6-drives-qa.json",
+      "docs\\frontend-audits\\phase4-pilot-drives-native-20261013.json:1-130",
+      "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json:1-230",
+      "migration-queue.md:2127,2614 and related native scope references",
+      "work-items.json:224-229",
+      ".github\\instructions\\observability.instructions.md"
+    ]
+  },
   "files_read": [
     "docs\\orchestrator-loop.md (full)",
     "migration-queue.md (exact existing row, dependency, excluded lock1 row)",

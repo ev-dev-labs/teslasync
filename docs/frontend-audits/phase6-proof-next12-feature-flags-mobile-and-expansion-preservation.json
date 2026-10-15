@@ -1,0 +1,165 @@
+{
+  "item": "phase6-proof-next12-feature-flags-mobile-and-expansion-preservation",
+  "phase": 6,
+  "kind": "proof-review",
+  "status": "BLOCKED_EXTERNAL_STARTUP",
+  "completion": "Required covering execution remains NOTRUN. Read-only original-intended-behavior reconciliation completed; no production or fixture correction granted or applied.",
+  "alreadyDone": false,
+  "continuation": {
+    "status": "BLOCKED_EXTERNAL_STARTUP",
+    "startedAt": "2026-10-14T08:22:57.6780685-07:00",
+    "endedAt": "2026-10-14T08:28:42.1441346-07:00",
+    "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\admin\\components\\feature-flags\\FlagsTable.phase6.test.tsx src\\features\\admin\\components\\feature-flags\\FlagsTable.test.tsx src\\features\\admin\\components\\feature-flags\\ChangesPanel.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "configuration": "Unchanged normal vite.config.ts and test-setup.ts, VITE_GIT_SHA=phase6-read-only-fixture, NO_COLOR=1; Node v26.8.1.",
+    "exit": 1,
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedCases": 0,
+    "skipped": 0,
+    "executedTestNames": [],
+    "caseResult": "NOTRUN",
+    "failure": "Normal split-i18n-catalog.mjs --check rejected generated projections before collection. Exact raw filenames, stack and native exit appended to the assigned log.",
+    "attemptsConsumedByCatalogStartup": 0,
+    "sourcePinCheck": "All eight retained SHA-256 pins matched at 2026-10-14T08:26:08.6726161-07:00; validation command exit 0. Both exact Expand row selectors remain at lines 104 and 178.",
+    "sourceReconciliation": "Current ChangesPanel and shared DataTable still implement controlled local numeric-key expansion with seven read-only fields and full historical values. Row-specific accessible names remain intentional. No production expansion regression identified; existing precise fixture grant requirement retained, not silently applied.",
+    "historicalEvidence": "Prior lint, scans, original-source reconciliation and original test pins remain historical; no new scanner PASS, compiler closure or native acceptance is claimed.",
+    "writes": "Assigned report and log only; no production, fixture, shared component, catalog, provider, route, type or baseline edits.",
+    "notRun": ["TypeScript full gate", "full lint", "build", "preservation scanner rerun", "browser/native QA", "Phase7"],
+    "release": "Owned normal command completed with native exit 1. No running owned command, further retry, dispatch, Git command, install, browser download or Docker rebuild."
+  },
+  "historicalEvidence": {
+    "releasedReceipt": "web/logs/phase6-fix-next12-feature-flags-table-full-values-mobile-and-initial-trust.receipt.json",
+    "baseline": "web/logs/phase6-fix-next12-feature-flags-table-full-values-mobile-and-initial-trust.baseline.json",
+    "preservation": "web/logs/phase6-fix-next12-feature-flags-table-full-values-mobile-and-initial-trust.preservation-final.json",
+    "preservationExit": 1,
+    "historicalDiscovered": 0,
+    "historicalExecuted": 0,
+    "preservedPassingEvidence": "Original lint exit 0, scoped scans exit 0 and unchanged original test hashes retained as historical evidence, not rerun or attributed as new fixes.",
+    "historicalExternalCompiler": "Four AuditLog diagnostics were recorded with exit 2. No current compiler pass or closure is asserted by this item."
+  },
+  "execution": {
+    "runtime": "Node v26.8.1",
+    "normalConfiguration": "web/vite.config.ts with its existing catalog buildStart checks and web/src/test-setup.ts; no alternative config, provider additions or guard bypass",
+    "identityEnvironment": "VITE_GIT_SHA=phase6-read-only-fixture; existing build-identity input prevents incidental Git invocation, not a deployable commit identity. NO_COLOR=1.",
+    "initialCommand": "npx vitest run src\\features\\admin\\components\\feature-flags\\FlagsTable.phase6.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "initialResult": "Silent startup stopped with stop_powershell, shellId 2; no native exit or collection result available. NOTRUN, not PASS.",
+    "actualCommand": "node node_modules\\vitest\\vitest.mjs run src\\features\\admin\\components\\feature-flags\\FlagsTable.phase6.test.tsx src\\features\\admin\\components\\feature-flags\\FlagsTable.test.tsx src\\features\\admin\\components\\feature-flags\\ChangesPanel.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "actualExit": 1,
+    "actualFailure": "Normal buildStart split-i18n-catalog.mjs --check rejected generated projections before collection; raw invalid filenames and stack are in the log.",
+    "discovered": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedCases": 0,
+    "skipped": 0,
+    "executedTestNames": [],
+    "caseResult": "NOTRUN",
+    "attemptsConsumedByCatalogStartup": 0,
+    "rawOutput": "web/logs/phase6-proof-next12-feature-flags-mobile-and-expansion-preservation.log",
+    "noFurtherRetry": "No changed catalog authority or successful current startup evidence established. Historical catalog verification is not a current startup pass."
+  },
+  "sourcePins": [
+    {
+      "path": "web/src/features/admin/components/feature-flags/FlagsTable.tsx",
+      "sha256": "d352343eb0d17af570308b4cd7d03a3f7ce578442f7f83839d69614292768f7e",
+      "lines": 208,
+      "matchesReleasedPreservation": true
+    },
+    {
+      "path": "web/src/features/admin/components/feature-flags/ChangesPanel.tsx",
+      "sha256": "78611e8590e61a2e1fa95bcb22cb5f25890922f27cecef79c2b6718884019815",
+      "lines": 223,
+      "matchesReleasedPreservation": true
+    },
+    {
+      "path": "web/src/features/admin/components/feature-flags/FlagsTable.phase6.test.tsx",
+      "sha256": "bbd92a29023ab7b477f620a0e85a1020ba835ef0dba0314ac643b7b2af0165c1",
+      "lines": 259
+    },
+    {
+      "path": "web/src/features/admin/components/feature-flags/FlagsTable.test.tsx",
+      "sha256": "277f68444b0d64a005dc21c1dd26645298bf273c515b6b762f6315e63697d6d1",
+      "matchesOriginalBaseline": true
+    },
+    {
+      "path": "web/src/features/admin/components/feature-flags/ChangesPanel.test.tsx",
+      "sha256": "693e4e1da0eada721d92c3dd3b099bfbbcccfa3f16766fb2d5ea20d84663a008",
+      "matchesOriginalBaseline": true
+    },
+    {
+      "path": "web/src/components/ui/DataTable.tsx",
+      "sha256": "7d1eb7197f09998b612177437093376024fe249d23245679f54bf96eedb18911"
+    },
+    {
+      "path": "web/vite.config.ts",
+      "sha256": "7e0f246e3d538f48b8df6a024f5cce1e068685023a844cce3b537a1afcf54f58"
+    },
+    {
+      "path": "web/src/test-setup.ts",
+      "sha256": "fb61779479e36b97298928c7bcc0620e8ff2a509a0ea50350f9935d9f260517a"
+    }
+  ],
+  "originalIntendedBehaviorReconciliation": {
+    "basis": "Decoded original source bytes from the released baseline, reviewed current sources and shared expansion implementation; not a scanner proxy or a mounted result.",
+    "grant": "feature-flags-table-full-values-mobile-and-initial-trust objective in docs/frontend-audits/phase6-confirmed-fix-owner-map-next.json explicitly requires every audit mobile field and full read-only historical values through existing detail/presentation APIs.",
+    "original": "ChangesPanel had seven columns, mobile visibility only for changed_at/actor/operation, compact 60-character value previews, no expansion hook and no full historical disclosure. FlagsTable had three mobile columns, key sorting and exact edit/delete callbacks.",
+    "addedHook": "ChangesPanel calls the existing useTableExpansion<number>() once, unconditionally, before loading/empty returns. DataTable.tsx:1705-1708 owns useState<number[]>([]) and its setter; it performs no request, persistence write or domain mutation.",
+    "controlledRoundTrip": "DataTable.tsx:859-870 toggles the row.id in controlled expandedKeys and calls onExpandedChange. ChangesPanel retains numeric keys and sets state. DataTable.tsx:1192-1198 renders the same source row only when expanded; its Enter handling at 1104-1111 and shared Button at 1147-1169 retain disclosure interaction.",
+    "mobileFields": "The existing leading disclosure column is not hidden. ChangesPanel renderExpanded maps all seven original columns: changed_at, actor, flag_key, operation, old_value, new_value, reason. Historical values use fullValue rather than compact; remaining fields use their existing renderers. This is source/class evidence only, not viewport or native proof.",
+    "historicalValues": "Strings remain opaque and JSON-quoted for display, not parsed. Full historical JSON preserves false, zero, objects and arrays; null/undefined/unserializable values keep the prior missing-value representation. CSV export accessors return original raw values independently of previews; JSON export remains owned by shared DataTable.",
+    "filtersAndActions": "Original column keys, filterValue expressions, enableValueFilters, registry filterData, key sorting, exact onEdit(row)/onAskDelete(row), row.id audit keys, pagination 25/50/100, table names and all three persistent table IDs are retained. No selection, API, workspace selector or full-result capability is introduced.",
+    "loading": "Only cold loading with zero rows uses the contextual busy region and aria-hidden skeleton. Populated rows continue through DataTable during loading; wrapper busy metadata does not replace data/actions. Settled audit scoped/global empty copy remains unchanged. FeatureFlagsPage passes independent deriveDataState initial state and retains per-source fatal error/retry branches; page fixtures were not executed.",
+    "lineCounts": {
+      "originalProductionTotal": 354,
+      "releasedProductionTotal": 431,
+      "retainedPercentRounded": 121.8,
+      "originalColumnCounts": [3, 7],
+      "releasedColumnCounts": [3, 7],
+      "originalGlassPanelChartContainerCountInTheseLeaves": 0,
+      "releasedGlassPanelChartContainerCountInTheseLeaves": 0
+    },
+    "sourceConclusion": "The added state hook supplies the expressly granted missing read-only disclosure; it is not evidence that an original expansion action was removed or replaced. No production expansion regression identified in the inspected source.",
+    "scannerDisposition": "Historical preservation exit 1 remains unchanged, including its added-hook identity finding and two inherited unknowns (dynamic scoped tableId and computed original test id). No scanner waiver, baseline update, bypass or fresh scanner PASS is claimed."
+  },
+  "preciseRemainingFixtureNeed": {
+    "classification": "SOURCE_CONFIRMED_SELECTOR_MISMATCH_NOT_EXECUTED_FAILURE",
+    "file": "web/src/features/admin/components/feature-flags/FlagsTable.phase6.test.tsx",
+    "lines": [104, 178],
+    "currentSelectors": "getByRole('button', { name: 'Expand row' })",
+    "currentProductionName": "Expand row: synthetic.audit.flag",
+    "authority": "ChangesPanel supplies rowLabel={(row) => row.flag_key ?? ''}; shared DataTable.tsx:1156-1161 joins disclosure wording with the accessible row label.",
+    "requiredTestGrant": "Grant only these two fixture queries a row-specific accessible-name correction, preserving the real shared DataTable, existing fixture provider and all seven-field/full-value/keyboard/collapse/export assertions. No test edit was made under this read-only source-fixture assignment.",
+    "productionGrant": "None needed or requested based on the inspected expansion implementation. Do not remove rowLabel or expansion to satisfy obsolete selectors.",
+    "requiredExecution": "After the authorized catalog owner restores normal startup, execute the same three exact files with forks/maxWorkers=2 and report actual names/counts/exits. Do not count current zero collection as a pass."
+  },
+  "scopedCaseSensitiveCounts": {
+    "files": ["FlagsTable.tsx", "ChangesPanel.tsx", "FlagsTable.phase6.test.tsx"],
+    "inlineStyles": 0,
+    "rawControls": 0,
+    "directVendorImports": 0,
+    "oldApiImports": 0,
+    "neonOrGlow": 0,
+    "doubleApiPrefix": 0,
+    "directFetchOrEventSource": 0,
+    "hiddenDataPanels": 0,
+    "commandExit": 0,
+    "correctionToInitialScan": "An initial case-insensitive PowerShell raw-controls search counted two shared <Button> tags. Explicit -CaseSensitive resolved both false matches; no source changed."
+  },
+  "limits": {
+    "typeScript": "NOTRUN: this read-only item permits scoped existing checks and forbids full gates; no current tsc pass is claimed.",
+    "apiHookVerification": "No API hook or endpoint changed. Added useTableExpansion is local UI state with no URL; historical route verification is not rerun as a new result.",
+    "nativeAndBrowser": "NOTRUN; no browser grant, capture, server start, download or deployment.",
+    "fullGateAndPhase7": "NOTRUN",
+    "sourceWrites": 0,
+    "testWrites": 0,
+    "catalogWrites": 0,
+    "sharedComponentWrites": 0,
+    "gitCommands": 0,
+    "installs": 0,
+    "apiMutations": 0,
+    "subagents": 0,
+    "budgetRenewal": false
+  },
+  "finalArtifactValidation": "Report parsed successfully; all eight source/config/setup SHA-256 pins matched at 2026-10-14T08:22:01.6791426-07:00; exact fixture selectors measured at lines 104 and 178. Validation command exit 0.",
+  "release": "Own command completed with exit 1; initial silent command stopped. Only the assigned report and log changed. All own claims released on final return; no post-return work."
+}

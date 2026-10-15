@@ -8,7 +8,8 @@
   "sourceChanges": false,
   "fixtureChanges": false,
   "attemptCharge": 0,
-  "normalStartupAttempts": 1,
+  "normalStartupAttempts": 2,
+  "latestEvidence": "continuation20261014T152220Z; all earlier clocks, commands, runtime accounting, artifactValidation and release entries remain historical evidence, not this continuation's execution",
   "sourceAssignmentCommit": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
   "commitIdentityEvidence": "Provided by the root queue assignment; no Git commands or independent commit inspection performed. Four live source hashes match the predecessor's final preservation receipt.",
   "ownedFiles": [
@@ -74,9 +75,9 @@
     "failedAssertions": 0,
     "skipped": 0,
     "unselected": 0,
-    "startupFailures": 1,
+    "startupFailures": 2,
     "exitCode": 1,
-    "explanation": "Zero discovered tests is NOT a passing run. Planned filters and authored case names are not runtime discovery, execution, skip counts, or passing proof."
+    "explanation": "Zero discovered tests is NOT a passing run. Both recorded normal startup commands exited 1 before discovery. Planned filters and authored case names are not runtime discovery, execution, skip counts, or passing proof."
   },
   "plannedAccounting": {
     "staticDeclarations": 28,
@@ -338,9 +339,193 @@
     "install": false,
     "serverBrowserOrDockerCommands": false
   },
+  "continuation20261014T150741Z": {
+    "status": "BLOCKED_EXTERNAL_CATALOG_UNCHARGED",
+    "runtimeStatus": "NOTRUN",
+    "proofComplete": false,
+    "requestUTC": "2026-10-14T15:07:41.591Z",
+    "firstObservedUTC": "2026-10-14T15:07:53.4287587Z",
+    "returnDeadlineUTC": "2026-10-14T15:27:41.591Z",
+    "alreadyDoneCheck": "Retained receipt is proofComplete=false with discovered=executed=0; required runtime proof is genuinely missing.",
+    "sourceAssignmentCommit": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+    "identityLimit": "Assignment-provided commit identity only; no Git commands or independent commit inspection. All seven live source/fixture hashes and ten dependency hashes match the retained receipt before and after execution.",
+    "catalogPrerequisite": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "exitCode": 0,
+      "observedEndUTC": "2026-10-14T15:12:53.1643645Z",
+      "rawOutput": "[i18n-split] OK \u2014 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "limit": "This successful read-only check authorized the exact pending selector only. It did not establish stable closure: the subsequent normal Vitest startup check failed. No cause for the intervening catalog inconsistency is inferred."
+    },
+    "execution": {
+      "cwd": "D:\\repos\\teslasync\\web",
+      "nodeVersion": "v26.8.1",
+      "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\activity-timeline\\ActivityFeed.test.tsx src\\features\\system\\components\\activity-timeline\\helpers.test.ts src\\features\\system\\components\\activity-timeline\\ActivityOverview.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=C:\\Users\\AtulM\\.copilot\\session-state\\35e749c2-d945-43f5-919f-7699c8eb4e27\\files\\activity-feed-provenance-vitest.json --testNamePattern='wraps full source-authored titles|retains all five category icons|uses the selected locale for both day headings|keeps invalid timestamps unknown|retains source order, SI zero|preserves domain status and severity mappings|uses selected locale .* for labels without shifting|keeps unknown and valid buckets in input order|formats both loaded-page ordinals|reacts to saved locale changes|keeps empty-page zero ordinals|retains page counts and source state|keeps unavailable and loading sections'",
+      "environment": {
+        "VITE_GIT_SHA": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+        "reason": "Supply the assigned identity through the existing supported input so normal Vite identity resolution does not invoke Git; no configuration or catalog guard bypass."
+      },
+      "startUTC": "2026-10-14T15:13:19.1289011Z",
+      "endUTC": "2026-10-14T15:20:54.2332169Z",
+      "exitCode": 1,
+      "classification": "External generated-catalog startup failure before discovery or assertion execution",
+      "normalStartupAttemptsThisContinuation": 1,
+      "attemptCharge": 0,
+      "retry": false,
+      "retryReason": "No new catalog closure after the failed normal startup; repeating or bypassing the guard is not authorized.",
+      "freshVitestJson": null,
+      "freshVitestJsonAbsenceReason": "Requested JSON reporter artifact does not exist; startup failed before reporter initialization. No stale or fabricated results substituted."
+    },
+    "runtimeAccounting": {
+      "discovered": 0,
+      "selected": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "unselected": 0,
+      "startupFailures": 1,
+      "exitCode": 1,
+      "status": "NOTRUN",
+      "explanation": "No tests discovered or executed. Zero is not PASS; the expected authored selection is not a runtime count."
+    },
+    "plannedAccounting": {
+      "selectedDeclarations": 13,
+      "selectedExpandedExpectedCases": 15,
+      "deliberatelyUnselectedExpectedCases": 15,
+      "historicalPassingCasesReplayed": 0,
+      "caseAuthority": "Unchanged selectedCases and deliberatelyUnselectedAuthoredNames retained above; no added or altered test bodies."
+    },
+    "externalBlocker": {
+      "owner": "Serialized catalog integration",
+      "failedCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+      "failedCommandExit": 1,
+      "normalConfigEntry": "web\\vite.config.ts: verifyEnglishCatalogSplit.buildStart",
+      "invalidGeneratedFilesCount": 60,
+      "rawEvidence": "Complete current invalid-file list and startup stack are appended in web\\logs\\phase6-proof-activity-feed-provenance.log at COMMAND_START_UTC=2026-10-14T15:13:19.1289011Z.",
+      "requiredCorrection": "Establish stable generated-catalog closure through the existing serialized owner, then execute only the same genuinely unexecuted affected selector. Do not edit canonical catalogs, fixtures, configuration, or guards in this proof item.",
+      "ownedBehavioralFailure": false,
+      "limit": "No assertions executed; no conclusion about owned behavior is possible."
+    },
+    "readOnlyVerification": {
+      "beforeObservedUTC": "2026-10-14T15:10:17.6764794Z",
+      "afterObservedUTC": "2026-10-14T15:21:15.6672977Z",
+      "sourceAndFixtureFiles": 7,
+      "dependencyFiles": 10,
+      "mismatches": 0,
+      "exitCode": 0,
+      "rawEvidence": "CONTINUATION_HASH_AFTER and CONTINUATION_DEPENDENCY_HASH_AFTER in the owned log, each with exact SHA256 and matchesRetained=True.",
+      "sourceChanges": false,
+      "fixtureChanges": false,
+      "catalogOrCanonicalChanges": false,
+      "configurationOrGuardBypass": false
+    },
+    "preservation": "Original raw exit 1, two intentional adoption deltas and one unresolved computed identity remain retained above; not rerun, reset, waived, or promoted by this startup failure.",
+    "verificationLimits": {
+      "typecheckBuildLintAndGlobalAudits": "NOTRUN: exact read-only unexecuted-proof scope, no source changes or full gates.",
+      "browserNativeContrastBackendAndWholePage": "NOTRUN",
+      "gitCommands": false,
+      "nestedAgents": false,
+      "installOrBrowserDownload": false,
+      "serverOrDockerCommands": false
+    },
+    "release": {
+      "sourceWriteClaims": "Never acquired; seven application source/test files remained read-only",
+      "commandRunning": false,
+      "nativeAcceptance": false,
+      "pageAcceptance": false,
+      "globalAcceptance": false,
+      "executionAndHashCaptureCompleteUTC": "2026-10-14T15:21:15.8346293Z"
+    }
+  },
+  "continuation20261014T152220Z": {
+    "status": "BLOCKED_EXTERNAL_CATALOG_UNCHARGED",
+    "runtimeStatus": "NOTRUN",
+    "proofComplete": false,
+    "requestUTC": "2026-10-14T15:22:20.775Z",
+    "firstObservedUTC": "2026-10-14T15:22:40.3710830Z",
+    "returnDeadlineUTC": "2026-10-14T15:42:20.775Z",
+    "alreadyDoneCheck": "Latest retained continuation remains proofComplete=false with zero discovered/executed covering tests.",
+    "sourceAssignmentCommit": "80c4fe5fa6e7cac032a0d15490bb34f8ef6da85f",
+    "identityLimit": "Assignment-provided commit identity only; no Git inspection. Seven source/fixture hashes and ten dependency hashes match retained pins before and after the prerequisite check.",
+    "catalogPrerequisite": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "nodeVersion": "v26.8.1",
+      "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+      "startUTC": "2026-10-14T15:22:51.6264116Z",
+      "endUTC": "2026-10-14T15:28:40.3272022Z",
+      "exitCode": 1,
+      "invalidGeneratedFilesCount": 60,
+      "classification": "External catalog prerequisite failure; no new catalog closure established.",
+      "rawEvidence": "Exact invalid-file list and command timestamps appended in web\\logs\\phase6-proof-activity-feed-provenance.log.",
+      "retry": false,
+      "requiredCorrection": "Existing serialized catalog owner must establish stable normal generated-catalog closure before the unchanged affected selector is eligible. No canonical, generated catalog, fixture, source, configuration, or guard edits authorized here."
+    },
+    "runtimeAccounting": {
+      "status": "NOTRUN",
+      "vitestLaunches": 0,
+      "discovered": 0,
+      "selected": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "unselected": 0,
+      "startupFailures": 0,
+      "catalogPrerequisiteFailures": 1,
+      "attemptCharge": 0,
+      "normalStartupAttemptsAdded": 0,
+      "explanation": "Prerequisite exit 1 is not a Vitest launch or assertion failure. No unchanged historical passes replayed; zero execution is NOT PASS. Prior startup accounting and spent budgets remain unchanged."
+    },
+    "plannedAccounting": {
+      "selectedDeclarations": 13,
+      "selectedExpandedExpectedCases": 15,
+      "deliberatelyUnselectedExpectedCases": 15,
+      "historicalPassingCasesReplayed": 0,
+      "caseAuthority": "Existing selectedCases and deliberatelyUnselectedAuthoredNames above, read-only and unchanged."
+    },
+    "readOnlyVerification": {
+      "afterObservedUTC": "2026-10-14T15:29:01.7743124Z",
+      "sourceAndFixtureFiles": 7,
+      "dependencyFiles": 10,
+      "mismatches": 0,
+      "exitCode": 0,
+      "rawEvidence": "HASH_BEFORE/HASH_AFTER and DEPENDENCY_HASH_BEFORE/DEPENDENCY_HASH_AFTER in this continuation's owned log block.",
+      "sourceChanges": false,
+      "fixtureChanges": false,
+      "catalogOrCanonicalChanges": false,
+      "configurationOrGuardBypass": false
+    },
+    "preservation": "Original raw exit 1, two intentional caller-adoption deltas and one unresolved computed source identity retained unchanged. No scanner rerun, baseline reset, waiver or runtime approval.",
+    "verificationLimits": {
+      "typecheckBuildLintAndGlobalAudits": "NOTRUN: report-only exact proof scope; no global gates or unchanged passing checks replayed.",
+      "apiBrowserNativeContrastBackendAndWholePage": "NOTRUN",
+      "gitCommands": false,
+      "nestedAgents": false,
+      "installOrBrowserDownload": false,
+      "serverOrDockerCommands": false
+    },
+    "artifactValidation": {
+      "observedUTC": "2026-10-14T15:31:04.3692655Z",
+      "exitCode": 0,
+      "jsonParse": "PASS",
+      "invalidGeneratedFilesVerified": 60,
+      "rawHashRowsVerified": 34,
+      "issues": 0,
+      "meaning": "Report/log integrity only, not behavioral proof."
+    },
+    "release": {
+      "sourceWriteClaims": "Never acquired; all seven application source/test files remained read-only.",
+      "commandRunning": false,
+      "nativeAcceptance": false,
+      "pageAcceptance": false,
+      "globalAcceptance": false
+    }
+  },
   "rawLog": {
     "path": "web\\logs\\phase6-proof-activity-feed-provenance.log",
-    "sha256": "e087ef6dbe66063874348fdf63fe1fdddcbab81b8e691765578b86fedd163011"
+    "sha256": "beb6ea6133cb2cb53b2ff3488932adcedb2bc034ab4dfc6b570afbc3ab0a6825"
   },
   "artifactValidation": {
     "status": "PASS",

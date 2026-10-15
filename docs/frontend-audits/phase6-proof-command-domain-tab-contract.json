@@ -1,7 +1,187 @@
 {
   "schemaVersion": 1,
   "item": "phase6-proof-command-domain-tab-contract",
-  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP_WITH_CONCURRENT_INPUT_DRIFT",
+  "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+  "latestContinuation": {
+    "requestUtc": "2026-10-14T15:20:51.551Z",
+    "deadlineUtc": "2026-10-14T15:40:51.551Z",
+    "firstClockObservationUtc": "2026-10-14T15:21:07.9190088Z",
+    "postCheckObservationUtc": "2026-10-14T15:27:40.1695823Z",
+    "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+    "historicalEvidence": "previousContinuation preserves the prior 15:07-15:18 continuation without changing its results. All original fields below retain the historical 07:40-07:53 receipt. No historical pass was repeated.",
+    "runtime": {
+      "version": "v26.8.1",
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "supportedByPackageEngines": true
+    },
+    "alreadyDoneCheck": "Retained proofAccepted=false; all 15 affected authored cases have no retained runtime pass. The item is not already done.",
+    "catalogClosure": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "startedUtc": "2026-10-14T15:21:19.4652643Z",
+      "endedUtc": "2026-10-14T15:27:21.4796495Z",
+      "exitCode": 1,
+      "rawOutput": "[i18n-split] generated locale files are invalid (shell.json, locale-detail-gas.json, locale-explore.json, locale-system.json, locale-notifications.json, locale-telemetry.json, locale-battery.json, locale-driving.json, locale-analytics.json, locale-sharing.json, locale-vehicles.json, locale-automations.json, locale-charging.json, locale-dashboard.json, locale-settings.json, locale-admin.json, locale-vehicle-systems.json, locale-diagnostics.json, locale-maps.json, locale-trips.json, locale-exports.json, locale-benchmarks.json, locale-dashcam.json, locale-fleet-ops.json, locale-home-energy.json, locale-intelligence-packs.json, locale-resale-vault.json, locale-action-center.json, locale-advanced-intelligence.json, locale-service-intelligence.json, locale-ownership.json, locale-science.json, locale-power-user.json, locale-driving-arrival-reliability.json, locale-driving-cold-start.json, locale-driving-departure-forecast.json, locale-driving-destination-transitions.json, locale-driving-drive-compare.json, locale-driving-drive-dna.json, locale-driving-drive-score.json, locale-driving-drivetrain-health.json, locale-driving-driving-dynamics.json, locale-driving-driving-rhythm.json, locale-driving-efficiency.json, locale-driving-efficiency-target.json, locale-driving-explorer.json, locale-driving-fsdinsights.json, locale-driving-journey-fragmentation.json, locale-driving-trip-logbook.json, locale-driving-range-buffer.json, locale-driving-regen-efficiency.json, locale-driving-route-efficiency.json, locale-driving-seasonal-efficiency.json, locale-driving-segments.json, locale-driving-speed-profile.json, locale-driving-speed-sweet-spot.json, locale-driving-trip-planner.json, locale-driving-what-if.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+      "invalidGeneratedFilesCount": 60,
+      "closureEstablished": false,
+      "namespaceGuard": "NOTRUN: catalog closure failed first",
+      "writes": false
+    },
+    "coveringProof": {
+      "selectedFile": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.test.tsx",
+      "selector": "CommandDomainBrowser ordinary button contract (F10)",
+      "authoredCases": 15,
+      "caseNamesAuthority": "The original authoredCases array below, unchanged and compared against the read-only fixture; authored names are not runtime discovery.",
+      "discovery": "NOTRUN",
+      "runtimeDiscovered": 0,
+      "execution": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notRun": 15,
+      "discoveryExitCode": null,
+      "testExitCode": null,
+      "reason": "Exact affected selector rerun is authorized only after real new catalog closure. The normal read-only catalog check still fails; no Vitest command was started and zero collection is not PASS.",
+      "ownedCorrection": "NOT_EVALUATED: no test assertion executed",
+      "historicalGenuinePassesRepeated": false
+    },
+    "accounting": {
+      "attemptsUsedAtIntake": 0,
+      "ownedAttemptsChargedThisContinuation": 0,
+      "attemptsUsedAfterContinuation": 0,
+      "reason": "External catalog-only startup failure does not consume attempts.",
+      "originalHelperNativeBudgetsRenewed": false
+    },
+    "readOnlyPins": {
+      "sourceSha256BeforeAndAfter": "0040F7494D236E2FD15C038A37F749326E0D8FE3390667FE2DC491B09C17A9C2",
+      "fixtureSha256BeforeAndAfter": "EEA425EDE38B18367C4EB17986A2A6FB8CC42BC3DAAAC28C541C262E97E767BF",
+      "sourceOwnerHashesMatch": true,
+      "sourceAndFixtureUnchanged": true,
+      "limitation": "Only the requested source and fixture pins were measured in this continuation; prior dependency hashes remain historical, not freshly reverified. No whole-repository immutability or runtime acceptance is claimed."
+    },
+    "limits": {
+      "writes": [
+        "docs\\frontend-audits\\phase6-proof-command-domain-tab-contract.json",
+        "web\\logs\\phase6-proof-command-domain-tab-contract.log"
+      ],
+      "sourceFixtureCanonicalConfigWrites": false,
+      "gitCommands": false,
+      "guardBypass": false,
+      "fullSuitesLintBuildTypecheck": "NOTRUN: outside exact read-only proof scope",
+      "violationsLineSectionHookAudits": "NOTRUN: no application source edits; retained evidence not repeated",
+      "browserServerDockerInstall": "NOTRUN",
+      "nativeOrGlobalGateClaim": false,
+      "ownedCommandExited": true,
+      "remainingOwnedBackgroundProcesses": 0
+    },
+    "proofAccepted": false,
+    "receiptValidation": {
+      "scope": "Persisted JSON/log consistency, authored-case accounting and read-only source/fixture pins; not application execution",
+      "initialExitCode": 1,
+      "initialError": "Missing prior continuation",
+      "initialErrorCause": "PowerShell ConvertFrom-Json parsed requestUtc as a date; the validation incorrectly compared its formatted value against a literal ISO string. No receipt data correction was needed.",
+      "correctedExitCode": 0,
+      "correction": "Compared prior requestUtc as DateTimeOffset values.",
+      "rawOutput": "RECEIPT_JSON=valid\nRAW_CATALOG_OUTPUT=identical in JSON and log\nINVALID_GENERATED_FILES=60\nRETAINED_AUTHORED_CASES=15\nCOVERING_EXECUTED=0; NOTRUN=15; attemptsUsed=0; proofAccepted=false\nSOURCE_FIXTURE_PINS=unchanged\nPRIOR_CONTINUATION=preserved\nFINAL_OBSERVATION_UTC=2026-10-14T15:28:53.3479734Z"
+    },
+    "requiredNextCorrection": "An authorized catalog owner must close the 60 invalid generated files reported by the normal existing canonical workflow. Only after normal catalog and namespace guards succeed may this same existing item execute its exact affected covering suite. No catalog, source or fixture correction is invented under this read-only proof scope.",
+    "resultLine": "FAILED | phase6-proof-command-domain-tab-contract | external catalog check exit 1; 60 invalid generated files; covering proof NOTRUN (0 executed, 15 pending), attempts remain 0 | done so far: updated docs/frontend-audits/phase6-proof-command-domain-tab-contract.json, web/logs/phase6-proof-command-domain-tab-contract.log; source and fixture unchanged"
+  },
+  "previousContinuation": {
+    "requestUtc": "2026-10-14T15:07:41.625Z",
+    "deadlineUtc": "2026-10-14T15:27:41.625Z",
+    "firstClockObservationUtc": "2026-10-14T15:10:03.4502367Z",
+    "postCheckObservationUtc": "2026-10-14T15:18:54.9907127Z",
+    "status": "BLOCKED_EXTERNAL_CATALOG_STARTUP",
+    "historicalEvidence": "All pre-existing fields below this continuation retain the original 07:40-07:53 receipt. Their command exits, hashes, timestamps and concurrent-input-drift observations are historical, not rerun results. This continuation is the latest disposition.",
+    "runtime": {
+      "version": "v26.8.1",
+      "executable": "C:\\Program Files\\nodejs\\node.exe",
+      "supportedByPackageEngines": true
+    },
+    "alreadyDoneCheck": "Retained proofAccepted=false; all 15 affected authored cases were startup-blocked, with no retained runtime pass. The item is not already done.",
+    "catalogClosure": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "cwd": "D:\\repos\\teslasync\\web",
+      "startedUtc": "2026-10-14T15:10:15.0871818Z",
+      "endedUtc": "2026-10-14T15:18:42.6910271Z",
+      "exitCode": 1,
+      "rawOutput": "[i18n-split] generated locale files are invalid (locale-vehicles.json, runtime-manifest.json, usage-manifest.json). Run node scripts/split-i18n-catalog.mjs.",
+      "invalidGeneratedFiles": [
+        "web\\src\\i18n\\en\\locale-vehicles.json",
+        "web\\src\\i18n\\en\\runtime-manifest.json",
+        "web\\src\\i18n\\en\\usage-manifest.json"
+      ],
+      "invalidGeneratedFilesCount": 3,
+      "closureEstablished": false,
+      "namespaceGuard": "NOTRUN: catalog closure failed first",
+      "writes": false
+    },
+    "coveringProof": {
+      "selectedFile": "web\\src\\features\\system\\components\\command-center\\CommandDomainBrowser.test.tsx",
+      "selector": "CommandDomainBrowser ordinary button contract (F10)",
+      "authoredCases": 15,
+      "caseNamesAuthority": "The retained authoredCases array below, unchanged; these are authored names, not newly discovered tests.",
+      "discovery": "NOTRUN",
+      "runtimeDiscovered": 0,
+      "execution": "NOTRUN",
+      "executed": 0,
+      "passed": 0,
+      "failed": 0,
+      "skipped": 0,
+      "notRun": 15,
+      "discoveryExitCode": null,
+      "testExitCode": null,
+      "reason": "The prompt permits this exact selector rerun only after real new catalog closure. The normal read-only catalog check still fails, so no Vitest command was started and no zero-collection pass is claimed.",
+      "ownedCorrection": "NOT_EVALUATED: no test assertion executed",
+      "historicalGenuinePassesRepeated": false
+    },
+    "accounting": {
+      "attemptsUsedAtIntake": 0,
+      "ownedAttemptsChargedThisContinuation": 0,
+      "attemptsUsedAfterContinuation": 0,
+      "reason": "External catalog-only startup failure does not consume attempts.",
+      "originalHelperNativeBudgetsRenewed": false
+    },
+    "readOnlyPins": {
+      "sourceSha256BeforeAndAfter": "0040F7494D236E2FD15C038A37F749326E0D8FE3390667FE2DC491B09C17A9C2",
+      "fixtureSha256BeforeAndAfter": "EEA425EDE38B18367C4EB17986A2A6FB8CC42BC3DAAAC28C541C262E97E767BF",
+      "sourceOwnerHashesMatch": true,
+      "sourceAndFixtureUnchanged": true,
+      "dependencyFilesCompared": 8,
+      "dependencyFilesUnchanged": 8,
+      "dependencySha256BeforeAndAfter": {
+        "web\\src\\features\\system\\components\\command-center\\commandDomains.ts": "1BD5EEADEE7E122C73D66250D12B7FD8471BA18274A1FBC0FA747848CDBFFE84",
+        "web\\src\\features\\system\\commands.ts": "D71FCA1C8D68AACCA8910689C7206E7AB9C135C420F8706A1777AA8E388C2580",
+        "web\\src\\features\\system\\components\\CollapsibleCommandGroup.tsx": "8DB509B1DC1F73BB89F640BF7D0C2501B927F626F2BDDF27FFB3D7CAC5913A94",
+        "web\\src\\components\\ui\\Button.tsx": "E43E202CC9F465EFEEF93A1BE2B156255958934AF635ABF0EAA408F310DDE16C",
+        "web\\src\\test-setup.ts": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+        "web\\vite.config.ts": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+        "web\\scripts\\split-i18n-catalog.mjs": "CDA6CCFCDC442BD7524343921C18EFD43FF74DC3FFD6CC61BC34A37631850598",
+        "web\\scripts\\audit-i18n-namespaces.mjs": "2869FE9085C8629A0F042634F990088C2B64FB9A4B40E53BBF75BF5FF200BC96"
+      },
+      "limitation": "These bounded hashes do not prove all repository/runtime dependencies immutable or establish whole-suite preservation."
+    },
+    "limits": {
+      "writes": [
+        "docs\\frontend-audits\\phase6-proof-command-domain-tab-contract.json",
+        "web\\logs\\phase6-proof-command-domain-tab-contract.log"
+      ],
+      "sourceFixtureCanonicalConfigWrites": false,
+      "gitCommands": false,
+      "guardBypass": false,
+      "fullSuitesLintBuildTypecheck": "NOTRUN: outside exact read-only proof scope",
+      "violationsLineSectionHookAudits": "NOTRUN: no application source edits; retained scoped evidence not repeated",
+      "browserServerDockerInstall": "NOTRUN",
+      "nativeOrGlobalGateClaim": false,
+      "ownedProcessId": 60100,
+      "ownedProcessExited": true
+    },
+    "proofAccepted": false,
+    "requiredNextCorrection": "The authorized catalog owner must close the three currently invalid generated files using the existing canonical workflow. Only after normal catalog and namespace guards succeed may the same existing item execute its exact affected covering suite. No source/fixture correction is invented.",
+    "resultLine": "FAILED | phase6-proof-command-domain-tab-contract | external catalog check exit 1; 3 invalid generated files; covering proof NOTRUN (0 executed, 15 pending), attempts remain 0 | done so far: updated the existing JSON receipt and raw log; source and fixture pins unchanged"
+  },
   "root": "D:\\repos\\teslasync",
   "cwd": "D:\\repos\\teslasync\\web",
   "requestedSourceRef": "3d8bfe19db1e68205183865abf9bf94e1630781c",

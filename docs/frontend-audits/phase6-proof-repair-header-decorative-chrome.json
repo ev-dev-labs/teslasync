@@ -234,6 +234,201 @@
       "meaning": "Source lines, test lines, panel opens, direct cases, parameterized rows. Exact command retained in log; no runtime discovery."
     }
   },
+  "latestContinuation": {
+    "status": "EXTERNAL_BLOCKED_CATALOG_STARTUP",
+    "runtimeProof": "NOTRUN",
+    "evidenceInterpretation": "Earlier fields remain the original retained receipt. This continuation is the latest observation; it does not replace historical accounting or renew spent original/helper/native budgets.",
+    "clock": {
+      "requestUtc": "2026-10-14T15:07:41.707Z",
+      "firstObservedUtc": "2026-10-14T15:07:56.0149193Z",
+      "returnByUtc": "2026-10-14T15:27:41.707Z",
+      "originalClockRenewed": false
+    },
+    "preflight": {
+      "shellId": "1",
+      "startUtc": "2026-10-14T15:08:14.3740466Z",
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "exit": 0,
+      "rawOutput": "[i18n-split] OK — 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "meaning": "Actual new normal split closure permitted one covering run. This standalone check did not execute the strict namespace guard or any header test."
+    },
+    "runtime": {
+      "shellId": "phase6-header-proof-continuation",
+      "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseWorkspaceHeader.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+      "environment": {
+        "VITE_GIT_SHA": "d27981a26a17d8621c606ba64e18ec6397eeccef"
+      },
+      "environmentReason": "Supplied accepted-source identity avoids automatic Git discovery; no test/catalog policy changed.",
+      "nodeVersion": "v26.8.1",
+      "startUtc": "2026-10-14T15:13:19.4782667Z",
+      "endUtc": "2026-10-14T15:21:59.4685733Z",
+      "exit": 1,
+      "counts": {
+        "selectedFiles": 1,
+        "authoredExpandedCases": 13,
+        "discoveredFiles": 0,
+        "discoveredCases": 0,
+        "executed": 0,
+        "passed": 0,
+        "failedAssertions": 0,
+        "skipped": 0,
+        "startupErrors": 1
+      },
+      "countBasis": "Normal startup error preceded runner discovery; no RUN or test summary emitted. The unchanged 13 exact case names remain listed in cases and the raw log, all NOTRUN.",
+      "normalCatalogGuard": "scripts\\split-i18n-catalog.mjs --check",
+      "invalidGeneratedFiles": 60,
+      "externalOnly": true,
+      "attemptCharge": 0,
+      "ownedAssertionFailures": [],
+      "runsAfterClosure": 1,
+      "unchangedHistoricalGenuinePassesRepeated": 0,
+      "strictNamespaceGuard": "NOTRUN; preceding normal split guard failed",
+      "rawOutput": "Matching log retains exact 60 invalid filenames, normal Startup Error stack, child status1/signalnull/pid70784 and observed runner exit1.",
+      "meaning": "Catalog coherence changed after the successful preflight. Zero execution is NOTPASS; no source or fixture failure is inferred."
+    },
+    "preservation": {
+      "baselineUtc": "2026-10-14T15:08:14.3740466Z",
+      "postCaptureUtc": "2026-10-14T15:22:15.3531787Z",
+      "pinCount": 16,
+      "acceptedSourceTestSupportConfigToolPinsMatchedBeforeAfter": 13,
+      "catalogPinsAlreadyChangedFromHistoricalReceiptBeforeRun": 3,
+      "catalogPinsChangedDuringContinuation": 1,
+      "catalogChangeDuringContinuation": {
+        "path": "web\\src\\i18n\\en.json",
+        "beforeSha256": "6e1e8ff4ddb120705d08ecf840ac959f8dad8e8eda35bd088f01c3437bbb9867",
+        "afterSha256": "a70130fb345938a41ad87cb910c5012c372f1db720fb044e0633c61b62f7c184"
+      },
+      "otherCurrentCatalogPinsUnchangedDuringContinuation": [
+        {
+          "path": "web\\src\\i18n\\en\\locale-system.json",
+          "sha256": "7690edb20e239471c9697e51c3e1af1f7c04a4190b762dc36534a8d3850e1d7c"
+        },
+        {
+          "path": "web\\src\\i18n\\en\\usage-manifest.json",
+          "sha256": "b27b839785b20c9c26eae281b98315d2c9121659f68a7051249bd296cbc12923"
+        }
+      ],
+      "sourceLines": 112,
+      "testLines": 144,
+      "panelOpens": 1,
+      "sourceEdits": 0,
+      "fixtureEdits": 0,
+      "catalogEditsByThisWorker": 0,
+      "configEdits": 0,
+      "guardBypasses": 0,
+      "meaning": "Exact accepted header/test hashes and 11 additional read-only pins still match. External canonical catalog changed during this continuation; no repository-wide immutable snapshot is claimed."
+    },
+    "remainingNeed": "Serialized catalog owner must close current canonical/generated drift and keep the ordinary startup inputs coherent for the same 13 unchanged covering cases. No owned correction is established without executed assertions.",
+    "notRun": [
+      "Global TypeScript, lint, build, violations audit or full suites: proof-only scope; original genuine passes not repeated",
+      "Browser/native contrast/geometry, API/network acceptance or real scan/repair actions",
+      "Git, source/fixture/catalog/config/queue edits, installs, servers, Docker or subagents"
+    ],
+    "release": {
+      "runtimeShell": "COMPLETED exit1",
+      "sourceClaims": "NONE HELD",
+      "taskOwnedProcessesRemaining": 0,
+      "writableArtifacts": "Only assigned report and matching log",
+      "applicationAcceptance": "NOT_GRANTED",
+      "nativeAcceptance": "NOTRUN"
+    }
+  },
+  "continuation20261014T152328": {
+      "status": "EXTERNAL_BLOCKED_CATALOG_STARTUP",
+      "runtimeProof": "NOTRUN",
+      "evidenceInterpretation": "Latest observation. Original receipt and prior latestContinuation are retained unchanged; no original/helper/native budget is renewed.",
+      "clock": {
+        "requestUtc": "2026-10-14T15:23:28.721Z",
+        "firstObservedUtc": "2026-10-14T15:23:38.5787463Z",
+        "returnByUtc": "2026-10-14T15:43:28.721Z",
+        "originalClockRenewed": false
+      },
+      "preflight": {
+        "shellId": "header-proof-preflight-oct14",
+        "command": "node scripts\\split-i18n-catalog.mjs --check",
+        "cwd": "D:\\repos\\teslasync\\web",
+        "nodeVersion": "v26.8.1",
+        "startUtc": "2026-10-14T15:23:58.2914431Z",
+        "endUtc": "2026-10-14T15:29:45.3741659Z",
+        "exit": 1,
+        "invalidGeneratedFiles": 60,
+        "rawOutput": "Exact generated-file list and numeric exit retained in matching log under RESUME_20261014T152328.",
+        "externalOnly": true,
+        "meaning": "Real new catalog closure has not occurred. This standalone ordinary guard is not a Vitest run; zero collection is NOTPASS."
+      },
+      "runtime": {
+        "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseWorkspaceHeader.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+        "status": "NOTRUN",
+        "exit": null,
+        "reason": "Assigned prerequisite requires real new catalog closure before exact affected-selector rerun. Preflight exit1 does not authorize another startup-only test run.",
+        "counts": {
+          "selectedFiles": 1,
+          "authoredExpandedCases": 13,
+          "discoveredFiles": 0,
+          "discoveredCases": 0,
+          "executed": 0,
+          "passed": 0,
+          "failedAssertions": 0,
+          "skipped": 0
+        },
+        "exactCaseNames": "The 13 unchanged identities in cases remain the selected covering inventory, all NOTRUN.",
+        "attemptCharge": 0,
+        "ownedAssertionFailures": [],
+        "runsAfterClosure": 0,
+        "unchangedHistoricalGenuinePassesRepeated": 0,
+        "strictNamespaceGuard": "NOTRUN; ordinary preceding split guard failed"
+      },
+      "preservation": {
+        "baselineUtc": "2026-10-14T15:23:58.0658090Z",
+        "postCaptureUtc": "2026-10-14T15:30:00.8903926Z",
+        "pinCount": 16,
+        "unchangedBeforeAfter": 16,
+        "changedBeforeAfter": 0,
+        "acceptedSourceTestSupportConfigToolPinsMatchedHistoricalReceipt": 13,
+        "catalogPinsAlreadyChangedFromHistoricalReceiptBeforeRun": 3,
+        "currentCatalogPins": [
+          {"path":"web\\src\\i18n\\en.json","sha256":"a70130fb345938a41ad87cb910c5012c372f1db720fb044e0633c61b62f7c184"},
+          {"path":"web\\src\\i18n\\en\\locale-system.json","sha256":"7690edb20e239471c9697e51c3e1af1f7c04a4190b762dc36534a8d3850e1d7c"},
+          {"path":"web\\src\\i18n\\en\\usage-manifest.json","sha256":"d6b21297bea18907cd1783cf1bbb68a4b34d3b1e6e6471d84605f658750a2ee3"}
+        ],
+        "otherPins": "Exact remaining 13 SHA256 values match preservation.hashes before and after; raw outputs retained in log.",
+        "sourceLines": 112,
+        "testLines": 144,
+        "panelOpens": 1,
+        "authoredDirectCases": 7,
+        "authoredParameterizedRows": 6,
+        "sourceEdits": 0,
+        "fixtureEdits": 0,
+        "catalogEditsByThisWorker": 0,
+        "configEdits": 0,
+        "guardBypasses": 0
+      },
+      "receiptValidation": {
+        "initialExit": 1,
+        "initialRawOutput": "Receipt accounting mismatch",
+        "cause": "Continuation was initially nested inside the prior receipt; corrected to a separate top-level continuation without changing historical fields.",
+        "recoveredShellId": "4",
+        "recoveredExit": 0,
+        "utc": "2026-10-14T15:32:00.4071668Z",
+        "rawOutput": "REPORT_JSON_PARSE=PASS CASES=13 PINS=16 INVALID_GENERATED_FILES=60 PREFLIGHT_EXIT=1 RUNTIME_EXIT=null EXECUTED=0 PASSED=0 ATTEMPT_CHARGE=0",
+        "meaning": "JSON syntax and persisted blocker accounting only, not runtime acceptance."
+      },
+      "remainingNeed": "Serialized catalog owner must close current canonical/generated drift through normal guards. Then the same unchanged 13-case covering file requires actual execution. No owned correction is inferred from a catalog-only failure.",
+      "notRun": [
+        "Global TypeScript, lint, build, violations audit and full suites: proof-only scope and explicit scoped-check restriction",
+        "Browser/native contrast/geometry, API/hook reachability or real scan/repair operations",
+        "Git, source/fixture/catalog/config/queue edits, installs, servers, Docker and subagents"
+      ],
+      "release": {
+        "captureUtc": "2026-10-14T15:30:01.0109639Z",
+        "preflightShell": "COMPLETED exit1",
+        "taskOwnedProcessesRemaining": 0,
+        "sourceClaims": "NONE HELD",
+        "writableArtifacts": "Only assigned report and matching log",
+        "applicationAcceptance": "NOT_GRANTED",
+        "nativeAcceptance": "NOTRUN"
+      }
+    },
   "release": {
     "utc": "2026-10-14T07:50:11.0173114Z",
     "clockBasis": "UTC captured by shell5923 for final claim-release declaration; receipt sealing and final read-only artifact verification follow.",

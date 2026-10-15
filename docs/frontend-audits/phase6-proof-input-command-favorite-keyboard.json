@@ -4,6 +4,132 @@
   "status": "BLOCKED_EXTERNAL",
   "outcome": "NOTRUN",
   "runtimeAccepted": false,
+  "currentContinuation": {
+    "requestUtc": "2026-10-14T15:23:07.986Z",
+    "preflightStartUtc": "2026-10-14T15:23:30.4396941Z",
+    "preflightCompleteObservedUtc": "2026-10-14T15:29:29.2528187Z",
+    "status": "BLOCKED_EXTERNAL",
+    "outcome": "NOTRUN",
+    "runtimeAccepted": false,
+    "node": "v26.8.1",
+    "catalogPreflight": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "exitCode": 1,
+      "wrapperExitCode": 0,
+      "invalidFilesCount": 60,
+      "rawOutputLocation": "web\\logs\\phase6-proof-input-command-favorite-keyboard.log CURRENT_CONTINUATION_CATALOG_RAW_OUTPUT",
+      "result": "Generated locale files are invalid, including shell.json, locale-system.json, runtime-manifest.json and usage-manifest.json. Normal catalog closure is absent.",
+      "wrapperExitExplanation": "PowerShell printed CATALOG_EXIT=1 after the native command; its own exit 0 is not the catalog result."
+    },
+    "runtimeProof": {
+      "command": null,
+      "exitCode": null,
+      "launched": false,
+      "reason": "Assignment permits the exact affected selector rerun only after real new catalog closure. The normal preflight exited 1, so no Vitest invocation was launched."
+    },
+    "accounting": {
+      "allAuthoredExpanded": 20,
+      "originalBodies": 11,
+      "newAuthoredExpanded": 9,
+      "requiredSelected": 15,
+      "requiredSelectedAffectedOriginal": 6,
+      "requiredSelectedNew": 9,
+      "deliberatelyUnselectedAuthored": 5,
+      "discovered": 0,
+      "executed": 0,
+      "passed": 0,
+      "failedAssertions": 0,
+      "skipped": 0,
+      "coveringNotRun": 15,
+      "explanation": "These counts describe this continuation only: Vitest was not launched. Zero execution is NOT PASS. Earlier interrupted-run unknown counts remain unchanged in latestContinuation."
+    },
+    "attemptCharge": 0,
+    "attemptsUnchanged": true,
+    "receiptValidation": {
+      "command": "PowerShell ConvertFrom-Json, receipt invariant assertions and raw catalog invalid-file count",
+      "exitCode": 0,
+      "observedUtc": "2026-10-14T15:30:26.0613243Z",
+      "rawOutput": "RECEIPT_JSON_PARSE=PASS ACCOUNTING_SHAPE=PASS HISTORICAL_UNKNOWN_COUNTS_PRESERVED=PASS EXIT=0",
+      "evidenceLimit": "Receipt integrity only; runtime proof remains NOTRUN."
+    },
+    "preservation": {
+      "beforeAndAfterHashesMatchRetainedPins": true,
+      "sourceSha256": "A28872B7121D53022FCAE4E77F9FA989554351F52FF8129FE637D4EE8D1E3795",
+      "fixtureSha256": "00A5600191BE089BD653BC8479A7793AB1E1AAF252B2E32A712160728258AFAE",
+      "setupSha256": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "configSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "sourceFixtureWrites": [],
+      "historicalEvidencePreserved": true
+    },
+    "limitations": [
+      "External catalog failure remains a blocker; no startup guard bypass, regeneration, fixture correction or source change was authorized.",
+      "No historical passing tests were repeated and no spent task/helper/native budget was renewed.",
+      "No browser/native/global gate, full TypeScript, lint, build, test suite, API check, Git command, agent launch or server start was performed.",
+      "Only the two assigned evidence files were edited; no heartbeat was written outside the exclusive writable scope.",
+      "The earlier latestContinuation and all older receipts below are preserved historical evidence, not the current result."
+    ]
+  },
+  "latestContinuation": {
+    "requestUtc": "2026-10-14T15:07:39.052Z",
+    "commandStartUtc": "2026-10-14T15:13:20.4059801Z",
+    "releaseObservedUtc": "2026-10-14T15:22:34.6175693Z",
+    "status": "BLOCKED_BOUNDED_RUNTIME",
+    "outcome": "UNVERIFIED",
+    "node": "v26.8.1",
+    "catalogPreflight": {
+      "command": "node scripts\\split-i18n-catalog.mjs --check",
+      "exitCode": 0,
+      "rawOutput": "[i18n-split] OK — 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)"
+    },
+    "command": "node node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\InputCommandTile.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile=C:\\Users\\AtulM\\.copilot\\session-state\\a7e43290-12a0-4b29-8f08-98f7fcd64fb1\\files\\input-command-vitest.json -t \"does not cancel favorite|toggles favorites with|blocks mouse and tile|keyboard-focusable|opens the input dialog|activates on Enter|shows a spinner|reflects the favourite|marks the favourite\"",
+    "identityEnvironment": "VITE_GIT_SHA=e9bf7a86ea24e74ac706b23352820c3267524846 prevents configuration Git lookup; supplied target identity is not independently verified.",
+    "commandExitCode": null,
+    "termination": "Stopped through stop_powershell for shellId 3 after the 300-second initial wait, a further 120-second wait, and a bounded progress probe; no normal exit was observed.",
+    "runnerOutputObserved": false,
+    "freshJsonReceiptExists": false,
+    "accounting": {
+      "allAuthoredExpanded": 20,
+      "originalBodies": 11,
+      "newAuthoredExpanded": 9,
+      "requestedSelected": 15,
+      "requestedSelectedAffectedOriginal": 6,
+      "requestedSelectedNew": 9,
+      "deliberatelyUnselectedAuthored": 5,
+      "discovered": null,
+      "executed": null,
+      "passed": null,
+      "failedAssertions": null,
+      "skipped": null,
+      "explanation": "Fresh execution counts are unknown: the interrupted runner produced neither output nor a JSON receipt. Historical zero counts below belong only to prior catalog-blocked invocations. They are not fresh counts or passing evidence."
+    },
+    "preservation": {
+      "sourceSha256Before": "A28872B7121D53022FCAE4E77F9FA989554351F52FF8129FE637D4EE8D1E3795",
+      "fixtureSha256Before": "00A5600191BE089BD653BC8479A7793AB1E1AAF252B2E32A712160728258AFAE",
+      "sourceAndFixtureMatchRetainedPinsBefore": true,
+      "sourceFixtureWrites": [],
+      "postCommandHashes": "Separate read-only hash command exited 0 at 2026-10-14T15:22:34.6175693Z; source, fixture, src\\test-setup.ts and vite.config.ts match all four retained pre-run pins.",
+      "sourceUnchanged": true,
+      "fixtureUnchanged": true,
+      "setupUnchanged": true,
+      "configUnchanged": true,
+      "historicalEvidencePreserved": true
+    },
+    "receiptValidation": {
+      "command": "PowerShell ConvertFrom-Json plus assertions for requestedSelected=15, runtimeAccepted=false and executed=null",
+      "exitCode": 0,
+      "observedUtc": "2026-10-14T15:22:27.5718667Z",
+      "rawOutput": "RECEIPT_JSON_PARSE=PASS ACCOUNTING_SHAPE=PASS EXIT=0",
+      "evidenceLimit": "Receipt integrity only, not runtime acceptance."
+    },
+    "limitations": [
+      "No completed runtime proof, native/browser acceptance, or global gate is claimed.",
+      "No source, fixture, canonical catalog, shared component, queue, or Git edits were made.",
+      "No full TypeScript, lint, build, or test suite was run: this item authorizes only the exact scoped proof.",
+      "A read-only PowerShell progress probe also failed to return within its wait and was explicitly stopped as shellId 4.",
+      "The historical receipt fields below remain historical; this continuation does not renew or adjudicate spent budgets.",
+      "No normal runner exit or exact command-release timestamp was captured."
+    ]
+  },
   "targetSourceCommit": "e9bf7a86ea24e74ac706b23352820c3267524846",
   "commitIdentityAuthority": "Exact pending root queue row; supplied by parent, not independently verified by Git",
   "requestUtc": "2026-10-14T12:28:07.264Z",

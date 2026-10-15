@@ -1,0 +1,206 @@
+{
+  "item": "phase6-proof-next12-playground-endpoint-selection",
+  "phase": 6,
+  "kind": "proof",
+  "status": "FAILED",
+  "outcome": "Executed scoped proof failed; no source or fixture correction authorized.",
+  "requestUtc": "2026-10-14T15:08:34.703Z",
+  "commandStartUtc": "2026-10-14T15:09:24.3387673Z",
+  "commandEndUtc": "2026-10-14T15:17:26.4723887Z",
+  "alreadyDoneCheck": {
+    "reportExisted": false,
+    "logExisted": false,
+    "remainingWorkExportStatus": "PENDING",
+    "historicalStartupZeroPromotedToPass": false
+  },
+  "runtime": {
+    "node": "v26.8.1",
+    "npm": "11.19.0",
+    "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+    "vitest": "4.1.11",
+    "environment": "jsdom",
+    "supportedNode": true
+  },
+  "check": {
+    "cwd": "web",
+    "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\admin\\components\\EndpointSidebar.phase6.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "config": "web\\vite.config.ts",
+    "setup": "web\\src\\test-setup.ts",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "environmentOverrides": {
+      "VITE_GIT_SHA": "dev",
+      "NO_COLOR": "1"
+    },
+    "identityNote": "VITE_GIT_SHA=dev prevents the existing config from executing Git discovery. This is explicitly not a commit pin or deployment identity.",
+    "startupGuardBypassed": false,
+    "catalogSplit": "OK: 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys.",
+    "namespaceAudit": "Normal strict guard returned and Vitest reached RUN: 2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new source-local dotless labels, 49 newly resolved baseline entries.",
+    "exitCode": 1,
+    "captureShellExitCode": 0,
+    "captureShellExitNote": "The output-capture wrapper finished successfully; VITEST_EXIT 1 is the actual test result.",
+    "testFiles": 1,
+    "failedTestFiles": 1,
+    "collected": 8,
+    "executed": 8,
+    "passed": 0,
+    "failed": 8,
+    "durationSecondsReportedByVitest": 37.28,
+    "rawSummary": [
+      "Test Files  1 failed (1)",
+      "Tests  8 failed (8)",
+      "Duration  37.28s (transform 14.74s, setup 6.72s, import 23.15s, tests 2.29s, environment 3.69s)",
+      "VITEST_EXIT 1"
+    ],
+    "rawLog": "web\\logs\\phase6-proof-next12-playground-endpoint-selection.log"
+  },
+  "cases": [
+    {
+      "name": "exposes exactly the current method/path without changing names or button roles",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"POST /vehicles\""
+    },
+    {
+      "name": "follows controlled selection changes and clears current state for null or unmatched selection",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"GET /vehicles\""
+    },
+    {
+      "name": "keeps pointer selection callback-only until the parent supplies selection",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"POST /vehicles\""
+    },
+    {
+      "name": "retains Tab reachability and Enter selection without sending requests",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Vehicles 2\""
+    },
+    {
+      "name": "retains Tab reachability and Space selection without sending requests",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Vehicles 2\""
+    },
+    {
+      "name": "retains keyboard group disclosure and current state after reopening",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Vehicles 2\""
+    },
+    {
+      "name": "reveals a newly selected endpoint in a collapsed group without selecting or sending again",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"Tag3 1\""
+    },
+    {
+      "name": "retains filtering, counts and the empty state without losing the controlled selection",
+      "status": "FAILED",
+      "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name \"POST /vehicles\""
+    }
+  ],
+  "failureEvidence": {
+    "actualAccessibleNames": ["GET/vehicles", "POST/vehicles", "Vehicles2", "Tag31"],
+    "expectedAccessibleNames": ["GET /vehicles", "POST /vehicles", "Vehicles 2", "Tag3 1"],
+    "detail": "All eight executed cases stop at exact accessible-name lookups. Failure diagnostics include selected rows with aria-current=\"true\", but this does not establish complete selection, grouping, keyboard, callback or focus acceptance.",
+    "networkEvidence": "Each unchanged case installs a fetch spy and asserts no calls during afterEach; no separate fetch assertion failure was reported. No native API/network behavior is claimed.",
+    "correctionAuthority": "Source and fixtures are read-only. Determining whether source naming or test expectations should change requires a separately authorized correction; neither was changed and no assertion was weakened."
+  },
+  "pins": [
+    {
+      "path": "web\\src\\features\\admin\\components\\EndpointSidebar.tsx",
+      "sha256Before": "83697A3D0B6E29C214B5507519B9A5A88DFD3AE8855E2A6E98F61BBF16E35AEF",
+      "sha256After": "83697A3D0B6E29C214B5507519B9A5A88DFD3AE8855E2A6E98F61BBF16E35AEF",
+      "bytes": 7023,
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\EndpointSidebar.phase6.test.tsx",
+      "sha256Before": "A3723F72136955DAED4300821E827F16A0AF636A95D13BD726C82497A3A92F44",
+      "sha256After": "A3723F72136955DAED4300821E827F16A0AF636A95D13BD726C82497A3A92F44",
+      "bytes": 8503,
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\EndpointSidebar.test.tsx",
+      "sha256Before": "332B11DEA670B6F2C6F2AA1D7842BEEF9D4E88BC207165FE57B3676EACC072CB",
+      "sha256After": "332B11DEA670B6F2C6F2AA1D7842BEEF9D4E88BC207165FE57B3676EACC072CB",
+      "bytes": 9202,
+      "unchanged": true
+    },
+    {
+      "path": "web\\vite.config.ts",
+      "sha256Before": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "sha256After": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "bytes": 19987,
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\test-setup.ts",
+      "sha256Before": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "sha256After": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+      "bytes": 7885,
+      "unchanged": true
+    },
+    {
+      "path": "web\\package.json",
+      "sha256Before": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "sha256After": "8C1D55D305A1A47A6A5E7CA3DBB0452D129C4CB0DC9F95B9ED9151C9CE93EC7A",
+      "bytes": 10780,
+      "unchanged": true
+    },
+    {
+      "path": "web\\package-lock.json",
+      "sha256Before": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF",
+      "sha256After": "626F096DFDD962204BC6D88931F60469A57DD07F2A8F6B045744BD90F29910DF",
+      "bytes": 497249,
+      "unchanged": true
+    },
+    {
+      "path": "web\\src\\i18n\\en.json",
+      "sha256Before": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867",
+      "sha256After": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+      "bytesBefore": 1854647,
+      "bytesAfter": 1855206,
+      "unchanged": false,
+      "note": "An external catalog delta was observed during the read-only proof. This worker did not edit the catalog and did not revert or claim ownership of that change."
+    }
+  ],
+  "budgets": {
+    "attemptsUsedAtAssignment": 0,
+    "normalScopedRunsThisItem": 1,
+    "executedFailedRunsThisItem": 1,
+    "catalogOnlyFailuresThisItem": 0,
+    "automaticRetries": 0,
+    "originalHelperNativeBudgetsRenewed": false,
+    "queueAttemptsEdited": false
+  },
+  "writes": [
+    "docs\\frontend-audits\\phase6-proof-next12-playground-endpoint-selection.json",
+    "web\\logs\\phase6-proof-next12-playground-endpoint-selection.log"
+  ],
+  "applicationWrites": [],
+  "sourceFixtureWrites": [],
+  "gitCommands": [],
+  "agentsLaunched": [],
+  "dependenciesInstalled": [],
+  "browserDownloads": [],
+  "dockerRebuilds": [],
+  "evidenceLimits": [
+    "This is a failed normal scoped jsdom proof, not zero collection or a catalog-only failure.",
+    "No native, visual, browser, deployment or whole-page acceptance is claimed.",
+    "No whole-repository TypeScript, lint, build or test suite ran; the assignment permits scoped existing checks only.",
+    "Original EndpointSidebar.test.tsx was preserved by before/after byte hashes, not rerun or promoted to passing evidence.",
+    "No hooks, backend endpoints, units, workspace scope, shared components, registries or public contracts were changed.",
+    "The pinned source/test/config files remained stable; external catalog drift prevents an immutable whole-checkout claim.",
+    "No Git commit identity was independently obtained."
+  ],
+  "authorityRead": [
+    ".runner\\prompts\\phase6-proof-next12-playground-endpoint-selection.md",
+    "docs\\frontend-design-contract.md",
+    "docs\\session-handoff.md",
+    "docs\\frontend-worker-conventions.md",
+    ".github\\instructions\\frontend-si-cutover.instructions.md",
+    ".github\\instructions\\observability.instructions.md",
+    ".github\\instructions\\react-frontend.instructions.md",
+    "work-items.json exact item",
+    "migration-queue.md matching item"
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "latest_execution_status": "PARTIAL_NATIVE_NOTRUN_SAFE_FIXTURE_EMPTY",
+  "latest_execution_status": "BLOCKED_CALLER_MAP_BROWSER_AND_BUDGET_AUTHORITY",
   "item": "phase6-native-drives-preview-mobile-target",
   "continuation": 2,
   "status": "NARROW_REMAINING_NATIVE_TARGETS_CONFIRMED",
@@ -506,5 +506,76 @@
       "web\\src\\api\\hooks\\useVehicles.ts:1-115",
       "internal\\api\\router.go:3362-3389,3506-3528"
     ]
+  },
+  "prerequisite_assessment_20261014": {
+    "item": "phase6-native-drives-preview-mobile-target",
+    "assessment_utc": "2026-10-14T15:08:07.6900844Z",
+    "status": "BLOCKED_CALLER_MAP_BROWSER_AND_BUDGET_AUTHORITY",
+    "already_done": false,
+    "scope": "Prerequisite assessment only; assigned continuation report is the only changed file.",
+    "original_report_sha256_before_assessment": "b8979032390afd02882d36989ac048291c9f7a1deeca8cf4b345d33a86a96dee",
+    "fixture_binding_report": {
+      "path": "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json",
+      "sha256": "4a862cebd5086398d3cabfa76c33b3dfd211a8bfa0b36fd23497da7a690bbf4b",
+      "historical_status": "DONE_READONLY_DIAGNOSIS_FIXTURE_CALLER_MAPPING_REQUIRED",
+      "documented_mapping": {
+        "vehicle_id": 2,
+        "completed_drive_id": 3,
+        "ongoing_drive_id": 4
+      },
+      "diagnosis": "The documented availability blocker is stale caller IDs, not an established proxy or application defect. The binding report retains sixteen scoped HTTP200 observations from its own earlier execution.",
+      "new_availability_check": "NOTRUN; historical HTTP observations are not a fresh availability or native acceptance claim.",
+      "authority_limit": "The binding report explicitly does not grant browser locks, storage-fixture writes, source edits, queue changes or native acceptance."
+    },
+    "remaining_prerequisites": [
+      {
+        "owner": "Parent runtime/QA orchestration",
+        "required": "Explicitly approve the superseding caller-only vehicle2/completed3/ongoing4 map and its fresh same-origin context configuration while preserving historical vehicle4/190/191 receipts.",
+        "status": "NO_GRANT_FOUND_IN_REVIEWED_AUTHORITY",
+        "evidence": "Binding report precise_needed_owners requests approval; session-handoff requires separate explicit safe scope for native caller rebinding."
+      },
+      {
+        "owner": "Parent browser/resource orchestration",
+        "required": "Grant an exclusive current Edge browser slot and establish current ownership before browser execution.",
+        "status": "NO_CURRENT_GRANT_ESTABLISHED",
+        "evidence": "The historical browserlock1/4 was released at05:22:29.869Z. A released historical slot is not a new grant."
+      },
+      {
+        "owner": "Parent native-budget authority",
+        "required": "Establish remaining authorized execution within the retained attempts and original/helper/native budgets; otherwise retain the blocker.",
+        "status": "BUDGET_NOT_RENEWED",
+        "attempts_used_from_assignment": 2,
+        "evidence": "Current assignment explicitly says this inventory does not renew spent original/helper/native budgets."
+      }
+    ],
+    "remaining_native_cases": {
+      "fine_pointer_mobile_widths": [375, 320, 390, 430, 767],
+      "fine_pointer_restoration_widths": [768, 1023],
+      "status": "NOTRUN_AUTHORITY_BLOCKED",
+      "completed_cases_repeated": 0,
+      "new_native_measurements": 0,
+      "new_native_activations": 0,
+      "new_captures": 0
+    },
+    "preservation": {
+      "prior_receipt_fields": "Unchanged except the top-level latest_execution_status; this additive assessment does not replace historical outcomes.",
+      "historical_source_tests_touch_keyboard_and_captures": "Retained, not rerun or promoted to current acceptance.",
+      "original_404_and_empty_results": "Retained; diagnosed by the separate binding report, not rewritten as successful requests.",
+      "whole_pilot_status": "PARTIAL_NOT_ACCEPTED",
+      "source_tests_shared_components_config_seed_deployment_and_queue": "Unchanged",
+      "new_network_browser_storage_mutation_or_git_actions": 0,
+      "new_attempts_consumed": 0
+    },
+    "validation_scope": "Assigned JSON syntax, prerequisite fields and preservation of the original report bytes after removing this additive assessment and restoring the historical latest_execution_status. No application tests, full TypeScript, lint, build or browser checks: report-only scope and explicit assignment restrictions.",
+    "files_read": [
+      ".runner\\prompts\\phase6-native-drives-preview-mobile-target.md",
+      "docs\\frontend-design-contract.md",
+      "docs\\session-handoff.md",
+      "docs\\frontend-worker-conventions.md",
+      "docs\\frontend-audits\\phase6-native-drives-preview-target-continuation.json",
+      "docs\\frontend-audits\\phase6-local-preview-drill-fixture-binding.json",
+      "work-items.json"
+    ],
+    "release": "No browser/resource slot claimed, no background command or worker started, and no source/test claim acquired."
   }
 }
