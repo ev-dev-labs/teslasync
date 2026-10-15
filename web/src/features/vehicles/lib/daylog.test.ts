@@ -33,7 +33,8 @@ describe('daylog lib', () => {
 
   it('formats seconds in the queried timezone', () => {
     setGlobalLocale('en-GB');
-    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'UTC')).toBe('15:04:05 GMT');
+    // ICU spells the UTC offset as 'GMT' or 'GMT+0' depending on the runtime.
+    expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'UTC')).toMatch(/^15:04:05 GMT(?:\+0)?$/);
     expect(formatTimeSeconds('2026-09-14T15:04:05Z', 'America/Los_Angeles')).toBe('08:04:05 GMT-7');
   });
 

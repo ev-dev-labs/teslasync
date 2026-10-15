@@ -68,7 +68,8 @@ describe('SilenceBanner', () => {
     render(<SilenceBanner vehicleId={3} />);
     expect(screen.getByText('Refresh paused')).toBeTruthy();
     expect(screen.queryByText('Vehicle silent')).toBeNull();
-    expect(screen.queryByRole('status')).toBeNull();
+    // The paused notice is itself a status; no loading status is announced.
+    expect(screen.queryAllByRole('status').every((status) => !/loading/i.test(status.textContent ?? ''))).toBe(true);
   });
 
   it.each([undefined, null])('shows an unavailable successful empty watchdog (%s)', (data) => {

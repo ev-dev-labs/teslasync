@@ -352,15 +352,16 @@ describe('TopParkingLocations value filters', () => {
       return value;
     }
 
-    it('keeps the full address and top-ten sample searchable on desktop', () => {
+    it('keeps the full address and top-ten sample searchable on desktop', async () => {
       render(<LongestParkingStints summary={rankedSummary()} state={state} />);
       expect(screen.getByText(address)).not.toHaveClass('truncate');
       expect(screen.getByText('Destination 10')).toBeInTheDocument();
       expect(screen.queryByText('Destination 11')).toBeNull();
-      fireEvent.change(screen.getByRole('textbox', { name: 'Search loaded rows' }),
+      fireEvent.change(screen.getByRole('searchbox', { name: 'Search loaded rows' }),
         { target: { value: '90210' } });
       expect(screen.getByText(address)).toBeInTheDocument();
-      expect(screen.queryByText('Destination 2')).toBeNull();
+      // Table search is deferred; wait for the filtered render.
+      await waitFor(() => expect(screen.queryByText('Destination 2')).toBeNull());
     });
 
     it('opens all fields, full address and IDs from the existing mobile quick view', () => {
@@ -392,9 +393,9 @@ describe('TopParkingLocations value filters', () => {
         expect(dialog).toHaveTextContent('Ongoing');
         expect(dialog).toHaveTextContent('Drive ID');
         expect(dialog).toHaveTextContent('9000');
-        expect(dialog).toHaveTextContent('End time');
+        expect(dialog).toHaveTextContent('Ended at');
         expect(dialog).toHaveTextContent('2026-09-01T12:00:00.000Z');
-        fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }));
+        fireEvent.click(within(dialog).getAllByRole('button', { name: 'Close' })[0]);
         expect(screen.queryByRole('dialog')).toBeNull();
       } finally {
         vi.unstubAllGlobals();
@@ -570,7 +571,7 @@ describe('TopParkingLocations value filters', () => {
     expect(within(censoredRow!).getByText('Right-censored')).toBeInTheDocument();
     expect(within(censoredRow!).getByText('Observed minimum')).toBeInTheDocument();
     expect(within(censoredRow!).getByText('7200 s')).toBeInTheDocument();
-    expect(within(censoredRow!).getByText('75%')).toBeInTheDocument();
+    expect(within(censoredRow!).getByText('75.00%')).toBeInTheDocument();
     const completedRow = screen.getByText('Completed destination').closest('tr');
     expect(completedRow).not.toBeNull();
     expect(within(completedRow!).queryByText('Right-censored')).toBeNull();

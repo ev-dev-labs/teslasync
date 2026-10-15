@@ -1,3 +1,4 @@
+import { setGlobalLocale } from '@/lib/numberFormat';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -116,6 +117,9 @@ function history() {
   }));
 }
 
+// Day-log times follow the saved locale; pin a 24-hour locale for these fixtures.
+beforeEach(() => { setGlobalLocale('en-GB'); });
+
 describe('DayLogTimeline assigned receipt correction', () => {
   it('allocates below-md targets on real search, action, category and link hosts', () => {
     mount({ events: [event({ type: 'drive_end', ref_kind: 'drive', ref_id: 17 })] });
@@ -145,7 +149,7 @@ describe('DayLogTimeline assigned receipt correction', () => {
     expect(category).toHaveAttribute('aria-pressed', 'false');
     await user.keyboard('{Enter}');
     expect(category).toHaveAttribute('aria-pressed', 'true');
-    const disclosure = screen.getByRole('button', { name: 'Show details Door opened 01:30:00 receipt-1' });
+    const disclosure = screen.getByRole('button', { name: new RegExp('^Show details Door opened 01:30:00(?: \\S+)? receipt-1$') });
     disclosure.focus();
     await user.keyboard('{Enter}');
     expect(disclosure).toHaveFocus();
@@ -157,13 +161,13 @@ describe('DayLogTimeline assigned receipt correction', () => {
 
   it('names each disclosure by action, event, local time and exact identity', () => {
     mount({ events: [event(), event({ id: 'receipt-2' })] });
-    const first = screen.getByRole('button', { name: 'Show details Door opened 01:30:00 receipt-1' });
-    const second = screen.getByRole('button', { name: 'Show details Door opened 01:30:00 receipt-2' });
+    const first = screen.getByRole('button', { name: new RegExp('^Show details Door opened 01:30:00(?: \\S+)? receipt-1$') });
+    const second = screen.getByRole('button', { name: new RegExp('^Show details Door opened 01:30:00(?: \\S+)? receipt-2$') });
     expect(first).toHaveAttribute('aria-expanded', 'false');
     expect(first).not.toHaveAttribute('aria-controls');
     expect(second).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(first);
-    const collapse = screen.getByRole('button', { name: 'Hide details Door opened 01:30:00 receipt-1' });
+    const collapse = screen.getByRole('button', { name: new RegExp('^Hide details Door opened 01:30:00(?: \\S+)? receipt-1$') });
     expect(collapse).toHaveAttribute('aria-expanded', 'true');
     const target = document.getElementById(collapse.getAttribute('aria-controls') ?? '');
     expect(target).not.toBeNull();
@@ -172,7 +176,7 @@ describe('DayLogTimeline assigned receipt correction', () => {
     expect(second).toHaveAttribute('aria-expanded', 'false');
     fireEvent.click(collapse);
     expect(target).not.toBeInTheDocument();
-    expect(first).toHaveAccessibleName('Show details Door opened 01:30:00 receipt-1');
+    expect(first).toHaveAccessibleName(new RegExp('^Show details Door opened 01:30:00(?: \\S+)? receipt-1$'));
   });
 
   // Opt in with DAYLOG_NATIVE=1 against the existing Vite server; never start a
@@ -327,8 +331,8 @@ describe('DayLogTimeline assigned receipt correction', () => {
     const link = screen.getByRole('link', { name: 'Drive ended' });
     expect(link).toHaveAttribute('href', '/drives/17');
     expect(link.parentElement).toHaveClass('break-words');
-    fireEvent.click(screen.getByRole('button', { name: `Show details Drive ended 01:30:00 ${identifier}` }));
-    const button = screen.getByRole('button', { name: `Hide details Drive ended 01:30:00 ${identifier}` });
+    fireEvent.click(screen.getByRole('button', { name: (name) => name.startsWith('Show details Drive ended 01:30:00') && name.endsWith(identifier) }));
+    const button = screen.getByRole('button', { name: (name) => name.startsWith('Hide details Drive ended 01:30:00') && name.endsWith(identifier) });
     const details = document.getElementById(button.getAttribute('aria-controls') ?? '')!;
     expect(details).toHaveClass('min-w-0', 'bg-surface-2');
     expect(details.className).not.toMatch(/\b(?:ml|ms)-/);
@@ -346,7 +350,7 @@ describe('DayLogTimeline assigned receipt correction', () => {
     mount({ events: history(), timezone: 'UTC' });
     const list = screen.getByRole('list', { name: 'Timeline' });
     expect(list).toHaveAttribute('tabindex', '-1');
-    const initial = screen.getByRole('button', { name: 'Show details Signal change 05:00:00 receipt-0' });
+    const initial = screen.getByRole('button', { name: new RegExp('^Show details Signal change 05:00:00(?: \\S+)? receipt-0$') });
     expect(initial).toHaveAttribute('aria-keyshortcuts', 'ArrowDown ArrowUp Home End');
     expect(within(list).getAllByRole('listitem').length).toBeLessThan(90);
     expect(screen.queryByTestId('daylog-event-receipt-89')).toBeNull();
@@ -377,12 +381,12 @@ describe('DayLogTimeline assigned receipt correction', () => {
   it('keeps expanded event identity and payload through unmount and virtual remount', async () => {
     mount({ events: history(), timezone: 'UTC' });
     const list = screen.getByRole('list', { name: 'Timeline' });
-    fireEvent.click(screen.getByRole('button', { name: 'Show details Signal change 05:00:00 receipt-0' }));
+    fireEvent.click(screen.getByRole('button', { name: new RegExp('^Show details Signal change 05:00:00(?: \\S+)? receipt-0$') }));
     fireEvent.keyDown(list, { key: 'End' });
     await screen.findByTestId('daylog-event-receipt-89');
     expect(screen.queryByTestId('daylog-event-receipt-0')).toBeNull();
     fireEvent.keyDown(list, { key: 'Home' });
-    const restored = await screen.findByRole('button', { name: 'Hide details Signal change 05:00:00 receipt-0' });
+    const restored = await screen.findByRole('button', { name: new RegExp('^Hide details Signal change 05:00:00(?: \\S+)? receipt-0$') });
     expect(restored).toHaveAttribute('aria-expanded', 'true');
     const details = document.getElementById(restored.getAttribute('aria-controls') ?? '')!;
     expect(within(details).getByText('Field0')).toBeInTheDocument();
@@ -412,7 +416,7 @@ describe('DayLogTimeline assigned receipt correction', () => {
     const items = screen.getAllByRole('listitem');
     expect(items.map((item) => item.getAttribute('data-testid'))).toEqual(['daylog-event-later', 'daylog-event-earlier']);
     for (const [id, timestamp] of [['later', '2026-11-01T06:30:00Z'], ['earlier', '2026-11-01T05:30:00Z']]) {
-      fireEvent.click(screen.getByRole('button', { name: `Show details Door opened 01:30:00 ${id}` }));
+      fireEvent.click(screen.getByRole('button', { name: (name) => name.startsWith('Show details Door opened 01:30:00') && name.endsWith(` ${id}`) }));
       expect(within(screen.getByTestId(`daylog-event-${id}`)).getByText(timestamp)).toBeInTheDocument();
     }
   });

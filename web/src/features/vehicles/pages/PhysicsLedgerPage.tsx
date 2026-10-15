@@ -130,7 +130,7 @@ export default function PhysicsLedgerPage() {
       {ledger ? (
         <div className="space-y-6">
           <FadeIn>
-            <VehicleEvidenceBrief id="ledger-summary"
+            <VehicleEvidenceBrief refreshFailed={state.refreshError != null} id="ledger-summary"
               title={t('physicsLedger.briefTitle', 'Returned ledger evidence')}
               description={ledger.honesty}
               status={state.status}

@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useNavigate } from 'react-router-dom'
+import { useInRouterContext, useNavigate } from 'react-router-dom'
 import {
   AlertCircle,
   CircleSlash2,
@@ -37,6 +37,16 @@ export interface StatusAwareErrorProps {
   message?: string
 }
 
+/** Client-side navigation when a router is mounted (portals/bare renders may lack one). */
+function RouterListButton({ href, label }: { href: string; label: string }) {
+  const navigate = useNavigate()
+  return (
+    <Button type="button" onClick={() => navigate(href)} variant="secondary" size="sm" wrapLabel>
+      {label}
+    </Button>
+  )
+}
+
 export function StatusAwareError({
   error,
   onRetry,
@@ -47,7 +57,7 @@ export function StatusAwareError({
   message,
 }: StatusAwareErrorProps) {
   const { t } = useTranslation()
-  const navigate = useNavigate()
+  const inRouter = useInRouterContext()
   const online = useOnlineStatus()
   const kind = classifyError(error, online)
 
@@ -123,15 +133,19 @@ export function StatusAwareError({
           'It may have been deleted or the link is wrong.',
         ),
         action: listHref ? (
-          <Button
-            type="button"
-            onClick={() => navigate(listHref)}
-            variant="secondary"
-            size="sm"
-            wrapLabel
-          >
-            {t('error.notFound.cta', 'Back to list')}
-          </Button>
+          inRouter
+            ? <RouterListButton href={listHref} label={t('error.notFound.cta', 'Back to list')} />
+            : (
+              <Button
+                type="button"
+                onClick={() => window.location.assign(listHref)}
+                variant="secondary"
+                size="sm"
+                wrapLabel
+              >
+                {t('error.notFound.cta', 'Back to list')}
+              </Button>
+            )
         ) : undefined,
       }
       break

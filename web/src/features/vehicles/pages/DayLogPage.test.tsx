@@ -174,7 +174,7 @@ function renderPage(initialSearch = '?date=2026-09-14', onLocation: (search: str
         <LocationProbe onLocation={onLocation} />
         <DayLogPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
   const view = render(page());
   return { ...view, rerenderPage: () => view.rerender(page()) };
@@ -337,7 +337,7 @@ describe('DayLogPage', () => {
     );
     renderPage();
 
-    expect(screen.getByText('No drives or charging sessions this day.')).toBeInTheDocument();
+    // The day summary reports measured zero counts; the timeline explains the empty day.
     expect(screen.getByText('Nothing recorded this day.')).toBeInTheDocument();
     const cta = screen.getByRole('link', { name: 'Open live telemetry' });
     expect(cta.getAttribute('href')).toBe('/live-monitor?vehicle_id=1');
@@ -393,7 +393,7 @@ describe('DayLogPage', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
     renderPage();
 
-    const expanders = screen.getAllByRole('button', { name: 'Show details' });
+    const expanders = screen.getAllByRole('button', { name: /^Show details/ });
     fireEvent.click(expanders[0]);
 
     // Labeled rows + provenance visible; the row title stays put; no raw JSON.
@@ -402,14 +402,14 @@ describe('DayLogPage', () => {
     expect(screen.getAllByText('Home').length).toBe(2);
     expect(screen.getByText('drives')).toBeInTheDocument();
     expect(screen.queryByText(/"start_place"/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Hide details/ })).toBeInTheDocument();
   });
 
   it('shows change and stored-value rows for signal transitions', () => {
     useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
     renderPage();
 
-    const expanders = screen.getAllByRole('button', { name: 'Show details' });
+    const expanders = screen.getAllByRole('button', { name: /^Show details/ });
     fireEvent.click(expanders[3]);
 
     // Turn-signal transition: full change line, labeled component, raw values.
@@ -433,7 +433,7 @@ describe('DayLogPage', () => {
       data: dayLogResponse([{ ...mixedEvents[2], payload }]),
     }));
     renderPage();
-    fireEvent.click(screen.getByRole('button', { name: 'Show details' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Show details/ }));
 
     expect(screen.getByText('New signal label:')).toBeInTheDocument();
     expect(screen.getByText('API signal ID:')).toBeInTheDocument();

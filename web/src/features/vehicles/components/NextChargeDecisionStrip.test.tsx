@@ -101,7 +101,7 @@ function renderStrip(soc?: number) {
         <NextChargeDecisionStrip vehicleId={1} currentSoc={soc} />
         <LocationProbe />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
   const view = render(tree());
   return { ...view, rerenderStrip: () => view.rerender(tree()) };
@@ -171,7 +171,7 @@ describe('NextChargeDecisionStrip', () => {
   it.each([undefined, 0, 50])('waits for a paused initial decision without inferring empty or exposing actions (SOC=%s)', (soc) => {
     mockDecision.mockReturnValue(qr({ isPending: true, fetchStatus: 'paused' }));
     renderStrip(soc);
-    expect(screen.getByRole('status')).toHaveTextContent('Refresh paused');
+    expect(screen.getAllByRole('status').some((status) => status.textContent?.includes('Refresh paused'))).toBe(true);
     expect(screen.queryByText('No charge decision yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Waiting for live battery level')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Open Autopilot' })).not.toBeInTheDocument();

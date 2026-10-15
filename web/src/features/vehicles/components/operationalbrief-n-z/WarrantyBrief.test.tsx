@@ -38,7 +38,8 @@ describe('Warranty summary and retained entity details', () => {
   it('retains the existing successful empty-response and technical-details paths without inventing coverage', () => {
     render(<MemoryRouter><WarrantyDataView data={{ activeWarranty: [], expiredWarranty: [] }} /></MemoryRouter>);
     expect(screen.getByText('No warranty coverage returned')).toBeInTheDocument();
-    expect(screen.queryByTestId('vehicle-warranty-counts')).not.toBeInTheDocument();
+    // Returned empty groups are measured zero counts; the brief stays as the summary shell.
+    expect(screen.getByTestId('vehicle-warranty-counts')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Technical response details' })).toBeInTheDocument();
   });
 });

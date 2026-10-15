@@ -2190,13 +2190,6 @@
       }
     }
   },
-  "digitalTwin": {
-    "brief": {
-      "status": {
-        "stale": "Retained source snapshots"
-      }
-    }
-  },
   "draft": {
     "discardDraft": "Discard draft",
     "restored": "Draft restored from {{when}}.",
@@ -3526,6 +3519,8 @@
         "initialFailure": "Source unavailable",
         "ok": "Source returned",
         "partial": "Partial source coverage",
+        "retained": "Retained source snapshots",
+        "stale": "Retained after refresh failure",
         "unavailable": "No source data"
       }
     }

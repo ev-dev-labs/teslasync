@@ -14,10 +14,12 @@ interface VehicleEvidenceBriefProps {
   provenance: string;
   freshness?: ReactNode;
   loading?: boolean;
+  /** True only when retained data follows an actual refresh error (not a pause). */
+  refreshFailed?: boolean;
 }
 
 export function VehicleEvidenceBrief({
-  id, title, description, metrics: sourceMetrics, status, scope, provenance, freshness, loading,
+  id, title, description, metrics: sourceMetrics, status, scope, provenance, freshness, loading, refreshFailed = false,
 }: VehicleEvidenceBriefProps) {
   const { t } = useTranslation();
   const bridgedMetrics = useOperationalMetrics(sourceMetrics);
@@ -30,7 +32,10 @@ export function VehicleEvidenceBrief({
       ? t('dataSources.status.pending', 'Pending')
       : t('vehicles.evidenceBrief.status.initial', 'Loading source'),
     ok: t('vehicles.evidenceBrief.status.ok', 'Source returned'),
-    stale: t('digitalTwin.brief.status.stale', 'Retained source snapshots'),
+    // Cause-neutral unless the retained data follows an actual refresh error.
+    stale: refreshFailed
+      ? t('vehicles.evidenceBrief.status.stale', 'Retained after refresh failure')
+      : t('vehicles.evidenceBrief.status.retained', 'Retained source snapshots'),
     partial: t('vehicles.evidenceBrief.status.partial', 'Partial source coverage'),
     unavailable: t('vehicles.evidenceBrief.status.unavailable', 'No source data'),
     initialFailure: t('vehicles.evidenceBrief.status.initialFailure', 'Source unavailable'),

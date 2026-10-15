@@ -83,7 +83,7 @@ describe('production vehicle charts through shared layout', () => {
       expect(screen.getByTestId('battery-gauge')).not.toHaveAttribute('data-value');
       const brief = screen.getByTestId('vehicle-battery-readouts');
       expect(brief.querySelectorAll('[data-operational-metric]')).toHaveLength(2);
-      expect(brief.querySelector('[data-operational-metric="percent"]'))
+      expect(brief.querySelector('[data-operational-metric="battery"]'))
         .toHaveAttribute('data-value-state', battery_level == null ? 'missing' : 'invalid');
       expect(screen.getByLabelText('Battery current and remaining levels bar chart')).toBeInTheDocument();
     },
@@ -99,14 +99,14 @@ describe('production vehicle charts through shared layout', () => {
 
   it.each([0, -1250, 1250, -1250.5, 1250.5])('preserves valid signed and fractional range %s in the retained readout', rated_range => {
     render(<VehicleBatteryChart state={{ ...syntheticState, rated_range }} />);
-    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="distance"]');
+    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="range"]');
     expect(range).toHaveAttribute('data-value-state', 'value');
     expect(range).toHaveTextContent(`${(rated_range / 1000).toFixed(2)} km`);
   });
 
   it.each([null, undefined, NaN, Infinity, -Infinity, '1250', ''])('keeps invalid or missing range %s distinct from zero', rated_range => {
     render(<VehicleBatteryChart state={Object.assign({}, syntheticState, { rated_range })} />);
-    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="distance"]');
+    const range = screen.getByTestId('vehicle-battery-readouts').querySelector('[data-operational-metric="range"]');
     expect(range).toHaveAttribute('data-value-state', rated_range == null ? 'missing' : 'invalid');
     expect(range).not.toHaveTextContent('0.00 km');
     expect(screen.getByTestId('battery-bars')).toBeInTheDocument();

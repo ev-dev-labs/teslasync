@@ -57,7 +57,8 @@ describe('Physical ledger summary source preservation', () => {
       friction_brake_wh: -1.25, unknown: false, honesty: 'Signed returned energy.',
     } }} /></MemoryRouter>);
     const brief = screen.getByTestId('ledger-dynamics-summary');
-    expect(within(brief).getByText('Retained after refresh failure')).toBeInTheDocument();
+    // A bare stale status is cause-neutral; failure wording needs an actual refresh error.
+    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
     expect(brief.querySelector('[data-operational-metric="regen"]')).toHaveAttribute('data-value-state', 'value');
     expect(brief.querySelector('[data-operational-metric="friction"]')).toHaveAttribute('data-value-state', 'value');
     fireEvent.click(within(brief).getByRole('button', { name: 'Review details' }));
@@ -131,7 +132,8 @@ describe('Coverage accounting brief boundaries', () => {
     render(<MemoryRouter><UtilizationMethodology summary={summary} historyLimit={1000}
       state={state} sourceStatus="stale" hasSource /></MemoryRouter>);
     const brief = screen.getByTestId('utilization-coverage-summary');
-    expect(within(brief).getByText('Retained after refresh failure')).toBeInTheDocument();
+    // A bare stale status is cause-neutral; failure wording needs an actual refresh error.
+    expect(within(brief).getByText('Retained source snapshots')).toBeInTheDocument();
     expect(brief.querySelector('[data-operational-metric="returned"]')).toHaveAttribute('data-value-state', 'value');
     expect(screen.getByRole('list', { name: 'Methodology notes' })).toHaveTextContent('canonical meters and watt-hours');
   });

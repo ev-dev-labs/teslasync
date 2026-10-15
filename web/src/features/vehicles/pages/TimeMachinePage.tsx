@@ -482,7 +482,7 @@ export default function TimeMachinePage() {
           <section
             aria-label={t('timeMachine.overview', 'Overview')}
           >
-            <VehicleEvidenceBrief id="time-machine-summary"
+            <VehicleEvidenceBrief refreshFailed={summaryState.refreshError != null} id="time-machine-summary"
               title={t('timeMachine.summary', 'Reconstruction summary')}
               description={t('timeMachine.briefDescription', 'Reconstructed signals belong to the resolved instant; tracked fields and history span come from the independent timeline source.')}
               status={summaryState.status}

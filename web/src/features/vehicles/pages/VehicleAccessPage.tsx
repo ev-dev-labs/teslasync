@@ -310,7 +310,7 @@ export default function VehicleAccessPage() {
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
-        <VehicleEvidenceBrief id="vehicle-access-summary"
+        <VehicleEvidenceBrief refreshFailed={briefState.refreshError != null} id="vehicle-access-summary"
           title={t('vehicleAccess.kpis', 'Access summary')}
           description={t('vehicleAccess.briefDescription', 'Driver and invitation records are independent snapshots. Expiring soon means pending invitations expiring within the next seven days.')}
           status={briefState.status}

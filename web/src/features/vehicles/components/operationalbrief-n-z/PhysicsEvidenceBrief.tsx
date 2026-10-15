@@ -17,7 +17,7 @@ export function PhysicsEvidenceBrief({ physics, id, metrics, description, availa
   const limited = evidence && (!evidence.history_available || !evidence.black_box_available ||
     evidence.history_truncated || evidence.black_box_truncated ||
     evidence.drive_sessions_truncated || evidence.charge_sessions_truncated);
-  return <VehicleEvidenceBrief id={id} title={t('teslaOnly.briefTitle', '{{title}} evidence summary', { title: physics.title })}
+  return <VehicleEvidenceBrief refreshFailed={state.refreshError != null} id={id} title={t('teslaOnly.briefTitle', '{{title}} evidence summary', { title: physics.title })}
     description={description ?? t('teslaOnly.briefLimits', 'Returned observations only; missing readings and row caps do not establish lifetime completeness.')}
     metrics={metrics} status={state.status === 'ok' && (!available || limited) ? 'partial' : state.status}
     scope={evidence ? <>

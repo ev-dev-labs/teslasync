@@ -1020,7 +1020,8 @@
         "stale": "Retained after refresh failure",
         "partial": "Partial source coverage",
         "unavailable": "No source data",
-        "initialFailure": "Source unavailable"
+        "initialFailure": "Source unavailable",
+        "retained": "Retained source snapshots"
       },
       "unbounded": "Unbounded"
     },

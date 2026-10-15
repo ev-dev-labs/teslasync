@@ -303,7 +303,7 @@ describe('ParkingAnalyticsPage', () => {
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     const brief = screen.getByTestId('parking-summary');
-    expect(brief).toHaveTextContent('Retained after refresh failure');
+    expect(brief).toHaveTextContent('Retained source');
     expect(brief).not.toHaveTextContent('Partial source coverage');
     const warning = screen.getByTestId('stale-refresh-warning');
     fireEvent.click(within(warning).getByRole('button'));
@@ -377,7 +377,9 @@ describe('ParkingAnalyticsPage', () => {
     const brief = screen.getByTestId('parking-summary');
     expect(screen.getByTestId('parking-coverage')).toHaveAttribute('data-has-source', 'false');
     expect(screen.getByTestId('parking-coverage')).toHaveAttribute('data-source-status', 'initial');
-    expect(brief).toHaveAttribute('aria-busy', String(busy));
+    // aria-busy is only present while busy.
+    if (busy) expect(brief).toHaveAttribute('aria-busy', 'true');
+    else expect(brief).not.toHaveAttribute('aria-busy');
     expect(brief).toHaveTextContent(busy ? 'Loading source' : 'Pending');
     expect(screen.queryByText('Not enough drives in this period to reconstruct parking.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('stale-refresh-warning')).not.toBeInTheDocument();
@@ -412,7 +414,7 @@ describe('ParkingAnalyticsPage', () => {
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
 
     expect(screen.getByTestId('parking-summary')).toHaveTextContent('Refresh paused');
-    expect(screen.getByTestId('parking-summary')).toHaveAttribute('aria-busy', 'false');
+    expect(screen.getByTestId('parking-summary')).not.toHaveAttribute('aria-busy');
     const warning = screen.getByTestId('stale-refresh-warning');
     expect(warning).toHaveAttribute('data-refresh-blocked', 'true');
     expect(warning).toHaveTextContent('Refresh paused');
@@ -579,7 +581,7 @@ describe('ParkingAnalyticsPage', () => {
     useDrivesMock.mockReturnValue(query({ data: [], isError: true, error: new Error('refresh failed') }));
     render(<ParkingAnalyticsPage />, { wrapper: MemoryRouter });
     for (const id of SECTION_IDS) {
-      if (id === 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Retained after refresh failure');
+      if (id === 'parking-kpis') expect(screen.getByTestId(id)).toHaveTextContent('Retained source');
       else expect(screen.getByTestId(id)).toHaveTextContent('ready');
     }
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();

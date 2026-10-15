@@ -119,7 +119,7 @@ export default function PhysicsCockpitPage() {
         errorRecovery={{ onRetry: () => { void cockpitQuery.refetch(); } }}
         emptyContent={pendingContent(cockpitState, cockpitQuery)}
       >
-        <VehicleEvidenceBrief
+        <VehicleEvidenceBrief refreshFailed={cockpitState.refreshError != null}
           id="physics-cockpit-readings"
           title={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
           description={t('vehicles.physicsCockpit.briefDescription', 'Independently reported cockpit measurements; a missing field is unknown, not zero.')}
@@ -144,7 +144,7 @@ export default function PhysicsCockpitPage() {
           emptyContent={pendingContent(heartbeatState, heartbeatQuery)}
         >
         {heartbeat && <>
-          <VehicleEvidenceBrief id="physics-heartbeat-readings"
+          <VehicleEvidenceBrief refreshFailed={heartbeatState.refreshError != null} id="physics-heartbeat-readings"
             title={t('vehicles.physicsCockpit.heartbeatBrief', 'Trip-meter evidence')}
             description={heartbeat.honesty}
             status={heartbeatState.status}
@@ -181,7 +181,7 @@ export default function PhysicsCockpitPage() {
           emptyContent={pendingContent(cockpitState, cockpitQuery)}
         >
         {cockpit?.park ? <>
-          <VehicleEvidenceBrief id="physics-park-readings"
+          <VehicleEvidenceBrief refreshFailed={cockpitState.refreshError != null} id="physics-park-readings"
             title={t('vehicles.physicsCockpit.parkBrief', 'Park accounting evidence')}
             description={cockpit.park.honesty}
             status={cockpitState.status}
