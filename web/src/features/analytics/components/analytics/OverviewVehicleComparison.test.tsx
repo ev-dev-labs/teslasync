@@ -233,7 +233,7 @@ function renderCmp(query: FleetAnalyticsQuery, initialEntry = '/') {
           <LocationProbe />
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
   const result = render(tree(query));
   return { ...result, rerenderQuery: (current: FleetAnalyticsQuery) => result.rerender(tree(current)) };

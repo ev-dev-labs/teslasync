@@ -304,7 +304,7 @@ function renderPage() {
       <QueryClientProvider client={client}>
         <SmartChargePage />
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   const result = render(page());
   return { ...result, rerenderPage: () => result.rerender(page()) };

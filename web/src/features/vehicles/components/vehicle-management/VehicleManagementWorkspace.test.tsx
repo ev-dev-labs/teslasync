@@ -206,7 +206,7 @@ function renderWorkspace(vehicleId: number | null = VEHICLE_ID) {
           <VehicleManagementWorkspace vehicleId={vehicleId ?? undefined} />
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
   const view = render(workspace())
   return { ...view, rerenderWorkspace: () => view.rerender(workspace()) }

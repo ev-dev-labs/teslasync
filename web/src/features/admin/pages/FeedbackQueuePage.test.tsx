@@ -296,7 +296,7 @@ function renderPage() {
       <MemoryRouter initialEntries={['/admin/feedback']}>
         <FeedbackQueuePage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   )
   const result = render(tree())
   return { ...result, rerenderPage: () => result.rerender(tree()) }

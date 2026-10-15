@@ -384,7 +384,7 @@ function renderPage(entries: string[] = ['/charging?from=2000-01-01&to=2100-01-0
           <PaginationLocationProbe />
         </ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   const result = render(content());
   return { ...result, refresh: () => result.rerender(content()) };

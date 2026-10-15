@@ -72,7 +72,7 @@ function renderTab(vehicleId = 42) {
           <VehicleSettingsTab vehicleId={id} />
         </ToastProvider>
       </QueryClientProvider>
-    </MemoryRouter>,
+    </MemoryRouter>
   )
   const view = render(tree(vehicleId))
   return { ...view, qc, rerenderVehicle: (id: number) => view.rerender(tree(id)) }

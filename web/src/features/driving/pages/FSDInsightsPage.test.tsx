@@ -185,7 +185,7 @@ function PageHarness({ initialEntry = '/fsd' }: { initialEntry?: string }) {
       <Routes>
         <Route path="/fsd" element={<FSDInsightsPage />} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
 }
 
