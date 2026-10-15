@@ -334,3 +334,11 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 - No catalog strings or package files changed in this group. The test output
   included existing jsdom `scrollTo`, chart sizing, and React `act` warnings;
   they did not fail the suite.
+
+### Phase 6 group: charging checkpoint (2026-10-15)
+
+- Fixed and pushed three focused test updates: the chart selector test now checks the accessible fallback label actually rendered by the component; session distance tests preserve finite zero and negative meter deltas; charging-list responsive empty-state tests tolerate duplicated responsive content and account for all four independent insight skeletons. The targeted selector/detail suites passed **91/91**; the charging-list suite passed **91/93**, with two prior-period comparison assertions still failing.
+- Powershare fixtures now use the verified `PowershareStateEnabled` enum identity. Preserved unknown enum values rather than guessing labels; helper and page suites passed **72/72**, and the catalog split check passed. Closed `fix-charging-powershare-ps-f03` based on that coverage.
+- Charging heatmap grid and page suites passed in prior focused runs. The broader charging-focused batch last reported **958 passed /43 failed** across 27 files; this checkpoint fixed 2 tests in the focused selector/detail suites and a Powershare page regression. Smart Charge still has 7 failing tests; charging list still has 2. The group remains incomplete and the remaining failing files are recorded in the pending charging work items.
+- Source/test commits pushed during this group: `a2a1fc3e84`, `089f2ba49b`, `93e30c8c97`, `90bac3bc1f`, `79b480b40b`.
+- No new catalog strings were added in this checkpoint.

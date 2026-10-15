@@ -5895,11 +5895,11 @@
       "web\\src\\i18n\\en"
     ],
     "DependsOn": [],
-    "Status": "failed",
+    "Status": "done",
     "WorkAttempts": 2,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: timeout after 25 minutes (changes left on disk) Attempt 2: timeout after 25 minutes (changes left on disk) CHECKPOINT 2026-10-15: Powershare helpers/constants/runtime/stop-reason suites pass (85 tests); trend card remains open.",
-    "Commit": "",
+    "Notes": "Verified canonical known enum labels, unknown values preserved, and inactive severity precedence retained. Focused helper suite passed 40/40; catalog split check passed. Commit 79b480b40b aligned stale enum fixtures and expectations.",
+    "Commit": "79b480b40b",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
