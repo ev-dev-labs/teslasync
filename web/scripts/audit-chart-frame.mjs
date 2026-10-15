@@ -199,7 +199,7 @@ function hasFrameAncestor(node, file, isFrame) {
   return false;
 }
 
-export function auditFile(file, isFrame = createFrameResolver(path.resolve(process.cwd(), 'src'))) {
+export function auditFile(file, isFrame = createFrameResolver(path.resolve(process.cwd(), 'src')), isCompositionFramed = () => false) {
   const source = readFileSync(file, 'utf8');
   if (!source.includes('<ResponsiveContainer')) {
     return { responsive: 0, framed: 0, offenders: [] };
@@ -225,7 +225,7 @@ export function auditFile(file, isFrame = createFrameResolver(path.resolve(proce
 
     if (openingElement && tagName(openingElement) === 'ResponsiveContainer') {
       responsive += 1;
-      if (hasFrameAncestor(node, file, isFrame)) {
+      if (hasFrameAncestor(node, file, isFrame) || isCompositionFramed(file, node)) {
         framed += 1;
       } else {
         const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
@@ -244,15 +244,67 @@ export function auditFile(file, isFrame = createFrameResolver(path.resolve(proce
   return { responsive, framed, offenders };
 }
 
+export function createCompositionFrameResolver(sourceRoot, projectFiles, isFrame) {
+  const componentCache = new Map();
+  return (componentFile, node) => {
+    // Plot-only components can own a ResponsiveContainer while their caller
+    // owns the shared frame. Prove every production JSX callsite is framed.
+    let owner = node;
+    while (owner) {
+      if (ts.isFunctionDeclaration(owner) && owner.name) break;
+      if (ts.isVariableDeclaration(owner) && ts.isIdentifier(owner.name)
+        && owner.parent.parent.parent.modifiers?.some(modifier => modifier.kind === ts.SyntaxKind.ExportKeyword)) break;
+      owner = owner.parent;
+    }
+    if (!owner) return false;
+    const componentName = ts.isFunctionDeclaration(owner) ? owner.name.text : owner.name.text;
+    const key = `${componentFile}#${componentName}`;
+    if (componentCache.has(key)) return componentCache.get(key);
+    const consumers = [];
+    for (const candidate of projectFiles) {
+      if (candidate === componentFile) continue;
+      const text = readFileSync(candidate, 'utf8');
+      const source = ts.createSourceFile(candidate, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+      const importedNames = new Set();
+      for (const statement of source.statements) {
+        if (!ts.isImportDeclaration(statement) || !statement.importClause || statement.importClause.isTypeOnly) continue;
+        const target = resolveSourceImport(sourceRoot, candidate, statement.moduleSpecifier.text);
+        if (target !== componentFile) continue;
+        const bindings = statement.importClause.namedBindings;
+        if (bindings && ts.isNamedImports(bindings)) {
+          for (const item of bindings.elements) {
+            if ((item.propertyName?.text ?? item.name.text) === componentName && !item.isTypeOnly) importedNames.add(item.name.text);
+          }
+        }
+      }
+      if (!importedNames.size) continue;
+      const visit = current => {
+        if ((ts.isJsxElement(current) && importedNames.has(tagName(current.openingElement)))
+          || (ts.isJsxSelfClosingElement(current) && importedNames.has(tagName(current)))) {
+          consumers.push(hasFrameAncestor(current, candidate, isFrame));
+        }
+        ts.forEachChild(current, visit);
+      };
+      visit(source);
+    }
+    const result = consumers.length > 0 && consumers.every(Boolean);
+    componentCache.set(key, result);
+    return result;
+  };
+}
+
 export function runAudit(root = ROOT) {
-  const isFrame = createFrameResolver(path.dirname(root));
+  const sourceRoot = path.dirname(root);
+  const isFrame = createFrameResolver(sourceRoot);
+  const projectFiles = walk(root);
+  const compositionIsFramed = createCompositionFrameResolver(sourceRoot, projectFiles, isFrame);
   const offenders = [];
   let responsiveCount = 0;
   let framedCount = 0;
   let filesWithCharts = 0;
 
-  for (const file of walk(root)) {
-    const result = auditFile(file, isFrame);
+  for (const file of projectFiles) {
+    const result = auditFile(file, isFrame, compositionIsFramed);
     if (result.responsive > 0) filesWithCharts += 1;
     responsiveCount += result.responsive;
     framedCount += result.framed;

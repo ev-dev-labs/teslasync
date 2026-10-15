@@ -255,3 +255,14 @@ Applied the catalog requirement for the new empty-state copy: 25 complete
 English sentences now live under their translated `t()` keys in `web/src/i18n/en.json`.
 Regenerated the split bundles and verified `node scripts/split-i18n-catalog.mjs --check` passes.
 Changed fallback wording that had reused unrelated keys to dedicated catalog keys.
+
+### Phase 7 gate follow-up: chart-frame audit (2026-10-15)
+
+- Extended the chart-frame audit to verify every production JSX caller of a plot
+  component that owns a `ResponsiveContainer`. This covers the five plots whose
+  shared frame is supplied by a parent component.
+- Added regression coverage for fully framed composition and for rejecting a
+  plot with any unframed production caller. The audit test suite passed **12/12**.
+- `node scripts/audit-chart-frame.mjs` now reports **364/364 framed**, zero raw.
+  The full lint rerun is in progress; Phase 7 gates remain open until it and the
+  remaining gates finish.

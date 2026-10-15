@@ -5,7 +5,7 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { after, test } from 'node:test';
-import { auditFile, createFrameResolver } from '../audit-chart-frame.mjs';
+import { auditFile, createCompositionFrameResolver, createFrameResolver } from '../audit-chart-frame.mjs';
 
 const root = mkdtempSync(path.join(tmpdir(), 'teslasync-chart-frame-'));
 const sourceRoot = path.join(root, 'src');
@@ -47,6 +47,38 @@ test('recognizes an aliased canonical frame through its category barrel', () => 
   `);
   assert.equal(result.framed, 1);
   assert.equal(result.offenders.length, 0);
+});
+
+test('proves a plot component is framed by every production JSX caller', () => {
+  const plot = write('features/Plot.tsx', `export function Plot() { return <ResponsiveContainer />; }`);
+  const parent = write('features/PlotPanel.tsx', `
+    import { ChartContainer } from '@/components/charts';
+    import { Plot } from './Plot';
+    export function PlotPanel() { return <ChartContainer><Plot /></ChartContainer>; }
+  `);
+  const frame = createFrameResolver(sourceRoot);
+  const resolveComposition = createCompositionFrameResolver(sourceRoot, [plot, parent], frame);
+  const result = auditFile(plot, frame, resolveComposition);
+  assert.equal(result.framed, 1);
+  assert.equal(result.offenders.length, 0);
+});
+
+test('rejects a plot with any production caller outside a shared frame', () => {
+  const plot = write('features/RawPlot.tsx', `export function RawPlot() { return <ResponsiveContainer />; }`);
+  const framed = write('features/RawPlotPanel.tsx', `
+    import { ChartContainer } from '@/components/charts';
+    import { RawPlot } from './RawPlot';
+    export function Panel() { return <ChartContainer><RawPlot /></ChartContainer>; }
+  `);
+  const raw = write('features/RawUsage.tsx', `
+    import { RawPlot } from './RawPlot';
+    export function RawUsage() { return <RawPlot />; }
+  `);
+  const frame = createFrameResolver(sourceRoot);
+  const resolveComposition = createCompositionFrameResolver(sourceRoot, [plot, framed, raw], frame);
+  const result = auditFile(plot, frame, resolveComposition);
+  assert.equal(result.framed, 0);
+  assert.equal(result.offenders.length, 1);
 });
 
 test('proves nested adapters through re-exports and rest-prop forwarding', () => {
