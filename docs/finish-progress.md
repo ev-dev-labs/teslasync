@@ -189,3 +189,8 @@ Not started.
 - Focused helpers, signal constants, runtime, and stop-reason suites pass (**85 tests**).
 - `humanizeEnum` now falls back to its verified English label when the translator has no initialized result. Test fixtures now use the actual generated proto enum identities (`PowershareStateEnabled`, `PowershareStopReasonStatus*`).
 - A separate `TrendCard.test.tsx` timestamp-export case remains failing and is not included in this checkpoint.
+
+### Charging checkpoint: cost-analysis area (2026-10-15)
+
+- The full cost-analysis component area passes: **17 test files, 280 tests**.
+- Updated the remaining stale end-to-end expectation to keep distance-based gasoline comparisons unavailable without verified driven-distance evidence. Core aggregates, calculator, table and chart suites all pass.
