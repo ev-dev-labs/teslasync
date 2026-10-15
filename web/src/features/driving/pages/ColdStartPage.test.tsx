@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { Drive } from '@/types/driving';
 import type { ComponentProps } from 'react';
@@ -30,7 +31,7 @@ timezoneMock, briefPropsMock, nestedBriefPropsMock, comparisonPropsMock, chartPr
   numberFormatMock: vi.fn(),
   displayPrefs: {
     distance: 'km' as 'km' | 'mi',
-    temperature: 'C' as 'C' | 'F',
+    temperature: '°C' as '°C' | '°F',
   },
   formatting: {
     costPerKwh: 0.2 as number | null | undefined,
@@ -347,7 +348,7 @@ beforeEach(() => {
   formatting.locale = 'en-US';
   formatting.timezoneMode = 'vehicle';
   displayPrefs.distance = 'km';
-  displayPrefs.temperature = 'C';
+  displayPrefs.temperature = '°C';
   numberFormatMock.mockImplementation((value: number) => String(value));
   formatCurrencyMock.mockImplementation((value: number) => `$${value.toFixed(2)}`);
   timezoneMock.mockReturnValue('America/Los_Angeles');
@@ -430,8 +431,8 @@ describe('Cold-start chart precision', () => {
   const state = { isLoading: false, error: null, onRetry: vi.fn() };
 
   it.each([
-    { distance: 'km' as const, temperature: 'C' as const },
-    { distance: 'mi' as const, temperature: 'F' as const },
+    { distance: 'km' as const, temperature: '°C' as const },
+    { distance: 'mi' as const, temperature: '°F' as const },
   ])('retains converted rows and formats only display values in $distance/$temperature', (prefs) => {
     Object.assign(displayPrefs, prefs);
     numberFormatMock.mockImplementation((value: number) => value.toFixed(3));
@@ -462,7 +463,7 @@ describe('Cold-start chart precision', () => {
       expect(column.format(monthlyProps.data[0][key])).toBe(monthlyProps.data[0][key].toFixed(3));
       expect(column.format(null)).toBe('—');
     }
-    numberFormatMock.mockImplementation((value: number) => value.toFixed(1));
+    numberFormatMock.mockImplementation((value: number) => (typeof value === 'number' ? value.toFixed(1) : String(value)));
     monthly.rerender(<MonthlyColdStartChart months={summary.monthly} state={state} />);
     expect(chartPropsMock.mock.lastCall![0].data).toEqual(monthlyProps.data);
     expect(chartPropsMock.mock.lastCall![0].dataColumns[1].format(monthlyProps.data[0].cold))
@@ -476,9 +477,11 @@ describe('Cold-start chart precision', () => {
       consumption: summary.temperature[0]!.whPerKm * factor,
       distance: convertDistanceFromSI(1_234.56, prefs.distance),
     });
+    // Rows without a temperature reading stay in the table; check formatting on a measured row.
+    const measured = temperatureProps.data.find((row: Record<string, unknown>) => typeof row.temperature === 'number');
     for (const key of ['temperature', 'consumption', 'distance']) {
       const column = temperatureProps.dataColumns.find((item: { key: string }) => item.key === key);
-      expect(column.format(temperatureProps.data[0][key])).toBe(temperatureProps.data[0][key].toFixed(1));
+      expect(column.format(measured[key])).toBe(measured[key].toFixed(1));
     }
     expect(summary).toEqual(original);
   });
@@ -612,6 +615,7 @@ describe('ColdStartPage', () => {
             windowLimit={1000}
             state={{ isLoading, error, onRetry }}
           />,
+          { wrapper: MemoryRouter },
         );
 
         expect(screen.getByRole('region', { name: 'Confidence and methodology' })).toBeInTheDocument();
@@ -755,9 +759,16 @@ describe('ColdStartPage', () => {
             />,
           );
 
-          const bar = screen.getByRole('progressbar', {
+          // Out-of-range signed readings stay visible as a labeled group, not a progressbar value.
+          const outOfRange = value != null && Number.isFinite(value) && value < 0;
+          const bar = screen.getByRole(outOfRange ? 'group' : 'progressbar', {
             name: cohort === 'cold' ? 'Cold starts (5 drives)' : 'Warm starts (5 drives)',
           });
+          if (outOfRange) {
+            expect(bar).not.toHaveAttribute('aria-valuenow');
+            expect(bar).toHaveTextContent(`${value} Wh/km`);
+            return;
+          }
           const max = Math.max(value ?? 0, 200, 1);
           const safeMax = Number.isFinite(max) && max > 0 ? max : 0;
           expect(bar).toHaveAttribute('aria-valuemax', String(safeMax));
