@@ -14,6 +14,7 @@ import {
   chartGrid,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
+import { useChartPalette } from '@/hooks/useChartPalette';
 import { TrueCostSectionBody } from './TrueCostSectionBody';
 import type { TrueCostSectionProps } from './types';
 
@@ -23,6 +24,7 @@ export function TrueCostPerDistanceChart({
   display,
 }: TrueCostSectionProps) {
   const { t } = useTranslation();
+  const palette = useChartPalette();
   const ev = analysis.metrics.costPerKmEv.value;
   const gas = analysis.metrics.costPerKmIce.value;
   const rows = useMemo(
@@ -31,16 +33,16 @@ export function TrueCostPerDistanceChart({
         {
           category: t('tco.perDistance.ev', 'Recorded EV'),
           cost: display.costPerDistanceValue(ev),
-          fill: '#22d3ee',
+          fill: palette[0],
         },
         {
           category: t('tco.perDistance.gas', 'Modeled gas'),
           cost: display.costPerDistanceValue(gas),
-          fill: '#fb7185',
+          fill: palette[5],
         },
       ]
       : [],
-    [analysis.gates.fuelComparison, display, ev, gas, t],
+    [analysis.gates.fuelComparison, display, ev, gas, palette, t],
   );
   const ready = state.enabled && state.hasData && state.isResolved && rows.length > 0;
   const exportRows = ready ? [
