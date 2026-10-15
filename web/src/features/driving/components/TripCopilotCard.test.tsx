@@ -115,7 +115,7 @@ describe('TripCopilotCard', () => {
       isPending: false, isPaused: false, isError: false, error: null,
     });
     render(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
-    expect(screen.getByText('Arrival ~0% · 0 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Arrival ~0.00% · 0.00 kWh margin')).toBeTruthy();
     expect(screen.getByText('You will make it')).toBeTruthy();
     expect(screen.queryByText(/Enter remaining distance to estimate/)).toBeNull();
   });
@@ -156,33 +156,33 @@ describe('TripCopilotCard', () => {
     state.isPending = true;
     rerender(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
     expect(screen.getByText('Trip Copilot: Refreshing')).toBeTruthy();
-    expect(screen.getByText('Arrival ~48% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Arrival ~48.00% · 28.50 kWh margin')).toBeTruthy();
     state.isPaused = true;
     rerender(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
     expect(screen.getByText('Refresh paused')).toBeTruthy();
     expect(screen.queryByText('Trip Copilot: Refreshing')).toBeNull();
-    expect(screen.getByText('Arrival ~48% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Arrival ~48.00% · 28.50 kWh margin')).toBeTruthy();
 
     Object.assign(state, { isPending: false, isPaused: false, isError: true, error: new Error('Refresh unavailable') });
     rerender(<TripCopilotCard currentSoc={70} minArrivalSoc={20} />);
     expect(screen.getByText('Cached · refresh failed')).toBeTruthy();
     expect(screen.getByText('Previously loaded data remains visible while affected sources recover.')).toBeTruthy();
-    expect(screen.getByText('Checked scenario: starting SOC 80%, minimum arrival SOC 10%, remaining distance 150 km.')).toBeTruthy();
+    expect(screen.getByText('Checked scenario: starting SOC 80.00%, minimum arrival SOC 10.00%, remaining distance 150.00 km.')).toBeTruthy();
     fireEvent.change(screen.getByLabelText('Remaining (km)'), { target: { value: '250' } });
     fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources: Trip Copilot' }));
     expect(mutate.mock.calls[2][0]).toEqual({ current_soc: 80, remaining_km: 200, min_arrival_soc: 10 });
 
     Object.assign(state, { isError: false, error: null });
     act(() => mutate.mock.calls[2][1].onSuccess(verdict({ arrival_soc: 30 })));
-    expect(screen.getByText('Checked scenario: starting SOC 80%, minimum arrival SOC 10%, remaining distance 200 km.')).toBeTruthy();
-    expect(screen.getByText('Arrival ~30% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Checked scenario: starting SOC 80.00%, minimum arrival SOC 10.00%, remaining distance 200.00 km.')).toBeTruthy();
+    expect(screen.getByText('Arrival ~30.00% · 28.50 kWh margin')).toBeTruthy();
     expect(screen.queryByText('Cached · refresh failed')).toBeNull();
     expect(screen.queryByText('Refresh unavailable')).toBeNull();
   });
 
   it('labels manual inputs, default assumptions, and unknown observations before a check', () => {
     render(<TripCopilotCard currentSoc={80} minArrivalSoc={20} />);
-    expect(screen.getByText('Manual scenario: starting SOC 80% and minimum arrival SOC 20% come from the planner form, not live telemetry.')).toBeTruthy();
+    expect(screen.getByText('Manual scenario: starting SOC 80.00% and minimum arrival SOC 20.00% come from the planner form, not live telemetry.')).toBeTruthy();
     expect(screen.getByText('Server default assumptions: 75 kWh battery capacity, 160 Wh/km consumption, and 1.0 efficiency factor.')).toBeTruthy();
     expect(screen.getByText(/Vehicle observations are unknown for this check: live SOC/)).toBeTruthy();
     expect(screen.getByText('Enter remaining distance to estimate arrival for this manual scenario.')).toBeTruthy();
@@ -204,7 +204,7 @@ describe('TripCopilotCard', () => {
     render(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
     expect(screen.getByText('You will make it')).toBeTruthy();
     expect(screen.getByText("You'll arrive with plenty to spare.")).toBeTruthy();
-    expect(screen.getByText('Arrival ~48% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Arrival ~48.00% · 28.50 kWh margin')).toBeTruthy();
     expect(screen.getByText(/Server default assumptions:/)).toBeTruthy();
     expect(screen.getByText(/Vehicle observations are unknown for this check:/)).toBeTruthy();
   });
@@ -219,8 +219,8 @@ describe('TripCopilotCard', () => {
     });
     render(<TripCopilotCard currentSoc={40} minArrivalSoc={10} />);
     expect(screen.getByText('Tight — drive gently')).toBeTruthy();
-    expect(screen.getByText('Arrival ~14% · 3 kWh margin')).toBeTruthy();
-    expect(screen.getByText(/Manual scenario: starting SOC 40%/)).toBeTruthy();
+    expect(screen.getByText('Arrival ~14.00% · 3.00 kWh margin')).toBeTruthy();
+    expect(screen.getByText(/Manual scenario: starting SOC 40.00%/)).toBeTruthy();
   });
 
   it('renders the charge-first verdict when short', () => {
@@ -249,10 +249,10 @@ describe('TripCopilotCard', () => {
       rerender(<TripCopilotCard currentSoc={input === 'starting SOC' ? 70 : 80} minArrivalSoc={input === 'arrival floor' ? 20 : 10} />);
     }
 
-    expect(screen.getByText('Checked scenario: starting SOC 80%, minimum arrival SOC 10%, remaining distance 150 km.')).toBeTruthy();
+    expect(screen.getByText('Checked scenario: starting SOC 80.00%, minimum arrival SOC 10.00%, remaining distance 150.00 km.')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('Inputs have changed.');
     expect(screen.getByText("You'll arrive with plenty to spare.")).toBeTruthy();
-    expect(screen.getByText('Arrival ~48% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Arrival ~48.00% · 28.50 kWh margin')).toBeTruthy();
     expect(screen.getByText('You will make it')).toBeTruthy();
   });
 
@@ -274,13 +274,13 @@ describe('TripCopilotCard', () => {
     state.error = new Error('Request failed');
     rerender(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
     expect(screen.getByText('Request failed')).toBeTruthy();
-    expect(screen.getByText('Checked scenario: starting SOC 80%, minimum arrival SOC 10%, remaining distance 150 km.')).toBeTruthy();
+    expect(screen.getByText('Checked scenario: starting SOC 80.00%, minimum arrival SOC 10.00%, remaining distance 150.00 km.')).toBeTruthy();
 
     state.isError = false;
     mutate.mockImplementation((_params, options) => options.onSuccess(verdict({ arrival_soc: 30 })));
     fireEvent.click(screen.getByText('Will I make it?'));
-    expect(screen.getByText('Checked scenario: starting SOC 80%, minimum arrival SOC 10%, remaining distance 200 km.')).toBeTruthy();
-    expect(screen.getByText('Arrival ~30% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Checked scenario: starting SOC 80.00%, minimum arrival SOC 10.00%, remaining distance 200.00 km.')).toBeTruthy();
+    expect(screen.getByText('Arrival ~30.00% · 28.50 kWh margin')).toBeTruthy();
     expect(screen.queryByText(/Inputs have changed/)).toBeNull();
   });
 
@@ -295,12 +295,12 @@ describe('TripCopilotCard', () => {
 
     const options = mutate.mock.calls[0][1] as { onSuccess: (response: TripConfidence) => void };
     act(() => options.onSuccess(verdict()));
-    expect(screen.getByText('Checked scenario: starting SOC 80%, minimum arrival SOC 10%, remaining distance 150 km.')).toBeTruthy();
+    expect(screen.getByText('Checked scenario: starting SOC 80.00%, minimum arrival SOC 10.00%, remaining distance 150.00 km.')).toBeTruthy();
     expect(screen.getByRole('status').textContent).toContain('Inputs have changed.');
 
     fireEvent.change(screen.getByLabelText('Remaining (km)'), { target: { value: '150' } });
     rerender(<TripCopilotCard currentSoc={80} minArrivalSoc={10} />);
     expect(screen.queryByText(/Inputs have changed/)).toBeNull();
-    expect(screen.getByText('Arrival ~48% · 28.5 kWh margin')).toBeTruthy();
+    expect(screen.getByText('Arrival ~48.00% · 28.50 kWh margin')).toBeTruthy();
   });
 });
