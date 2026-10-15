@@ -65,8 +65,8 @@ Resume file for whoever continues this work. Updated and pushed after every grou
   drive-detail f04, speed-sweet-spot f02, destination-transitions f09).
 - RemainingUsefulLife test edits tested behaviour the page never got; parked
   (not committed) — redo them with the diagnostics RUL items (rul-03/04/05).
-- Not committed / left alone: the Gradle wrapper bump in `apps/mobile`,
-  `tools/claude.ps1`, `tools/run-workers.ps1`.
+- The Gradle wrapper bump and `tools/claude.ps1` / `tools/run-workers.ps1` were
+  later committed upstream on `fix/dashboard-followups` and merged in (`bd0f2dc53f`).
 - Shared harness repair (`c3b4e9b301`): annotation hook mocks
   (`useChartAnnotations`), theme/settings fallbacks for `useChartPalette` in
   `test-setup.ts`, partial `useDateFormat` mocks spread the real hook; later the
@@ -93,6 +93,7 @@ Order: feature by feature, by primary-file cluster.
 | Departure forecast | df02/05/06/08 | refresh fixture |
 | Drive DNA | dna002/004/005/010 | plural emissions, truthful watts copy |
 | Drive score | ds05/06/07/10/11/12/13 | singular exclusion notice, truthful insights |
+| FSD insights | f01/02/04/05/08/10/13 | icon selector test fix only |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
@@ -101,7 +102,6 @@ export on origin concentration; stale "kW ×1000" methodology copy.
 
 ### Next up (driving, then other features)
 
-FSD insights (f01/02/04/05/08/10/13) →
 efficiency (f003/f008/f03/f04, efficiency-target f06) → explorer (exp03/05/09)
 → regen (04/05/07/08) → sweet spot (f03/f04/f05) → rhythm (f01/f03, punchcard
 f04, tips f03/04/05/07) → compare (f01/f07, driveCompare f05) → what-if

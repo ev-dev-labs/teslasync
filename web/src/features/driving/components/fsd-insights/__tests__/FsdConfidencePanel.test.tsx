@@ -105,10 +105,10 @@ describe('FsdConfidencePanel', () => {
     expect(screen.getByText('Usable counter basis')).toBeInTheDocument();
     expect(screen.getByTestId('fsd-confidence').querySelector('h3 svg'))
       .toHaveClass(typography.color.muted);
-    for (const icon of screen.getByTestId('fsd-methodology-notes').querySelectorAll('li > span')) {
+    for (const icon of screen.getByTestId('fsd-methodology-notes').querySelectorAll('li > span:first-child')) {
       expect(icon).toHaveClass(typography.color.muted);
     }
-    for (const icon of screen.getByTestId('fsd-confidence-footnotes').querySelectorAll('p > span')) {
+    for (const icon of screen.getByTestId('fsd-confidence-footnotes').querySelectorAll('p > span:first-child')) {
       expect(icon).toHaveClass(typography.color.muted);
     }
   });
