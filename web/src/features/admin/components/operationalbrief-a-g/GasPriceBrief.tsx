@@ -15,7 +15,7 @@ export function GasPriceBrief({ source }: { source: DataState<GasPriceStatus> })
   const { unitPrefs } = useUnits();
   const { settingsState } = useSettings();
   const formatQuote = (raw: number) => ({
-    value: formatCurrencyValue(raw, 'USD', unitPrefs.locale, unitPrefs.precision ?? 2, { useGrouping: true }),
+    value: formatCurrencyValue(raw, 'USD', unitPrefs.locale ?? 'en-US', unitPrefs.precision ?? 2, { useGrouping: true }),
     unit: 'USD',
   });
   const data = source.data;

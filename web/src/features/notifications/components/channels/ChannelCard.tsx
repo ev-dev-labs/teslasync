@@ -134,7 +134,7 @@ export function ChannelCard({ channel, onEdit }: ChannelCardProps) {
             {webhookResult.success ? t('webhookChannels.test.success', 'Success') : t('webhookChannels.test.failure', 'Failed')}
           </Badge>
           <Text variant="caption">{t('webhookChannels.test.status', 'Status {{status}}', { status: webhookResult.status_code })} · {t('webhookChannels.test.latency', '{{ms}} ms', { ms: webhookResult.latency_ms })}</Text>
-          {webhookResult.error && <Text variant="bodySm" color="danger">{webhookResult.error}</Text>}
+          {webhookResult.error && <Text variant="bodySm" color="subtle">{webhookResult.error}</Text>}
           {webhookResult.signature && <Text variant="caption">{t('webhookChannels.test.signature', 'Signature:')} <code className="break-all">{webhookResult.signature}</code></Text>}
           {webhookResult.body_preview && <Text variant="caption" className="break-all">{webhookResult.body_preview}</Text>}
         </div>

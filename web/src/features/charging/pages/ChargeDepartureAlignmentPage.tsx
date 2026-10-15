@@ -254,7 +254,7 @@ export default function ChargeDepartureAlignmentPage() {
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData} margin={{ top: 16, right: 16, bottom: 8, left: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
-                <XAxis dataKey="date" tick={axisTick} tickFormatter={formatDateShort} />
+                <XAxis dataKey="date" tick={axisTick} tickFormatter={(value) => formatDateShort(value)} />
                 <YAxis yAxisId="dwell" tick={axisTick} />
                 <YAxis yAxisId="margin" orientation="right" tick={axisTick} domain={[0, 100]} unit="%" />
                 <Tooltip content={<ChartTooltip labelFormatter={label => instantLabel(Date.parse(String(label)))} />} />

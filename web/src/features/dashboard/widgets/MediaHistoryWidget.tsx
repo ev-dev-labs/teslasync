@@ -77,7 +77,7 @@ export default function MediaHistoryWidget({ vehicleId, size }: WidgetProps) {
         const isPlaying = (item.playback_status ?? '').toLowerCase() === 'playing';
 
         return {
-          id: item.id,
+          id: item.id ?? `${item.created_at ?? 'unknown'}-${trackTitle}-${artist}`,
           icon: <Music className="h-3.5 w-3.5" />,
           title: `🎵 ${trackTitle} — ${artist}`,
           subtitle: source || undefined,

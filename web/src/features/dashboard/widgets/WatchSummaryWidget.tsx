@@ -16,7 +16,7 @@ import { WidgetBigNumber, WidgetStatusGrid } from './shared';
 import { DashboardSourceBrief } from '../components/operationalbrief-all/DashboardSourceBrief';
 import { dashboardTokens } from '../lib/dashboardTokens';
 import type { WidgetProps } from './types';
-import { convertDistanceFromSI, convertDistanceToSI, convertTempFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 
 // Battery state-of-charge health bands → gauge/accent color:
@@ -54,7 +54,7 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   const isLoading = !readsBlocked && (summaryLoading || compLoading);
 
   const batteryLevel = knownNumber(summary?.battery_level);
-  const rangeKm = summary?.range_km ?? null;
+  const rangeM = summary?.range_m ?? null;
   const state = summary?.state ?? null;
   const stateLabel = state === 'online'
     ? t('widget.watchState.online', 'Online')
@@ -77,16 +77,15 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
   } satisfies Parameters<typeof WidgetShell>[0]['dataState'];
 
   const displayRange = useMemo(() => {
-    if (rangeKm == null) return null;
-    // range_km is kilometres; lift to SI metres before the display-unit cast.
-    return convertDistanceFromSI(convertDistanceToSI(rangeKm, 'km'), distanceUnit);
-  }, [rangeKm, distanceUnit]);
+    if (rangeM == null) return null;
+    return convertDistanceFromSI(rangeM, distanceUnit);
+  }, [rangeM, distanceUnit]);
 
   const measurementMetrics: readonly StatMetric[] = [
     {
       metricId: 'distance',
       occurrenceId: 'watch-summary-range',
-      rawValue: rangeKm == null ? null : convertDistanceToSI(rangeKm, 'km'),
+      rawValue: rangeM,
       label: t('widget.range', 'Range'),
       display: { formatter: raw => ({ value: fmtNumber(convertDistanceFromSI(raw, distanceUnit)), unit: distanceUnit }) },
     },
@@ -253,3 +252,4 @@ export default function WatchSummaryWidget({ vehicleId, size }: WidgetProps) {
     </WidgetShell>
   );
 }
+

@@ -29,7 +29,7 @@ const CATEGORY_PALETTE_SLOTS = {
 };
 
 export function categoryColor(category: string, palette: readonly string[]): string {
-  const slot = Object.hasOwn(CATEGORY_PALETTE_SLOTS, category)
+  const slot = Object.prototype.hasOwnProperty.call(CATEGORY_PALETTE_SLOTS, category)
     ? CATEGORY_PALETTE_SLOTS[category as keyof typeof CATEGORY_PALETTE_SLOTS] : undefined;
   return (slot === undefined ? undefined : palette[slot]) ?? 'var(--text-secondary)';
 }

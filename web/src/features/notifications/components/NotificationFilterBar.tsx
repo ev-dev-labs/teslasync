@@ -143,7 +143,7 @@ export function NotificationFilterBar({
     if (filters.severity?.length) {
       const summary = filters.severity.map(s => {
         const severity = presentationSeverity(s);
-        return Object.hasOwn(severityLabels, severity) ? severityLabels[severity] : s;
+        return Object.prototype.hasOwnProperty.call(severityLabels, severity) ? severityLabels[severity] : s;
       }).join(', ');
       chips.push({
         key: 'severity',

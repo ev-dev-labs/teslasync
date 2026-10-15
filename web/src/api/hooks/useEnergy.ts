@@ -134,7 +134,7 @@ export function useEnergyFlow(vehicleId: string | null) {
 }
 
 /** Fetches 90-day parked, non-charging drain statistics derived from canonical history. */
-export function useVampireDrainStats(vehicleId: string | null, staleTime = STALE_TIMES.STANDARD) {
+export function useVampireDrainStats(vehicleId: string | null, staleTime: number = STALE_TIMES.STANDARD) {
   return useQuery({
     queryKey: ['vampire-drain-stats', vehicleId],
     queryFn: ({ signal }) => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${vehicleId}`, { signal }),

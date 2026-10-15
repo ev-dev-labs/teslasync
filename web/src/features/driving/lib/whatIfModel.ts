@@ -150,7 +150,7 @@ export function simulateWhatIf(
   };
   if (!drive || !finite(distance) || distance <= 0 || !finite(duration) ||
       duration <= 0 || !finite(observed) || !finite(knobs.speedFactor) ||
-      !finite(knobs.ambientC) || !Object.hasOwn(TIRE_CRR, knobs.tires)) return neutral;
+      !finite(knobs.ambientC) || !Object.prototype.hasOwnProperty.call(TIRE_CRR, knobs.tires)) return neutral;
   const avgSpeed = drive.avgSpeedMps == null ? distance / duration : drive.avgSpeedMps;
   if (!finite(avgSpeed) || avgSpeed <= 0) return neutral;
 
