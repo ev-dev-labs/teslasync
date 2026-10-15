@@ -703,7 +703,7 @@ describe('checked-in locale artifacts', () => {
 
   it('keeps enlarged emptyState reachable through its real lazy namespace fallback', async () => {
     expect(JSON.stringify(catalog.emptyState).length).toBeGreaterThan(256)
-    expect(usageManifest.detailNamespaces).toHaveLength(177)
+    expect(usageManifest.detailNamespaces).toHaveLength(181)
     expect(usageManifest.detailNamespaces).toContain('emptyState')
     expect(usageManifest.namespaceFallbackBundles.emptyState).toBe('detail-emptyState')
     expect(runtimeManifest.complete).not.toContain('emptyState')
