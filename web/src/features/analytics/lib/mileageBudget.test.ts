@@ -65,6 +65,85 @@ describe('computeMileageBudget', () => {
     setGlobalLocale(originalLocale);
   });
 
+  it.each([
+    ['2026-01-31', 1, 2026, 1, 28, 28],
+    ['2024-01-31', 1, 2024, 1, 29, 29],
+    ['2026-01-30', 1, 2026, 1, 28, 29],
+    ['2026-01-31', 2, 2026, 2, 31, 59],
+    ['2026-04-30', 1, 2026, 4, 30, 30],
+    ['2024-02-29', 12, 2025, 1, 28, 365],
+    ['2026-12-31', 1, 2027, 0, 31, 31],
+  ])('adds calendar months to %s without overflowing (%i months)', (termStartIso, termMonths, year, month, day, totalDays) => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    const end = new Date(year, month, day).getTime();
+    const result = computeMileageBudget(
+      [],
+      { ...CONFIG, termStartIso, termMonths },
+      end,
+    );
+
+    expect(result.termEndMs).toBe(end);
+    expect(result.totalDays).toBe(totalDays);
+    expect(result.elapsedDays).toBe(totalDays);
+    expect(result.remainingDays).toBe(0);
+    expect(result.allowedToDateM).toBe(result.totalAllowanceM);
+    expect(result.monthly.at(-1)?.allowedKm).toBe(result.totalAllowanceM / 1000);
+  });
+
+  it('uses the clamped month interval for range, prorating and forecast with saved display preferences', () => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    setGlobalLocale('de-DE');
+    const savedDisplayPreferences = { locale: getGlobalLocale(), tz: 'Asia/Tokyo' };
+    const config = { ...CONFIG, termStartIso: '2026-01-31', termMonths: 1 };
+    const end = new Date(2026, 1, 28).getTime();
+    const rows = [
+      drive('2026-01-31T07:59:59.999Z', 999_000),
+      drive('2026-01-31T08:00:00Z', 200_000),
+      drive('2026-02-28T07:59:59.999Z', 300_000),
+      drive('2026-02-28T08:00:00Z', 999_000),
+      drive('2026-03-01T08:00:00Z', 999_000),
+      drive('invalid', 999_000),
+      drive('', 999_000),
+    ];
+    const halfway = computeMileageBudget(rows.slice(0, 2), config, new Date(2026, 1, 14).getTime());
+    expect(halfway.totalDays).toBe(28);
+    expect(halfway.elapsedDays).toBe(14);
+    expect(halfway.allowedToDateM).toBe(500_000);
+    expect(halfway.projectedTotalM).toBe(400_000);
+
+    const result = computeMileageBudget(rows, config, end);
+    expect(result.termEndMs).toBe(Date.parse('2026-02-28T08:00:00Z'));
+    expect(result.usedM).toBe(500_000);
+    expect(result.projectedTotalM).toBe(500_000);
+    expect(result.monthly.map(({ month }) => month)).toEqual(['2026-01', '2026-02']);
+    expect(result.monthly.at(-1)).toEqual({ month: '2026-02', usedKm: 500, allowedKm: 1000 });
+    expect(formatDate(end, savedDisplayPreferences)).toBe(
+      new Date(end).toLocaleDateString('de-DE', {
+        timeZone: 'Asia/Tokyo', year: 'numeric', month: 'short', day: 'numeric',
+      }),
+    );
+  });
+
+  it.each(['2026-02-28', '2026-10-31'])('finishes pacing on the same interval across DST from %s', (termStartIso) => {
+    vi.stubEnv('TZ', 'America/Los_Angeles');
+    const config = { ...CONFIG, termStartIso, termMonths: 1 };
+    const start = new Date(`${termStartIso}T00:00:00`).getTime();
+    const end = termStartIso === '2026-02-28'
+      ? new Date(2026, 2, 28).getTime()
+      : new Date(2026, 10, 30).getTime();
+    const rows = [drive(new Date(start).toISOString(), 500_000)];
+    const halfway = computeMileageBudget(rows, config, start + (end - start) / 2);
+    expect(halfway.allowedToDateM).toBe(500_000);
+    expect(halfway.projectedTotalM).toBe(1_000_000);
+    const result = computeMileageBudget(rows, config, end);
+    expect(result.termEndMs).toBe(end);
+    expect(result.elapsedDays).toBe(result.totalDays);
+    expect(result.remainingDays).toBe(0);
+    expect(result.allowedToDateM).toBe(result.totalAllowanceM);
+    expect(result.projectedTotalM).toBe(result.usedM);
+    expect(result.monthly.at(-1)?.allowedKm).toBe(1000);
+  });
+
   it('uses the existing local business calendar at term and month day boundaries', () => {
     vi.stubEnv('TZ', 'America/Los_Angeles');
     const r = computeMileageBudget(

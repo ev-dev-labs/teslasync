@@ -56,7 +56,10 @@ const DAY_MS = 86_400_000;
 
 function addMonths(ms: number, months: number): number {
   const d = new Date(ms);
-  return new Date(d.getFullYear(), d.getMonth() + months, d.getDate()).getTime();
+  const target = new Date(d.getFullYear(), d.getMonth() + months, 1);
+  const lastDay = new Date(target.getFullYear(), target.getMonth() + 1, 0).getDate();
+  target.setDate(Math.min(d.getDate(), lastDay));
+  return target.getTime();
 }
 
 export function isValidBudgetConfig(c: MileageBudgetConfig): boolean {
@@ -82,7 +85,8 @@ export function computeMileageBudget(
   const termEndMs = addMonths(termStartMs, config.termMonths);
   const totalDays = Math.max(1, Math.round((termEndMs - termStartMs) / DAY_MS));
   const clampedNow = Math.min(Math.max(nowMs, termStartMs), termEndMs);
-  const elapsedDays = (clampedNow - termStartMs) / DAY_MS;
+  // Normalize to the same interval so DST cannot leave term-end pacing short or over.
+  const elapsedDays = ((clampedNow - termStartMs) / (termEndMs - termStartMs)) * totalDays;
 
   const totalAllowanceM = config.annualAllowanceKm * 1000 * (config.termMonths / 12);
   const allowedToDateM = totalAllowanceM * (elapsedDays / totalDays);
@@ -127,13 +131,13 @@ export function computeMileageBudget(
     monthly.push({
       month,
       usedKm: Math.round(cumulative / 100) / 10,
-      allowedKm: Math.round((totalAllowanceM * ((pointMs - termStartMs) / DAY_MS / totalDays)) / 100) / 10,
+      allowedKm: Math.round((totalAllowanceM * ((pointMs - termStartMs) / (termEndMs - termStartMs))) / 100) / 10,
     });
   }
 
   // A linear projection over the first days of a term is all noise —
   // withhold it until a week of signal exists.
-  const projectedTotalM = elapsedDays >= 7 ? (usedM / elapsedDays) * totalDays : null;
+  const projectedTotalM = elapsedDays >= 7 ? usedM * (totalDays / elapsedDays) : null;
   const projectedOverageM = projectedTotalM != null ? Math.max(0, projectedTotalM - totalAllowanceM) : 0;
 
   return {
