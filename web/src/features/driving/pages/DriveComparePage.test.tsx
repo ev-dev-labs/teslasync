@@ -1,5 +1,5 @@
 import type { ChangeEvent, ReactNode } from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, within, cleanup } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
@@ -145,9 +145,9 @@ vi.mock('@/features/onboarding/components/NoVehicleSelected', () => ({
 }));
 
 vi.mock('../components/drive-compare', () => {
-  type State = { isLoading: boolean; error: unknown; emptyMessage: string | null };
+  type State = { isLoading: boolean; isPaused?: boolean; error: unknown; emptyMessage: string | null };
   const status = (state: State) =>
-    state.error ? 'error' : state.isLoading ? 'loading' : state.emptyMessage ?? 'ready';
+    state.error ? 'error' : state.isPaused ? 'paused' : state.isLoading ? 'loading' : state.emptyMessage ?? 'ready';
   return {
     ComparisonVerdict: ({ state }: { state: State }) => (
       <section data-testid="compare-verdict">{status(state)}</section>
@@ -174,6 +174,7 @@ vi.mock('../components/operationalbrief-a-m/CompareVerdictBrief', async () => ({
   CompareVerdictBrief: (await import('../components/drive-compare')).ComparisonVerdict,
 }));
 
+import { CompareSectionBody } from '../components/drive-compare/CompareSectionBody';
 import DriveComparePage from './DriveComparePage';
 
 function LocationEvidence() {
@@ -260,6 +261,34 @@ beforeEach(() => {
 });
 
 describe('DriveComparePage', () => {
+  it('reports a paused initial drive list neutrally instead of loading or empty', () => {
+    useDrivesMock.mockReturnValue(query({ isPending: true, fetchStatus: 'paused' }));
+    renderPage();
+    for (const id of ['compare-verdict', 'compare-breakdown', 'compare-identity-a', 'compare-identity-b']) {
+      expect(screen.getByTestId(id)).toHaveTextContent('paused');
+    }
+    expect(screen.queryByText('At least two drives are needed for a comparison.')).not.toBeInTheDocument();
+
+    cleanup();
+    useDrivesMock.mockReturnValue(query({ data: [driveA, driveB] }));
+    renderPage();
+    expect(screen.getByTestId('compare-verdict')).not.toHaveTextContent('paused');
+  });
+
+  it('renders the cause-neutral paused body with the source retry', () => {
+    const onRetry = vi.fn();
+    render(
+      <CompareSectionBody state={{ isLoading: true, isPaused: true, error: null, emptyMessage: null, onRetry }}>
+        <span>chart</span>
+      </CompareSectionBody>,
+    );
+    expect(screen.getByText('The initial evidence query is paused; no empty result is inferred.')).toBeInTheDocument();
+    expect(screen.queryByText('chart')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status', { name: 'Loading drive comparison' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps every identity field and the complete route readable without a disclosure', () => {
     const drive = {
       ...driveA,

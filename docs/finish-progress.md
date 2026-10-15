@@ -99,6 +99,7 @@ Order: feature by feature, by primary-file cluster.
 | Regen efficiency | 04/05/07/08 | harness fixes only |
 | Speed sweet spot | f03/f04/f05 | exportable coerced to boolean |
 | Driving rhythm / dynamics | rhythm f01/f03/f04, dynamics f03/04/05/07 | exact-instant window, truthful time-semantics copy |
+| Drive compare | f01/f05/f07 | neutral paused state instead of endless loading |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
@@ -109,7 +110,7 @@ labels without i18n init and was not announced (now role=alert).
 
 ### Next up (driving, then other features)
 
-compare (f01/f07, driveCompare f05) → what-if
+what-if
 (003/006/007) → misc (ShareDriveDialog f03, ElapsedComposition 02, replayMarkers
 f10). Then vehicles (62), vehicle-systems (45), charging (48), system (47),
 notifications, settings, battery, and the rest.

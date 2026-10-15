@@ -109,19 +109,23 @@ export default function DriveComparePage() {
   const listError = drivesState.fatalError;
   const detailAError = detailAId ? driveAState.fatalError : null;
   const detailBError = detailBId ? driveBState.fatalError : null;
-  const listLoading = drivesState.status === 'initial';
+  // A paused first request is neither loading nor empty: report it neutrally.
+  const pausedWithoutData = (state: typeof drivesState) =>
+    !state.hasData && state.isRefreshBlocked && state.fatalError == null;
+  const listPaused = pausedWithoutData(drivesState);
+  const listLoading = drivesState.status === 'initial' && !listPaused;
   const unavailableSelection = t(
     'driveCompare.selectionUnavailable',
     "The requested drive is unavailable in this vehicle's loaded history window. Choose a drive to replace it.",
   );
-  const unavailableA = !listLoading && !listError && activeA !== '' && !detailAId;
-  const unavailableB = !listLoading && !listError && activeB !== '' && !detailBId;
+  const unavailableA = !listLoading && !listPaused && !listError && activeA !== '' && !detailAId;
+  const unavailableB = !listLoading && !listPaused && !listError && activeB !== '' && !detailBId;
   const optionsFor = (id: string) => id && !hasDrive(id)
     ? [{ value: id, label: listLoading
         ? t('driveCompare.loading', 'Loading drive comparison')
         : unavailableSelection, disabled: true }, ...driveOptions]
     : driveOptions;
-  const needTwo = !listLoading && !listError && drives.length < 2;
+  const needTwo = !listLoading && !listPaused && !listError && drives.length < 2;
   const selectionMessage = unavailableA || unavailableB
     ? unavailableSelection
     : needTwo
@@ -133,15 +137,19 @@ export default function DriveComparePage() {
           )
         : null;
 
-  const combinedLoading = listLoading
+  const detailAPaused = detailAId !== '' && pausedWithoutData(driveAState);
+  const detailBPaused = detailBId !== '' && pausedWithoutData(driveBState);
+  const combinedPaused = listPaused || detailAPaused || detailBPaused;
+  const combinedLoading = !combinedPaused && (listLoading
     || (detailAId !== '' && driveAState.status === 'initial')
-    || (detailBId !== '' && driveBState.status === 'initial');
+    || (detailBId !== '' && driveBState.status === 'initial'));
   const combinedError = listError ?? detailAError ?? detailBError;
-  const missingDetails = !combinedLoading && !combinedError && !selectionMessage && (!driveA || !driveB)
+  const missingDetails = !combinedLoading && !combinedPaused && !combinedError && !selectionMessage && (!driveA || !driveB)
     ? t('driveCompare.detailsUnavailable', 'Drive details are not available for this comparison.')
     : null;
   const compareState: CompareSectionState = {
     isLoading: combinedLoading,
+    isPaused: combinedPaused,
     error: combinedError,
     emptyMessage: selectionMessage ?? missingDetails,
     onRetry: () => {
@@ -159,13 +167,15 @@ export default function DriveComparePage() {
     const detailError = side === 'a' ? detailAError : detailBError;
     const source = side === 'a' ? driveAState : driveBState;
     const activeId = side === 'a' ? detailAId : detailBId;
-    const isLoading = listLoading || (activeId !== '' && source.status === 'initial');
+    const isPaused = listPaused || (activeId !== '' && pausedWithoutData(source));
+    const isLoading = !isPaused && (listLoading || (activeId !== '' && source.status === 'initial'));
     const error = listError ?? detailError;
-    const noDetail = !isLoading && !error && !selectionMessage && !hasData
+    const noDetail = !isLoading && !isPaused && !error && !selectionMessage && !hasData
       ? t('driveCompare.detailsUnavailable', 'Drive details are not available for this comparison.')
       : null;
     return {
       isLoading,
+      isPaused,
       error,
       emptyMessage: (side === 'a' ? unavailableA : unavailableB)
         ? unavailableSelection
