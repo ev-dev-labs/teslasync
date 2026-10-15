@@ -72,6 +72,8 @@
       "motionUnavailable": "Motion analysis unavailable: {{reason}}",
       "pause": "Pause",
       "play": "Play",
+      "playbackFailed": "This clip could not be played. Replay to try again. If it still fails, the file may be damaged or its format unsupported by this browser.",
+      "replay": "Replay clip",
       "restart": "Restart",
       "runMotion": "Run local motion analysis"
     },

@@ -12,8 +12,6 @@
       "restart": "Restart",
       "pause": "Pause",
       "play": "Play",
-      "playbackFailed": "This clip could not be played. Replay to try again. If it still fails, the file may be damaged or its format unsupported by this browser.",
-      "replay": "Replay clip",
       "stop": "Stop",
       "speed": "Playback speed",
       "progress": "Playback progress"

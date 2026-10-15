@@ -2,7 +2,9 @@ import type { ReactNode } from 'react';
 import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { createInstance } from 'i18next';
+import { I18nextProvider, initReactI18next } from 'react-i18next';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { StatMetric } from '@/components/data-display/stat-reference/types';
 import type { DataStateSource } from '@/api/dataState';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
@@ -10,6 +12,25 @@ import { useRetainedMutation } from '@/hooks/useRetainedMutation';
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
 import { formatEfficiencyFromSI } from '../../formatters';
 import { AnalysisBrief } from './AnalysisBrief';
+import en from '@/i18n/en.json';
+import { getFormatterPreferences, setGlobalLocale } from '@/lib/numberFormat';
+
+vi.unmock('react-i18next');
+const translations = createInstance();
+let savedLocale = getFormatterPreferences().locale;
+
+beforeEach(async () => {
+  savedLocale = getFormatterPreferences().locale;
+  setGlobalLocale('en-US');
+  await translations.use(initReactI18next).init({
+    lng: 'en', fallbackLng: false, interpolation: { escapeValue: false },
+    resources: { en: { translation: en } },
+  });
+});
+
+afterEach(() => {
+  setGlobalLocale(savedLocale);
+});
 
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
@@ -24,7 +45,7 @@ vi.mock('@/hooks/useFormatting', () => ({
 }));
 
 function Wrapper({ children }: { children: ReactNode }) {
-  return <MemoryRouter>{children}</MemoryRouter>;
+  return <I18nextProvider i18n={translations}><MemoryRouter>{children}</MemoryRouter></I18nextProvider>;
 }
 
 const retainedEvidence: Evidence = {
@@ -134,6 +155,59 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     provenance: 'Modeled source',
   };
 
+  it.each([
+    { count: 0, label: '0 samples' },
+    { count: 1, label: '1 sample' },
+    { count: 12345, label: '12,345 samples' },
+    { count: -12345, label: '-12,345 samples' },
+    { count: -1, label: '-1 sample' },
+    { count: 1.25, label: '1 samples' },
+    { count: -1.75, label: '-2 samples' },
+  ])('formats evidence count $count without changing its plural category or raw data', ({ count, label }) => {
+    const item = Object.freeze({ ...retainedEvidence, sample_count: count });
+    render(<AnalysisBrief {...baseProps} hasResult evidence={[item]}
+      quality={{ ...emptyQuality, sample_count: count }} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = within(screen.getByRole('dialog', { name: 'Assessment details' }));
+    expect(drawer.getByText(`Recorded evidence. · ${label}`)).toBeInTheDocument();
+    expect(drawer.getByText(`Source quality sample count: ${label.split(' ')[0]}`)).toBeInTheDocument();
+    expect(item.sample_count).toBe(count);
+  });
+
+  it.each([
+    { kind: 'missing', count: undefined },
+    { kind: 'null', count: null },
+    { kind: 'NaN', count: Number.NaN },
+    { kind: 'positive infinity', count: Number.POSITIVE_INFINITY },
+    { kind: 'negative infinity', count: Number.NEGATIVE_INFINITY },
+    { kind: 'numeric string', count: '0' },
+    { kind: 'empty string', count: '' },
+    { kind: 'boolean', count: false },
+  ])('keeps $kind evidence and quality counts distinct from measured zero', ({ count }) => {
+    const item: Evidence = { ...retainedEvidence };
+    const quality: DataQuality = { ...emptyQuality };
+    Object.defineProperty(item, 'sample_count', { value: count });
+    Object.defineProperty(quality, 'sample_count', { value: count });
+    Object.freeze(item);
+    Object.freeze(quality);
+    render(<AnalysisBrief {...baseProps} hasResult evidence={[item]}
+      quality={quality} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = within(screen.getByRole('dialog', { name: 'Assessment details' }));
+    expect(drawer.getByText('Recorded evidence.')).toBeInTheDocument();
+    expect(drawer.getByText('Source quality sample count: —')).toBeInTheDocument();
+    expect(drawer.queryByText('Recorded evidence. · 0 samples')).not.toBeInTheDocument();
+    expect(item.sample_count).toBe(count);
+  });
+
+  it('uses the existing numeric locale preference for evidence count display', () => {
+    setGlobalLocale('de-DE');
+    render(<AnalysisBrief {...baseProps} hasResult
+      evidence={[{ ...retainedEvidence, sample_count: 12345 }]} />, { wrapper: Wrapper });
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    expect(screen.getByText('Recorded evidence. · 12.345 samples')).toBeInTheDocument();
+  });
+
   it('keeps never-submitted idle sources Not calculated with the submission instruction and every metric', () => {
     render(<AnalysisBrief {...baseProps} query={{ fetchStatus: 'idle' }} />, { wrapper: Wrapper });
     const brief = screen.getByTestId('analysis-state');
@@ -197,6 +271,30 @@ describe('advanced intelligence raw OperationalBrief bridge', () => {
     expect(screen.queryByText('Not calculated')).not.toBeInTheDocument();
     expect(screen.queryByText('Intelligence evidence could not be loaded.')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Review details' })).toBeInTheDocument();
+  });
+
+  it('wraps the retained-result retry with mobile targets and desktop restoration, then recovers without losing zero', () => {
+    const retry = vi.fn();
+    const { rerender } = render(<AnalysisBrief {...baseProps} hasResult query={{
+      data: {}, error: new Error('Refresh failed'), refetch: retry,
+    }} />, { wrapper: Wrapper });
+    const action = screen.getByRole('button', { name: 'Retry' });
+    expect(action).toHaveClass('h-auto', 'min-h-11', 'min-w-11', 'md:min-h-9', 'md:min-w-0', 'whitespace-normal', 'max-w-full');
+    expect(action.querySelector('span')).toHaveClass('min-w-0', 'break-words');
+    fireEvent.click(action);
+    expect(retry).toHaveBeenCalledOnce();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    rerender(<AnalysisBrief {...baseProps} hasResult query={{
+      data: {}, isFetching: true, fetchStatus: 'fetching', refetch: retry,
+    }} />);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    expect(screen.getByText('Updating result')).toBeInTheDocument();
+    rerender(<AnalysisBrief {...baseProps} hasResult query={{
+      data: {}, isSuccess: true, fetchStatus: 'idle', refetch: retry,
+    }} />);
+    expect(screen.queryByText('Retained result')).not.toBeInTheDocument();
+    expect(screen.getByText('0.00 kWh')).toBeInTheDocument();
+    expect(retry).toHaveBeenCalledOnce();
   });
 
   it('honors the real publication scope guard instead of retaining obsolete vehicle metrics', () => {

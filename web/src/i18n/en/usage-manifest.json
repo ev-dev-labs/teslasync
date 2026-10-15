@@ -67633,6 +67633,8 @@
       "dashcam.player.motionNotRun",
       "dashcam.player.motionScore",
       "dashcam.player.motionUnavailable",
+      "dashcam.player.playbackFailed",
+      "dashcam.player.replay",
       "dashcam.player.runMotion",
       "dashcam.reconstruction.clipEnd",
       "dashcam.reconstruction.clipStart",

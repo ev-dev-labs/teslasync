@@ -8,6 +8,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useOperationalMetrics } from '@/hooks/useOperationalMetrics';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { isFiniteNumber } from '@/lib/numberFormat';
 import type { DataQuality, Evidence } from '@/types/advancedIntelligence';
 
 interface AnalysisBriefProps {
@@ -89,7 +90,7 @@ export function AnalysisBrief({
       {retained && (
         <AlertBanner variant="warning" role="status">
           {t('advancedIntelligence.brief.retainedNotice', 'Previously loaded data remains visible while affected sources recover.')}
-          {state.retry && <Button variant="ghost" size="sm" onClick={state.retry}>
+          {state.retry && <Button variant="ghost" size="sm" wrapLabel className="min-h-11 min-w-11 md:min-h-9 md:min-w-0" onClick={state.retry}>
             {t('common.retry', 'Retry')}
           </Button>}
         </AlertBanner>
@@ -137,7 +138,9 @@ export function AnalysisBrief({
               qualityLabel,
               window,
               ...(quality ? [
-                t('advancedIntelligence.brief.qualitySamples', 'Source quality sample count: {{value}}', { value: fmtInt(quality.sample_count) }),
+                t('advancedIntelligence.brief.qualitySamples', 'Source quality sample count: {{value}}', {
+                  value: isFiniteNumber(quality.sample_count) ? fmtInt(quality.sample_count) : '—',
+                }),
                 quality.coverage_pct != null
                   ? t('advancedIntelligence.brief.qualityCoverage', 'Source coverage: {{value}}%', { value: fmtNumber(quality.coverage_pct) })
                   : t('advancedIntelligence.brief.coverageUnknown', 'Source coverage not supplied'),
@@ -150,9 +153,9 @@ export function AnalysisBrief({
           limitations: limitations ?? [],
           evidence: (evidence ?? []).map((item, index) => ({
             id: `${item.source}-${index}`,
-            summary: item.sample_count == null ? item.summary : t(
-              'advancedIntelligence.brief.evidenceSamples', '{{summary}} · {{count}} samples',
-              { summary: item.summary, count: item.sample_count },
+            summary: !isFiniteNumber(item.sample_count) ? item.summary : t(
+              'advancedIntelligence.brief.evidenceSamples', '{{summary}} · {{formattedCount}} samples',
+              { summary: item.summary, count: item.sample_count, formattedCount: fmtInt(item.sample_count) },
             ),
             observedAt: item.observed_at,
             provenance: { source: item.source },
