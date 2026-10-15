@@ -95,6 +95,8 @@ Order: feature by feature, by primary-file cluster.
 | Drive score | ds05/06/07/10/11/12/13 | singular exclusion notice, truthful insights |
 | FSD insights | f01/02/04/05/08/10/13 | icon selector test fix only |
 | Efficiency / target | f003/f008, target f03/f04/f06 | five distinct bands, scorecard export key, boundary labels |
+| Explorer | exp05/exp09 (exp03 left failed) | filter grouping test |
+| Regen efficiency | 04/05/07/08 | harness fixes only |
 
 Real product bugs fixed along the way: drive-detail energy/regen estimate was
 1000× too large; (0,0) GPS placeholder stretched routes; TorqueHistory ticks
@@ -105,12 +107,18 @@ labels without i18n init and was not announced (now role=alert).
 
 ### Next up (driving, then other features)
 
-explorer (exp03/05/09)
-→ regen (04/05/07/08) → sweet spot (f03/f04/f05) → rhythm (f01/f03, punchcard
+sweet spot (f03/f04/f05) → rhythm (f01/f03, punchcard
 f04, tips f03/04/05/07) → compare (f01/f07, driveCompare f05) → what-if
 (003/006/007) → misc (ShareDriveDialog f03, ElapsedComposition 02, replayMarkers
 f10). Then vehicles (62), vehicle-systems (45), charging (48), system (47),
 notifications, settings, battery, and the rest.
+
+## Known open issues (left failed in state.json)
+
+- explorer exp03: DestinationDirectory mobile details open with all fields, but
+  focus does not return to the row trigger after Escape
+  (`DestinationDirectory.test.tsx:216`); the shared MobileDataTableAdapter
+  restore tests pass, so it is specific to this composition.
 
 ## Step 2 — Phase 7 gates
 

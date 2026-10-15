@@ -29,7 +29,8 @@ const zeroAggregate: RegenEfficiencyData = {
 };
 
 function assertList(scope: HTMLElement) {
-  const list = within(scope).getByRole('list');
+  // Source notices can render their own list; select the methodology grid.
+  const list = within(scope).getAllByRole('list').find((candidate) => candidate.classList.contains('lg:grid-cols-2'))!;
   expect(list).toHaveClass('mt-5', 'grid', 'gap-3', 'lg:grid-cols-2');
   const items = within(list).getAllByRole('listitem');
   expect(items).toHaveLength(6);

@@ -27,7 +27,16 @@ vi.mock('@/components/ui/ThemeProvider', async importOriginal => {
   return {
     ...actual,
     useTheme: () => {
-      const context = actual.useTheme();
+      // Bare renders have no ThemeProvider; fall back to the default dark Signal Blue theme.
+      let context: ReturnType<typeof actual.useTheme>;
+      try {
+        context = actual.useTheme();
+      } catch {
+        context = {
+          theme: { id: 'neon-cyan', name: 'Signal Blue', primary: '#3b82f6', primaryRGB: '59, 130, 246', accent: '#06b6d4', accentRGB: '6, 182, 212' },
+          mode: { id: 'dark', name: 'Dark', colorScheme: 'dark' },
+        } as unknown as ReturnType<typeof actual.useTheme>;
+      }
       return { ...context, mode: h.mode ?? context.mode };
     },
   };

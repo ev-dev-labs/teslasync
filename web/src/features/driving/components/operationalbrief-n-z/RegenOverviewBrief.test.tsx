@@ -1,4 +1,5 @@
 import type { ComponentProps } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import type { RegenEfficiencyData } from '@/types/driving';
@@ -46,7 +47,7 @@ type Props = ComponentProps<typeof RegenOverviewBrief>;
 function show(overrides: Partial<Props> = {}) {
   render(<RegenOverviewBrief aggregate={aggregate} model={model}
     aggregateState={resolved} detailState={resolved} scope="Selected window" retained={false}
-    {...overrides} />);
+    {...overrides} />, { wrapper: MemoryRouter });
   return brief.mock.lastCall![0] as ComponentProps<typeof DrivingSummaryBrief>;
 }
 function raw(props: ComponentProps<typeof DrivingSummaryBrief>, occurrenceId: string) {
