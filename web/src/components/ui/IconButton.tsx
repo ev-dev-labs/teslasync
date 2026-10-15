@@ -15,6 +15,7 @@ export interface IconButtonProps {
   busy?: boolean;
   disabled?: boolean;
   tooltipSide?: 'top' | 'bottom' | 'left' | 'right';
+  'aria-label'?: string;
   'aria-haspopup'?: AriaAttributes['aria-haspopup'];
   'aria-expanded'?: boolean;
   className?: string;
@@ -32,13 +33,14 @@ export function IconButton({
   busy = false,
   disabled = false,
   tooltipSide = 'top',
+  'aria-label': ariaLabelOverride,
   className,
   ...ariaProps
 }: IconButtonProps) {
   const control = href ? (
     <Link
       to={href}
-      aria-label={label}
+      aria-label={ariaLabelOverride ?? label}
       aria-busy={busy || undefined}
       aria-disabled={disabled || undefined}
       tabIndex={disabled ? -1 : undefined}
@@ -54,7 +56,7 @@ export function IconButton({
   ) : (
     <Button
       type="button"
-      aria-label={label}
+      aria-label={ariaLabelOverride ?? label}
       variant={variant}
       icon={icon}
       loading={busy}
