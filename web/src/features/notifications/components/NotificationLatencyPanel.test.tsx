@@ -44,7 +44,7 @@ vi.mock('react-i18next', async () => {
   const { createInstance } = await import('i18next');
   const { default: english } = await import('@/i18n/en.json');
   const i18n = createInstance();
-  await i18n.init({ lng: 'en', resources: { en: { translation: english } } });
+  await i18n.init({ lng: 'en', resources: { en: { translation: english } }, interpolation: { escapeValue: false } });
   return { useTranslation: () => ({ t: i18n.t.bind(i18n), i18n }) };
 });
 vi.mock('@/components/charts', async importOriginal => {
