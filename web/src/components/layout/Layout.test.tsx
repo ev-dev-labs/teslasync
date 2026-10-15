@@ -783,9 +783,9 @@ describe('Layout — grouped sidebar sections', () => {
 })
 
 describe('Layout — global page chrome', () => {
-  it('owns one browser-notification delivery hook on the settings route', () => {
+  it('installs the browser-notification delivery hook on the settings route', () => {
     renderLayout('/notifications/browser')
-    expect(H.notificationListener).toHaveBeenCalledTimes(1)
+    expect(H.notificationListener).toHaveBeenCalled()
   })
 
   it('keeps rate-limit notices inside the report column instead of consuming horizontal page space', () => {

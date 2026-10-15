@@ -108,6 +108,7 @@ describe('useNotificationListener', () => {
     h.getSoundPrefs.mockImplementation(() => ({ master: true }))
     h.permission = 'granted'
     h.realWebPush = false
+    vi.mocked(Notification.requestPermission).mockClear()
     localStorage.clear()
     // Notifications only fire while the tab is backgrounded.
     setHidden(true)
