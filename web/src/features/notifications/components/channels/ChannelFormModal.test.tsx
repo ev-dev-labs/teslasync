@@ -517,7 +517,7 @@ describe('ChannelFormModal — edit mode', () => {
 
   it.each<NotificationChannel>([
     { ...discordChannel, username: 'Delivery bot', avatar_url: 'https://example.com/avatar.png' },
-    { ...discordChannel, kind: 'slack', channel: '#ops', username: 'Alerts' },
+    { id: 7, name: 'Ops Slack', kind: 'slack', enabled: true, created_at: '2020-01-01T00:00:00Z', updated_at: '2020-01-01T00:00:00Z', webhook_url: 'https://hooks.slack.com/services/xyz', channel: '#ops', username: 'Alerts' },
     {
       id: 8, name: 'Email', kind: 'email', enabled: true, created_at: 'c', updated_at: 'u',
       smtp_host: 'smtp.example.com', smtp_port: 2525, smtp_username: 'ops',

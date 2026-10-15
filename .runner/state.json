@@ -11577,7 +11577,7 @@
     "WorkAttempts": 0,
     "InfraAttempts": 0,
     "Notes": "Notification checkpoint 2026-10-15: no-match flat and grouped EmptyState clear-filter actions verified in InboxBody.test.tsx; split catalog check passed.",
-    "Commit": "",
+    "Commit": "e6b296e32f",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {
@@ -11624,11 +11624,11 @@
       "web\\src\\features\\admin\\components\\__tests__\\AlertDetailTimeline.test.tsx"
     ],
     "DependsOn": [],
-    "Status": "pending",
+    "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-notifications-archived-f06 | missing dependencies and locked Rollup binary prevent verification | done so far: updated both assigned components and both regression test files Attempt 2: FAILED | fix-notifications-archived-f06 | missing Vite dependencies and locked Rollup binary prevent verification | done so far: confirmed existing changes and regressions in all four assigned files; no source edits",
-    "Commit": "",
+    "Notes": "Focused AlertDetailDrawer and AlertDetailTimeline verification passed 18/18 and 22/22; test locators now select complete field rows and timeline uses its event timestamp.  Attempt 1: FAILED | fix-notifications-archived-f06 | missing dependencies and locked Rollup binary prevent verification | done so far: updated both assigned components and both regression test files Attempt 2: FAILED | fix-notifications-archived-f06 | missing Vite dependencies and locked Rollup binary prevent verification | done so far: confirmed existing changes and regressions in all four assigned files; no source edits",
+    "Commit": "e6b296e32f",
     "NotBefore": "0001-01-01T00:00:00"
   },
   {

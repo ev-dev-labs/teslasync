@@ -271,7 +271,7 @@ describe('buildChannelPayload', () => {
       url: 'https://example.com/new', method: 'PUT', bearer_token: 'new-secret',
     }, channels.webhook.id, channels.webhook)).toMatchObject({
       url: 'https://example.com/new', method: 'PUT', bearer_token: 'new-secret',
-      headers: { Authorization: '******' }, body_template: '{"text":"{{message}}"}',
+      headers: { Authorization: 'Bearer t' }, body_template: '{"text":"{{message}}"}',
     });
   });
 
