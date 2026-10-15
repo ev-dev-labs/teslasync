@@ -32760,6 +32760,14 @@
       "atSeconds": "t={{seconds}}s",
       "emptyMessage": "Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.",
       "emptyTitle": "No event candidates yet",
+      "basis":  {
+        "reason":  "event.json reason: \"{{reason}}\"",
+        "folder":  "folder: {{folder}}",
+        "sentryFolder":  "folder: {{folder}} (no event.json reason found — trigger cause unknown)",
+        "savedFolder":  "folder: {{folder}} (user-saved clip; no event metadata found)",
+        "motionScore":  "sampled-frame pixel-difference score: {{score}} across {{pairs}} frame-pair(s)",
+        "motionDisclaimer":  "basis: luminance delta heuristic only — no object/person/plate recognition was performed"
+      },
       "title": "Event evidence",
       "wholeClip": "whole clip",
       "type": {

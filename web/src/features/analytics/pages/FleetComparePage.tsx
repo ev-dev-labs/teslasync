@@ -248,24 +248,21 @@ function VehicleStatusCard({
         {/* Lock & Sentry */}
         <StatusRow icon={<Lock className="h-4 w-4" />} label={t('comparison.security', 'Security')}
           evidence={fieldEvidence('is_locked') ?? fieldEvidence('sentry_mode')}>
-          {state ? (
-            <div className="flex items-center justify-end gap-2">
-              <Text as="span" size="xs" weight="medium" className={cn(
-                state.is_locked == null ? 'text-[var(--text-muted)]' : state.is_locked ? severityTokens.success.fg : severityTokens.critical.fg,
-              )}>
-                {state.is_locked == null ? '—' : state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
+          <div className="flex items-center justify-end gap-2">
+            <Text as="span" size="xs" weight="medium" className={cn(
+              state?.is_locked == null ? 'text-[var(--text-muted)]' : state.is_locked ? severityTokens.success.fg : severityTokens.critical.fg,
+            )}>
+              {state?.is_locked == null ? '—' : state.is_locked ? t('comparison.locked', 'Locked') : t('comparison.unlocked', 'Unlocked')}
+            </Text>
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--text-primary)]">
+              <Shield className="h-3 w-3" aria-hidden="true" />
+              <Text as="span" size="xs" weight="medium">
+                {state?.sentry_mode === true ? t('comparison.sentryOn', 'Sentry ON')
+                  : state?.sentry_mode === false ? t('comparison.sentryOff', 'Sentry OFF')
+                    : t('comparison.sentryUnknown', 'Sentry unknown')}
               </Text>
-              <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 text-[var(--text-primary)]">
-                <Shield className="h-3 w-3" aria-hidden="true" />
-                <Text as="span" size="xs" weight="medium">
-                  {state.sentry_mode == null ? `${t('comparison.sentry', 'Sentry')}: —`
-                    : state.sentry_mode ? t('comparison.sentry', 'Sentry') : t('common.sentryOff', 'Sentry OFF')}
-                </Text>
-              </span>
-            </div>
-          ) : (
-            <Text as="span" size="xs" color="muted">—</Text>
-          )}
+            </span>
+          </div>
         </StatusRow>
 
         {/* Status */}
@@ -560,7 +557,7 @@ export default function FleetComparePage() {
         winner: 'neutral',
       },
       {
-        metric: t('comparison.co2Saved', 'CO₂ saved'),
+        metric: t('comparison.co2Saved', 'Estimated CO₂ saved'),
         valueA: formatKnown(dsA?.co2SavedKg, value => `${fmtNumber(value)} kg`),
         valueB: formatKnown(dsB?.co2SavedKg, value => `${fmtNumber(value)} kg`),
         rawA: dsA?.co2SavedKg ?? null,
@@ -775,7 +772,7 @@ export default function FleetComparePage() {
             },
             {
               id: 'co2-pair',
-              label: t('comparison.co2Diff', 'CO₂ saved'),
+              label: t('comparison.co2Diff', 'Estimated CO₂ saved'),
               metricId: 'mass', rawA: drivingStatsA?.co2SavedKg, rawB: drivingStatsB?.co2SavedKg,
               format: value => `${fmtNumber(value)} kg`,
               retained: (drivingStatsA != null && (statsQueryA.isError || statsQueryA.fetchStatus === 'paused'))
@@ -784,6 +781,9 @@ export default function FleetComparePage() {
               loading: statsLoading && !drivingStatsA && !drivingStatsB,
             },
           ]} />
+          <Caption className="block">
+            {t('comparison.co2Context', 'CO₂ savings are a distance-based estimate using 0.07 kg per kilometre of recorded driving, not measured emissions. Values cover lifetime tracked drives; exact observation bounds and recording completeness are not supplied.')}
+          </Caption>
         </Section>
       </FadeIn>
 
@@ -934,6 +934,9 @@ export default function FleetComparePage() {
             <div className="mb-3 flex items-center gap-2">
               <Info className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
               <div className="min-w-0">
+                <Caption className="block">
+                  {t('comparison.co2Context', 'CO₂ savings are a distance-based estimate using 0.07 kg per kilometre of recorded driving, not measured emissions. Values cover lifetime tracked drives; exact observation bounds and recording completeness are not supplied.')}
+                </Caption>
                 <Caption className="block">
                   {t('tco.methodology.costedOnly', 'Charging totals include only sessions whose recorded cost is greater than zero; excluded free or missing-cost sessions cannot be counted from this response.')}
                 </Caption>

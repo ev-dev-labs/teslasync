@@ -129,6 +129,7 @@ import type { Vehicle } from '@/types/vehicle'
 import type { VehicleState, VehicleStateReadings } from '@/api/types'
 import type { DrivingStats } from '@/types/driving'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
+import { drivingKeys } from '@/api/hooks/useDriving'
 import { analyticsKeys } from '@/api/hooks/useAnalytics'
 import type { CostBreakdown } from '@/types/analytics'
 import * as settingsHook from '@/hooks/useSettings'
@@ -238,6 +239,7 @@ const monthlyB = monthly(2, [
 ])
 
 interface InstallOptions {
+  statsForA?: Omit<Partial<DrivingStats>, 'co2SavedKg'> & { co2SavedKg?: number | null }
   costForA?: Partial<CostBreakdown>
   vehicles?: Vehicle[]
   /** /vehicles never resolves — drives the page-level loading shell. */
@@ -269,6 +271,7 @@ function install(opts: InstallOptions = {}) {
     monthlyErrorB = false,
     monthlyForA = monthlyA,
     costForA = costA,
+    statsForA = statsA,
     stateEvidence,
     stateResponse,
     statePending = false,
@@ -289,7 +292,7 @@ function install(opts: InstallOptions = {}) {
       return vehiclesPending ? never() : Promise.resolve(vehicles)
     }
     if (path.startsWith('/drives/stats')) {
-      return Promise.resolve(idOf(path) === '2' ? statsB : statsA)
+      return Promise.resolve(idOf(path) === '2' ? statsB : statsForA)
     }
     if (path.startsWith('/analytics/tco')) {
       return Promise.resolve(idOf(path) === '2' ? costB : costForA)
@@ -417,6 +420,25 @@ describe('FleetComparePage evidence preservation', () => {
     expect(screen.queryByRole('progressbar', { name: 'Battery level' })).toBeNull()
   })
 
+  it.each([
+    { state: null, label: 'Sentry unknown' },
+    { state: { vehicle_id: 1, is_locked: true }, label: 'Sentry unknown' },
+    { state: { vehicle_id: 1, is_locked: true, sentry_mode: null }, label: 'Sentry unknown' },
+    { state: { vehicle_id: 1, is_locked: true, sentry_mode: false }, label: 'Sentry OFF' },
+    { state: { vehicle_id: 1, is_locked: true, sentry_mode: true }, label: 'Sentry ON' },
+  ])('labels Sentry explicitly from present security readings, not freshness (%j)', async ({ state, label }) => {
+    install({ stateResponse: { state, live: false } })
+    const { client } = renderPage()
+    await waitFor(() => expect(client.getQueryState(vehicleKeys.state(1))?.status).toBe('success'))
+    expect(screen.getAllByText(label)).toHaveLength(2)
+    for (const other of ['Sentry unknown', 'Sentry OFF', 'Sentry ON'].filter(value => value !== label)) {
+      expect(screen.queryByText(other)).toBeNull()
+    }
+    if (state) expect(screen.getAllByText('Locked')).toHaveLength(2)
+    const cached = client.getQueryData<{ state: VehicleStateReadings | undefined }>(vehicleKeys.state(1))
+    expect(cached?.state?.sentry_mode).toBe(state?.sentry_mode)
+  })
+
   it('preserves durable zero and false through refresh failure and recovery without rewriting cache', async () => {
     const state = makeState({
       battery_level: 0, rated_range: 0, inside_temp: 0, outside_temp: 0,
@@ -532,7 +554,7 @@ describe('FleetComparePage evidence preservation', () => {
     expect(table.getAllByRole('row')).toHaveLength(11)
     for (const label of [
       'Total drives', 'Total distance', 'Avg efficiency', 'Avg speed', 'Top speed',
-      'Regen ratio', 'CO₂ saved', 'Recorded-cost spend', 'Recorded-cost energy', 'Costed sessions',
+      'Regen ratio', 'Estimated CO₂ saved', 'Recorded-cost spend', 'Recorded-cost energy', 'Costed sessions',
     ]) {
       expect(table.getByText(label)).toBeInTheDocument()
     }
@@ -621,6 +643,33 @@ describe('FleetComparePage evidence preservation', () => {
 })
 
 describe('FleetComparePage', () => {
+  it.each([
+    ['missing', undefined, '—', '— vs 300.00 kg'],
+    ['null', null, '—', '— vs 300.00 kg'],
+    ['NaN', Number.NaN, '—', '— vs 300.00 kg'],
+    ['positive infinity', Number.POSITIVE_INFINITY, '—', '— vs 300.00 kg'],
+    ['negative infinity', Number.NEGATIVE_INFINITY, '—', '— vs 300.00 kg'],
+    ['zero', 0, '0.00 kg', '0.00 vs 300.00 kg'],
+    ['positive fraction', 12.375, '12.38 kg', '12.38 vs 300.00 kg'],
+    ['negative fraction', -12.375, '-12.38 kg', '-12.38 vs 300.00 kg'],
+  ])('qualifies the CO₂ estimate and preserves %s separately from zero', async (_name, raw, display, pair) => {
+    install({ statsForA: { ...statsA, co2SavedKg: raw } })
+    const { client } = renderPage()
+    const table = within(await screen.findByRole('table'))
+    const row = table.getByText('Estimated CO₂ saved').closest('tr')
+    if (!row) throw new Error('CO₂ estimate must have a lifetime table row')
+    await waitFor(() => expect(within(row).getAllByRole('cell')[1]).toHaveTextContent(display))
+    expect(within(row).getAllByRole('cell')[2]).toHaveTextContent('300.00 kg')
+    const highlight = screen.getByText('Estimated CO₂ saved · Model 3 LR').closest<HTMLElement>('[role="listitem"]')
+    if (!highlight) throw new Error('CO₂ estimate must have a highlight list item')
+    await waitFor(() => expect(within(highlight).getByText(pair)).toBeInTheDocument())
+    expect(screen.getAllByText('CO₂ savings are a distance-based estimate using 0.07 kg per kilometre of recorded driving, not measured emissions. Values cover lifetime tracked drives; exact observation bounds and recording completeness are not supplied.')).toHaveLength(2)
+    expect(within(row).queryByText('Winner')).not.toBeInTheDocument()
+    const stats = client.getQueryData<DrivingStats>(drivingKeys.stats('1'))
+    expect(stats).toBeDefined()
+    expect(stats?.co2SavedKg).toBe(raw)
+  })
+
   it('renders the full comparison once two vehicles + their stats load', async () => {
     renderPage()
 
@@ -643,7 +692,7 @@ describe('FleetComparePage', () => {
     // Charging Cost / CO₂ Saved also appear as KPI-band labels → getAllByText).
     for (const label of [
       'Total drives', 'Total distance', 'Avg efficiency', 'Avg speed', 'Top speed',
-      'Regen ratio', 'CO₂ saved', 'Recorded-cost spend', 'Recorded-cost energy', 'Costed sessions',
+      'Regen ratio', 'Estimated CO₂ saved', 'Recorded-cost spend', 'Recorded-cost energy', 'Costed sessions',
     ]) {
       expect(screen.getAllByText(label).length).toBeGreaterThan(0)
     }
