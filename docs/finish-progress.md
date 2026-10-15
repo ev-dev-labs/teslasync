@@ -26,14 +26,27 @@ Resume file for the finishing session. Updated after every completed group.
   also ran as a Vite `buildStart` plugin on every Vitest start. That 2+ minute
   silent startup is why earlier workers saw "vitest produced no output" stalls.
   Fixed (check now ~12s, skipped under Vitest; Vitest starts in ~2s).
-- [ ] Review uncommitted change groups (in progress).
+- [x] Reviewed uncommitted change groups; committed verified ones:
+  charging f09, home-energy f11, explore f01, firmware-canary fc03, drive-score ds14,
+  fsdinsights f09, drive-detail f04, speed-sweet-spot f02, destination-transitions f09.
+  The RemainingUsefulLife test edits tested behaviour the page never got; parked
+  as a patch and folded into the diagnostics RUL items in Step 1.
+- [x] Shared test-harness repair (commit c3b4e9b301): baseline at HEAD had 4,279
+  failing tests; four harness gaps (annotation hook mocks, theme/settings
+  providers for useChartPalette, partial useDateFormat mocks) accounted for
+  ~2,200. Full suite after: 2,067 failing (remaining are page-specific).
 - Not carried over / left alone: `apps/mobile/android/gradle/wrapper/gradle-wrapper.properties`
   (unrelated Gradle 9 bump from local tooling), `tools/claude.ps1`,
   `tools/run-workers.ps1` (local runner scripts).
 
 ## Step 1 — Phase 6 items
 
-Not started.
+Order: feature by feature (driving → vehicles → vehicle-systems → charging → …).
+Open at start of Step 1: 689 (553 pending + 145 failed − 9 closed in Step 0).
+
+### Groups done
+
+(none yet)
 
 ## Step 2 — Phase 7 gates
 
