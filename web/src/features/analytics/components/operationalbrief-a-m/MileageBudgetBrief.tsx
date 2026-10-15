@@ -19,6 +19,10 @@ export function MileageBudgetBrief({
   const historyCapped = budget.historyCapReached;
   const paceOver = !historyCapped && budget.paceRatio != null && budget.paceRatio > 1;
   const unavailable = t('mileageBudget.cap.unavailable', 'unavailable while history is capped');
+  const projectionEligible = source.hasData && !historyCapped && budget.ok &&
+    budget.projectedTotalM != null && Number.isFinite(budget.projectedTotalM);
+  const projectionMissingReason = historyCapped ? unavailable
+    : t('developerReference.stats.reason.missing', 'No measurement supplied');
   const distanceDisplay = { formatter: (raw: number) => ({ value: formatDistance(raw), unit: '' }) };
   const metrics: StatMetric[] = [
     {
@@ -47,9 +51,10 @@ export function MileageBudgetBrief({
     {
       metricId: 'currency', occurrenceId: 'budget-overage',
       label: t('mileageBudget.overageCost', 'Projected overage'),
-      rawValue: source.hasData && !historyCapped ? budget.projectedOverageM > 0 ? budget.projectedOverageCost : 0 : null,
+      rawValue: projectionEligible ? budget.projectedOverageM > 0 ? budget.projectedOverageCost : 0 : null,
+      missingReason: projectionEligible ? undefined : projectionMissingReason,
       display: { formatter: raw => ({ value: formatCurrency(raw), unit: '' }) },
-      context: !source.hasData ? undefined : historyCapped ? unavailable
+      context: !projectionEligible ? undefined
         : budget.projectedOverageM > 0 ? formatDistance(budget.projectedOverageM)
           : t('mileageBudget.noOverage', 'no overage projected'),
     },
