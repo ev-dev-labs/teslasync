@@ -330,7 +330,7 @@ export default function SegmentsPage() {
               />
             </GlassPanel>
           ) : (
-            <div role="listbox" aria-label={t('segments.list.title', 'Route segments')} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div role="group" aria-label={t('segments.list.title', 'Route segments')} className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {visibleSegments.map((s) => (
                 <SegmentCard
                   key={s.id || `${s.name}-${s.start_address}`}
@@ -629,7 +629,6 @@ interface SegmentCardProps {
 function SegmentCard({ segment: s, selected, disabled, onSelect, formatDistance, t }: SegmentCardProps) {
   return (
     <SelectableCard
-      role="option"
       selected={selected}
       disabled={disabled}
       onClick={() => onSelect(s.id)}
