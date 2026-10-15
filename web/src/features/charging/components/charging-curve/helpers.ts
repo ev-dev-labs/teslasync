@@ -22,9 +22,9 @@ export function getChargerCategoryId(s: ChargingSession): ChargerCategoryId {
 
 export function getChargerCategoryLabel(category: ChargerCategoryId, t: TFunction = i18n.t): string {
   switch (category) {
-    case 'Home / AC': return t('charging.curve.chargerLabels.homeAc', 'Home / AC');
-    case 'Supercharger': return t('charging.curve.chargerLabels.supercharger', 'Supercharger');
-    case 'DC Fast': return t('charging.curve.chargerLabels.dcFast', 'DC Fast');
+    case 'Home / AC': return t('charging.curve.chargerLabels.homeAc', { defaultValue: 'Home / AC' }) || 'Home / AC';
+    case 'Supercharger': return t('charging.curve.chargerLabels.supercharger', { defaultValue: 'Supercharger' }) || 'Supercharger';
+    case 'DC Fast': return t('charging.curve.chargerLabels.dcFast', { defaultValue: 'DC Fast' }) || 'DC Fast';
   }
 }
 

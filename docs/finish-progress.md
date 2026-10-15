@@ -205,7 +205,8 @@ Not started.
 - `ChargingThermalTaxPage.test.tsx` plus the full `charging-thermal-tax-modernization` component area pass: **5 files, 42 tests**.
 - Aligned tests with localized number grouping, current observed-window empty-state copy, the raw timestamp included in chart rows, and the shared export menu's supported options. Unknown heater readings remain represented as unavailable and the shell/provenance tests pass.
 
-### Charging checkpoint: thermal-tax verification (2026-10-15)
 
-- Thermal-tax page plus modernization tests passed: **5 files, 42 tests**.
-- Test updates reflect localized number grouping, the current observed-window message, complete timestamp evidence, uncertain heater input handling, and actual chart export capabilities.
+### Charging checkpoint: curve helpers and page selector (2026-10-15)
+
+- `charging-curve/helpers.test.ts` and `ChargingCurvePage.test.tsx` pass (**2 files, 91 tests**).
+- The default charger-category label helper now supplies a safe English fallback when the global translator is uninitialized; the selected-session fixture renders the verified Supercharger category label again. The broader curve/modernization cluster still has open failures.
