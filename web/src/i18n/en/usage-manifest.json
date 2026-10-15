@@ -10126,6 +10126,7 @@
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
       "yearReview.aiNarration.title",
+      "yearReview.goToVehicles",
       "yearReview.pageTitle"
     ],
     "notifications": [
@@ -20338,6 +20339,7 @@
       "yearReview.aiNarration.emptyHint",
       "yearReview.aiNarration.generateButton",
       "yearReview.aiNarration.title",
+      "yearReview.goToVehicles",
       "yearReview.pageTitle"
     ],
     "driving": [
@@ -120866,7 +120868,8 @@
       "upstream.banner",
       "vehiclePicker.aria",
       "vehiclePicker.fallbackName",
-      "widget.motorPerformance.outsideScale"
+      "widget.motorPerformance.outsideScale",
+      "yearReview.goToVehicles"
     ],
     "driving-speed-sweet-spot": [
       "a11y.breadcrumb",
@@ -131062,7 +131065,8 @@
       "timeline",
       "toast",
       "tour",
-      "widget"
+      "widget",
+      "yearReview"
     ],
     "driving-speed-sweet-spot": [
       "achievements",

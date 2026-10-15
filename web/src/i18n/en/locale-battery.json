@@ -4488,6 +4488,7 @@
       "generateButton": "Generate narration",
       "title": "Helix narration"
     },
+    "goToVehicles": "Go to vehicles",
     "pageTitle": "{{year}} Year in review"
   }
 }

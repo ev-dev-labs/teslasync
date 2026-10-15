@@ -850,5 +850,8 @@
     "motorPerformance": {
       "outsideScale": "Reading outside displayed scale ({{min}} to {{max}} {{unit}})"
     }
+  },
+  "yearReview": {
+    "goToVehicles": "Go to vehicles"
   }
 }
