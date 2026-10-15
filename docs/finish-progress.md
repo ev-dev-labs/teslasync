@@ -234,3 +234,17 @@ preserved for prior cases, and no new no-action comments were added here.
 - Added a focused `EmptyState` test for the informational variant. Full gates and
   affected-area regressions are still in progress; do not treat these counts as
   a completed Phase 7 gate result.
+
+## Phase 7 gate check update (2026-10-15)
+
+- `node scripts/split-i18n-catalog.mjs --check` passed after running the normal
+  generator to refresh five English bundles/manifests. No package files changed.
+- `npx tsc --noEmit` passed after the actionable empty-state changes.
+- `npm run lint` passed ESLint and audits through `audit:chart-a11y`, then found
+  five raw `ResponsiveContainer` charts rejected by `audit:chart-frame`:
+  departure forecast, destination transition profile, origin concentration,
+  speed consumption, and drive evidence. Those chart-frame repairs are next.
+- Focused tests for 29 affected files: **925 passed, 77 failed**. Failures were
+  spread across existing assertions in 19 files; detailed follow-up is needed
+  before declaring the full suite result. The standalone `ChartContainer.test.tsx`
+  suite passed **21/21** after clarifying its annotation-only fixture.
