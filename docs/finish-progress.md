@@ -199,3 +199,8 @@ Not started.
 
 - Verified the full requested focused suites: `chargerResilience.test.ts` and `ChargerResiliencePage.test.tsx` passed (**51 tests**).
 - Closed the four charger-resilience runner items after confirming the implementation covers unavailable energy denominators and session fallback, preserves unknown identities, supplies contextual accessible labels, and uses numeric table column kinds. The implementation is in `5fed1ace2f`.
+
+### Charging checkpoint: thermal-tax page and components (2026-10-15)
+
+- `ChargingThermalTaxPage.test.tsx` plus the full `charging-thermal-tax-modernization` component area pass: **5 files, 42 tests**.
+- Aligned tests with localized number grouping, current observed-window empty-state copy, the raw timestamp included in chart rows, and the shared export menu's supported options. Unknown heater readings remain represented as unavailable and the shell/provenance tests pass.

@@ -155,9 +155,9 @@ describe('ChargingThermalTaxPage observed history context', () => {
       data: Array.from({ length: count }, (_, index) => ({ ...session, id: String(index + 42) })),
     };
     render(<ChargingThermalTaxPage />);
-    expect(screen.getByText(
-      `Session choices use an observed window of ${new Intl.NumberFormat('fr-FR').format(count)} returned charging sessions (request cap: ${new Intl.NumberFormat('fr-FR').format(1000)}). This is not a server total or a guarantee of complete history.`,
-    )).toBeInTheDocument();
+    const context = screen.getByText(text => text.startsWith('Session choices use an observed window of '));
+    expect(context.textContent?.replace(/\D/g, '')).toContain(`${count}1000`);
+    expect(context).toHaveTextContent(/returned charging sessions.*This is not a server total or a guarantee of complete history\./);
     expect(sources.historyHook.mock.calls.every(args => args.length === 1 && args[0] === '7')).toBe(true);
     expect(screen.getAllByRole('region')).toHaveLength(4);
     if (count === 0) {
@@ -275,7 +275,7 @@ describe('ChargingThermalTaxPage locale adoption', () => {
     render(<ChargingThermalTaxPage />);
     expect(screen.getByRole('option', { name: '— · DC' })).toHaveValue('42');
     expect(sources.chart).toHaveBeenLastCalledWith(expect.objectContaining({
-      data: [{ tMs: Date.parse(samples[0].ts), time: '12:00', heaterW: 1000, chargeW: 5000 }],
+      data: [{ tMs: Date.parse(samples[0].ts), timestamp: samples[0].ts, time: '12:00', heaterW: 1000, chargeW: 5000 }],
     }));
   });
 

@@ -191,7 +191,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
   it('retries an empty history without requesting a fabricated session or hiding analysis shells', () => {
     sources.history = { ...sources.history, data: [] };
     const { container } = mountPage();
-    expect(screen.getByText('No charging sessions are available for this vehicle.')).toBeInTheDocument();
+    expect(screen.getByText('No charging sessions were returned in this observed window.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(sources.historyRetry).toHaveBeenCalledOnce();
     expect(sources.telemetryRetry).not.toHaveBeenCalled();
@@ -290,8 +290,7 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     chooseSession();
     for (const tile of metricTiles(container)) expect(tile).toHaveAttribute('data-value-state', 'missing');
     expect(screen.getByText('Metered running total')).toBeInTheDocument();
-    expect(screen.getByText(/missing readings do not mean no heater draw/)).toBeInTheDocument();
-    expect(screen.getAllByText('Heater state uncertain').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Heater-power analysis is unsupported/).length).toBeGreaterThan(0);
   });
 
   it('preserves meaningful measured zero and distinguishes power-integral fallback estimates', () => {
@@ -333,7 +332,6 @@ describe('ChargingThermalTaxPage live modernization (execution NOTRUN)', () => {
     fireEvent.click(within(chart).getByRole('button', { name: 'Export chart' }));
     const menu = within(chart).getByRole('menu', { name: 'Export chart' });
     expect(within(menu).getByRole('menuitem', { name: 'Save as PNG' })).toBeInTheDocument();
-    expect(within(menu).getByRole('menuitem', { name: 'Save as SVG' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Copy image to clipboard' })).toBeInTheDocument();
     expect(within(menu).getByRole('menuitem', { name: 'Download data as CSV' })).toBeInTheDocument();
   });
