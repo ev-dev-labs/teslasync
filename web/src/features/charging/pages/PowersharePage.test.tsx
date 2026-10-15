@@ -216,7 +216,7 @@ function numObs(name: string, value: number | null, ts: string): SignalObservati
 // A fully-populated, "sharing to Home at 3.25 kW with 5.5h left" fleet.
 function readyFleet() {
   h.queries[POWERSHARE_SIGNALS.status] = makeQuery({
-    data: [textObs(POWERSHARE_SIGNALS.status, 'PowershareStatusActive', '2024-05-01T10:00:00Z')],
+    data: [textObs(POWERSHARE_SIGNALS.status, 'PowershareStateEnabled', '2024-05-01T10:00:00Z')],
   });
   h.queries[POWERSHARE_SIGNALS.type] = makeQuery({
     data: [textObs(POWERSHARE_SIGNALS.type, 'PowershareTypeHome', '2024-05-01T10:00:00Z')],
@@ -375,7 +375,7 @@ describe('PowersharePage', () => {
     // KPI band — humanised enums + SI-formatted numbers, scoped to its region
     // so the same values on sibling panels can't create a false positive.
     const kpi = within(screen.getByRole('region', { name: 'Powershare metrics' }));
-    expect(kpi.getByText('Active')).toBeInTheDocument();
+    expect(kpi.getByText('Enabled')).toBeInTheDocument();
     expect(kpi.getByText('Home')).toBeInTheDocument();
     expect(kpi.getByText('3.25 kW')).toBeInTheDocument();
     expect(kpi.getByText('5.50 h')).toBeInTheDocument();
@@ -392,7 +392,7 @@ describe('PowersharePage', () => {
     ).toBeInTheDocument();
 
     // Derived state propagates beyond the KPI band into the live-session panel.
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Enabled').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('3.25 kW').length).toBeGreaterThanOrEqual(2);
 
     // a11y landmarks — the three labelled section regions.
@@ -503,7 +503,7 @@ describe('PowersharePage', () => {
 
     // The live-session panel keeps rendering its ready content (StatusPill),
     // proving it was NOT gated on the stop-signal error. KPI + runtime = 2.
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Enabled').length).toBeGreaterThanOrEqual(2);
     // The power trend panel likewise stays healthy.
     expect(screen.getAllByText('Output Power Trend').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Remaining Runtime Trend').length).toBeGreaterThan(0);
@@ -555,7 +555,7 @@ describe('PowersharePage', () => {
       isLoading: true, isFetching: true, dataUpdatedAt: 0,
     });
     renderPage();
-    expect(screen.getAllByText('Active').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText('Enabled').length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText('5.50 h').length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
   });
@@ -622,7 +622,7 @@ describe('PowersharePage', () => {
     const kpi = within(region);
     expect(region).not.toHaveAttribute('aria-busy');
     expect(kpi.getByText('Some measurements unavailable')).toBeInTheDocument();
-    expect(kpi.getByText('Active')).toBeInTheDocument();
+    expect(kpi.getByText('Enabled')).toBeInTheDocument();
     expect(kpi.getByText('5.50 h')).toBeInTheDocument();
     expect(kpi.getByText('—')).toBeInTheDocument();
     expect(screen.getByRole('table', { name: 'charging:powershare-signals' })).toBeInTheDocument();
@@ -702,7 +702,7 @@ describe('PowersharePage', () => {
 
     const card = screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]');
     const runtime = within(card as HTMLElement);
-    expect(runtime.getByText('Active')).toBeInTheDocument();
+    expect(runtime.getByText('Enabled')).toBeInTheDocument();
     expect(runtime.getByText('Home')).toBeInTheDocument();
     expect(runtime.getByText('0.00 kW')).toBeInTheDocument();
     expect(runtime.getByText('0.00 h')).toBeInTheDocument();
@@ -716,7 +716,7 @@ describe('PowersharePage', () => {
     const view = renderPage();
     const runtimeCard = () => screen.getByRole('heading', { name: 'Powershare status' }).closest('[data-card]') as HTMLElement;
     const runtime = within(runtimeCard());
-    expect(runtime.getByText('Active')).toBeInTheDocument();
+    expect(runtime.getByText('Enabled')).toBeInTheDocument();
     expect(runtime.getByText('Home')).toBeInTheDocument();
     expect(runtime.getByText('3.25 kW')).toBeInTheDocument();
     expect(runtime.getByText('5.50 h')).toBeInTheDocument();
@@ -735,7 +735,7 @@ describe('PowersharePage', () => {
       </QueryClientProvider>,
     );
     expect(within(runtimeCard()).queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
-    expect(within(runtimeCard()).getByText('Active')).toBeInTheDocument();
+    expect(within(runtimeCard()).getByText('Enabled')).toBeInTheDocument();
     expect(screen.queryByText(/live session/i)).not.toBeInTheDocument();
   });
 });
@@ -771,12 +771,12 @@ describe('powershare derivation helpers', () => {
   });
 
   it('humanizeEnum strips the signal prefix, splits camelCase, and null-guards', () => {
-    expect(humanizeEnum('PowershareStatusActive', POWERSHARE_SIGNALS.status)).toBe('Active');
+    expect(humanizeEnum('PowershareStatusActive', POWERSHARE_SIGNALS.status)).toBe('PowershareStatusActive');
     expect(humanizeEnum('PowershareStopReasonUserRequest', POWERSHARE_SIGNALS.stopReason)).toBe(
-      'User Request',
+      'PowershareStopReasonUserRequest',
     );
-    // No matching prefix falls back to the generic "Powershare" strip / split.
-    expect(humanizeEnum('SomethingElse', 'NoMatch')).toBe('Something Else');
+    // Unknown enum identities remain intact rather than guessing at a label.
+    expect(humanizeEnum('SomethingElse', 'NoMatch')).toBe('SomethingElse');
     expect(humanizeEnum(null)).toBeNull();
   });
 
