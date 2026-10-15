@@ -305,6 +305,7 @@
     "effectiveSitesHint": "{{n}} locations seen",
     "topDependency": "Top-site dependency",
     "none": "None yet",
+    "unknownLocation": "Unknown location",
     "fallback": "Fallback coverage",
     "fallbackHint": "sessions charged elsewhere",
     "noData": "No charging locations recorded yet.",

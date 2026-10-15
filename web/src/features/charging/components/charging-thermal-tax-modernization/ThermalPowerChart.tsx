@@ -3,7 +3,7 @@ import {
   ChartContainer, ChartTooltip, ChartLegend, ComposedChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
-import { useCardPlacement } from '@/components/layout/layout-reference';
+import { useCardPlacement } from '@/components/layout';
 import { useUnits } from '@/hooks/useUnits';
 import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
@@ -42,6 +42,7 @@ export function ThermalPowerChart({ selected, loading, state, data }: ThermalPow
     exportData={data}
     dataColumns={[
       { key: 'time', label: t('chargingThermalTax.col.time', 'Time') },
+      { key: 'timestamp', label: t('chargingThermalTax.col.timestamp', 'Exact timestamp') },
       { key: 'heaterW', label: t('chargingThermalTax.col.heater', 'Heater (W)') },
       { key: 'chargeW', label: t('chargingThermalTax.col.charge', 'Charge power (W)') },
     ]}
@@ -60,7 +61,7 @@ export function ThermalPowerChart({ selected, loading, state, data }: ThermalPow
             name={t('chargingThermalTax.series.heater', 'Heater')}
             fill={chartTokens.series[3]}
             stroke={chartTokens.series[3]}
-            fillOpacity={0.35}
+            fillOpacity={0.08}
             hide={hiddenSeries?.isHidden('heaterW')}
           />
           <Line

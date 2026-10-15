@@ -162,6 +162,7 @@
       },
       "notEnough": "Not enough history yet for this signal and window.",
       "pickOne": "Choose a signal above to see its normalized timeline.",
+      "loadFailed": "Signal history could not be loaded.",
       "subtitle": "Each series independently scaled to 0–1 for visual comparison; ranking uses the raw robust statistics, not this view",
       "title": "Normalized signal timeline"
     },
@@ -178,7 +179,7 @@
     "nextService": {
       "title": "Next service due",
       "by": "projected by",
-      "none": "No upcoming service projected — all components healthy.",
+      "none": "No upcoming service projected.",
       "error": "Unable to load service projection.",
       "component": "Service component",
       "source": "Existing next-service projection from the component health board.",

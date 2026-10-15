@@ -114,9 +114,9 @@
     "comparison": {
       "awaitingDelta": "Aggregate difference withheld",
       "building": "Building aggregate confidence",
-      "help": "A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.",
+      "help": "A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap is 1 hour or less; in-between gaps are excluded as ambiguous. The comparison uses distance-weighted whole-drive consumption, not just the first kilometres. It does not adjust for temperature, route, speed or trip length, so the observed difference does not isolate battery or cabin warm-up.",
       "noGroups": "This window has no drives in the warm or cold parking-gap groups.",
-      "noPositivePenalty": "Cold starts did not consume more than the weighted warm baseline in this selected observed window, so no avoidable energy is claimed.",
+      "noPositivePenalty": "The cold cohort did not consume more than the distance-weighted warm cohort in this selected observed window. No positive whole-drive difference or savings is claimed.",
       "samples": "{{cold}} cold and {{warm}} warm observations",
       "sufficient": "Aggregate sample ready"
     },
@@ -166,7 +166,7 @@
       "warmSamples": "Warm samples",
       "warmSeries": "Warm consumption"
     },
-    "noData": "Not enough cold and warm starts in this period to compare fairly (5+ of each needed).",
+    "noData": "At least five cold and five warm starts are needed to report an aggregate whole-drive difference in this observed window.",
     "opportunities": {
       "distance": "Distance",
       "empty": "No individual cold start consumed more than the valid warm baseline in this window.",
@@ -190,9 +190,9 @@
       "opportunities": "Cold-start opportunities",
       "temperature": "Temperature and consumption evidence"
     },
-    "subtitle": "What the first kilometres after a long park really cost",
-    "takeaway": "Warm-up overhead added {{energy}} across this period. Preconditioning while plugged in shifts that energy to the wall.",
-    "takeawayCost": "Warm-up overhead added {{energy}} across this period — about {{cost}} at your electricity rate. Preconditioning while plugged in shifts that energy to the wall.",
+    "subtitle": "Observed whole-drive consumption after long and short parking gaps",
+    "takeaway": "Applying the observed whole-drive cold-minus-warm consumption difference to the cold cohort distance gives {{energy}}. This is not measured warm-up energy or guaranteed savings. If plugged in before departure, preconditioning may shift some warm-up energy to the wall; this comparison does not estimate that benefit.",
+    "takeawayCost": "Applying the observed whole-drive cold-minus-warm consumption difference to the cold cohort distance gives {{energy}} — about {{cost}} at your electricity rate. This is not measured warm-up energy or guaranteed savings. If plugged in before departure, preconditioning may shift some warm-up energy to the wall; this comparison does not estimate that benefit.",
     "temperature": {
       "aria": "Scatter plot of outside temperature against consumption, split into cold and warm starts",
       "cold": "Cold",

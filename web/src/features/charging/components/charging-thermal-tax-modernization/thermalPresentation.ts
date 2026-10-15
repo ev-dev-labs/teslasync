@@ -21,6 +21,7 @@ export function thermalPowerRows(samples: readonly ThermalTaxSample[], locale: s
       const ac = finiteNumber(sample.ac_charging_power_w);
       const dc = finiteNumber(sample.dc_charging_power_w);
       return {
+        timestamp: sample.ts,
         tMs: new Date(sample.ts).getTime(),
         heaterW: finitePower(sample.battery_heater_power_w),
         chargeW: ac == null && dc == null ? null : Math.max(0, (ac ?? 0) + (dc ?? 0)),
@@ -29,6 +30,7 @@ export function thermalPowerRows(samples: readonly ThermalTaxSample[], locale: s
     .filter(row => Number.isFinite(row.tMs))
     .sort((a, b) => a.tMs - b.tMs)
     .map(row => ({
+      timestamp: row.timestamp,
       tMs: row.tMs,
       time: formatTime
         ? formatTime(new Date(row.tMs))
