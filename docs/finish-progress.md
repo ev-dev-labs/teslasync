@@ -264,5 +264,9 @@ Changed fallback wording that had reused unrelated keys to dedicated catalog key
 - Added regression coverage for fully framed composition and for rejecting a
   plot with any unframed production caller. The audit test suite passed **12/12**.
 - `node scripts/audit-chart-frame.mjs` now reports **364/364 framed**, zero raw.
-  The full lint rerun is in progress; Phase 7 gates remain open until it and the
-  remaining gates finish.
+  The next lint run passed the chart-frame audit and exposed one additional
+  chart-legend adoption gap in the arrival reliability profile.
+- Added the profile's existing stable parent chart keys to its embedded frame.
+  The focused plot suite passed **7/7**, and the legend audit now reports **113
+  adopted, 5 waived, 0 candidate warnings**. Full lint was stopped at its first
+  failing audit; rerun it to verify the remaining sequence.

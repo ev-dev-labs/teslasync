@@ -32,6 +32,7 @@ export interface ArrivalReliabilityProfileRow
 }
 
 interface ArrivalReliabilityProfilePlotProps {
+  chartKey: string;
   rows: ArrivalReliabilityProfileRow[];
   normalizedName: string;
   allowanceName: string;
@@ -44,6 +45,7 @@ interface ArrivalReliabilityProfilePlotProps {
 }
 
 export function ArrivalReliabilityProfilePlot({
+  chartKey,
   rows,
   normalizedName,
   allowanceName,
@@ -83,8 +85,7 @@ export function ArrivalReliabilityProfilePlot({
 
   return (
     <EmbeddedChart
-      // The old hidden_arrival-reliability-profile URL key is retained but ignored:
-      // each outer profile owns its canonical key, without migrating shared flags.
+      chartKey={chartKey}
       title={t('arrivalReliability.profileTitle', 'Arrival Reliability Profile')}
       ariaLabel={effectiveAriaLabel}
       data={rows}

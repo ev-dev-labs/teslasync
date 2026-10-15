@@ -75,6 +75,7 @@ const rows: ArrivalReliabilityProfileRow[] = [
   { key: 'missing', label: 'Missing', normalizedDurationIndex: null, allowanceShare: null, samples: 0 },
 ];
 const props = {
+  chartKey: keys[0],
   rows,
   normalizedName: 'Normalized duration',
   allowanceName: 'Allowance share',
@@ -90,7 +91,7 @@ function Profiles({ external }: { external?: HiddenSeriesState }) {
   return <>{keys.map((key) => (
     <div key={key} data-testid={key}>
       <ChartHiddenSeriesProvider chartKey={key}>
-        {() => <ArrivalReliabilityProfilePlot {...props} hiddenSeries={external} />}
+        {() => <ArrivalReliabilityProfilePlot {...props} chartKey={key} hiddenSeries={external} />}
       </ChartHiddenSeriesProvider>
     </div>
   ))}<Location /></>;
@@ -146,18 +147,18 @@ describe('Arrival reliability profile controller', () => {
 
   it('uses the explicit controller for both legend and marks without a profile context', () => {
     const toggle = vi.fn();
-    render(<ArrivalReliabilityProfilePlot {...props}
+    render(<MemoryRouter><ArrivalReliabilityProfilePlot {...props}
       hiddenSeries={{ hidden: new Set(['samples']), isHidden: (key) => key === 'samples',
-        toggle, reset: vi.fn() }} />);
+        toggle, reset: vi.fn() }} /></MemoryRouter>);
     expect(screen.getByTestId('samples')).toHaveAttribute('data-hidden', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'samples' }));
     expect(toggle).toHaveBeenCalledWith('samples');
   });
 
   it('preserves populated series, accessible columns, null gaps and real zero counts', () => {
-    render(<ArrivalReliabilityProfilePlot {...props} ariaLabel="Profile evidence" />);
+    render(<MemoryRouter><ArrivalReliabilityProfilePlot {...props} ariaLabel="Profile evidence" /></MemoryRouter>);
     expect(screen.getByTestId('embedded')).toHaveAttribute('aria-label', 'Profile evidence');
-    expect(screen.getByTestId('embedded')).not.toHaveAttribute('data-chart-key');
+    expect(screen.getByTestId('embedded')).toHaveAttribute('data-chart-key', keys[0]);
     expect(screen.getByTestId('columns').textContent).toBe(JSON.stringify([
       { key: 'label', label: 'Category', values: ['Observed', 'Missing'] },
       { key: 'normalizedDurationIndex', label: 'Normalized duration', values: ['101.5', '—'] },
