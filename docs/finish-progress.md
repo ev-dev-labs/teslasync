@@ -177,3 +177,9 @@ Not started.
 - The full vehicle-systems area is green: `npx vitest run src/features/vehicle-systems` passed **55 test files, 939 tests**.
 - Corrected stale expectations for the current UI contracts, fixed several cases where formatted interpolation counts used the reserved i18next `count` key, and ensured unknown/invalid preconditioning reuse and source coverage remain unknown. Also corrected query identity, date, and DataTable fixture assertions.
 - The 47 linked vehicle-systems work items remain open for item-by-item acceptance; this broad suite is a verified checkpoint, not a blanket closure. Continue with charging.
+
+### Charging checkpoint: cost-analysis view-model contracts (2026-10-15)
+
+- `npx vitest run src/features/charging/components/cost-analysis/types.test.ts` passes (**13 tests**).
+- Updated stale shape assertions for the richer coverage/disclosure result, pinned accounting to UTC fixtures, and retained unknown actual-cost savings and unverified distance as unavailable.
+- The broader charging area is still in progress; its initial sweep had **143 failing tests** across 37 files. Continue cluster by cluster.
