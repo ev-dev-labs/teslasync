@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { I18nextProvider } from 'react-i18next';
 import type { i18n } from 'i18next';
-import { createEnglishI18n } from '@/test/createEnglishI18n';
+import { createEnglishI18n as createSharedEnglishI18n } from '@/test/createEnglishI18n';
 import type { DataStateSource } from '@/api/dataState';
 import type { AdvancedPage, FirmwareCanary } from '@/types/advancedIntelligence';
 import { ToastProvider } from '@/components/feedback';
@@ -23,6 +23,23 @@ const state = vi.hoisted(() => ({
   timezone: 'UTC',
 }));
 
+// Catalog-override assertions need the real provider-aware translator, not the global stub.
+vi.mock('react-i18next', async () => {
+  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
+  const { useContext } = await import('react');
+  const stub = (key: string, second?: unknown, third?: unknown): string => {
+    const bag = (typeof second === 'string' ? third : second) as Record<string, unknown> | undefined;
+    const template = typeof second === 'string' ? second
+      : typeof bag?.defaultValue === 'string' ? bag.defaultValue : key;
+    return template.replace(/{{\s*(\w+)\s*}}/g, (_, name: string) => String(bag?.[name] ?? ''));
+  };
+  return {
+    ...actual,
+    useTranslation: () => useContext(actual.I18nContext)?.i18n
+      ? actual.useTranslation()
+      : { t: stub, i18n: { language: 'en', changeLanguage: vi.fn() } },
+  };
+});
 vi.mock('@/api/hooks/useAdvancedIntelligence', () => ({
   useFirmwareCanary: (...args: unknown[]) => {
     state.read(...args);
@@ -47,6 +64,15 @@ vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>('@/lib/timezone');
   return { ...actual, useTimezone: () => state.timezone };
 });
+
+// i18next keeps the imported catalog by reference, so detach it before tests add overrides.
+async function createEnglishI18n() {
+  const instance = await createSharedEnglishI18n();
+  const detached = structuredClone(instance.getResourceBundle('en', 'translation'));
+  instance.removeResourceBundle('en', 'translation');
+  instance.addResourceBundle('en', 'translation', detached);
+  return instance;
+}
 
 function renderPage(translations?: i18n) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
