@@ -95,7 +95,7 @@ describe('maintenance live source integration and preservation boundaries', () =
     for (const route of ['/drives', '/charging', '/locations', '/notifications/inbox', '/signals', '/diagnostics/service-evidence']) {
       expect(drawer).toContain(`'${route}'`);
     }
-    expect(drawer).toContain('localDayKey(record?.date)');
+    expect(drawer).toContain('localDayKey(date, tz)');
   });
 
   it('uses fatalError locally, keeps retained data and does not invent scheduling', () => {

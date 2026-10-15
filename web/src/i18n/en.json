@@ -32063,7 +32063,7 @@
       "classified": "Classified departures",
       "classifiedHint": "{{classified}} of {{valid}} unique valid drives",
       "active": "Observed HVAC-active pre-drive",
-      "activeHint": "{{count}} classified departures",
+      "activeHint": "{{value}} classified departures",
       "control": "Explicitly HVAC-off control",
       "controlHint": "Every joined window row explicitly reported HVAC off",
       "readinessDifference": "Observed readiness difference",
@@ -32157,7 +32157,7 @@
       "hour": "Hour",
       "meanStart": "Mean departure gap",
       "meanImprovement": "Mean observed improvement",
-      "bucketCounts": "{{active}} active · {{control}} control",
+      "bucketCounts": "{{activeCount}} active · {{controlCount}} control",
       "bucketMeans": "Mean gap {{gap}} · improvement {{improvement}}"
     },
     "comparison": {
@@ -32215,7 +32215,7 @@
       "combinedConfidence": "Combined confidence",
       "title": "Threshold and confidence matrix",
       "subtitle": "All qualification cutoffs and the multiplicative balance-by-volume confidence calculation are disclosed.",
-      "affected": "{{count}} applicable or excluded",
+      "affected": "{{value}} applicable or excluded",
       "confidenceTitle": "Overall comparison support",
       "confidenceMethod": "Confidence is descriptive support, not statistical significance: balance confidence times volume confidence over strata containing both groups; effects are withheld without within-stratum overlap."
     },

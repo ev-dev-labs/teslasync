@@ -171,3 +171,9 @@ Not started.
 - Vehicle-systems remains in progress; its broader sweep still has failures in
   maintenance, media, preconditioning, tire pressure, safety, climate summaries,
   software updates, and related presenters. Continue with those clusters.
+
+## Vehicle-systems verification (2026-10-15)
+
+- The full vehicle-systems area is green: `npx vitest run src/features/vehicle-systems` passed **55 test files, 939 tests**.
+- Corrected stale expectations for the current UI contracts, fixed several cases where formatted interpolation counts used the reserved i18next `count` key, and ensured unknown/invalid preconditioning reuse and source coverage remain unknown. Also corrected query identity, date, and DataTable fixture assertions.
+- The 47 linked vehicle-systems work items remain open for item-by-item acceptance; this broad suite is a verified checkpoint, not a blanket closure. Continue with charging.

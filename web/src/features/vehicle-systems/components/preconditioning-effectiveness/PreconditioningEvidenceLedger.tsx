@@ -82,8 +82,8 @@ export function PreconditioningEvidenceLedger({
       rawValue: resolved && summary.conditionedShare != null ? summary.conditionedShare * 100 : null,
       display: { formatter: raw => ({ value: fmtPercent(raw), unit: '' }) },
       context: <><ThermometerSun aria-hidden="true" className="h-5 w-5 text-cyan-300" />{resolved
-        ? t('preconditioningEffectiveness.kpis.activeHint', '{{count}} classified departures', {
-            count: isFiniteNumber(summary.conditionedDepartures) ? fmtInt(summary.conditionedDepartures) : '—',
+        ? t('preconditioningEffectiveness.kpis.activeHint', '{{value}} classified departures', {
+            value: isFiniteNumber(summary.conditionedDepartures) ? fmtInt(summary.conditionedDepartures) : '—',
           }) : unavailable}</>,
     },
     {

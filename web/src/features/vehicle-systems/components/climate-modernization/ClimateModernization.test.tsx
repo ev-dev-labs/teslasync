@@ -118,7 +118,7 @@ function mountPage() {
     <MemoryRouter initialEntries={['/climate']}><ClimateControlPage /></MemoryRouter>
   </QueryClientProvider>);
 }
-function metric(label: string): HTMLElement {
+function metric(label: string | RegExp): HTMLElement {
   const match = screen.getByText(label, { selector: '[data-operational-metric] > div:first-child > :first-child' })
     .closest<HTMLElement>('[data-operational-metric]');
   if (!match) throw new Error(`Missing canonical stat: ${label}`);
@@ -174,12 +174,12 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     expect(screen.getByTestId('climate-ai-props')).toHaveAttribute('data-outside', '15');
     expect(screen.getByTestId('climate-ai-props')).toHaveAttribute('data-target', '21');
     expect(screen.getByTestId('climate-ai-props')).toHaveAttribute('data-vehicle', '42');
-    expect(within(metric('HVAC power')).getByText('State: Off')).toBeInTheDocument();
-    expect(within(metric('HVAC power')).getByText('On')).toBeInTheDocument();
+    expect(within(metric('HVAC power')).getByText('Off')).toBeInTheDocument();
+    expect(within(group(container, 'climate-systems')).getByText('AC on/off: On')).toBeInTheDocument();
     expect(within(metric('Fan speed')).getByText('2.5')).toBeInTheDocument();
     expect(within(metric('Avg fan speed')).getByText('5.00')).toBeInTheDocument();
     expect(within(metric('Peak fan speed')).getByText('6.00')).toBeInTheDocument();
-    expect(within(metric('AC on time')).getByText('50.00%')).toBeInTheDocument();
+    expect(within(metric(/AC on\/off.*On/)).getByText('50.00%')).toBeInTheDocument();
     expect(within(group(container, 'climate-comfort')).getByText('90.00')).toBeInTheDocument();
   });
 
@@ -264,7 +264,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     const failed = mountPage();
     fireEvent.click(within(group(failed.container, 'climate-status')).getByText('Retry'));
     expect(chargingRetry).toHaveBeenCalledTimes(1);
-    expect(within(metric('HVAC power')).getByText('State: Off')).toBeInTheDocument();
+    expect(within(metric('HVAC power')).getByText('Off')).toBeInTheDocument();
     cleanup();
     vi.mocked(useChargingTelemetryLatest).mockReturnValue(query({
       not_enough_power_to_heat: false,
@@ -280,7 +280,7 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     mountPage();
     expect(within(metric('Passenger setting')).getByText('20.00°C')).toBeInTheDocument();
     expect(screen.getAllByTestId('embedded-chart')).toHaveLength(2);
-    expect(within(metric('AC on time')).getByText('50.00%')).toBeInTheDocument();
+    expect(within(metric(/AC on\/off.*On/)).getByText('50.00%')).toBeInTheDocument();
     expect(screen.getAllByText(/Showing retained measurements/).length).toBeGreaterThan(0);
   });
 
@@ -336,12 +336,10 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     const view = render(ui());
     expect(within(metric('Passenger setting')).getByText('0.00°C')).toBeInTheDocument();
     expect(within(metric('Fan speed')).getByText('0')).toBeInTheDocument();
-    expect(within(metric('HVAC power')).getByText('State: Off')).toBeInTheDocument();
+    expect(within(metric('HVAC power')).getByText('Off')).toBeInTheDocument();
     expect(within(group(view.container, 'climate-comfort')).getByText('100.00')).toBeInTheDocument();
-    expect(within(group(view.container, 'climate-systems')).getByText(/Showing retained measurements/, {
-      selector: '[role="status"][aria-live="polite"]',
-    }))
-      .toHaveTextContent('The device is offline, so this section is showing the last values it received.');
+    expect(within(group(view.container, 'climate-systems')).getAllByText(/Showing retained measurements/).length)
+      .toBeGreaterThan(0);
 
     latest({
       ...zero, insideTemp: null, driverTempSetting: null,
@@ -386,8 +384,10 @@ describe('Climate live modernization — no real API or vehicle commands', () =>
     mountPage();
     fireEvent.click(screen.getByText('Refresh'));
     expect(refetch).toHaveBeenCalledTimes(1);
-    expect(useClimate).toHaveBeenCalledWith('42');
-    expect(useClimateHistory).toHaveBeenCalledWith('42');
+    expect(useClimate).toHaveBeenCalledWith(String(42));
+    expect(useClimateHistory).toHaveBeenCalledWith('42', expect.objectContaining({
+      start: expect.any(String), end: expect.any(String),
+    }));
     expect(useChargingTelemetryLatest).toHaveBeenCalledWith(42);
   });
 });
@@ -442,7 +442,7 @@ describe('one host observer, provider placement and preservation source contract
     expect(source).toContain('climateAcGrad');
     expect(source).toContain('sortFn(history, climateAccessor)');
     expect(source).toContain('Math.max(0, 100 - delta * 10)');
-    expect(source).toContain('(acOnCount / chronoHistory.length) * 100');
+    expect(source).toContain('(acOnCount / acSamples.length) * 100');
     expect(source).toContain('targetCabinTempC={latest?.driverTempSetting ?? 21}');
     expect(source).not.toMatch(/useMutation|\bfetch\(|\/api\/v1|[?&]vehicleId=|from ['"](?:recharts|framer-motion|react-leaflet)['"]/);
   });

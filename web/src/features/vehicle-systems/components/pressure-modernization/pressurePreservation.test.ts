@@ -29,17 +29,17 @@ describe('pressure shipping source preservation', () => {
 
   it('keeps exact query, workspace, privacy and persistence identities', () => {
     expect(page).toContain('usePressurePageLatest(activeVehicleId)');
-    expect(page).toContain('usePressurePageHistory(activeVehicleId, start, end)');
+    expect(page).toContain('usePressurePageHistory(activeVehicleId, startInstant, endInstantExclusive)');
     expect(hooks).toContain("queryKey: ['tire-pressure-latest', activeVehicleId]");
-    expect(hooks).toContain("queryKey: ['tire-pressure-history', activeVehicleId, start, end]");
+    expect(hooks).toContain("queryKey: ['tire-pressure-history', activeVehicleId, startInstant, endInstantExclusive]");
     expect(hooks).toContain('/tire-pressure/latest?vehicle_id=${activeVehicleId}');
-    expect(hooks).toContain('/tire-pressure?vehicle_id=${activeVehicleId}&start=${start}&end=${end}');
-    expect(page).toContain("persistKey: 'tire-pressure.range'");
+    expect(hooks).toContain('/tire-pressure?vehicle_id=${activeVehicleId}&start=${encodeURIComponent(startInstant)}&end=${encodeURIComponent(endInstantExclusive)}');
+    expect(page).toContain('useRangeState()');
     expect(page).toContain('<AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined}');
     expect(page).not.toMatch(/<RangePicker|<VehicleSelect|<DateRangeFilter/);
     expect(source('PressureHistoryCard.tsx')).toContain('chartKey="tire-pressure-history"');
     expect(source('PressureHistoryTable.tsx')).toContain('tableId="vehicle-systems:tire-pressure-history"');
-    expect(source('PressureHistoryTable.tsx')).toContain("mobileColumns={['created_at', 'warnings']}");
+    expect(source('PressureHistoryTable.tsx')).toContain('mobilePresentation={{');
     const router = readFileSync(path.resolve(root, '../internal/api/router.go'), 'utf8');
     expect(router).toContain('r.Route("/tire-pressure"');
     expect(router).toContain('r.Get("/", tirePressureHandler.List)');

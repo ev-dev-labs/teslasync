@@ -27,6 +27,8 @@ export function PreconditioningJoinSupport({
   const { fmtInt, fmtNumber } = useNumberFormatting();
   const { t } = useTranslation();
   const support = summary.windowSupport;
+  const reusedClimateRows = isFiniteNumber(support.climateRowsReused)
+    && support.climateRowsReused >= 0 ? support.climateRowsReused : null;
   const items = [
     [t('preconditioningEffectiveness.join.overlap', 'Drive windows overlapping coverage'), summary.coverage.overlappingDriveWindows, 'count'],
     [t('preconditioningEffectiveness.join.withRows', 'Departures with window rows'), support.departuresWithWindowRows, 'count'],
@@ -68,15 +70,20 @@ export function PreconditioningJoinSupport({
           />
           <AlertBanner
             className="mt-4"
-            variant={support.climateRowsReused > 0 ? 'warning' : 'info'}
+            variant={reusedClimateRows == null || reusedClimateRows > 0 ? 'warning' : 'info'}
             icon={<Repeat2 className="h-4 w-4" aria-hidden="true" />}
           >
             <Text as="p" variant="caption">
-              {support.climateRowsReused > 0
+              {reusedClimateRows == null
+                ? t(
+                    'preconditioningEffectiveness.join.reuseUnknown',
+                    'Climate-row reuse could not be determined from the returned evidence.',
+                  )
+                : reusedClimateRows > 0
                 ? t(
                     'preconditioningEffectiveness.join.reuseObserved',
                     '{{count}} unique climate rows are referenced by more than one overlapping departure window; departures are therefore not row-independent.',
-                    { count: isFiniteNumber(support.climateRowsReused) ? fmtInt(support.climateRowsReused) : '—' },
+                    { count: fmtInt(reusedClimateRows) },
                   )
                 : t(
                     'preconditioningEffectiveness.join.reuseNone',

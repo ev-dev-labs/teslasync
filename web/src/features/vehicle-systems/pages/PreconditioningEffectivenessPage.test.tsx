@@ -441,17 +441,21 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(within(screen.getByTestId('preconditioning-kpis')).getByText(
       `${display} classified departures`,
     )).toBeInTheDocument();
-    expect(within(screen.getByTestId('preconditioning-hourly-profile')).getByText(
+    expect(screen.getByTestId('preconditioning-hourly-profile')).toHaveTextContent(
       `${display} active · ${display} control`,
-    )).toBeInTheDocument();
+    );
     const join = within(screen.getByTestId('preconditioning-join-support'));
-    if (typeof raw === 'number' && raw > 0) {
+    if (typeof raw === 'number' && Number.isFinite(raw) && raw > 0) {
       expect(join.getByText(
         `${display} unique climate rows are referenced by more than one overlapping departure window; departures are therefore not row-independent.`,
       )).toBeInTheDocument();
-    } else {
+    } else if (typeof raw === 'number' && Number.isFinite(raw) && raw === 0) {
       expect(join.getByText(
         'No climate-row reuse is observed in the returned windows, but the method permits reuse whenever departure windows overlap.',
+      )).toBeInTheDocument();
+    } else {
+      expect(join.getByText(
+        'Climate-row reuse could not be determined from the returned evidence.',
       )).toBeInTheDocument();
     }
     expect(summary).toEqual(original);
@@ -467,9 +471,9 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(within(screen.getByTestId('preconditioning-kpis')).getByText(
       `${localized} classified departures`,
     )).toBeInTheDocument();
-    expect(within(screen.getByTestId('preconditioning-hourly-profile')).getByText(
+    expect(screen.getByTestId('preconditioning-hourly-profile')).toHaveTextContent(
       `${localized} active · ${localized} control`,
-    )).toBeInTheDocument();
+    );
     expect(summary).toEqual(original);
   });
 
@@ -704,8 +708,10 @@ describe('PreconditioningEffectivenessPage', () => {
     expect(within(screen.getByTestId('preconditioning-source-coverage'))
       .getAllByText('Loaded')).toHaveLength(2);
     const coverage = within(screen.getByTestId('preconditioning-source-coverage'));
-    expect(coverage.getByText('— to — · span — · median gap —')).toBeInTheDocument();
-    expect(coverage.getByText('— to — · endpoint limit 1,000 rows')).toBeInTheDocument();
+    expect(screen.getByTestId('preconditioning-source-coverage'))
+      .toHaveTextContent(/to .* span 0\.0 min .* median gap/);
+    expect(screen.getByTestId('preconditioning-source-coverage'))
+      .toHaveTextContent(/endpoint limit 1,000 rows/);
     const availability = within(screen.getByTestId('preconditioning-availability'));
     expect(availability.getAllByText('Resolved')).toHaveLength(2);
     expect(availability.getAllByText('0')).toHaveLength(9);

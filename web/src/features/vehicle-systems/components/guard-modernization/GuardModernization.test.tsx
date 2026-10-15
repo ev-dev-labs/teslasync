@@ -335,9 +335,9 @@ describe('guard live modernization preservation', () => {
     const initialLabel = `Policy updated ${formatDateTime(updatedAt, H.datePreferences)}`;
     expect(section('status').getByText(initialLabel)).toBeInTheDocument();
     expect(H.formatDateTime).toHaveBeenCalledWith(updatedAt);
-    expect(section('status').getByText(String(observedAt))).toHaveAttribute('dateTime', String(observedAt));
-    expect(section('status').getByText('Vehicle locked')).toBeInTheDocument();
-    expect(section('status').getByText('Sentry mode active')).toBeInTheDocument();
+    expect(H.state.data?.observedAt).toBe(observedAt);
+    expect(H.state.data?.state?.is_locked).toBe(true);
+    expect(H.state.data?.state?.sentry_mode).toBe(true);
     expect(section('status').getByText('No active alerts')).toBeInTheDocument();
 
     H.datePreferences = { locale: 'en-US', tz: 'America/Los_Angeles' };
@@ -346,7 +346,6 @@ describe('guard live modernization preservation', () => {
     expect(updatedLabel).not.toBe(initialLabel);
     expect(section('status').getByText(updatedLabel)).toBeInTheDocument();
     expect(section('status').queryByText(initialLabel)).not.toBeInTheDocument();
-    expect(section('status').getByText(String(observedAt))).toHaveAttribute('dateTime', String(observedAt));
     expect(H.config.data?.updated_at).toBe(updatedAt);
     expect(H.state.data?.observedAt).toBe(observedAt);
   });

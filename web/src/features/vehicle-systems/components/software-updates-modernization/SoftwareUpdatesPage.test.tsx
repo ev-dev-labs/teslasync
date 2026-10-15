@@ -23,7 +23,7 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
 }));
 vi.mock('@/hooks/usePageTitle', () => ({ usePageTitle: vi.fn() }));
 vi.mock('@/hooks/useRangeState', () => ({
-  useRangeState: () => ({ start: '2026-01-01', end: '2026-02-01', presetId: 'custom', reset: fake.resetRange }),
+  useRangeState: () => ({ start: '2026-01-01', end: '2026-02-01', presetId: 'custom', setPreset: fake.resetRange }),
 }));
 vi.mock('@/hooks/useUrlState', () => ({
   useUrlNumber: () => [1, fake.setPage], useUrlBatch: () => fake.setUrl,
@@ -156,6 +156,6 @@ describe('SoftwareUpdatesPage presentation preservation (fake inputs only)', () 
     fake.query.data = [];
     view.rerender(<SoftwareUpdatesPage />);
     fireEvent.click(screen.getAllByRole('button', { name: 'View all time' })[0]);
-    expect(fake.resetRange).toHaveBeenCalledOnce();
+    expect(fake.resetRange).toHaveBeenCalledWith('all');
   });
 });

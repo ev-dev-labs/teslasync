@@ -379,9 +379,10 @@ describe('complete maintenance presenters', () => {
     }))} enabled />);
     const missing = within(screen.getByRole('region', { name: 'Maintenance summary' }));
     expect(missing.queryByText('0')).not.toBeInTheDocument();
-    expect(missing.getAllByText('—')).toHaveLength(6);
+    const missingValues = screen.getAllByText('—', { selector: '[data-operational-value="true"]' });
+    expect(missingValues).toHaveLength(7);
     rerender(<MaintenanceSummary source={deriveDataState(query<MaintenanceItem[]>([]))} enabled />);
-    expect(screen.getAllByText('0')).toHaveLength(6);
+    expect(screen.getAllByText('0')).toHaveLength(7);
     expect(h.request).not.toHaveBeenCalled();
   });
 

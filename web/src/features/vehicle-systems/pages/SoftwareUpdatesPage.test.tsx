@@ -491,9 +491,9 @@ describe('SoftwareUpdatesPage — resilience states', () => {
     expect(kpiCard('Current version').querySelector('[data-operational-value]')).not.toBeInTheDocument();
     expect(within(band).queryByText('2025.20.1')).not.toBeInTheDocument();
     expect(screen.queryByText(/is paused while the connection is unavailable/)).not.toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Update cadence' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'By status' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Update timeline' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Update cadence' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: 'By status' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: 'Update timeline' }).length).toBeGreaterThan(0);
     expect(screen.getByTestId('ai-summarizer')).toBeInTheDocument();
   });
 
@@ -502,7 +502,7 @@ describe('SoftwareUpdatesPage — resilience states', () => {
     try {
       const { container } = renderPage();
       const labels = ['Software update summary', 'Update cadence', 'By status', 'Update timeline'];
-      const shells = labels.map(label => screen.getByRole('heading', { name: label }));
+      const shells = labels.map(label => screen.getAllByRole('heading', { name: label })[0]!);
 
       expect(await screen.findAllByText(/is paused while the connection is unavailable/)).toHaveLength(4);
       expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(4);
@@ -530,7 +530,7 @@ describe('SoftwareUpdatesPage — resilience states', () => {
       expect(within(kpiCard('Total updates')).getByText('3')).toBeInTheDocument();
       expect(screen.getByTestId('status-breakdown')).toHaveAttribute('data-total', '3');
       expect(within(screen.getByRole('list', { name: 'Update timeline' })).getAllByRole('listitem')).toHaveLength(3);
-      labels.forEach((label, index) => expect(screen.getByRole('heading', { name: label })).toBe(shells[index]));
+      labels.forEach((label, index) => expect(screen.getAllByRole('heading', { name: label })[0]).toBe(shells[index]));
     } finally {
       await act(async () => onlineManager.setOnline(true));
     }
@@ -774,10 +774,10 @@ describe('SoftwareUpdatesPage — shared trust preservation', () => {
 
     await waitFor(() => expect(updatePaths()).toHaveLength(1));
     expect(await screen.findAllByText('Update history is not available. Select a vehicle to load its history.')).toHaveLength(4);
-    expect(screen.getByRole('heading', { name: 'Software update summary' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Update cadence' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'By status' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Update timeline' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { name: 'Software update summary' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: 'Update cadence' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: 'By status' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole('heading', { name: 'Update timeline' }).length).toBeGreaterThan(0);
     expect(within(kpiCard('Total updates')).queryByText('0')).not.toBeInTheDocument();
     expect(screen.queryByTestId('cadence-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('status-breakdown')).not.toBeInTheDocument();

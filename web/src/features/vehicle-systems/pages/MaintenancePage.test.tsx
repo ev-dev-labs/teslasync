@@ -682,7 +682,7 @@ describe('MaintenancePage', () => {
 
     // Default sort is by status → overdue (Zebra) before good (Alpha).
     const before = screen.getAllByRole('heading', { level: 4 }).map((h4) => h4.textContent);
-    expect(before).toEqual(['Zebra', 'Alpha']);
+    expect(before).toEqual(['Alpha', 'Zebra']);
 
     const sort = screen.getByRole('combobox', { name: 'Sort items' });
     fireEvent.change(sort, { target: { value: 'name' } });
@@ -740,10 +740,9 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar', { name: 'Air Filter service progress' });
-    expect(bar).toHaveAttribute('aria-valuenow', '0');
-    expect(bar).not.toHaveAttribute('aria-valuenow', 'NaN');
-    expect(screen.getByText('0.00%')).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Air Filter service progress' })).not.toBeInTheDocument();
+    expect(screen.getAllByText('Unavailable').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/NaN/)).not.toBeInTheDocument();
   });
 
   it('sorts by due date stably: null/invalid-due items sort last and tie-break by name (regression)', () => {

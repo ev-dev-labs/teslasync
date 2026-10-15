@@ -288,7 +288,7 @@ describe('pressure page live composition — authored, execution owned by parent
     expect(container.querySelectorAll('[data-operational-brief]')).toHaveLength(1);
     expect(container.querySelector('[data-operational-brief] [data-operational-value]')).toHaveTextContent('2.88 bar');
     expect(screen.getAllByRole('meter')).toHaveLength(4);
-    expect(H.calls).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01&end=2026-06-30');
+    expect(H.calls).toContain('/tire-pressure?vehicle_id=42&start=2026-06-01T00%3A00%3A00Z&end=2026-07-01T00%3A00%3A00Z');
     expect(screen.getByTestId('pressure-ai-scope')).toHaveAttribute('data-vehicle', '42');
   });
 
@@ -318,13 +318,15 @@ describe('pressure page live composition — authored, execution owned by parent
     const { container, client } = mount();
     await screen.findAllByText('Front left (bar)');
     H.failHistory = true;
-    await act(async () => { await client.refetchQueries({ queryKey: ['tire-pressure-history', 42] }); });
+    await act(async () => { await client.refetchQueries({ queryKey: [
+      'tire-pressure-history', 42, '2026-06-01T00:00:00Z', '2026-07-01T00:00:00Z',
+    ] }); });
     await waitFor(() => expect(historyTable().getByText(
       'Could not refresh Tire pressure history. Retained readings remain available.',
     )).toBeInTheDocument());
     expect(client.getQueryState(['tire-pressure-latest', 42])?.status).toBe('success');
     expect(client.getQueryState(['tire-pressure-latest', 42])?.error).toBeNull();
-    expect(client.getQueryState(['tire-pressure-history', 42, '2026-06-01', '2026-06-30'])?.status).toBe('error');
+    expect(client.getQueryState(['tire-pressure-history', 42, '2026-06-01T00:00:00Z', '2026-07-01T00:00:00Z'])?.status).toBe('error');
     expect(screen.getByTestId('pressure-series')).toBeInTheDocument();
     expect(historyTable().getByText('Front left (bar)')).toBeInTheDocument();
     expect(screen.getAllByRole('meter')).toHaveLength(4);

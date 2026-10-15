@@ -74,8 +74,8 @@ export function PreconditioningThresholdConfidence({
                 <Text as="p" variant="caption" className="mt-1">
                   {t(
                     'preconditioningEffectiveness.thresholds.affected',
-                    '{{count}} applicable or excluded',
-                    { count: isFiniteNumber(affected) ? fmtInt(affected) : '—' },
+                    '{{value}} applicable or excluded',
+                    { value: isFiniteNumber(affected) ? fmtInt(affected) : '—' },
                   )}
                 </Text>
               </div>

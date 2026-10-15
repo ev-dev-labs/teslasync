@@ -127,10 +127,12 @@ export function PreconditioningHourlyProfile({
                 <Text as="p" variant="bodySm" className="mt-1">
                   {t(
                     'preconditioningEffectiveness.hourly.bucketCounts',
-                    '{{active}} active · {{control}} control',
+                    '{{activeCount}} active · {{controlCount}} control',
                     {
-                      active: bucket.conditionedDepartures,
-                      control: bucket.unconditionedDepartures,
+                      activeCount: isFiniteNumber(bucket.conditionedDepartures)
+                        ? fmtInt(bucket.conditionedDepartures) : '—',
+                      controlCount: isFiniteNumber(bucket.unconditionedDepartures)
+                        ? fmtInt(bucket.unconditionedDepartures) : '—',
                     },
                   )}
                 </Text>

@@ -60,12 +60,12 @@ vi.mock('@/components/ui', async importOriginal => {
       columns: { key: string; header: string; render: (row: SafetySnapshot) => ReactNode }[];
       data: SafetySnapshot[];
       tableId: string;
-      mobileColumns: string[];
+      mobileColumns?: string[];
       keyExtractor: (row: SafetySnapshot) => number;
       pagination: boolean; compact: boolean; enableValueFilters: boolean;
     }) => createElement('div', {
       'data-testid': 'history-table', 'data-table-id': tableId,
-      'data-mobile-columns': mobileColumns.join(','),
+      'data-mobile-columns': (mobileColumns ?? []).join(','),
       'data-options': [pagination, compact, enableValueFilters].join(','),
     }, columns.map(column => createElement('div', { key: column.key },
       column.header, data.map(row => createElement('div', {
@@ -218,7 +218,7 @@ describe('mock-only page: pending/refetch/failure and lossless presentation', ()
     expect(screen.getByRole('link', { name: /Open FSD insights/ })).toHaveAttribute('href', '/fsd');
     const table = screen.getByTestId('history-table');
     expect(table).toHaveAttribute('data-table-id', 'vehicle-systems:safety-history');
-    expect(table).toHaveAttribute('data-mobile-columns', 'time,aeb,fcw');
+    expect(table).toHaveAttribute('data-mobile-columns', '');
     expect(table).toHaveAttribute('data-options', 'true,true,true');
     for (const header of ['Time', 'AEB', 'BSC', 'BSCW', 'FCW', 'LDA', 'ELDA', 'CFD', 'SLW', 'PIN']) {
       expect(within(table).getByText(header)).toBeInTheDocument();
