@@ -262,8 +262,8 @@ describe('buildFsmTimeline', () => {
 
   it('keeps bare HH:MM labels inside a single-day window', () => {
     const rows = [tx('driving', new Date(NOW - 60 * 60_000).toISOString())];
-    const { buckets } = buildFsmTimeline(rows, 6, NOW);
-    expect(buckets[0]?.time).toBe(formatTime(new Date(NOW - 6 * HOUR)));
+    const { buckets } = buildFsmTimeline(rows, 3, NOW);
+    expect(buckets[0]?.time).toBe(formatTime(new Date(NOW - 3 * HOUR)));
   });
 
   it('uses the saved display zone and locale across a local midnight without changing counts', () => {
