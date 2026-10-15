@@ -10,6 +10,7 @@ import { AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { Button, Text } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useNumberFormatting } from '@/hooks/useNumberFormatting';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import type { Drive } from '@/types/driving';
@@ -34,7 +35,8 @@ const DRIVE_HISTORY_LIMIT = 1_000;
 const TWO_COLUMNS = { default: 1, xl: 2 } as const;
 
 export default function DestinationTransitionsPage() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
+  const { locale } = useNumberFormatting();
   usePageTitle(t('destinationTransitions.title', 'Destination Transitions'));
 
   const { vehicleId } = useSelectedVehicle();
@@ -82,7 +84,6 @@ export default function DestinationTransitionsPage() {
       drivesState.refreshError,
     onRetry: () => void drivesQuery.refetch(),
   };
-  const locale = i18n.language;
   const timeZone = model.timeZone;
   return (
     <PageLayout
