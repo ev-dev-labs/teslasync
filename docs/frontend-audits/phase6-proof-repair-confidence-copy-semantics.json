@@ -8,6 +8,162 @@
   "nativeContrast": "NOTRUN",
   "nativeAcceptance": "NOTRUN",
   "applicationAcceptance": "NOTRUN",
+  "latestProofReceipt": "catalogRecheck",
+  "historicalReceiptScope": "Original fields describe the retained 07:40-07:50 UTC receipt, and resumedProof preserves the 15:07-15:22 UTC receipt. The latest read-only startup check is catalogRecheck; none of the historical receipts or catalog hashes establishes current runtime approval.",
+  "catalogRecheck": {
+    "status": "BLOCKED_EXTERNAL_CATALOG",
+    "runtimeProof": "NOTRUN_NO_NEW_CATALOG_CLOSURE",
+    "firstMeasuredUtc": "2026-10-14T15:23:20.5461523Z",
+    "hardDeadlineUtc": "2026-10-14T15:42:51.851Z",
+    "deadlineBasis": "Conservative twenty-minute deadline from the supplied current request timestamp; measured clock did not extend it.",
+    "historicalBudgetsRenewed": false,
+    "alreadyDoneCheck": "Latest retained receipt has zero executed cases. The same seven selected confidence cases remain unproven; no completed passing evidence was repeated.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-proof-repair-confidence-copy-semantics.json",
+      "web\\logs\\phase6-proof-repair-confidence-copy-semantics.log"
+    ],
+    "runtime": "v26.8.1",
+    "catalogPreflight": {
+      "command": "node .\\scripts\\split-i18n-catalog.mjs --check",
+      "shellId": "confidence-catalog-current",
+      "startedUtc": "2026-10-14T15:23:20.5461523Z",
+      "endedUtc": "2026-10-14T15:29:07.3152233Z",
+      "exitCode": 1,
+      "diagnosticArtifactCount": 60,
+      "rawOutputLocation": "web\\logs\\phase6-proof-repair-confidence-copy-semantics.log after CATALOG_RECHECK",
+      "meaning": "Normal startup closure is still absent. The affected selector was not launched; the retained zero-execution failure remains NOTPASS.",
+      "repeatedAfterFailure": false
+    },
+    "testAccounting": {
+      "selectedNames": "Exact seven names retained in testAccounting.selectedCases.",
+      "sourceDeclaredCases": 8,
+      "selectedCases": 7,
+      "selectedDrawerCases": 4,
+      "selectedQueueCases": 3,
+      "intentionallyUnselectedCases": 1,
+      "runnerLaunched": false,
+      "runnerDiscoveredCases": 0,
+      "runnerExecutedCases": 0,
+      "observedPassedCases": 0,
+      "observedFailedAssertions": 0,
+      "runnerSkippedCases": null,
+      "historicalGenuinePassesRerun": 0,
+      "runtimeAttemptsUsedBefore": 0,
+      "runtimeAttemptsConsumed": 0,
+      "meaning": "Seven cases remain NOTRUN. Catalog-only preflight failure consumes no runtime attempt and grants no new retry budget."
+    },
+    "readOnlyCurrentness": {
+      "allFourSourceFixturePinsMatchRetainedBeforeCheck": true,
+      "allFourSourceFixturePinsMatchRetainedAfterCheck": true,
+      "verifiedUtc": "2026-10-14T15:30:23.8129768Z",
+      "configAndCanonicalCatalogUnchangedBeforeAndAfter": true,
+      "canonicalCatalogBeforeSha256": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+      "configBeforeSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "sourceFixtureCanonicalConfigEdits": 0,
+      "sourceAssertionFailuresObserved": 0,
+      "sourceCorrectionAuthorizedByObservedFailure": false,
+      "limit": "Preflight pins establish observed currentness only, not a whole dependency closure or Git commit verification."
+    },
+    "notRun": [
+      "Affected Vitest selector: no genuinely new normal catalog closure, so not launched.",
+      "Global TypeScript, full tests, lint, build and fresh source audits: outside this read-only covering-proof assignment.",
+      "Browser/native/contrast/application/API acceptance: not requested by the exact covering selector and not claimed.",
+      "No source, fixture, catalog, configuration or canonical-copy edits; no Git, installs, server starts, browser downloads, Docker rebuilds or repair mutations."
+    ],
+    "requiredFollowUp": "The external catalog owner must reconcile the exact normal --check failure and establish stable startup closure. Then execute the same seven still-unexecuted affected cases with the existing guards and retained accounting.",
+    "release": {
+      "utc": "2026-10-14T15:30:23.8129768Z",
+      "preflightCompleted": true,
+      "backgroundServicesStarted": 0,
+      "sourceClaims": "Read-only; no source write claim acquired.",
+      "validation": {
+        "command": "Node JSON.parse exact report; SHA256 four source/fixture pins and normal config/catalog; count exact preflight diagnostic in retained log",
+        "exitCode": 0,
+        "rawOutput": "FINAL_JSON_VALID selected=7 launched=false discovered=0 executed=0 passed=0 catalogExit=1 diagnosticArtifacts=60 unchangedSourceFixturePins=4 historicalReceiptsPreserved=true"
+      },
+      "result": "FAILED: exact runtime proof remains blocked by external generated-catalog drift."
+    }
+  },
+  "resumedProof": {
+    "status": "BLOCKED_EXTERNAL_CATALOG",
+    "runtimeProof": "NOTRUN_STARTUP_BLOCKED",
+    "firstMeasuredUtc": "2026-10-14T15:07:59.6473985Z",
+    "hardDeadlineUtc": "2026-10-14T15:27:59.6473985Z",
+    "historicalBudgetsRenewed": false,
+    "alreadyDoneCheck": "Retained receipt had executed zero cases; exact seven confidence cases remained unproven. No historical genuine passing case was repeated.",
+    "writableFiles": [
+      "docs\\frontend-audits\\phase6-proof-repair-confidence-copy-semantics.json",
+      "web\\logs\\phase6-proof-repair-confidence-copy-semantics.log"
+    ],
+    "runtime": "v26.8.1",
+    "catalogPreflight": {
+      "command": "node .\\scripts\\split-i18n-catalog.mjs --check",
+      "exitCode": 0,
+      "rawOutput": "[i18n-split] OK — 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "meaning": "Observed new closure of the retained split-catalog blocker authorized the same still-unexecuted selector, not catalog immutability or application approval."
+    },
+    "runner": {
+      "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\system\\components\\RepairCaseDrawer.test.tsx src\\features\\system\\components\\RepairCaseQueue.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose -t \"confidence semantics\"",
+      "shellId": "confidence-proof-resumed",
+      "startedUtc": "2026-10-14T15:12:59.0887288Z",
+      "endedUtc": "2026-10-14T15:21:37.6801544Z",
+      "exitCode": 1,
+      "config": "vite.config.ts",
+      "environment": "VITE_GIT_SHA=dev prevents automatic Git identity discovery; this is fixture-only identity, not a release SHA. No startup guard bypass.",
+      "failureCommand": "C:\\Program Files\\nodejs\\node.exe scripts/split-i18n-catalog.mjs --check",
+      "failureStage": "verify-english-catalog-split buildStart before discovery",
+      "rawOutputLocation": "web\\logs\\phase6-proof-repair-confidence-copy-semantics.log after RESUMED_PROOF",
+      "repeatedAfterFailure": false
+    },
+    "testAccounting": {
+      "selectedNames": "Exact seven names in retained testAccounting.selectedCases; source and fixture pins remain identical.",
+      "sourceDeclaredCases": 8,
+      "selectedCases": 7,
+      "selectedDrawerCases": 4,
+      "selectedQueueCases": 3,
+      "intentionallyUnselectedCases": 1,
+      "runnerDiscoveredCases": 0,
+      "runnerExecutedCases": 0,
+      "observedPassedCases": 0,
+      "observedFailedAssertions": 0,
+      "startupFailures": 1,
+      "runnerSkippedCases": null,
+      "meaning": "NOTPASS. No test-result inventory was emitted. Seven selected cases remain NOTRUN, not skipped or passed.",
+      "historicalGenuinePassesRerun": 0,
+      "runtimeAttemptsUsedBefore": 0,
+      "runtimeAttemptsConsumed": 0,
+      "reason": "Catalog-only startup failure does not consume a runtime attempt."
+    },
+    "externalCatalogBlocker": {
+      "diagnosticArtifactCount": 60,
+      "rawDiagnosticLocation": "Exact full diagnostic retained in resumed runner log.",
+      "canonicalCatalogBeforeSha256": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867",
+      "canonicalCatalogAfterSha256": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+      "catalogChangedDuringProof": true,
+      "limit": "Hash change establishes catalog instability but does not identify an external writer or prove it caused every drifted artifact.",
+      "requiredFollowUp": "External catalog owner must establish stable normal startup closure before the same seven still-unexecuted cases can run. No catalog edits, regeneration, guard bypass or additional retry performed by this worker."
+    },
+    "readOnlyCurrentness": {
+      "verifiedUtc": "2026-10-14T15:21:51.0990466Z",
+      "sourceAndFixturesMatchAllFourRetainedPinsBeforeAndAfter": true,
+      "configBeforeAndAfterSha256": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+      "sourceFixtureCanonicalConfigEdits": 0,
+      "sourceAssertionFailuresObserved": 0,
+      "sourceCorrectionAuthorizedByObservedFailure": false
+    },
+    "notRun": [
+      "Global TypeScript, full tests, lint and build: outside this exact report-only proof assignment; retained passing evidence not repeated.",
+      "Fresh violations, line-count, section and hook audits: no application edits; retained evidence remains historical.",
+      "Browser, native, contrast, application and API/network acceptance: no claim made.",
+      "No Git commands, dependency installs, server starts, browser downloads, Docker rebuilds or repair mutations."
+    ],
+    "release": {
+      "runnerCompleted": true,
+      "backgroundServicesStarted": 0,
+      "sourceClaims": "Read-only; no source write claim acquired.",
+      "result": "FAILED: missing runtime proof remains blocked by external catalog drift, not source or fixture assertion failure."
+    }
+  },
   "authority": {
     "queue": "migration-queue.md:2691",
     "predecessorQueue": "migration-queue.md:2610",

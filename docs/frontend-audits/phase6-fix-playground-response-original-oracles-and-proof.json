@@ -1,0 +1,242 @@
+{
+  "item": "phase6-fix-playground-response-original-oracles-and-proof",
+  "status": "BLOCKED_CURRENT_CATALOG_AND_RAW_SOURCE_RECEIPT",
+  "startedAt": "2026-10-14T15:08:35.150Z",
+  "deadlineAt": "2026-10-14T15:28:35.150Z",
+  "filesChanged": [
+    "web\\src\\features\\admin\\components\\ResponseViewer.test.tsx",
+    "docs\\frontend-audits\\phase6-fix-playground-response-original-oracles-and-proof.json",
+    "web\\logs\\phase6-fix-playground-response-original-oracles-and-proof.log"
+  ],
+  "authority": {
+    "exactFixtureExists": true,
+    "queueItem": "migration-queue.md:2761",
+    "releasedSourceReceipt": "migration-queue.md:2730",
+    "releasedSourceCommit": "c305e37a216b3c9cb5f056f7b57fb8cf375976b4",
+    "releasedSourceActor": "c53059d8-555e-48a8-b083-ba8ee41a6662",
+    "releasedAt": "2026-10-14T12:38:47Z",
+    "rawSourceWorkerReceipt": "NOT LOCATED: root logs, web/logs, docs/frontend-audits, .agent-status and .runner inspected. Queue intake is not the raw worker receipt.",
+    "productionAndPageFixture": "READ ONLY",
+    "originalHelperNativeBudgets": "Not renewed; no Python AST, native, provider or helper acceptance rerun.",
+    "retainedPassingEvidence": "Six genuine Python AST roundtrips and original scoped lint/pattern checks are historical evidence, not fresh passes."
+  },
+  "corrections": [
+    {
+      "originalLines": "204-224",
+      "inputsPreserved": ["size NaN, duration 42", "size -100, duration 42"],
+      "oracle": "Invalid size renders unknown em dash, never fabricated measured 0 B. Existing measured-zero size case retained."
+    },
+    {
+      "originalLines": "455-460",
+      "inputsPreserved": ["POST", "https://api.test/v1/alerts", "{\"a\":1}"],
+      "oracle": "Python imports json and supplies json=json.loads of the original escaped JSON text; decoded argument equals the exact original body."
+    },
+    {
+      "additionalCases": 3,
+      "oracle": "Real HTTP 204 with duration/size 0 remains measured success; network status 0 remains failure and unknown metadata for both NaN and legacy scalar zero inputs; raw failure text remains inspectable."
+    },
+    {
+      "coupledOwnedTyping": "Clipboard mock now accepts its actual string argument; removed unnecessary copied-value cast. This repairs two original fixture compiler errors, without provider/production changes."
+    }
+  ],
+  "preservation": {
+    "pageFixtureSha256": "8D479138EABC8BB04F30D6699CD1EF67D17A18F4A3834377EA37981383D7E4D9",
+    "pageFixtureLines": 881,
+    "pageFixtureDeclarations": 32,
+    "originalPageDeclarations": 21,
+    "originalPageDeclarationsPreserved": true,
+    "pageLines": 197,
+    "originalPageLinesRecorded": 190,
+    "composedPageLines": 1012,
+    "originalComposedPageLinesRecorded": 974,
+    "currentComposedPanelOpenings": 6,
+    "originalComposedPanelOpeningsRecorded": 6,
+    "responseFixtureLinesBefore": 501,
+    "responseFixtureLinesAfter": 555,
+    "responseFixtureDeclarationsBefore": 29,
+    "responseFixtureDeclarationsAfter": 31,
+    "responseFixtureSha256After": "564288DEB30BAC8393F3E59B6465E070A54B38B28C7EC097D1EFFC84FA3C790A",
+    "responseSourceSha256": "45B4F830D650BF4EF412D6F004D68883D305BEBBC12043B720C41CBA8C63FCA4",
+    "pageSourceSha256": "28129C63705C3765D68E9B6D9E3C0706987420FBABAC108E767A4C0B497BA315",
+    "sourceLimits": "Historical originals taken from existing QA receipt, not regenerated. Production/page fixture pins unchanged between first and final reads. Raw SI inspection, all formats, request identity, replay, metadata-only persistence and privacy source remain untouched."
+  },
+  "checks": {
+    "node": "v26.8.1",
+    "catalog": {"command": "node scripts\\split-i18n-catalog.mjs --check", "exit": 0, "groupedLocaleBundles": 57, "fallbacks": 178, "shellKeys": 1241, "knownMissing": 0},
+    "namespaces": {"command": "node scripts\\audit-i18n-namespaces.mjs --strict", "exit": 0, "knownDottedMisses": 2, "dotlessLabels": 25, "newDotted": 0, "newDotless": 3, "newlyResolved": 49},
+    "productionTypes": {
+      "command": "npx --no-install tsc --noEmit",
+      "exit": 2,
+      "diagnostics": 2,
+      "externalFiles": ["web\\src\\features\\admin\\components\\security-access\\helpers.ts", "web\\src\\features\\admin\\components\\tesla-orders\\teslaOrderStats.ts"],
+      "notFixtureProof": "Production tsconfig excludes tests; no production compiler pass claimed."
+    },
+    "initialScopedTypes": {"ownedDiagnostics": 2, "allDiagnostics": 4, "exit": 1, "disposition": "Owned clipboard call-tuple diagnostics corrected; final scoped owned closure verified."},
+    "finalScopedTypes": {
+      "command": "node --input-type=module -e TypeScript createProgram with ResponseViewer.test.tsx and ApiPlaygroundPage.test.tsx roots, tsconfig options and original ambient types plus Vitest/Testing Library",
+      "exit": 0,
+      "ownedDiagnostics": 0,
+      "allDependencyDiagnostics": 1,
+      "externalDiagnostic": "security-access/EventHistoryTable.tsx: unused allWindowsClosed",
+      "limit": "Owned fixture typing closed; dependency-wide/full production typing is not green."
+    },
+    "finalLint": {"command": "node node_modules\\eslint\\bin\\eslint.js src\\features\\admin\\components\\ResponseViewer.test.tsx --max-warnings 0", "exit": 0, "stdout": "", "stderr": ""},
+    "changedFixturePatternCounts": {"inlineStyles": 0, "rawControls": 0, "directLibraries": 0, "oldApiImports": 0, "doublePrefix": 0, "camelCaseQueries": 0, "neonGlow": 0},
+    "hookRoutes": "No hooks changed. Existing specification request /system/openapi matches router.go:4395,4440 and omits the client-added prefix.",
+    "styleScans": [
+      {"file": "web\\src\\features\\admin\\pages\\ApiPlaygroundPage.tsx", "exit": 1, "candidates": 3, "individualDispositions": ["line142 grid-cols-[20rem_minmax(0,1fr)]: retained sidebar/workspace geometry, no approved exception", "line144 h-[26rem]: retained explorer viewport, no approved exception", "line144 h-[calc(100vh-13rem)]: retained viewport/header-offset calculation, no approved exception"]},
+      {"file": "web\\src\\features\\admin\\components\\ResponseViewer.tsx", "exit": 1, "candidates": 2, "tokenReferences": 20, "individualDispositions": ["line279 max-w-[120px]: history path truncation with full title/replay identity retained, not waived", "line337 max-h-[500px]: full raw text remains scrollable, not waived"]},
+      {"file": "web\\src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts", "exit": 0, "candidates": 0}
+    ],
+    "vitest": {
+      "command": "npx --no-install vitest run src\\features\\admin\\components\\ResponseViewer.test.tsx src\\features\\admin\\pages\\ApiPlaygroundPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose -t \"^(?!.*round-trips the original JSON body)\"",
+      "status": "NOTRUN_TERMINATED_BEFORE_COLLECTION_OUTPUT",
+      "exit": "TERMINATED_AT_ITEM_TIMEBOX",
+      "discovered": "NOT REPORTED",
+      "executed": 0,
+      "retainedPythonRowsExcluded": 6,
+      "preconditions": "Actual catalog check exit0, namespace check exit0, scoped owned compiler diagnostics0 before launch.",
+      "identity": "VITE_GIT_SHA=dev only prevents config Git discovery; normal catalog guards, pool and maxWorkers preserved.",
+      "termination": "Owned shellId19 process tree stopped with stop_powershell before deadline. No runner names/counts/results appeared. Zero executed is NOTPASS; startup delay does not consume attempt.",
+      "actualExecutedTestNames": [],
+      "declaredNamesEvidence": "Owned raw log lists all 31 ResponseViewer and 32 page declarations as declarations only, not executed tests."
+    },
+    "auditScript": "Inspected, NOTRUN: excludes changed fixture and repeats full TypeScript; exact case-sensitive fixture counts and actual separate TypeScript result recorded instead.",
+    "browserNativeBuild": "NOTRUN; outside proof grant."
+  },
+  "blockers": [
+    "Normal Vitest startup never reached collection output within the bounded item; covering behavior remains unverified. No retry or startup bypass.",
+    "Raw released worker receipt was unavailable at searched qualified repository locations; only exact queue intake, retained evidence and unchanged source/page-fixture pins could be inspected."
+  ],
+  "continuation": {
+    "startedAt": "2026-10-14T15:28:12.030Z",
+    "deadlineAt": "2026-10-14T15:48:12.030Z",
+    "status": "BLOCKED_CURRENT_CATALOG_AND_RAW_SOURCE_RECEIPT",
+    "filesChanged": [
+      "docs\\frontend-audits\\phase6-fix-playground-response-original-oracles-and-proof.json",
+      "web\\logs\\phase6-fix-playground-response-original-oracles-and-proof.log"
+    ],
+    "retainedFixture": "Exact ResponseViewer.test.tsx exists; all retained corrections and input identities already present. No fixture or production edits needed or made.",
+    "rawSourceReceipt": {
+      "status": "UNAVAILABLE",
+      "knownActor": "c53059d8-555e-48a8-b083-ba8ee41a6662",
+      "readAgentResult": "No agent found; may have been cleared or never existed.",
+      "qualifiedRepositorySearch": "No matching receipt in .agent-status, docs/frontend-audits, web/logs or .runner.",
+      "historySearch": "Recent local turns and exact cloud source-session lookup both returned zero rows.",
+      "queueEvidence": "migration-queue.md:2730 intake remains available, but does not replace the raw worker receipt."
+    },
+    "checks": {
+      "node": "v26.8.1",
+      "catalog": {
+        "command": "node scripts\\split-i18n-catalog.mjs --check",
+        "exit": 1,
+        "result": "Generated locale files invalid, including shell.json, grouped locale bundles, runtime-manifest.json and usage-manifest.json. Full raw output retained in item log.",
+        "disposition": "External catalog prerequisite failure; no catalog/config edits or bypass; no attempt consumed."
+      },
+      "namespaces": {
+        "command": "node scripts\\audit-i18n-namespaces.mjs --strict",
+        "exit": 0,
+        "knownDottedMisses": 2,
+        "dotlessLabels": 25,
+        "newDotted": 0,
+        "newDotless": 3,
+        "newlyResolved": 49
+      },
+      "scopedTypes": {
+        "command": "TypeScript createProgram: ResponseViewer.test.tsx, ApiPlaygroundPage.test.tsx, src/vite-env.d.ts; original tsconfig options/types plus vitest/globals and @testing-library/jest-dom",
+        "exit": 0,
+        "ownedDiagnostics": 0,
+        "allDependencyDiagnostics": 0,
+        "initialProbe": "Omitted vite-env.d.ts and produced 13 ambient diagnostics with zero owned diagnostics; corrected probe includes original ambient declaration without changing any file.",
+        "limit": "Scoped fixture/dependency closure only, not a full production compiler or build pass."
+      },
+      "lint": {
+        "command": "node node_modules\\eslint\\bin\\eslint.js src\\features\\admin\\components\\ResponseViewer.test.tsx --max-warnings 0",
+        "exit": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "changedFixturePatternCounts": {
+        "inlineStyles": 0,
+        "rawControls": 0,
+        "directLibraries": 0,
+        "oldApiImports": 0,
+        "doublePrefix": 0,
+        "camelCaseQueries": 0,
+        "neonGlow": 0,
+        "exit": 0,
+        "limit": "Retained fixture scanned; no application-source changes."
+      },
+      "styleScans": {
+        "commands": [
+          "node scripts\\frontend-qa.mjs scan --path src\\features\\admin\\pages\\ApiPlaygroundPage.tsx",
+          "node scripts\\frontend-qa.mjs scan --path src\\features\\admin\\components\\ResponseViewer.tsx",
+          "node scripts\\frontend-qa.mjs scan --path src\\features\\admin\\components\\continuation-admin-1\\playgroundRequest.ts"
+        ],
+        "candidateCounts": [3, 2, 0],
+        "exits": [1, 1, 0],
+        "individualDispositions": [
+          "Page142 grid-cols-[20rem_minmax(0,1fr)]: sidebar/workspace geometry, retained and not waived.",
+          "Page144 h-[26rem]: explorer viewport, retained and not waived.",
+          "Page144 h-[calc(100vh-13rem)]: viewport/header-offset geometry, no native measurement or waiver.",
+          "Response279 max-w-[120px]: path truncation retains full title/replay identity; not waived.",
+          "Response337 max-h-[500px]: full raw response remains scrollable; not waived."
+        ],
+        "limit": "Only transport has zero candidates; no blanket clean style/visual claim."
+      },
+      "vitest": {
+        "status": "NOTRUN_CATALOG_PRECONDITION_FAILED",
+        "commandExecuted": false,
+        "plannedCommand": "npx --no-install vitest run src\\features\\admin\\components\\ResponseViewer.test.tsx src\\features\\admin\\pages\\ApiPlaygroundPage.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose -t \"^(?!.*round-trips the original JSON body)\"",
+        "exit": null,
+        "discovered": null,
+        "executed": 0,
+        "actualExecutedTestNames": [],
+        "retainedPythonRowsNotRepeated": 6,
+        "limit": "Zero execution is NOTPASS. Required actual catalog closure failed, so no runner launch, alternate config or startup bypass."
+      },
+      "productionTypesBuildNative": "NOTRUN in continuation: report-only delivery, only scoped checks authorized.",
+      "hooks": "No hooks changed. Read-only page request /system/openapi remains client-relative; router.go:4440 registers /openapi inside /system."
+    },
+    "preservation": {
+      "allFourPinsMatchRetainedDelivery": true,
+      "responseFixtureSha256": "564288DEB30BAC8393F3E59B6465E070A54B38B28C7EC097D1EFFC84FA3C790A",
+      "responseSourceSha256": "45B4F830D650BF4EF412D6F004D68883D305BEBBC12043B720C41CBA8C63FCA4",
+      "pageSourceSha256": "28129C63705C3765D68E9B6D9E3C0706987420FBABAC108E767A4C0B497BA315",
+      "pageFixtureSha256": "8D479138EABC8BB04F30D6699CD1EF67D17A18F4A3834377EA37981383D7E4D9",
+      "responseFixtureDeclarations": 31,
+      "responseFixtureLines": 555,
+      "pageFixtureDeclarations": 32,
+      "pageFixtureLines": 881,
+      "original21PageDeclarations": "Retained unchanged page-fixture pin; no new fixture rewrite.",
+      "composedScope": ["ApiPlaygroundPage.tsx", "EndpointSidebar.tsx", "RequestBuilder.tsx", "ResponseViewer.tsx"],
+      "composedLines": 1012,
+      "originalRecordedComposedLines": 974,
+      "glassPanelOpenings": 6,
+      "chartContainerOpenings": 0,
+      "originalRecordedPanelOpenings": 6,
+      "countCorrection": "Including Card and LayoutCard produces eight openings; helper tests are excluded from the historical composed comparison.",
+      "passingEvidence": "Six original genuine Python AST roundtrips retained only, never repeated or claimed as fresh passes."
+    },
+    "blockers": [
+      "Current generated catalog check exit1 prevents required normal covering-test startup; no catalog repair authority.",
+      "Required raw released source-worker receipt unavailable; queue intake is not substituted.",
+      "Covering behavior remains unexecuted and unverified; no production grant requested or invented."
+    ],
+    "reportValidation": {
+      "command": "Node JSON.parse of the item report, exact continuation outcome assertions and SHA256 comparison of all four retained source/fixture pins",
+      "exit": 0,
+      "pinMatches": "4/4",
+      "rawOutput": "REPORT_JSON=VALID STATUS=BLOCKED_CURRENT_CATALOG_AND_RAW_SOURCE_RECEIPT PIN_MATCHES=4/4 VITEST_EXECUTED=0"
+    },
+    "releasedAt": "2026-10-14T15:37:01.695Z",
+    "ownershipRelease": "All continuation commands completed; no Vitest/browser/provider/server/agent process launched or retained. No Git, installs, catalog/config/shared/source/page-fixture changes."
+  },
+  "releasedAt": "2026-10-14T15:27:19.2155834Z",
+  "ownershipRelease": "All owned source/report/command claims released on final return. Own proof process tree stopped; no browser/provider/server/agent resources acquired.",
+  "evidence": {
+    "rawLog": "web\\logs\\phase6-fix-playground-response-original-oracles-and-proof.log",
+    "commandEvidence": "Separate session files retain scoped compiler, lint, declarations and full per-file style findings; command output is appended to the owned raw log after completion.",
+    "limits": "No whole-page/native/visual/accessibility/full-build acceptance. No Git, installs, catalog/config/barrel/shared-type/source edits, servers, Docker, provider calls or new agents."
+  }
+}

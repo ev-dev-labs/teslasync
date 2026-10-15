@@ -1,0 +1,252 @@
+{
+  "item": "phase6-proof-next12-api-logs-initial-trust-paging",
+  "phase": 6,
+  "kind": "proof",
+  "status": "FAILED",
+  "outcome": "19 executed: 16 passed, 3 failed; normal catalog startup completed. Source and fixtures remain read-only.",
+  "startedUtc": "2026-10-14T15:08:40.914Z",
+  "deadlineUtc": "2026-10-14T15:28:40.914Z",
+  "runtimeAccepted": false,
+  "applicationWrites": [],
+  "fixtureWrites": [],
+  "ownedFiles": [
+    "docs/frontend-audits/phase6-proof-next12-api-logs-initial-trust-paging.json",
+    "web/logs/phase6-proof-next12-api-logs-initial-trust-paging.log"
+  ],
+  "authority": [
+    ".runner/prompts/phase6-proof-next12-api-logs-initial-trust-paging.md",
+    "docs/frontend-design-contract.md",
+    "docs/session-handoff.md",
+    "docs/frontend-worker-conventions.md",
+    "migration-queue.md: exact pending proof and completed source rows",
+    "work-items.json: exact proof object; dependsOn is empty",
+    ".github/instructions/frontend-si-cutover.instructions.md",
+    ".github/instructions/react-frontend.instructions.md",
+    ".github/instructions/observability.instructions.md",
+    ".github/instructions/unit-conversion.instructions.md"
+  ],
+  "priorEvidence": {
+    "sourceDelivery": "5c570c5329c38958a3d93b04b66e352cffd0bd1d",
+    "identityAuthority": "Retained migration-queue.md source row; no Git verification performed.",
+    "sourceChecksExit": 0,
+    "compilerExit": 2,
+    "compilerLimit": "Historical external AuditLogIntegrity/Page diagnostics; no current compiler closure claimed.",
+    "normalVitestExit": 1,
+    "discovered": 0,
+    "executed": 0,
+    "expected": 19,
+    "outcome": "NOTRUN: historical external catalog startup failure, not PASS.",
+    "previousPassingChecksRepeated": false,
+    "budgetsRenewed": false
+  },
+  "runtime": {
+    "node": "v26.8.1",
+    "npm": "11.19.0",
+    "nodeExecutable": "C:\\Program Files\\nodejs\\node.exe",
+    "supportedByManifest": true,
+    "environment": {
+      "VITE_GIT_SHA": "dev"
+    },
+    "identityNote": "Explicit non-release identity prevents Vite's automatic Git command. No build, catalog, test setup or startup guard was changed or bypassed."
+  },
+  "execution": {
+    "cwd": "web",
+    "command": "npx vitest run src\\features\\admin\\pages\\ApiLogsPage.phase6.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "startUtc": "2026-10-14T15:09:44.3600475Z",
+    "endUtc": "2026-10-14T15:18:04.8412677Z",
+    "exit": 1,
+    "expected": 19,
+    "discovered": 19,
+    "executed": 19,
+    "passed": 16,
+    "failed": 3,
+    "skipped": 0,
+    "files": 1,
+    "failedFiles": 1,
+    "runnerDurationSeconds": 47.19,
+    "normalInvocationsThisWorker": 1,
+    "retries": 0,
+    "startupGuardBypassed": false,
+    "compilerClosureVerified": false,
+    "catalogStartup": {
+      "split": "OK: 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "namespaceAudit": "2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved; new dotless source-local labels Healthy, Never, Paused",
+      "limit": "These are actual unchanged normal-run startup outputs, not an independent global/catalog acceptance."
+    },
+    "log": "web/logs/phase6-proof-next12-api-logs-initial-trust-paging.log"
+  },
+  "expectedCases": [
+    "keeps all cold paused sources unknown, preserves the URL and exposes independent retry",
+    "does not call a cold idle pending source empty or failed",
+    "keeps actively fetching cold sources loading rather than empty",
+    "resumes paused sources and accepts measured zero without claiming full browser coverage",
+    "recovers a failed browser source independently without refreshing the other sources",
+    "keeps failed-refresh evidence and successful neighbors visible",
+    "reconciles an authoritative total=5 at size=25 without dropping scope",
+    "reconciles an authoritative total=125 at size=50 without dropping scope",
+    "reconciles an authoritative total=+0 at size=100 without dropping scope",
+    "waits for the requested-page response before reconciling instead of clamping an unknown total",
+    "does not clamp a malformed total null to a fabricated zero",
+    "does not clamp a malformed total -1 to a fabricated zero",
+    "does not clamp a malformed total 1.5 to a fabricated zero",
+    "does not clamp a malformed total NaN to a fabricated zero",
+    "does not clamp a malformed total Infinity to a fabricated zero",
+    "reconciles a shrinking dataset after a successful refresh and retains filter/size interactions",
+    "does not use a paused retained total to rewrite the requested URL or erase independent evidence",
+    "does not reconcile against placeholder totals while the requested page is unresolved",
+    "waits for refresh confirmation and does not reconcile a retained total after refresh failure"
+  ],
+  "caseResults": {
+    "nameAuthority": "expectedCases above exactly matches the 19 verbose collected names in the raw log, in runner order.",
+    "passedCaseNumbers": [1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 18],
+    "failedCaseNumbers": [6, 17, 19],
+    "failures": [
+      {
+        "caseNumber": 6,
+        "name": "keeps failed-refresh evidence and successful neighbors visible",
+        "file": "web/src/features/admin/pages/ApiLogsPage.phase6.test.tsx",
+        "line": 192,
+        "error": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"stale-refresh-warning\"]",
+        "observed": "First backend warning assertion fails after invalidating backend/frontend queries. The failure DOM still contains Retained backend evidence. Later frontend-warning, retained-neighbor and absence-of-fatal-error assertions were not reached.",
+        "assessment": "The test immediately queries the warning after act/invalidateQueries; asynchronous render synchronization versus an actual warning regression remains unverified. No production defect is asserted solely from this failure."
+      },
+      {
+        "caseNumber": 17,
+        "name": "does not use a paused retained total to rewrite the requested URL or erase independent evidence",
+        "file": "web/src/features/admin/pages/ApiLogsPage.phase6.test.tsx",
+        "line": 277,
+        "error": "TestingLibraryElementError: Unable to find an accessible element with the role \"button\" and name `/Tesla API/`",
+        "observed": "URL page=3, no log fetch and both seeded diagnostic empty states passed before the missing service quick-pick. Later frontend paused/stale-warning assertions were not reached.",
+        "assessment": "The fixture seeds adminKeys.apiCallLogStats() and adminKeys.apiCallLogs(3, {}, 25) without bounds. Current /api-logs is a header-owned dated route; useRangeState chooses the shared/product range instead of the page's all-time fallback. The rendered summary says Last 24h. Those unbounded seeds therefore do not establish retained evidence for the active bounded queries. Correct the test's scope-aware seeding only under explicit fixture authority; do not undo workspace ownership."
+      },
+      {
+        "caseNumber": 19,
+        "name": "waits for refresh confirmation and does not reconcile a retained total after refresh failure",
+        "file": "web/src/features/admin/pages/ApiLogsPage.phase6.test.tsx",
+        "line": 296,
+        "error": "TestingLibraryElementError: Unable to find an element by: [data-testid=\"stale-refresh-warning\"]",
+        "observed": "waitFor expires waiting for a retained-data warning; failure DOM labels the page refresh Error. Later URL and requested-offset assertions were not reached.",
+        "assessment": "The same unbounded log-cache seed does not match the active workspace-bounded query key. The rejected active query has no seeded retained rows, so this fixture does not yet exercise the intended retained-data refresh failure. No source or fixture correction was authorized here."
+      }
+    ]
+  },
+  "inputPinsSha256": {
+    "web/src/features/admin/pages/ApiLogsPage.phase6.test.tsx": "298B1FBE2BAC3EDBD98E0E40F457E40BD2E7E0F708FE931220B0A2F203F7F8E7",
+    "web/src/features/admin/pages/ApiLogsPage.tsx": "CD52B5B387A9F4088B67CA3A1D4BCF81FA5E895A052510AF816FCE66D9D605CB",
+    "web/src/features/admin/components/ApiLogsFrontendErrors.tsx": "38C01C22E5A4EA0917F577A2CBE1131A5FC1779540E9613FAA9962A7D7C77ED5",
+    "web/src/features/admin/components/ApiLogsBackendErrors.tsx": "CA442F795F602FB00533461461D9993B0DBA7E9E2302AA7A4BB6CFF306B9B1C2",
+    "web/vite.config.ts": "7E0F246E3D538F48B8DF6A024F5CCE1E068685023A844CCE3B537A1AFCF54F58",
+    "web/src/test-setup.ts": "FB61779479E36B97298928C7BCC0620E8FF2A509A0EA50350F9935D9F260517A",
+    "web/src/api/hooks/useAdmin.ts": "483433A3C072FA6F1B32D61C1D807F5C1F2834463EFDB08D4B5747A0A9D82B6F",
+    "web/src/i18n/en.json": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867"
+  },
+  "preservation": {
+    "sourceAndFixtureReadonly": true,
+    "sections": [
+      "KPI summary band",
+      "API totals and request-filter scope explanation",
+      "By service quick-picks",
+      "API call evidence table, filters, pagination, inspection and loaded-page exports",
+      "Independent backend runtime errors",
+      "Independent frontend error reports and browser coverage caveat"
+    ],
+    "actionsRetained": [
+      "Header refresh",
+      "Independent source retry",
+      "Service quick-picks",
+      "Server filters and clear filters",
+      "Rows per page and page navigation",
+      "Request detail expansion",
+      "Loaded-page CSV and JSON export",
+      "Inspect system health"
+    ],
+    "hookRoutesReadOnlyReviewed": [
+      "/api-logs",
+      "/api-logs/stats",
+      "/system/errors/stats",
+      "/admin/web-errors/summary"
+    ],
+    "routeAuthority": "web/src/api/hooks/useAdmin.ts and web/src/api/devtools.ts match internal/api/router.go route groups. Both bounds map to start/end_exclusive; AbortSignal propagation retained. This is source review, not network acceptance.",
+    "sourceChecks": "Historical successful source/lint/fixture-type checks were not rerun or relabeled as runtime proof.",
+    "lineCounts": {
+      "web/src/features/admin/pages/ApiLogsPage.tsx": 488,
+      "web/src/features/admin/pages/ApiLogsPage.phase6.test.tsx": 301,
+      "web/src/features/admin/components/ApiLogsFrontendErrors.tsx": 92,
+      "web/src/features/admin/components/ApiLogsBackendErrors.tsx": 100
+    },
+    "assignedProductionFilesTotalLines": 680,
+    "productionAndFixturePinsUnchanged": true,
+    "finalPinsUnchanged": false,
+    "stablePins": 7,
+    "changedPins": 1,
+    "externalDrift": {
+      "file": "web/src/i18n/en.json",
+      "beforeSha256": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867",
+      "afterSha256": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+      "workerWroteFile": false,
+      "limit": "Concurrent external catalog change observed; no immutable whole-checkout gate or authorship attribution claimed."
+    }
+  },
+  "notRun": [
+    "Full production TypeScript compiler: forbidden global gate in this scoped proof assignment; no current compiler pass claimed.",
+    "Full tests, full lint and builds.",
+    "Repeated historical successful source/lint/audit checks.",
+    "Browser, native, contrast, screenshots and live API/network acceptance.",
+    "Docker, dependency installs, provider writes, dev server starts and agent launches."
+  ],
+  "residualNeeds": [
+    "A separately authorized fixture correction must align retained log/stats seeds with the actual workspace date bounds for cases 17 and 19, without changing the production workspace owner or weakening assertions.",
+    "Establish whether case 6 requires waiting for TanStack Query's rendered stale-state notification or reveals a production warning defect. Preserve both independent diagnostics, retained evidence and successful neighbors.",
+    "After authorized correction, run only the three failed selectors; preserve this run's 16 genuine passes rather than relaunching the full file.",
+    "The inherited owned AuditLog compiler closure remains unverified here; no full TypeScript, build or phase gate authority was assumed.",
+    "Native/browser/contrast and live-network acceptance remain NOTRUN and are not implied by these jsdom results."
+  ],
+  "artifactWriteIssue": "An attempted pin append during redirected runner output hit Windows file-sharing errors. The shell returned 0 despite nonterminating Add-Content errors; that append is not claimed as successful. Final pins were successfully appended after runner completion.",
+  "artifactValidation": {
+    "exit": 0,
+    "jsonParsed": true,
+    "actualVerboseNamesMatchedExactly": 19,
+    "outcomeAccountingMatched": true,
+    "rawOutput": "ARTIFACT_VALIDATION report JSON parsed; 19 actual verbose names matched exactly; passed=16 failed=3 skipped=0; accounting matched; EXIT=0"
+  },
+  "releaseUtc": "2026-10-14T15:22:14.2540857Z",
+  "continuation": {
+    "inputCheckUtc": "2026-10-14T15:22:50.7345317Z",
+    "status": "FAILED",
+    "alreadyDone": false,
+    "blocker": "All 19 cases already executed. The three failed cases require separately authorized fixture correction or production defect resolution; this assignment explicitly keeps source and fixtures read-only.",
+    "authorityChecked": [
+      ".runner/prompts/phase6-proof-next12-api-logs-initial-trust-paging.md",
+      "docs/frontend-design-contract.md: MDC-001 and MDC-002",
+      "docs/session-handoff.md: current drain and remaining-work export",
+      "docs/frontend-worker-conventions.md: no-change workers do not launch new tests",
+      "migration-queue.md: phase6-proof-next12-api-logs-initial-trust-paging",
+      "work-items.json: exact proof object and its two owned artifact paths"
+    ],
+    "pinCommandExit": 0,
+    "pinsCompared": 8,
+    "sourceFixtureRunnerAndHookPinsUnchanged": 7,
+    "catalogMatchesRetainedFinalPin": true,
+    "currentCatalogSha256": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+    "genuinelyUnexecutedChangedSelectors": 0,
+    "newTestInvocations": 0,
+    "newExecutedCases": 0,
+    "newTestExit": null,
+    "testDisposition": "NOTRUN: no changed or genuinely unexecuted selectors. Retained 16 passes and 3 failures remain authoritative; zero new execution is not PASS.",
+    "applicationWrites": [],
+    "fixtureWrites": [],
+    "budgetsRenewed": false,
+    "compilerClosureVerified": false,
+    "requiredNextAuthority": "An explicit fixture-edit grant for ApiLogsPage.phase6.test.tsx cases 6, 17 and 19, preserving all existing assertions and aligning retained seeds to the actual workspace bounds. Production changes require a separate grant if case 6 establishes a real warning regression.",
+    "checksNotRepeated": "Historical passing source checks and the 16 genuine passing cases; full compiler, full lint/build/suites, browser/native/network and Docker checks remain unrun.",
+    "evidenceLimit": "Read-only SHA256 comparison and retained-artifact review only; no new runtime, compiler, whole-checkout or phase acceptance.",
+    "artifactValidation": {
+      "initialExit": 1,
+      "initialError": "Missing retained or continuation log evidence",
+      "initialCause": "Literal matching failed on retained Vitest ANSI color escape sequences, not missing test evidence.",
+      "correctedExit": 0,
+      "correction": "Strip ANSI SGR sequences in the in-memory log string and match the actual retained result using whitespace-aware regex. Raw log and application/test configuration remain unchanged.",
+      "rawOutput": "CONTINUATION_ARTIFACT_VALIDATION JSON parsed; retained executed=19 passed=16 failed=3 exit=1; new invocations=0 executed=0 exit=null; stable source/fixture/runner/hook pins=7; catalog matches retained final pin; ANSI-normalized log evidence present; EXIT=0"
+    }
+  }
+}

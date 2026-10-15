@@ -1,0 +1,266 @@
+{
+  "item": "phase6-proof-next12-playground-builder-44",
+  "phase": 6,
+  "status": "FAILED_RUNTIME_PROOF",
+  "requestUtc": "2026-10-14T15:08:41.587Z",
+  "returnDeadlineUtc": "2026-10-14T15:28:41.587Z",
+  "evidenceFinalizedUtc": "2026-10-14T15:21:47.2931385Z",
+  "purpose": "First genuine execution of the retained 44-case RequestBuilder.phase6.test.tsx fixture, without source or oracle changes.",
+  "ownedFiles": [
+    "docs\\frontend-audits\\phase6-proof-next12-playground-builder-44.json",
+    "web\\logs\\phase6-proof-next12-playground-builder-44.log"
+  ],
+  "applicationAndFixtureChanges": [],
+  "priorEvidence": {
+    "expectedReceiptExistedBeforeRun": false,
+    "expectedLogExistedBeforeRun": false,
+    "historicalAuthoredCases": 44,
+    "historicalExecutedCases": 0,
+    "historicalScopedLintAndTypes": "Retained historical evidence only; not repeated or promoted to runtime PASS.",
+    "previousPassingProofsRepeated": 0
+  },
+  "runtime": {
+    "node": "v26.8.1",
+    "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+    "vitest": "4.1.11",
+    "config": "web\\vite.config.ts",
+    "pool": "forks",
+    "maxWorkers": 2,
+    "environmentOverrides": {
+      "VITE_GIT_SHA": "dev"
+    },
+    "environmentOverrideReason": "Fixture-only identity prevents vite.config.ts from executing prohibited implicit Git discovery. This is not a commit pin, deployable identity, catalog bypass or config change.",
+    "normalStartupGuards": [
+      "node scripts\\split-i18n-catalog.mjs --check",
+      "node scripts\\audit-i18n-namespaces.mjs --strict"
+    ],
+    "startupOutput": [
+      "[i18n-split] OK: 57 grouped locale bundles, 178 per-namespace fallbacks, 1241 inlined shell keys, 0 known-missing keys (0 new, 0 resolved)",
+      "[i18n-namespace-audit] 2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved"
+    ],
+    "startupEvidenceLimit": "The two synchronous guards completed without startup exceptions. Raw original output, including warnings, is preserved in the log; separate subprocess exit receipts are not fabricated.",
+    "globalSetupLimit": "The unchanged normal src/test-setup.ts mocks useTranslation with supplied English fallback strings. These tests do not prove production translation-key resolution."
+  },
+  "run": {
+    "command": "node .\\node_modules\\vitest\\vitest.mjs run src\\features\\admin\\components\\RequestBuilder.phase6.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose --reporter=json --outputFile.json=C:\\Users\\AtulM\\.copilot\\session-state\\1f0c2a92-dd37-4e18-a383-5e7725d098b6\\files\\playground-builder-44-vitest.json",
+    "startUtc": "2026-10-14T15:10:03.4120640Z",
+    "endUtc": "2026-10-14T15:19:15.7279647Z",
+    "exit": 1,
+    "invocations": 1,
+    "timedOut": false,
+    "reporterDuration": "20.53s (transform 11.30s, setup 1.85s, import 14.40s, tests 1.78s, environment 1.91s)",
+    "durationLimit": "Reporter duration is not total command wall time; normal startup completed before the reporter runtime interval.",
+    "rawSummary": [
+      "Test Files  1 failed (1)",
+      "Tests  11 failed | 33 passed (44)",
+      "RUN_EXIT=1"
+    ]
+  },
+  "accounting": {
+    "intendedCases": 44,
+    "runtimeDiscovered": 44,
+    "runtimeExecuted": 44,
+    "passed": 33,
+    "failed": 11,
+    "pending": 0,
+    "skipped": 0,
+    "todo": 0,
+    "unselected": 0,
+    "coveringCasesNotRun": 0,
+    "testFiles": 1,
+    "startupErrors": 0,
+    "externalCatalogFailuresUncharged": 0,
+    "genuineRuntimeInvocationsThisItem": 1,
+    "originalHelperAndNativeBudgets": "Unchanged; no authority or renewal inferred from this inventory.",
+    "suiteCountLimit": "JSON counts the file and three describe nodes as four suites. This is one selected test file, not four test files.",
+    "executionLimit": "All 44 test bodies executed; the 11 failures stop at required-body control lookup, before their later payload assertions."
+  },
+  "failure": {
+    "root": "Exact required-body label lookups disagree with the existing shared required-label accessible-name contract.",
+    "actualAccessibleName": "Request body required",
+    "fixtureExpectedAccessibleName": "Request body",
+    "mechanism": "RequestBuilder passes label='Request body' and required=true to shared Textarea. Textarea forwards required to shared form Label, whose VisuallyHidden form.required text intentionally becomes part of the associated control's accessible name.",
+    "evidenceFiles": [
+      "web\\src\\features\\admin\\components\\RequestBuilder.tsx",
+      "web\\src\\features\\admin\\components\\RequestBuilder.phase6.test.tsx",
+      "web\\src\\components\\ui\\Textarea.tsx",
+      "web\\src\\components\\ui\\Label.tsx"
+    ],
+    "firstRawError": "TestingLibraryElementError: Unable to find an accessible element with the role \"textbox\" and name \"Request body\"",
+    "otherRawError": "TestingLibraryElementError: Unable to find a label with the text of: Request body",
+    "exactFailedNames": [
+      "phase6 accessible body feedback and raw diagnostics associates the localized visible label, required state and schema hint with the real textarea",
+      "phase6 accessible body feedback and raw diagnostics keeps the exact invalid diagnostic body { after explicit confirmation",
+      "phase6 accessible body feedback and raw diagnostics keeps the exact invalid diagnostic body {\"distance_m\":-1} after explicit confirmation",
+      "phase6 accessible body feedback and raw diagnostics keeps the exact invalid diagnostic body {} after explicit confirmation",
+      "phase6 accessible body feedback and raw diagnostics keeps the exact invalid diagnostic body null after explicit confirmation",
+      "phase6 accessible body feedback and raw diagnostics keeps the exact invalid diagnostic body false after explicit confirmation",
+      "phase6 accessible body feedback and raw diagnostics keeps the exact invalid diagnostic body 0 after explicit confirmation",
+      "phase6 accessible body feedback and raw diagnostics clears JSON syntax feedback without converting or rewriting raw SI values and whitespace",
+      "phase6 accessible body feedback and raw diagnostics shows required-body feedback while leaving empty negative requests confirmable",
+      "phase6 accessible body feedback and raw diagnostics resets request body, defaults and confirmation on endpoint change without resetting the local API key",
+      "phase6 OpenAPI constraint preservation retains local referenced parameters, scalar bounds/enum/defaults, required bodies and body schemas"
+    ],
+    "correctionAuthority": "BLOCKED: source and fixture are read-only and shared components cannot be edited by this page/proof item. Existing Label explicitly documents the required suffix. No authority to replace that contract, weaken assertions or bypass guards was supplied.",
+    "requiredDisposition": "An authorized contract owner must reconcile the frozen fixture's exact-name expectation with the existing required-label contract before affected-case proof can be accepted. This receipt does not authorize another retry or source correction."
+  },
+  "prerequisiteInspection": {
+    "routeBundle": "admin",
+    "route": "/api-playground",
+    "inspectedCanonical": "web\\src\\i18n\\en.json",
+    "inspectedProjection": "web\\src\\i18n\\en\\locale-admin.json",
+    "fiveRequiredLeaves": [
+      "playground.validation.required",
+      "playground.validation.schemaMismatch",
+      "playground.validation.schemaHint",
+      "playground.validation.invalidJson",
+      "playground.validation.advisory"
+    ],
+    "canonicalPresentCount": 0,
+    "adminProjectionPresentCount": 0,
+    "status": "PREREQUISITE_NOT_ESTABLISHED_ON_CURRENT_INPUTS",
+    "limit": "Current canonical and admin projection both lack all five leaves despite successful normal startup guards. Fallback-based fixture behavior is not leaf/projection closure. No catalog changes or alternate key invention were performed."
+  },
+  "currentness": {
+    "hashAlgorithm": "SHA256",
+    "prePostPinnedFiles": 200,
+    "unchangedPinnedFiles": 198,
+    "changedPinnedFiles": 2,
+    "sourceAndFixtureUnchanged": true,
+    "sourceSha256": "3655FC0D7405071ABFE45FD4C653F696B167C785356FB32B6644D8820D038193",
+    "fixtureSha256": "D0436DD134E217DB02507B555850FA06D846F95B43C38DE4B382E7276191D369",
+    "playgroundSpecSha256": "3A093A80A5E28AA799A011F617DFE833999A5B4B657337E9AE4C6C47754880EA",
+    "postOnlyInspectedSharedPins": {
+      "web\\src\\components\\ui\\Textarea.tsx": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "web\\src\\components\\ui\\Label.tsx": "7BBFE56155987D2B3E3EDE284ADC5F4A5FA8A2EC3241B61A1642568C00F83FE6"
+    },
+    "changedInputs": [
+      {
+        "path": "web\\src\\i18n\\en.json",
+        "preSha256": "6E1E8FF4DDB120705D08ECF840AC959F8DAD8E8EDA35BD088F01C3437BBB9867",
+        "postSha256": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+        "postLastWriteUtc": "2026-10-14T15:13:30.206387Z"
+      },
+      {
+        "path": "web\\src\\i18n\\en\\locale-admin.json",
+        "preSha256": "C8EFEDB3F5D32E3126748100B92400F92E8F32E1D2D7DEA3F6F74620FCAA678C",
+        "postSha256": "B3E878BC80C9E129D3C9718BB94DB04017B15903521B4DDD76490E256ABB3EE5",
+        "postLastWriteUtc": "2026-10-14T15:17:09.4921557Z"
+      }
+    ],
+    "pinManifest": "Complete before/after paths, SHA256, byte counts and last-write times are retained in the raw log.",
+    "claimLimit": "Actual failure/pass evidence on normal-run loaded inputs only. Concurrent canonical/projection changes prevent an immutable current-catalog gate claim. Complete transitive dependency closure and pre-run shared Label/Textarea pins are not claimed."
+  },
+  "evidence": {
+    "rawLog": "web\\logs\\phase6-proof-next12-playground-builder-44.log",
+    "rawLogSha256": "43BC98063BC2EA2B4A079D2D4D36251E8B2245EE51C6C0890A27987A3611DB73",
+    "historicalRawLogSha256BeforeContinuation": "0CB6B3894B9442B0EB2359101D0CB4444DDE3E2134B69BC9EA18AA6E4E652C5A",
+    "originalReporterJsonSha256": "4764954481273B45D8EC18F6A194E22454DF043ECB488A1F2FCA7439AD6A7DC1",
+    "reporterPreservation": "The complete original Vitest JSON is retained after ORIGINAL_VITEST_JSON in the raw log. All 44 exact runtime names, statuses and failure messages remain available; verbose output is preserved as well.",
+    "supplementalInspection": "Five missing canonical/projection leaves and post-only shared-component/source release pins are recorded in the same log.",
+    "readParserRecovery": "One read-only PowerShell ConvertFrom-Json probe rejected differently cased existing keys. The corrected -AsHashtable read succeeded; this was not a test run or proof attempt."
+  },
+  "notRun": {
+    "typescript": "NOTRUN: proof-only readonly item; historical scoped compiler evidence is not re-executed or claimed current.",
+    "lintAndViolationsAudit": "NOTRUN: no application edits; outside this exact runtime proof.",
+    "pageLineAndSectionComparison": "NOTRUN: no page or component migration/edit performed.",
+    "build": "NOTRUN: full builds prohibited.",
+    "hookRouterAndRealNetwork": "NOTRUN: diagnostic fixtures forbid fetch and do not prove actual endpoints.",
+    "browserNative": "NOTRUN: no browser execution or native claim."
+  },
+  "integrity": {
+    "gitCommands": 0,
+    "subagents": 0,
+    "sourceEdits": 0,
+    "fixtureEdits": 0,
+    "sharedComponentEdits": 0,
+    "catalogEdits": 0,
+    "configEdits": 0,
+    "guardBypasses": 0,
+    "browserDownloads": 0,
+    "serversStarted": 0,
+    "dockerCommands": 0,
+    "dependencyInstalls": 0,
+    "fullSuites": 0,
+    "fullLintOrBuild": 0,
+    "otherItemsDispatched": 0
+  },
+  "continuation": {
+    "requestUtc": "2026-10-14T15:23:28.631Z",
+    "returnDeadlineUtc": "2026-10-14T15:43:28.631Z",
+    "evidenceFinalizedUtc": "2026-10-14T15:26:30.2928277Z",
+    "status": "BLOCKED_PREREQUISITES_UNCHANGED",
+    "alreadyDoneCheck": "Not accepted: the retained genuine runtime run executed 44 cases, passed 33 and failed 11 with exit 1. No new completed gate exists in this receipt.",
+    "scope": "Read-only prerequisite/currentness inspection and owned evidence update only. Source, fixture, shared components, catalogs and configuration remain untouched.",
+    "sourceAndFixtureAndContractCurrentness": {
+      "inspectedUtc": "2026-10-14T15:23:55.6962977Z",
+      "comparedFiles": 7,
+      "matchingRetainedPostInspectionPins": 7,
+      "sourceSha256": "3655FC0D7405071ABFE45FD4C653F696B167C785356FB32B6644D8820D038193",
+      "fixtureSha256": "D0436DD134E217DB02507B555850FA06D846F95B43C38DE4B382E7276191D369",
+      "playgroundSpecSha256": "3A093A80A5E28AA799A011F617DFE833999A5B4B657337E9AE4C6C47754880EA",
+      "textareaSha256": "6DE5EFA5B3F0077C97712BE4FC7C3B436DF47A4C803012CAE8CB0756BAD2DB75",
+      "labelSha256": "7BBFE56155987D2B3E3EDE284ADC5F4A5FA8A2EC3241B61A1642568C00F83FE6",
+      "canonicalSha256": "A70130FB345938A41AD87CB910C5012C372F1DB720FB044E0633C61B62F7C184",
+      "adminProjectionSha256": "B3E878BC80C9E129D3C9718BB94DB04017B15903521B4DDD76490E256ABB3EE5",
+      "limit": "These inspected inputs match retained post-run pins. This is not a complete transitive dependency closure, new compiler pass or immutable runtime gate."
+    },
+    "prerequisites": {
+      "inspectedUtc": "2026-10-14T15:24:10.878Z",
+      "canonicalPresentCount": 0,
+      "canonicalRequiredCount": 5,
+      "adminProjectionPresentCount": 0,
+      "adminProjectionRequiredCount": 5,
+      "lookup": "Parsed both JSON catalogs and checked the exact five retained keys in flat and nested forms.",
+      "requiredLabelContract": "Unchanged shared Label intentionally appends localized required; frozen fixture still demands the exact name Request body.",
+      "correctionAuthority": "Not supplied: this item prohibits source/fixture changes and does not own shared components or catalogs. No contract substitution, oracle weakening or generated-catalog bypass is permitted."
+    },
+    "runtimeThisContinuation": {
+      "status": "NOTRUN",
+      "invocations": 0,
+      "newlyDiscovered": 0,
+      "newlyExecuted": 0,
+      "newlyPassed": 0,
+      "newlyFailed": 0,
+      "reason": "Actual five-leaf closure remains absent and the known required-label mismatch is unchanged. No eligible missing proof on corrected inputs was established; do not repeat retained passing evidence or spend another runtime attempt on unchanged blockers.",
+      "zeroCollectionIsPass": false,
+      "historicalRuntimeEvidenceRepeated": false,
+      "originalHelperNativeBudgets": "Unchanged; no reset or retry authority inferred."
+    },
+    "inspectionCommands": [
+      {
+        "name": "PowerShell Get-Date/Get-Item/Get-FileHash plus ConvertFrom-Json -AsHashtable catalog lookup",
+        "exit": 1,
+        "result": "Seven pins emitted; catalog inspection failed with Cannot index into a null array because validation is absent. Read-only probe, not a runtime attempt."
+      },
+      {
+        "name": "node - exact five-leaf flat/nested catalog inspection",
+        "exit": 0,
+        "result": "canonical 0/5 and admin projection 0/5; raw per-key output and complete script retained in the log. Inspection completion is not prerequisite acceptance."
+      },
+      {
+        "name": "node - historical whole-log prefix SHA256 comparison",
+        "exit": 1,
+        "result": "Exact former log prefix byte hash not reproduced after editing. No whole-log exact-byte preservation claim."
+      },
+      {
+        "name": "node - historical log newline/encoding reconstruction",
+        "exit": 1,
+        "result": "0 candidate matches; whole-log exact-byte preservation remains unverified."
+      },
+      {
+        "name": "node - retained ORIGINAL_VITEST_JSON SHA256 and count inspection",
+        "exit": 0,
+        "result": "Exact original reporter SHA256 verified: 4764954481273B45D8EC18F6A194E22454DF043ECB488A1F2FCA7439AD6A7DC1. Counts remain 44 total, 33 passed, 11 failed, 0 pending; all original names/statuses/failures preserved."
+      }
+    ],
+    "notRun": "TypeScript, lint/violations audit, line/section comparison, hook/router, full build, browser/native and real network. Evidence-only blocked continuation; no application edits, new acceptance claim or full gates.",
+    "changedFiles": [
+      "docs/frontend-audits/phase6-proof-next12-playground-builder-44.json",
+      "web/logs/phase6-proof-next12-playground-builder-44.log"
+    ],
+    "otherItemsDispatched": 0,
+    "disposition": "FAILED: required-label correction authority and actual five validation leaf/projection closure remain blockers. The original 44-case runtime failure is retained, not reclassified."
+  },
+  "acceptance": "NOT ACCEPTED: retained 33 passed and 11 failed out of 44 executed cases; continuation performed no new runtime invocation. Required-label contract reconciliation, actual five-leaf closure and current-catalog acceptance remain unresolved. No Phase6/Phase7, whole-page or native approval."
+}

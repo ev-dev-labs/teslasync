@@ -662,5 +662,54 @@
       "artifactAndCommandRelease": "Exact final artifact/command release UTC and numeric exit are recorded by bounded shell phase4-pilot-settings-final-validation in web\\logs\\phase4-pilot-settings.log before return; no post-return writes. Earlier queue return05:41/hard05:46 applies."
     },
     "delivery": "Original missing-native continuation remains unavailable/NOTRUN, with exact confirmed guard/provider/helper/runtime blockers and narrow owners only. Prior partial native evidence and accepted timezone fix remain intact. No page, Phase6, backend, Docker or whole-session safety pass."
+  },
+  "blockedPrerequisiteReview20261014": {
+    "measuredAt": "2026-10-14T15:08:11.835Z",
+    "status": "BLOCKED",
+    "nativeExecution": "NOTRUN",
+    "scope": "Exact prerequisite/authority review only; not a renewed native continuation, helper retry or page migration.",
+    "authorityRead": [
+      ".runner\\prompts\\phase4-pilot-settings.md",
+      "docs\\frontend-design-contract.md authority and MDC-040/041/060/070 conventions",
+      "docs\\session-handoff.md current drain/export and retained native/privacy conventions",
+      "docs\\frontend-audits\\phase6-settings-qa.json retained acceptance and blocker evidence",
+      "work-items.json exact phase4-pilot-settings object"
+    ],
+    "authorityCheck": {
+      "exactWorkItemCount": 1,
+      "existingAcceptance": "PARTIAL_NOT_ACCEPTED; this item is not already complete.",
+      "attemptsUsed": 2,
+      "budgetRenewed": false,
+      "currentTaskRequires": "Safe explicit caller-only synthetic vehicle 2 rebinding and provider authorization; do not assume historical DRILL4 remains eligible.",
+      "grantFound": false,
+      "grantLimit": "Neither the supplied prompt nor the exact remaining-work object grants the required rebinding/provider authority. The handoff's synthetic seed evidence is not a Settings caller-specific grant.",
+      "currentToolBoundary": "No native browser context/page/guard/capture provider is exposed in this session. Shell access does not authorize a replacement helper or restore exhausted safety/native budgets.",
+      "historicalRuntimeBlockers": "Prior helper incompatibility and Lighthouse MODULE_NOT_FOUND remain historical evidence, not fresh runtime measurements."
+    },
+    "requiredBeforeNativeExecution": [
+      "Explicit Settings caller-only synthetic vehicle 2 binding and approved read/privacy scope, without preference/save/reset/disconnect/paid actions or assuming DRILL4.",
+      "Explicit eligible provider/guard authorization and remaining execution budget; retain the exhausted original/helper/native safety history rather than resetting attempts.",
+      "An available approved installed-Edge provider with pre-operation privacy/write guards that survive the authorized operations."
+    ],
+    "preservation": {
+      "priorRootFields": 24,
+      "priorReportBytes": 45731,
+      "priorReportSha256": "204d25cb70d211d7c767ae4da4a5b3bac7f1c50be80dbd32f84497c482e360e7",
+      "priorRootFieldsJsonStringifySha256": "b46fb3c40b9edd2934ff11ddc30e914f6bdc49b4e04dfb54c3280fb18701d554",
+      "method": "Append this member only; validate all prior root fields after excluding this member using Node JSON.stringify and SHA-256.",
+      "retainedLimits": "All prior partial evidence, guard gap, failed trial, viewport discrepancies, accepted timezone source fix and remaining NOTRUN cases retained without promotion."
+    },
+    "execution": {
+      "browserLaunches": 0,
+      "browserContextsOrPagesCreated": 0,
+      "apiOrNetworkRequests": 0,
+      "nativeTestsOrCaptures": 0,
+      "helperInvocations": 0,
+      "sourceOrQueueEdits": 0,
+      "gitCommands": 0,
+      "backgroundProcessesStarted": 0
+    },
+    "validationScope": "Report JSON parse, exact blocked-authority fields and preservation of all 24 historical root fields only. Application TypeScript, lint, audits, line/section counts, API-hook checks, suites and browser QA NOTRUN: report-only blocked assignment, no application changes.",
+    "delivery": "Prerequisites cannot be resolved within the supplied authority. Only this report is updated; Settings native acceptance remains blocked, with no new attempt charged or pass claimed."
   }
 }

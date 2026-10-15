@@ -1,0 +1,223 @@
+{
+  "item": "phase6-proof-next12-api-logs-summary-runtime-and-preservation",
+  "phase": 6,
+  "kind": "proof",
+  "outcome": "BLOCKED_INHERITED_ASSERTION_WRITE_AUTHORITY",
+  "startedAt": "2026-10-14T15:08:34.614Z",
+  "timeboxDeadline": "2026-10-14T15:28:34.614Z",
+  "log": "web\\logs\\phase6-proof-next12-api-logs-summary-runtime-and-preservation.log",
+  "existingCompletionReceiptFound": false,
+  "applicationSourceWrites": 0,
+  "testWrites": 0,
+  "continuationReview": {
+    "checkedAt": "2026-10-14T15:27:55.4052105Z",
+    "outcome": "BLOCKED_INHERITED_ASSERTION_WRITE_AUTHORITY",
+    "alreadyComplete": false,
+    "sourceAndBothTestPinsUnchanged": true,
+    "releasedWorkerReceiptPinUnchanged": true,
+    "pinValidationExitCode": 0,
+    "retainedRuntimeEvidence": "18 named cases executed and passed, exit 0; historical result preserved, not rerun or claimed as a fresh pass.",
+    "authorityReview": "Released sourceworker log explicitly preserves the unowned ApiLogsSummary.test.tsx and requires an exact test grant. Current prompt grants read-only source/new fixture and assigned report/log; no inherited fixture write grant.",
+    "remainingAssertion": "ApiLogsSummary.test.tsx:34 still expects increased; all five inherited scenarios remain untouched.",
+    "newApplicationChecks": 0,
+    "newNativeChecks": 0,
+    "notRepeated": "Passing runtime, lint, scans and reviewed preservation evidence were not repeated. No-change worker conventions prohibit new tests; the inherited assertion cannot be corrected within current authority.",
+    "externalEvidenceLimit": "Prior catalog startup and external compiler failures remain historical receipts, not fresh observations of current catalog/compiler health.",
+    "budgetsRenewed": false,
+    "writes": [
+      "docs\\frontend-audits\\phase6-proof-next12-api-logs-summary-runtime-and-preservation.json",
+      "web\\logs\\phase6-proof-next12-api-logs-summary-runtime-and-preservation.log"
+    ]
+  },
+  "authority": {
+    "releasedWorkerReceipt": "logs\\phase6-fix-next12-api-logs-summary-supported-severity-and-count.log",
+    "releasedWorkerReceiptSha256": "515a519882014fc6251f69984c636e97d1d0bae341a6d56a5f02ff0e1cf8c2c3",
+    "releaseUtc": "2026-10-14T12:48:01.2644863Z",
+    "originalWorkerGrant": "Only ApiLogsSummary.tsx, explicit NEW ApiLogsSummary.phase6.test.tsx and sourceworker log.",
+    "proofGrant": "Read-only source/new fixture; assigned JSON report and log.",
+    "exactInheritedFixture": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.test.tsx",
+    "exactInheritedAssertionLine": 34,
+    "writeAuthority": "NOT_GRANTED",
+    "receiptEvidence": "Original unowned ApiLogsSummary.test.tsx preserved; first increased expectation obsolete, exact test grant needed.",
+    "decision": "No guessed grant, no test deletion, no case suppression, no fixture edit."
+  },
+  "pins": [
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx",
+      "sha256": "e6aaffc8e5f3028b393e6f06028c856f55c4a7e6bb679c456dae29002092796f"
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.phase6.test.tsx",
+      "sha256": "c700395ae54cd7df504017735a33df219091e140ee96def3bdeb95e983fa5bd8"
+    },
+    {
+      "path": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.test.tsx",
+      "sha256": "20f9fc49bb6b53abbc71d0bc31815536c0a6027b016efc42d1ef1975e342dd3a"
+    }
+  ],
+  "runtime": {
+    "node": "v26.8.1",
+    "nodePath": "C:\\Program Files\\nodejs\\node.exe",
+    "supportedByPackageEngines": true,
+    "vitest": "4.1.11",
+    "normalConfig": "web\\vite.config.ts",
+    "catalogGuardsBypassed": false,
+    "identityEnvironment": "VITE_GIT_SHA=phase6-scoped-fixture, as used by the original worker, prevents automatic Git probing.",
+    "catalogStartup": {
+      "split": "OK",
+      "groupedLocaleBundles": 57,
+      "namespaceFallbacks": 178,
+      "inlinedShellKeys": 1241,
+      "knownMissingKeys": 0,
+      "namespaceAudit": "2 known dotted misses, 25 dotless labels, 0 new dotted, 3 new dotless, 49 newly resolved",
+      "changedCatalogsOrBaselines": false
+    }
+  },
+  "normalEighteenCaseProof": {
+    "command": "npx --no-install vitest run src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.phase6.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "status": "PASS",
+    "exitCode": 0,
+    "testFiles": 1,
+    "collected": 18,
+    "executed": 18,
+    "passed": 18,
+    "failed": 0,
+    "runnerDurationSeconds": 32.95,
+    "runnerStartLocal": "08:17:36",
+    "limitation": "Runner duration excludes the long normal catalog startup. JSDOM fixture runtime is not native browser or whole-page acceptance.",
+    "names": [
+      "keeps the measured count and severity without claiming a temporal increase",
+      "does not emphasize a count when error_rate is 0",
+      "does not emphasize a count when error_rate is 4.999",
+      "does not emphasize a count when error_rate is 5",
+      "retains the strict >5 threshold when error_rate is 5.001",
+      "retains the strict >5 threshold when error_rate is 6.5",
+      "retains a measured zero count without replacing it or suppressing it",
+      "does not invent an error count for a nullish wire value null",
+      "does not invent an error count for a nullish wire value undefined",
+      "formats the real integer count with saved locale en-US",
+      "formats the real integer count with saved locale de-DE",
+      "formats the real integer count with saved locale ar-EG",
+      "reacts to saved number preferences without replacing the statistics source",
+      "preserves four numeric tiles, both scope explanations, and integer milliseconds",
+      "preserves all-time scope and fixed milliseconds above one second",
+      "keeps retained measurements, severity, and independent summaries after refresh failure",
+      "keeps first-load and initial-failure shells without manufacturing zero or severity",
+      "preserves measured zero tiles and both real review-details actions"
+    ]
+  },
+  "inheritedPreservationFixture": {
+    "command": "npx --no-install vitest run src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.test.tsx --pool=forks --maxWorkers=2 --reporter=verbose",
+    "status": "NOTRUN_EXTERNAL_CATALOG_STARTUP_FAILURE",
+    "authoredCases": 5,
+    "exitCode": 1,
+    "collected": 0,
+    "executed": 0,
+    "passed": 0,
+    "failedTests": 0,
+    "startupFailure": "Normal split-i18n-catalog.mjs --check failed on shell/grouped namespace projections and runtime-manifest.json/usage-manifest.json; exact invalid names and stack are in raw log.",
+    "catalogFailureConsumesAttempt": false,
+    "sourceKnownObsoleteExpectation": "First case expects increased despite approved source removal; exact path established but no write grant. Startup failure is not evidence that this assertion executed.",
+    "earlier18PassStillRetained": true
+  },
+  "preservation": {
+    "method": "Existing check-modernization-preservation.mjs validateBaseline/capture/compare exports with immutable PRESERVATION_BASELINE serialized in released sourceworker log.",
+    "baselineRegenerated": false,
+    "originalSourceSha256": "64d216107d80a1115005b8a5099d5198097fbb19089c1076493a1a4be388a0e9",
+    "rawStatus": "SOURCE_REGRESSION",
+    "rawExitCode": 1,
+    "diagnostics": 1,
+    "diagnosticCategory": "reachability",
+    "diagnostic": "Resolved local dependency @/components/a11y removed.",
+    "reviewDisposition": "INTENTIONAL_SCOPED_REMOVAL: VisuallyHidden was solely used to announce unsupported temporal increased; removing it is necessary to remove that false claim, not removal of a panel, metric, action or measurement.",
+    "exactOriginalByteTransformEqualsCurrent": true,
+    "transform": "Remove VisuallyHidden import, decorative up arrow and increased announcement; add existing useNumberFormatting/fmtInt; replace String(error_count) with fmtInt(error_count).",
+    "originalLines": 64,
+    "currentLines": 63,
+    "ratio": 0.984375,
+    "minimumRequiredRatio": 0.7,
+    "briefs": { "before": 2, "after": 2 },
+    "sections": { "before": 1, "after": 1 },
+    "glassPanels": { "before": 0, "after": 0 },
+    "chartContainers": { "before": 0, "after": 0 },
+    "unchangedMetricIds": [
+      "api-total-calls", "api-error-rate", "api-average-duration", "api-last-24h"
+    ],
+    "semantics": "Strict >5/current measured counts including zero/nullish guard retained; saved locale formats the integer and reacts without changing source payload. Both scoped summaries, independent 24h explanation, integer milliseconds, retained/error/loading/missing states and real details action are covered by executed tests.",
+    "accessibilityEvidence": "Source retains plain readable count text under the error-rate MetricLabel/listitem and unchanged light/dark severity classes. Unsupported hidden temporal announcement is absent. Native composed contrast and actual screen-reader behavior remain unmeasured.",
+    "rawExitNotPromotedToPass": true
+  },
+  "scopedChecks": {
+    "eslint": {
+      "command": "npx --no-install eslint src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.phase6.test.tsx src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.test.tsx --max-warnings 0",
+      "exitCode": 0,
+      "output": "empty"
+    },
+    "sourceStyleScan": {
+      "command": "node scripts\\frontend-qa.mjs scan --path src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.tsx",
+      "exitCode": 0,
+      "candidateViolations": 0,
+      "tokenReferenceReview": 0,
+      "tokenOwnerExemptions": 0,
+      "forcedColorsReview": 0
+    },
+    "rawSourceCounts": {
+      "inlineStyles": 0, "rawHTML": 0, "directLibraries": 0, "oldApiImports": 0,
+      "doublePrefix": 0, "camelQuery": 0, "neonGlow": 0,
+      "unsupportedTemporal": 0, "unformattedCount": 0,
+      "processExitCode": 0
+    },
+    "scopedTypes": {
+      "command": "Existing TypeScript API createProgram: exact source/two fixtures + existing vite-env.d.ts and jest-dom types\\vitest.d.ts, unchanged tsconfig options, noEmit.",
+      "exitCode": 2,
+      "totalDiagnostics": 1,
+      "ownedDiagnostics": 0,
+      "externalDiagnostic": "src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx(11,22): TS6133 allWindowsClosed is declared but never read.",
+      "disposition": "External failure; left untouched. Not a clean compiler gate."
+    }
+  },
+  "hookContractSourceReview": {
+    "hook": "useAPICallLogStats",
+    "hookEvidence": "web\\src\\api\\hooks\\useAdmin.ts:153-158",
+    "adapterEvidence": "web\\src\\api\\devtools.ts:134-141",
+    "routerEvidence": "internal\\api\\router.go:4653-4657",
+    "path": "/api-logs/stats",
+    "queryParameters": ["start", "end_exclusive"],
+    "signalForwarded": true,
+    "sourceMatch": true,
+    "hookOrPublicContractChanges": 0,
+    "networkExecution": "NOTRUN"
+  },
+  "residualNeeds": [
+    {
+      "kind": "BLOCKER",
+      "path": "web\\src\\features\\admin\\components\\statstrip-api-quality\\ApiLogsSummary.test.tsx",
+      "need": "Explicit file-write grant for surgical first-case name/obsolete increased assertion update; retain all five scenarios and assert real count/severity with no temporal claim. No update made here."
+    },
+    {
+      "kind": "EXTERNAL_CATALOG_STARTUP_FAILURE",
+      "need": "Serialized catalog owner restores current generated projections through unchanged normal generator/check; then run all five inherited cases after an explicit assertion-update grant. Do not rerun the already-passing 18 cases as a new fix or bypass startup guards."
+    },
+    {
+      "kind": "EXTERNAL_COMPILER_FAILURE",
+      "path": "web\\src\\features\\admin\\components\\security-access\\EventHistoryTable.tsx",
+      "need": "Existing owner resolves unused allWindowsClosed diagnostic; this worker does not edit unrelated files."
+    },
+    {
+      "kind": "NATIVE_ACCEPTANCE",
+      "need": "Native composed dark/light contrast, actual screen-reader/keyboard/viewport acceptance unmeasured; no new native budget inferred."
+    }
+  ],
+  "notRun": [
+    "Full npx tsc --noEmit", "Full build", "Full lint", "Full suites",
+    "Browser/native contrast", "Whole application gate", "Phase7"
+  ],
+  "safety": {
+    "gitCommands": 0, "installs": 0, "browserDownloads": 0, "browserCalls": 0,
+    "serverStarts": 0, "dockerCommands": 0, "providerWrites": 0, "apiWrites": 0,
+    "sharedComponentWrites": 0, "catalogWrites": 0, "baselineWrites": 0,
+    "delegations": 0, "orchestrationLaunches": 0,
+    "attemptBudgetsReset": false,
+    "historicalZeroExecutionPromotedToPass": false
+  }
+}
