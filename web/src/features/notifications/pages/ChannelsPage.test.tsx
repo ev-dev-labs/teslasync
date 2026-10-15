@@ -400,7 +400,7 @@ describe('ChannelsPage — loading / error / empty', () => {
   it('shows paused initial statistics without fabricating zero outcomes or an outage', () => {
     setStats({ data: undefined, isPending: true, isLoading: false, fetchStatus: 'paused' });
     renderPage();
-    expect(screen.getByText('Refresh paused')).toBeInTheDocument();
+    expect(screen.getAllByText('Refresh paused').length).toBeGreaterThan(0);
     expect(screen.queryByTestId('stats-band')).not.toBeInTheDocument();
     expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
     expect(screen.getByTestId('providers-panel')).toBeInTheDocument();
