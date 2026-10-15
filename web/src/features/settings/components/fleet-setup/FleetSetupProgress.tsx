@@ -138,11 +138,13 @@ export function FleetSetupProgress({
     [connection, tokenValid, subscribed, streaming, reduce, t],
   )
   const stepSources = [accountSource, tokenSource, telemetrySource, telemetrySource]
+  const sourceIsLoading = (source: (typeof stepSources)[number]) => {
+    if ('isLoading' in source) return source.isLoading
+    return source.status === 'initial' || ('isRefreshing' in source && source.isRefreshing)
+  }
   const steps = baseSteps.map((step, index) => {
     const source = stepSources[index]!
-    const sourceLoading = 'isLoading' in source
-      ? source.isLoading
-      : source.status === 'initial' || source.isRefreshing
+    const sourceLoading = sourceIsLoading(source)
     const annotation = source.isRefreshBlocked
       ? sourceT('dataSources.status.paused', 'Refresh paused')
       : source.fatalError
@@ -167,7 +169,7 @@ export function FleetSetupProgress({
   return (
     <GlassPanel
       className="h-full min-w-0 space-y-4 p-4 sm:p-5"
-      aria-busy={stepSources.some(source => ('isLoading' in source ? source.isLoading : source.status === 'initial' || source.isRefreshing) && !source.isRefreshBlocked)}
+      aria-busy={stepSources.some(source => sourceIsLoading(source) && !source.isRefreshBlocked)}
     >
       <div className="flex min-w-0 items-center gap-3">
         <IconBox color="green">
