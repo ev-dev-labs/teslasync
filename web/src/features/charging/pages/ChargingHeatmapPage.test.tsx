@@ -269,11 +269,11 @@ describe('ChargingHeatmapPage — KPI band branches', () => {
       const grid = screen.getByRole('img', { name: 'Charging sessions by weekday and hour of day' });
       expect(grid.querySelectorAll('[title]')).toHaveLength(168);
       expect(grid.parentElement?.parentElement?.querySelectorAll('span[aria-hidden="true"]')).toHaveLength(5);
-      const figure = screen.getByRole('figure', { name: 'Charging sessions by weekday and hour of day' });
+      const figure = screen.getByRole('figure', { name: 'Weekly Charging Heatmap' });
       expect(within(figure).getAllByRole('row')).toHaveLength(169);
       expect(within(figure).getByRole('button', { name: 'Export chart' })).toBeEnabled();
-      expect(screen.getByRole('figure', { name: 'Charging session counts at the most frequently used locations' })).toBeInTheDocument();
-      expect(screen.getByRole('figure', { name: 'Charging session counts for each day of the week' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Charging session counts at the most frequently used locations' })).toBeInTheDocument();
+      expect(screen.getByRole('img', { name: 'Charging session counts for each day of the week' })).toBeInTheDocument();
       expect(screen.getAllByText(/This is not a complete-history total/).length).toBeGreaterThan(0);
     });
 

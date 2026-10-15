@@ -275,7 +275,7 @@ export default function ChargingHeatmapPage() {
                     height={300}
                     mobileHeight={300}
                   >
-                    <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} />
+                    <HeatmapGrid model={model} energySlots={slotData} formatEnergy={formatEnergy} framed />
                   </EmbeddedChart>
                   <Accordion
                     title={t('chart.a11y.fallbackTableLabel', '{{title}} — data table', {

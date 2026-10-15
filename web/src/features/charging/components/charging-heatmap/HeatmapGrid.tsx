@@ -15,6 +15,8 @@ interface HeatmapGridProps {
   }[];
   /** Formats an SI watt-hours value for the hover tooltip. */
   formatEnergy: (wh: number) => string;
+  /** The containing chart frame already provides the visualization label. */
+  framed?: boolean;
 }
 
 /**
@@ -23,7 +25,7 @@ interface HeatmapGridProps {
  * sensible min-width and scrolls inside its own container on narrow screens so
  * the page itself never scrolls horizontally.
  */
-export function HeatmapGrid({ model, energySlots, formatEnergy }: HeatmapGridProps) {
+export function HeatmapGrid({ model, energySlots, formatEnergy, framed = false }: HeatmapGridProps) {
   const { t } = useTranslation();
   const grid = model?.grid ?? [];
   const maxCount = model?.maxCount ?? 0;
@@ -34,8 +36,10 @@ export function HeatmapGrid({ model, energySlots, formatEnergy }: HeatmapGridPro
     <div>
       <div className="overflow-x-auto">
         <div
-          role="img"
-          aria-label={t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day')}
+          {...(framed ? {} : {
+            role: 'img' as const,
+            'aria-label': t('charging.heatmap.gridAria', 'Charging sessions by weekday and hour of day'),
+          })}
           className="grid min-w-[640px] grid-cols-[56px_repeat(24,minmax(0,1fr))] gap-[2px]"
         >
           {/* Hour header row */}

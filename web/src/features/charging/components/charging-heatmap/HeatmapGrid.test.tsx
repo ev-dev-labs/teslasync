@@ -80,6 +80,11 @@ const heatCells = (container: HTMLElement) =>
 
 /** Normalise rgba serialisation so whitespace differences don't break equality. */
 const norm = (s: string) => s.replace(/\s+/g, '');
+const normalizedCssColor = (value: string) => {
+  const probe = document.createElement('div');
+  probe.style.backgroundColor = value;
+  return norm(probe.style.backgroundColor);
+};
 
 describe('HeatmapGrid — structure & accessibility', () => {
   it('renders a labelled role="img" grid with all weekdays and hour columns', () => {
@@ -133,14 +138,14 @@ describe('HeatmapGrid — colour scale', () => {
     const cells = heatCells(container);
 
     // Busiest slot: ratio 1 → hottest stop.
-    expect(norm(cells[cellIndex(1, 9)].style.backgroundColor)).toBe(norm(heatColor(4, 4)));
+    expect(norm(cells[cellIndex(1, 9)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(4, 4)));
     // Quarter-density slot: distinct mid stop, not the hot one.
-    expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).toBe(norm(heatColor(1, 4)));
+    expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(1, 4)));
     expect(norm(cells[cellIndex(3, 14)].style.backgroundColor)).not.toBe(
-      norm(heatColor(4, 4)),
+      normalizedCssColor(heatColor(4, 4)),
     );
     // Empty slot: faintest base fill.
-    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(norm(heatColor(0, 4)));
+    expect(norm(cells[cellIndex(0, 0)].style.backgroundColor)).toBe(normalizedCssColor(heatColor(0, 4)));
   });
 });
 
@@ -202,7 +207,7 @@ describe('HeatmapGrid — legend', () => {
     swatches.forEach((swatch, i) => {
       // Swatches are purely decorative and paint the exact scale colours.
       expect(swatch).toHaveAttribute('aria-hidden', 'true');
-      expect(norm(swatch.style.backgroundColor)).toBe(norm(HEAT_LEGEND[i]));
+      expect(norm(swatch.style.backgroundColor)).toBe(normalizedCssColor(HEAT_LEGEND[i]));
     });
   });
 });
@@ -224,7 +229,7 @@ describe('HeatmapGrid — hardening', () => {
     expect(screen.getByRole('img')).toBeInTheDocument();
     // Every slot paints the faint base fill (heatColor(0, 0)).
     expect(norm(heatCells(container)[cellIndex(0, 0)].style.backgroundColor)).toBe(
-      norm(heatColor(0, 0)),
+      normalizedCssColor(heatColor(0, 0)),
     );
   });
 
