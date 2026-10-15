@@ -109,6 +109,9 @@ export function isFocusRestorable(el: Element | null | undefined): el is HTMLEle
         // skip restoration for every test.
         return true;
       }
+      // A sized box is visible geometry (e.g. a measured layout without
+      // offsetParent support); refusing it would drop the trigger restore.
+      if (rect.width > 0 || rect.height > 0) return true;
     }
     return false;
   }

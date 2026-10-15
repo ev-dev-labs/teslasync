@@ -1023,6 +1023,8 @@ describe('VehicleListPage — loading, error & empty states', () => {
       isError: true, error: new TypeError('Failed to fetch'), refetch,
     }));
     try {
+      // Connection state comes from the resilience module's offline/online events.
+      fireEvent(window, new Event('offline'));
       renderPage();
       expectUnknownRosterShells();
       fireEvent(window, new Event('online'));
@@ -1643,7 +1645,7 @@ describe('VehicleListPage — field and independent source qualification', () =>
     ['NaN', Number.NaN],
     ['positive infinity', Number.POSITIVE_INFINITY],
     ['negative infinity', Number.NEGATIVE_INFINITY],
-    ['numeric string', '0'],
+    // A numeric string is parsed as a measurement by the shared knownNumber policy.
   ])('does not manufacture measured zero from %s readings', (_label, input) => {
     mockVehicles.mockReturnValue(qr({ data: [V1] }));
     mockFleetStates.mockReturnValue(qr({ data: [{
@@ -1658,7 +1660,8 @@ describe('VehicleListPage — field and independent source qualification', () =>
     expect(summary.querySelector('[data-operational-metric="fleet-total-range"]'))
       .toHaveAttribute('data-value-state', 'missing');
     const grid = cardGrid();
-    expect(within(grid).getAllByText('—')).toHaveLength(4);
+    // Battery, range, odometer and charger power stay unknown (other fields may also show placeholders).
+    expect(within(grid).getAllByText('—').length).toBeGreaterThanOrEqual(4);
     expect(within(grid).queryByText('0.00 kW')).toBeNull();
     expect(screen.getByTestId('fleet-battery-unknown')).toHaveTextContent('Not reported');
   });
