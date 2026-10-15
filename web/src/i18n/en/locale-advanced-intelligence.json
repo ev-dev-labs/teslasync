@@ -337,6 +337,15 @@
       "findings": {
         "title": "Explainable findings"
       },
+      "severity": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "warning": "Warning",
+        "low": "Low",
+        "info": "Info",
+        "unknownCode": "Unknown severity: {{code}}"
+      },
       "subtitle": "Explainable command, identity, and telemetry-integrity signals without personal attribution.",
       "title": "Behavioral sentinel",
       "unsupported": {
@@ -722,6 +731,9 @@
     }
   },
   "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
     "col": {
       "date": "Date",
       "value": "Value"

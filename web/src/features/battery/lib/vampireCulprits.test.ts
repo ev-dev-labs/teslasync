@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { createInstance } from 'i18next';
 
 import type { ParkTruth, VampireSplit } from '@/types/teslaPhysics';
 import { deriveDataState } from '@/api/dataState';
+import en from '@/i18n/en.json';
 import { deriveVampireCulprits } from './vampireCulprits';
 
 const park = (overrides: Partial<ParkTruth> = {}): ParkTruth => ({
@@ -30,6 +32,39 @@ const split = (overrides: Partial<VampireSplit> = {}): VampireSplit => ({
 });
 
 describe('deriveVampireCulprits', () => {
+  it('returns a stable explanation descriptor without inventing external text', () => {
+    const report = deriveVampireCulprits(undefined, undefined);
+    expect(report.honesty).toEqual({ key: 'vampireDrain.culprit.honesty', args: {} });
+    expect(report.externalHonesty).toEqual([]);
+    expect(deriveVampireCulprits(park(), split()).honesty).toEqual(report.honesty);
+  });
+
+  it('localizes the complete explanation at display while preserving arbitrary source text', async () => {
+    const parkHonesty = '  External {{message}} <Park> text.  ';
+    const splitHonesty = 'Texte externe : fenêtre mesurée.';
+    const report = deriveVampireCulprits(
+      park({ honesty: parkHonesty }), split({ honesty: splitHonesty }),
+    );
+    expect(report.externalHonesty).toEqual([parkHonesty, splitHonesty]);
+    const i18n = createInstance();
+    await i18n.init({
+      lng: 'en',
+      fallbackLng: 'en',
+      resources: {
+        en: { translation: en },
+        fr: { translation: { vampireDrain: { culprit: { honesty: 'Explication complète traduite.' } } } },
+      },
+    });
+    expect(i18n.t(report.honesty.key, report.honesty.args)).toBe(
+      'Sentry, cabin overheat, and preconditioning only count after confirmed Park. Drain percentages are parked windows, not invented watt-hours.',
+    );
+    await i18n.changeLanguage('fr');
+    expect([...report.externalHonesty, i18n.t(report.honesty.key, report.honesty.args)].join(' '))
+      .toBe(`${parkHonesty} ${splitHonesty} Explication complète traduite.`);
+    expect(report.tonight).toBe('sentry');
+    expect(report.culprits[4].drainPct).toBe(1.8);
+  });
+
   it('names Sentry as tonight’s action when counted', () => {
     const report = deriveVampireCulprits(park(), split());
     expect(report.tonight).toBe('sentry');

@@ -25,6 +25,7 @@
       "downloadPng": "Download as PNG"
     },
     "a11y": {
+      "metricSelector": "{{title}} metric",
       "fallbackTableLabel": "{{title}} — data table",
       "summary": "Chart: {{title}}"
     },

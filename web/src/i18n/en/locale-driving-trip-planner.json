@@ -509,11 +509,13 @@
   "chargePlanner": {
     "aiAgent": {
       "badge": "Helix",
+      "departureAssumption": "No departure was supplied. This standalone draft assumes departure at the current time.",
       "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
       "emptyHint": "Select a vehicle and a rate plan to draft a schedule.",
       "generateButton": "Draft a schedule",
       "title": "Draft a schedule with Helix"
-    }
+    },
+    "invalidDepartBy": "Enter a valid departure date and time."
   },
   "charging": {
     "aiClustering": {
@@ -539,6 +541,9 @@
     }
   },
   "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
     "col": {
       "date": "Date",
       "value": "Value"

@@ -92,6 +92,10 @@
       "loadedHelp": "Number of sessions returned by the existing charging-history query, capped at 1,000. This is not a lifetime total.",
       "loadedSessions": "Loaded sessions",
       "model": "Indirect evidence, not a hardware diagnosis",
+      "modelDescription": "Modeled interruption probabilities from indirect session evidence, not measured failures or a hardware diagnosis.",
+      "modelRetained": "Retained interruption analysis",
+      "modelLoading": "Loading interruption evidence",
+      "modelAvailable": "Interruption estimate based on evaluable sessions",
       "noEvidence": "No evaluable sessions; this is the model prior, not an evidence-based estimate.",
       "paused": "Charging history loading is paused. Connect to resume or retry.",
       "period": "Loaded charging history",
@@ -146,7 +150,8 @@
       "description": "Ask Helix to propose a time-of-use-optimized charge schedule grounded in your selected rate plan and target departure. The schedule is never saved automatically — review the proposed window and click Schedule below to apply it.",
       "badge": "Helix",
       "generateButton": "Draft a schedule",
-      "emptyHint": "Select a vehicle and a rate plan to draft a schedule."
+      "emptyHint": "Select a vehicle and a rate plan to draft a schedule.",
+      "departureAssumption": "No departure was supplied. This standalone draft assumes departure at the current time."
     },
     "noRateData": "No rate data available",
     "offPeak": "Off-peak",
@@ -473,6 +478,11 @@
     },
     "curve": {
       "chargerType": "Charge rate by charger type",
+      "chargerLabels": {
+        "homeAc": "Home / AC",
+        "supercharger": "Supercharger",
+        "dcFast": "DC Fast"
+      },
       "modernization": {
         "chooseVehicle": "Choose a vehicle in the workspace header to view charging sessions.",
         "waitingConnection": "Charging sessions are waiting for a connection.",
@@ -916,7 +926,8 @@
       "period": "Selected charging session",
       "provenance": "Historical telemetry; heater energy and on-time are derived, not directly metered."
     },
-    "noSessions": "No charging sessions are available for this vehicle.",
+    "noSessions": "No charging sessions were returned in this observed window.",
+    "observedWindow": "Session choices use an observed window of {{returned}} returned charging sessions (request cap: {{limit}}). This is not a server total or a guarantee of complete history.",
     "panels": "Charging thermal analysis",
     "phases": {
       "analysisState": "Algorithm phase state (zero-fill analysis)",
@@ -968,6 +979,7 @@
     "chartAria": "Chart of battery heater power and total charging power over the session timeline",
     "col": {
       "time": "Time",
+      "timestamp": "Exact timestamp",
       "heater": "Heater (W)",
       "charge": "Charge power (W)"
     },
@@ -1098,6 +1110,13 @@
       "noData": "No monthly data available"
     },
     "calculator": {
+      "usdAssumptions": "Assumptions and comparisons are in USD. Changing the display currency does not convert these amounts. Gas volume uses US gallons.",
+      "gasPriceUsd": "Gas price (USD/US gal)",
+      "usdPerGallon": "USD/US gal",
+      "mpgUs": "Gas car efficiency (mi/US gal)",
+      "milesPerGallon": "mi/US gal",
+      "elecRateUsd": "Electricity rate (USD/kWh)",
+      "usdPerKwh": "USD/kWh",
       "title": "Gas vs electric savings calculator",
       "inputs": "Your assumptions",
       "gasPrice": "Gas price ($/gal)",
@@ -1169,6 +1188,24 @@
   },
   "powershare": {
     "title": "Powershare",
+    "enums": {
+      "unknown": "Unknown",
+      "inactive": "Inactive",
+      "handshaking": "Handshaking",
+      "init": "Initializing",
+      "enabled": "Enabled",
+      "enabledReconnectingSoon": "Enabled, reconnecting soon",
+      "stopped": "Stopped",
+      "none": "None",
+      "socTooLow": "Battery charge too low",
+      "retry": "Retry",
+      "fault": "Fault",
+      "user": "User",
+      "reconnecting": "Reconnecting",
+      "authentication": "Authentication",
+      "load": "Load",
+      "home": "Home"
+    },
     "modernization": {
       "observationContext": "Latest recorded observations; the trends show up to 48 recent readings per signal, not a complete time range."
     },
@@ -1375,6 +1412,17 @@
     "confidence": "{{level}} confidence",
     "waitProb": "{{pct}}% chance of any wait · ~{{stalls}} stalls",
     "bestHour": "Arrive {{hour}}:00 UTC instead to save ~{{min}} min.",
+    "verdict": {
+      "quiet": "Quiet",
+      "steady": "Steady",
+      "busy": "Busy",
+      "packed": "Packed"
+    },
+    "confidenceLevels": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
     "chart": {
       "title": "Wait across the arrival day (UTC)",
       "aria": "Expected wait minutes by hour of day",
@@ -1444,6 +1492,9 @@
       "kpi": {
         "staleHint": "Past 2-min window"
       }
+    },
+    "vehicleCost": {
+      "rowId": "ID {{id}}"
     }
   },
   "ai": {
@@ -1901,6 +1952,9 @@
     "version": "Calculation version"
   },
   "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
     "col": {
       "date": "Date",
       "time": "Time",

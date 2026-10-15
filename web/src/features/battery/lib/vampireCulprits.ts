@@ -28,7 +28,11 @@ export interface VampireCulprit {
 export interface VampireCulpritReport {
   culprits: VampireCulprit[];
   tonight: VampireCulpritId;
-  honesty: string;
+  honesty: {
+    key: 'vampireDrain.culprit.honesty';
+    args: Record<string, never>;
+  };
+  externalHonesty: string[];
 }
 
 function drain(value: number | null | undefined): number | null {
@@ -116,11 +120,14 @@ export function deriveVampireCulprits(
       && (row.evidence === 'live' || row.evidence === 'historical'))?.id
     ?? 'unknown';
 
-  const honesty = [
+  const externalHonesty = [
     park?.honesty,
     split?.honesty,
-    'Sentry, cabin overheat, and preconditioning only count after confirmed Park. Drain percentages are parked windows, not invented watt-hours.',
-  ].filter(Boolean).join(' ');
+  ].filter((text): text is string => typeof text === 'string' && text.length > 0);
+  const honesty: VampireCulpritReport['honesty'] = {
+    key: 'vampireDrain.culprit.honesty',
+    args: {},
+  };
 
-  return { culprits, tonight, honesty };
+  return { culprits, tonight, honesty, externalHonesty };
 }

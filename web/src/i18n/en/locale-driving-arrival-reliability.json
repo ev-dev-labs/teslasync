@@ -309,6 +309,9 @@
     }
   },
   "chart": {
+    "a11y": {
+      "metricSelector": "{{title}} metric"
+    },
     "col": {
       "date": "Date",
       "value": "Value"
