@@ -17,7 +17,8 @@ vi.mock('@/hooks/useNumberFormatting', () => ({
   }),
 }));
 
-beforeAll(async () => { await english.init({ lng: 'en', resources: {} }); });
+// Match the app's i18n config: React escapes output, so i18next must not.
+beforeAll(async () => { await english.init({ lng: 'en', resources: {}, interpolation: { escapeValue: false } }); });
 afterEach(cleanup);
 
 const now = Date.parse('2026-08-08T12:00:00Z');
@@ -92,7 +93,7 @@ describe('ArrivalReliabilityMethodology', () => {
     expect(section).toHaveTextContent('capped at 1,000');
     expect(section).toHaveTextContent('use America/Los_Angeles');
     expect(section).toHaveTextContent('reverse travel is a different route');
-    expect(section).toHaveTextContent('at least 3 and 2 samples');
+    expect(section).toHaveTextContent('at least 3 and 3 samples');
     expect(section).toHaveTextContent('limited to 2,500 rows');
     expect(section).toHaveTextContent('no holdout calibration has been performed');
     expect(section).toHaveTextContent('no arrival outcome is promised');

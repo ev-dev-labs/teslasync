@@ -43,6 +43,11 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+// FadeIn starts at opacity 0 until its animation runs; visibility assertions need the settled layout.
+vi.mock('@/components/motion', async (importOriginal) => ({
+  ...await importOriginal<typeof import('@/components/motion')>(),
+  FadeIn: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
 vi.mock('@/api/hooks/useDriving', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/api/hooks/useDriving')>();
   return {
@@ -279,7 +284,7 @@ describe('ArrivalReliabilityPage', () => {
       expectEverySection();
       expect(quantities()).toEqual(original);
       expect(within(briefs()[0]!).getByText(
-        refresh === 'failed' ? 'Retained evidence' : 'Refresh paused',
+        refresh === 'failed' ? 'Retained source' : 'Refresh paused',
       )).toBeVisible();
       for (const brief of briefs().slice(1)) {
         expect(within(brief).getAllByText('Retained source').length).toBeGreaterThan(0);
@@ -317,7 +322,7 @@ describe('ArrivalReliabilityPage', () => {
       view.rerenderPage();
       expectEverySection();
       expect(quantities()).toEqual(original);
-      expect(screen.queryByText('Retained evidence')).toBeNull();
+      expect(screen.queryByText('Retained source')).toBeNull();
       expect(screen.queryByText('Retained source')).toBeNull();
       expect(screen.queryByRole('alert')).toBeNull();
       expect(screen.queryByTestId('stale-refresh-warning')).toBeNull();
@@ -368,7 +373,7 @@ describe('ArrivalReliabilityPage', () => {
     expectEverySection();
     expect(screen.queryByText('Refresh paused')).toBeNull();
     expect(screen.queryByText('Updating…')).toBeNull();
-    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    expect(screen.getAllByText('Returned evidence').length).toBeGreaterThan(0);
   });
 
   it('renders all ten persistent analytical shells with the capped hook and vehicle timezone', () => {
@@ -600,7 +605,7 @@ describe('ArrivalReliabilityPage', () => {
     expectEverySection();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Retry' })).toBeNull();
-    expect(screen.getByText('Returned evidence')).toBeInTheDocument();
+    expect(screen.getAllByText('Returned evidence').length).toBeGreaterThan(0);
   });
 
   it('shows one actionable initial error without removing any shell', () => {
