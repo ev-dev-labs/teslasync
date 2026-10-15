@@ -91,6 +91,24 @@ describe('DataFreshness widget variant', () => {
     expect(onRefresh).toHaveBeenCalledOnce()
     expect(container.querySelector('svg.lucide-wifi, svg.lucide-wifi-off')).not.toBeInTheDocument()
   })
+
+  it('uses one shared relative-time ticker for multiple indicators', () => {
+    vi.useFakeTimers()
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+    const props = { updatedAt: Date.now(), isFetching: false, isStale: false, isError: false }
+    const { unmount } = render(
+      <>
+        <DataFreshness {...props} />
+        <DataFreshness {...props} />
+        <DataFreshness {...props} />
+      </>,
+    )
+    expect(setIntervalSpy).toHaveBeenCalledTimes(1)
+    unmount()
+    vi.clearAllTimers()
+    vi.useRealTimers()
+    setIntervalSpy.mockRestore()
+  })
 })
 
 describe('DataFreshness', () => {

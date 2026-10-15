@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { useTranslation } from 'react-i18next';
 import { RefreshCw, Wifi, WifiOff } from 'lucide-react';
 import type { UseQueryResult } from '@tanstack/react-query';
@@ -92,6 +92,30 @@ const STATUS_LABEL = {
   error: { key: 'freshness.error', fallback: 'Error' },
 } as const;
 
+let freshnessTick = 0;
+let freshnessTimer: ReturnType<typeof setInterval> | null = null;
+const freshnessSubscribers = new Set<() => void>();
+
+function subscribeToFreshnessTicker(subscriber: () => void) {
+  freshnessSubscribers.add(subscriber);
+  if (freshnessTimer == null) {
+    freshnessTimer = setInterval(() => {
+      freshnessTick += 1;
+      freshnessSubscribers.forEach((notify) => notify());
+    }, 30_000);
+  }
+  return () => {
+    freshnessSubscribers.delete(subscriber);
+    if (freshnessSubscribers.size === 0 && freshnessTimer != null) {
+      clearInterval(freshnessTimer);
+      freshnessTimer = null;
+    }
+  };
+}
+
+const noTickerSubscription = () => () => undefined;
+const getFreshnessTick = () => freshnessTick;
+
 // Centralize this once the shared
 // `formatRelativeTime` helper in @/lib/dateFormat grows i18n plural support.
 // Today the shared helper returns hardcoded English ("just now", "5m ago"),
@@ -136,16 +160,12 @@ export function DataFreshness({
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
   const { formatTime } = useDateFormat();
-  const [, setTick] = useState(0);
-
-  // Re-render periodically to keep the relative time label accurate. The
-  // label only changes on minute boundaries now, so a 30s cadence is plenty
-  // and avoids needless per-second re-renders.
-  useEffect(() => {
-    if (!updatedAt) return;
-    const id = setInterval(() => setTick((n) => n + 1), 30_000);
-    return () => clearInterval(id);
-  }, [updatedAt]);
+  // All mounted freshness indicators share one clock instead of each owning a timer.
+  useSyncExternalStore(
+    updatedAt ? subscribeToFreshnessTicker : noTickerSubscription,
+    getFreshnessTick,
+    getFreshnessTick,
+  );
 
   const forcedStale =
     forceStaleAfterMs != null &&
