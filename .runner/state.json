@@ -15380,7 +15380,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "9359e5a936",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17353,7 +17353,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-001 | regression execution blocked by missing dependencies | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-001 | regression execution blocked by missing dependencies and failed dependency restoration | done so far: existing page fix and independent HVAC/AC regressions confirmed; no source files changed",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-001 | regression execution blocked by missing dependencies | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-001 | regression execution blocked by missing dependencies and failed dependency restoration | done so far: existing page fix and independent HVAC/AC regressions confirmed; no source files changed | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17368,7 +17368,7 @@
     "Status": "done",
     "WorkAttempts": 1,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-002 | verification blocked by external dependency failures | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx with independent measurement evidence and regression coverage DONE | fix-vehicle-systems-climate-control-cc-002 | no change needed: implementation and regression coverage already present; test execution blocked by missing external Vite dependencies",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-002 | verification blocked by external dependency failures | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx with independent measurement evidence and regression coverage DONE | fix-vehicle-systems-climate-control-cc-002 | no change needed: implementation and regression coverage already present; test execution blocked by missing external Vite dependencies | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17383,7 +17383,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "1df6616cc2",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17398,7 +17398,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-005 | incomplete installed dependencies blocked test execution | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-005 | incomplete dependencies blocked required test execution | done so far: reviewed existing page and regression tests; no source files changed",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-005 | incomplete installed dependencies blocked test execution | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-005 | incomplete dependencies blocked required test execution | done so far: reviewed existing page and regression tests; no source files changed | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17415,7 +17415,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17430,7 +17430,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-007 | dependency failures prevented verification | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx with consistent presentation indices and focused regressions Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-007 | missing dependencies prevented verification; restoration failed with ENOTEMPTY | done so far: confirmed existing implementation and regressions; no source edits",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-007 | dependency failures prevented verification | done so far: updated web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx with consistent presentation indices and focused regressions Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-007 | missing dependencies prevented verification; restoration failed with ENOTEMPTY | done so far: confirmed existing implementation and regressions; no source edits | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17445,7 +17445,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-008 | focused tests blocked by missing dependencies | done so far: changed web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx with Refresh guard, prerequisite explanation, and regressions Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-008 | focused tests blocked by missing dependencies and ENOTEMPTY restoration failures | done so far: confirmed existing Refresh guard, prerequisite explanation, and regressions; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-008 | focused tests blocked by missing dependencies | done so far: changed web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx and web\\src\\features\\vehicle-systems\\pages\\ClimateControlPage.test.tsx with Refresh guard, prerequisite explanation, and regressions Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-008 | focused tests blocked by missing dependencies and ENOTEMPTY restoration failures | done so far: confirmed existing Refresh guard, prerequisite explanation, and regressions; no source changes | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17459,7 +17459,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-009 | verification blocked by missing dependencies | done so far: updated web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateSourceBoundary.tsx and added colocated ClimateSourceBoundary.test.tsx Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-009 | regression verification blocked by incomplete and locked dependencies | done so far: inspected existing implementation and colocated regression tests; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-climate-control-cc-009 | verification blocked by missing dependencies | done so far: updated web\\src\\features\\vehicle-systems\\components\\climate-modernization\\ClimateSourceBoundary.tsx and added colocated ClimateSourceBoundary.test.tsx Attempt 2: FAILED | fix-vehicle-systems-climate-control-cc-009 | regression verification blocked by incomplete and locked dependencies | done so far: inspected existing implementation and colocated regression tests; no source changes | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17748,7 +17748,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "6ee65562b1",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17860,7 +17860,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17876,7 +17876,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f02 | verification blocked by missing dependencies and npm restore failures | done so far: updated directory count gate and both assigned test files; preserved cap, shell, and run details Attempt 2: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f02 | verification blocked by broken dependencies and failed restoration | done so far: confirmed existing count gate and requested test coverage; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f02 | verification blocked by missing dependencies and npm restore failures | done so far: updated directory count gate and both assigned test files; preserved cap, shell, and run details Attempt 2: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f02 | verification blocked by broken dependencies and failed restoration | done so far: confirmed existing count gate and requested test coverage; no source changes | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17893,7 +17893,7 @@
     "Status": "done",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": "",
+    "Notes": " | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "548954972d",
     "NotBefore": "0001-01-01T00:00:00"
   },
@@ -17909,7 +17909,7 @@
     "Status": "pending",
     "WorkAttempts": 0,
     "InfraAttempts": 0,
-    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f05 | Missing test/compiler dependencies prevented verification | done so far: updated web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingEvidenceKpiLedger.tsx and added regressions in web\\src\\features\\vehicle-systems\\pages\\HvacCyclingPage.test.tsx Attempt 2: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f05 | Dependency restoration failed; required tests and TypeScript verification could not run | done so far: inspected existing implementation and regressions; no source changes",
+    "Notes": " Attempt 1: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f05 | Missing test/compiler dependencies prevented verification | done so far: updated web\\src\\features\\vehicle-systems\\components\\hvac-cycling\\HvacCyclingEvidenceKpiLedger.tsx and added regressions in web\\src\\features\\vehicle-systems\\pages\\HvacCyclingPage.test.tsx Attempt 2: FAILED | fix-vehicle-systems-hvac-cycling-hvac-f05 | Dependency restoration failed; required tests and TypeScript verification could not run | done so far: inspected existing implementation and regressions; no source changes | Area verification 2026-10-15: climate + HVAC focused suites passed (106 tests); unresolved HVAC directory counts now render Unknown instead of fabricated zero. Overall vehicle-systems area remains in progress.",
     "Commit": "",
     "NotBefore": "0001-01-01T00:00:00"
   },

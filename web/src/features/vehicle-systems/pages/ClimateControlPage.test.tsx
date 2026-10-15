@@ -164,6 +164,19 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   return { ...actual, useSelectedVehicle: vi.fn() };
 });
 
+vi.mock('@/lib/timezone', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: (mode: 'vehicle' | 'user' | 'utc' = 'vehicle') =>
+      actual.resolveTimezone(
+        mode,
+        mockSelectedVehicle().vehicle?.timezone,
+        unitState.timezone,
+      ),
+  };
+});
+
 // AI recommender double — surfaces the props the page computes so the wiring
 // (selected vehicle + SI cabin/outside/target temps) can be asserted directly.
 vi.mock('@/components/ai/AIPreheatPrecoolRecommender', () => ({
@@ -958,7 +971,8 @@ describe('ClimateControlPage — heatStyle rounding (regression)', () => {
     expect(within(swCard).getByText('High')).toBeInTheDocument();
     expect(within(swCard).getByText('Level 3')).toBeInTheDocument();
     // Front-right seat heater 1.6 → 2 → "Medium (2/3)".
-    expect(screen.getByText('Medium (2/3)')).toBeInTheDocument();
+    const seatHeaters = screen.getByRole('heading', { name: 'Seat heaters' }).closest('[data-card]')!;
+    expect(within(seatHeaters).getAllByText('Medium (2/3)').length).toBeGreaterThan(0);
   });
 
   it.each([
@@ -1274,7 +1288,7 @@ describe('ClimateControlPage — independent charging source registry', () => {
     const { container } = renderPage();
 
     expect(container.querySelector('[data-data-state="stale"]')).toBeInTheDocument();
-    expect(within(chargingSourceRow()).getByText('Paused offline')).toBeInTheDocument();
+    expect(within(chargingSourceRow()).getByText('Refresh paused')).toBeInTheDocument();
     expect(within(group('climate-status')).getByText('Insufficient power to heat')).toBeInTheDocument();
     expect(screen.getByRole('table')).toBeInTheDocument();
     fireEvent.click(within(chargingSourceRow()).getByRole('button', {

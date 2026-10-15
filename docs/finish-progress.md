@@ -159,3 +159,15 @@ Not started.
 - The 100 vehicle work items remain pending for item-by-item acceptance (one
   includes backend day-log coverage); these test results are recorded in runner
   notes and do not close unrelated requirements. Continue with vehicle-systems.
+
+## Vehicle-systems: climate and HVAC clusters (2026-10-15)
+
+- Focused suites passed: `ClimateControlPage.test.tsx` and
+  `HvacCyclingPage.test.tsx` (**106 tests**).
+- Fixed unresolved HVAC run-directory counts: null counts previously flowed
+  through `fmtInt` as zero. They now display localized “Unknown” while retaining
+  the configured 50-run cap. Corrected current icon name, scope, precision, and
+  timezone expectations in the related tests.
+- Vehicle-systems remains in progress; its broader sweep still has failures in
+  maintenance, media, preconditioning, tire pressure, safety, climate summaries,
+  software updates, and related presenters. Continue with those clusters.

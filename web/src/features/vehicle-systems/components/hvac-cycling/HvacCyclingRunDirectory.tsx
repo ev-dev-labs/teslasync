@@ -42,6 +42,7 @@ export function HvacCyclingRunDirectory({
   const date = (ms: number) => formatDateTime(new Date(ms), { tz: summary.timeZone });
   const directory = summary.runDirectory;
   const resolved = state.vehicleSelected && state.isResolved && !state.isLoading && !state.error;
+  const unknownCount = t('common.unknown', 'Unknown');
   const boundaryLabel = (boundary: HvacRunBoundary) => {
     if (boundary === 'observed_transition') {
       return t('hvacCycling.directory.boundary.transition', 'Observed transition');
@@ -72,9 +73,9 @@ export function HvacCyclingRunDirectory({
             'hvacCycling.directory.cap',
             'Showing {{shown}} of {{total}} runs; {{omitted}} omitted by the {{cap}}-run display cap.',
             {
-              shown: fmtInt(resolved ? directory.displayed : null),
-              total: fmtInt(resolved ? directory.total : null),
-              omitted: fmtInt(resolved ? directory.omitted : null),
+              shown: resolved ? fmtInt(directory.displayed) : unknownCount,
+              total: resolved ? fmtInt(directory.total) : unknownCount,
+              omitted: resolved ? fmtInt(directory.omitted) : unknownCount,
               cap: fmtInt(directory.cap),
             },
           )}

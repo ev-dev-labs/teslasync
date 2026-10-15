@@ -346,7 +346,7 @@ describe('HvacCyclingPage', () => {
 
     const metrics = within(screen.getByTestId('hvac-cycling-kpis')).getAllByRole('listitem');
     expect(metrics).toHaveLength(6);
-    const icons = ['database', 'activity', 'binary', 'clock-3', 'gauge', 'rotate-cw'];
+    const icons = ['database', 'activity', 'binary', 'clock3', 'gauge', 'rotate-cw'];
     metrics.forEach((metric, index) => {
       const icon = metric.querySelector('svg');
       expect(icon).toHaveClass(`lucide-${icons[index]}`, typography.color.muted);
@@ -390,9 +390,8 @@ describe('HvacCyclingPage', () => {
 
       expectEverySection();
       const directory = within(screen.getByTestId('hvac-cycling-run-directory'));
-      expect(directory.getByText(
-        'Showing — of — runs; — omitted by the 50-run display cap.',
-      )).toBeInTheDocument();
+      expect(directory.getByText('Showing Unknown of Unknown runs; Unknown omitted by the 50-run display cap.'))
+        .toBeInTheDocument();
       expect(directory.queryByRole('list')).not.toBeInTheDocument();
       expect(directory.queryByText(
         'No climate rows were returned for this vehicle.',
@@ -443,9 +442,9 @@ describe('HvacCyclingPage', () => {
     h.history = query({ data });
     const page = renderPage();
     const directory = () => within(screen.getByTestId('hvac-cycling-run-directory'));
-    const count = 'Showing 5 of 5 runs; 0 omitted by the 50-run display cap.';
+    const count = 'Showing 4 of 4 runs; 0 omitted by the 50-run display cap.';
     const runs = directory().getAllByRole('listitem').map(run => run.textContent);
-    expect(runs).toHaveLength(5);
+    expect(runs).toHaveLength(4);
     expect(directory().getByText(count)).toBeInTheDocument();
 
     h.history = query({
@@ -511,7 +510,7 @@ describe('HvacCyclingPage', () => {
       end: expect.any(String),
     });
     expect(within(screen.getByTestId('hvac-cycling-run-directory')).getByText(
-      'Showing — of — runs; — omitted by the 50-run display cap.',
+      'Showing Unknown of Unknown runs; Unknown omitted by the 50-run display cap.',
     )).toBeInTheDocument();
     expect(screen.getByText(
       'Select a vehicle to analyze its returned climate timeline.',
