@@ -265,7 +265,9 @@ export default function JourneyAssurancePage() {
           emptyMessage={pendingMessage}
         >
           <div className="@container grid min-w-0 gap-4 @2xl:grid-cols-2">
-            {factors.length === 0 ? <EmptyState message={t('advancedIntelligence.journey.factors.empty', 'No supported readiness factors are available.')} /> : factors.map((factor) => (
+            {factors.length === 0 ? <EmptyState variant="informational"
+              message={t('advancedIntelligence.journey.factors.empty', 'No supported readiness factors are available.')}
+              description={t('advancedIntelligence.journey.factors.emptyHelp', 'Factors appear when the selected vehicle has supported readiness data for this journey.')} /> : factors.map((factor) => (
               <article key={factor.factor} className={`min-w-0 break-words ${glassCardClasses.md}`}>
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <Text as="h3" variant="label" className="min-w-0 break-words">{factor.factor}</Text>

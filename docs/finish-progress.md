@@ -214,3 +214,23 @@ Not started.
 
 - Updated the bare `free` search token to use the existing recorded-zero-cost filter, and scoped responsive pagination assertions to the loaded session total. The focused page suite improved from 13 failures to 5 failures (**88 passed, 5 failed of 93**).
 - The remaining failures are prior-period copy, filtered empty-state rendering, and loading skeleton counts. Keep the charging-list group open and resolve these before treating charging as complete.
+
+## Phase 7 gate follow-up: actionable empty states (2026-10-15)
+
+The original empty-state audit reported 47 findings after removing the generic
+`no-action:` comments from the handoff fix. The lint rule now accepts the shared
+`EmptyState` `variant="informational"` only for self-populating or healthy
+informational panels; the existing project-specific no-action escape hatch is
+preserved for prior cases, and no new no-action comments were added here.
+
+- **35 actionable findings:** Retry for recoverable source states, clear search
+  or date filters for filtered results, vehicle/setup navigation where a
+  prerequisite is missing, and source refresh/all-time/all-vehicle actions for
+  charging history. The three charging history EmptyStates choose between a
+  concrete scope action and an informational explanation according to state.
+- **12 informational findings:** panels that populate from later telemetry or
+  supported source data, plus the healthy “no attention items” state. Each now
+  explains what event, input, or source response will make content appear.
+- Added a focused `EmptyState` test for the informational variant. Full gates and
+  affected-area regressions are still in progress; do not treat these counts as
+  a completed Phase 7 gate result.

@@ -165,11 +165,14 @@ export default function AuditLogPage() {
                   pagination={{ defaultPageSize: 50 }}
                 />
               ) : (
-                <EmptyState message={t('audit.noMatches', 'No audit entries match your search.')} className="py-6" />
+                <EmptyState message={t('audit.noMatches', 'No audit entries match your search.')}
+                  action={{ label: t('common.clearSearch', 'Clear search'), onClick: () => setSearch('') }} className="py-6" />
               )}
             </div>
           ) : (
-            <EmptyState message={t('audit.noEntries', 'No audit entries found')} className="py-6" />
+            <EmptyState variant="informational" message={t('audit.noEntries', 'No audit entries found')}
+              description={t('audit.noEntriesHelp', 'Audit entries appear after system or account activity is recorded.')}
+              className="py-6" />
           )}
         </GlassPanel>
       </FadeIn>

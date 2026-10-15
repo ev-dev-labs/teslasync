@@ -615,7 +615,8 @@ export default function SystemStatusPage() {
                       ))}
                     </ul>
                   ) : (
-                    <EmptyState message={t('systemStatus.noComponents', 'Current component status is unavailable.')} className="py-6" />
+                    <EmptyState message={t('systemStatus.noComponents', 'Current component status is unavailable.')}
+                      action={{ label: t('common.retry', 'Retry'), onClick: () => { void extendedQuery.refetch(); } }} className="py-6" />
                   )}
                 </GlassPanel>
               </section>
@@ -625,7 +626,10 @@ export default function SystemStatusPage() {
                 <section id="action-items" aria-label={t('systemStatus.actionItems', 'Operator action items')}>
                   <ActionItemsPanel title={t('systemStatus.needsAttention', 'Needs your attention')}>
                     {attentionNotice && <Text role="status" size="sm" color="secondary" className="py-3">{attentionNotice}</Text>}
-                    {!hasAttention && !attentionNotice && <EmptyState message={t('operations.noAttention', 'No current attention items.')} className="py-6" />}
+                    {!hasAttention && !attentionNotice && <EmptyState variant="informational"
+                      message={t('operations.noAttention', 'No current attention items.')}
+                      description={t('systemStatus.noAttentionHelp', 'This panel updates when an incident, maintenance notice, or available update needs attention.')}
+                      className="py-6" />}
                     {hasMaintenance && (
                       <ActionItem
                         severity="info"

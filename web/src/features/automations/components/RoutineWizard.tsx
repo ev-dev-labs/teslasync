@@ -168,7 +168,11 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
           </div>
         ) : <Text role="status" color="secondary">—</Text>
       ) : routines?.length === 0 ? (
-        <EmptyState message={t('automations.routines.resource', 'Geofence routines')} />
+        <EmptyState
+          message={t('automations.routines.noTemplates', 'No geofence routine templates are available yet.')}
+          description={t('automations.routines.createCustomHint', 'You can still create a custom automation from the automations page.')}
+          actionTo={{ label: t('automations.routines.openAutomations', 'Open automations'), to: '/automations' }}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {(routines ?? []).map((routine) => (

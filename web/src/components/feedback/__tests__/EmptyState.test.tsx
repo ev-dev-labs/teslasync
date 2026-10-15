@@ -48,6 +48,13 @@ describe('EmptyState', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 
+  it('marks self-populating content as informational without inventing a CTA', () => {
+    renderInRouter(<EmptyState variant="informational" message="Data appears after the next sync." />);
+    expect(screen.getByRole('status')).toHaveAttribute('data-variant', 'informational');
+    expect(screen.getByRole('status')).toHaveTextContent('Data appears after the next sync.');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+
   it('invokes the action onClick handler when the action button is clicked', () => {
     const onClick = vi.fn();
     renderInRouter(

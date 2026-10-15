@@ -29,7 +29,7 @@ export function useDriveScorePage() {
   /* ---- vehicle selector: header VehiclePicker is the source of truth ---- */
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
-  const { startInstant, endInstantExclusive } = useRangeState({
+  const { startInstant, endInstantExclusive, reset: resetRange } = useRangeState({
     persistKey: 'drive-score.range',
   });
 
@@ -369,6 +369,7 @@ export function useDriveScorePage() {
     t, fmtInt, fmtNumber, vehicleId, vehicleIdStr,
     scoreQuery, apiScoreState, apiScore, apiScoreCoverage,
     driveHistoryCoverage: { scope: 'selected-range' as const, start: startInstant, end: endInstantExclusive },
+    resetRange,
     drivesQuery, refetch, drivesSource,
     drivesLoading, scoreLoading, drivesPaused, scorePaused, drivesError, drivesIsError,
     formatDistance, formatSpeed, formatPower, efficiencyUnit, efficiencyDisplay, formatEfficiency,

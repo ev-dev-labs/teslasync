@@ -331,7 +331,9 @@ export default function TCOOptimizerPage() {
             ))}
           </div>
           {result && strategies.length === 0 && (
-            <EmptyState message={t('advancedIntelligence.panel.empty', 'No supported data is available.')} />
+            <EmptyState variant="informational"
+              message={t('advancedIntelligence.panel.empty', 'No supported strategies are available for these inputs.')}
+              description={t('advancedIntelligence.tco.noStrategiesHelp', 'Strategies appear when the submitted vehicle, cost, and distance inputs satisfy the optimizer support rules.')} />
           )}
         </InsightPanel>
       </FadeIn>

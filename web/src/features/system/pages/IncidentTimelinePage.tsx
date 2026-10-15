@@ -110,7 +110,8 @@ export default function IncidentTimelinePage() {
   const unavailableContent = isLoading ? (
     <Skeleton height={160} />
   ) : (
-    <EmptyState message={t('incidentTimeline.brief.unknownScope', 'Incident window unavailable until the source resolves.')} />
+    <EmptyState message={t('incidentTimeline.brief.unknownScope', 'Incident window unavailable until the source resolves.')}
+      action={{ label: t('common.retry', 'Retry'), onClick: () => { void incidentQuery.refetch(); } }} />
   )
   const unavailablePanels = (
     <>

@@ -137,9 +137,11 @@ export function TrueCostMonthlyDirectory({
         <TrueCostSectionBody state={state}>
           {analysis.monthlyAccounting.arrayAvailability !== 'valid' ? (
             <EmptyState
+              action={{ label: t('common.retry', 'Retry'), onClick: state.onRetry }}
               message={analysis.monthlyAccounting.arrayAvailability === 'invalid'
                 ? t('tco.methodology.invalidMonthly', 'The monthly_breakdown field is malformed; no monthly rows were fabricated.')
                 : t('tco.savings.unavailable', 'Unavailable')}
+              description={t('tco.directory.monthlyUnavailableHelp', 'Retry the operating-cost source; monthly rows appear when it returns a valid monthly_breakdown array.')}
             />
           ) : (
             <DataTable

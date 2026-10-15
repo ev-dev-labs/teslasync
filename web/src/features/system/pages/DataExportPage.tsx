@@ -529,7 +529,9 @@ function VehicleTargetFeedback({ vehiclesState, onRetryVehicles, unknownTarget }
           ? t('dataSources.status.paused', 'Refresh paused')
           : t('statCard.loading', 'Loading')}</Text>
       ) : vehiclesState.data.length === 0 ? (
-        <EmptyState message={t('palette.noVehicles', 'No vehicles available')} />
+        <EmptyState message={t('palette.noVehicles', 'No vehicles available')}
+          description={t('dataExport.noVehiclesHelp', 'Connect a Tesla account and sync a vehicle before exporting vehicle data.')}
+          actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }} />
       ) : null}
       {unknownTarget && (
         <HelperText>{t('common.unknown', 'Unknown')} — #{unknownTarget}</HelperText>
@@ -805,7 +807,9 @@ function ColumnPickerSection({
       <div className="mb-5" data-testid="export-column-picker">
         <Label className="mb-2 block">{t('dataExport.columns.title', 'STEP 2½ — columns')}</Label>
         <StaleRefreshWarning state={catalogState} label={t('dataExport.columns.title', 'STEP 2½ — columns')} />
-        <EmptyState message={t('common.noData', 'No data available')} />
+        <EmptyState message={t('common.noData', 'No export columns are available for this data type.')}
+          description={t('dataExport.columnsUnavailableHelp', 'Column choices appear after the export catalog returns supported fields.')}
+          action={{ label: t('common.retry', 'Retry'), onClick: () => { void catalogQuery.refetch(); } }} />
       </div>
     );
   }

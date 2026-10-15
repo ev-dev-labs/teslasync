@@ -182,6 +182,7 @@ export default function FleetOperationsPage() {
             <EmptyState
               title={t('vehicles.emptyTitle', 'No vehicles yet')}
               message={t('vehicles.emptyMessage', 'Connect your Tesla account and sync your vehicles to get started with fleet tracking, battery monitoring, and trip analysis.')}
+              actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }}
             />
           )}
         </LayoutCard>

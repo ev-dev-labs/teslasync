@@ -108,15 +108,9 @@ export function RegionEndpointPanel({
               'region.empty.message',
               'TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla.',
             )}
+            action={{ label: t('region.refresh', 'Refresh'), onClick: onRefresh, disabled: refreshDisabled || isRefreshing, loading: isRefreshing }}
           />
-          <div className="flex flex-col items-center gap-2">
-            <Button variant="secondary" wrapLabel className="min-h-11 md:min-h-9" onClick={onRefresh}
-              loading={isRefreshing} disabled={isRefreshing || refreshDisabled}
-              aria-busy={isRefreshing || undefined} title={refreshBlockReason ?? undefined}>
-              {t('region.refresh', 'Refresh')}
-            </Button>
-            {refreshBlockReason && <HelperText>{refreshBlockReason}</HelperText>}
-          </div>
+          {refreshBlockReason && <HelperText className="text-center">{refreshBlockReason}</HelperText>}
         </div>
       ) : (
         <div className="space-y-4">

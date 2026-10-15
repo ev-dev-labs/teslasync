@@ -4,13 +4,15 @@ import { Button as CtaButton, BUTTON_BASE, BUTTON_VARIANTS } from '@/components/
 import { Heading, Text } from '@/components/ui/Typography';
 
 interface EmptyStateProps {
+  /** Explicitly identifies a healthy or self-populating informational state. */
+  variant?: 'default' | 'informational';
   icon?: React.ReactNode;
   title?: string;
   message: string;
   /** Supporting context that explains prerequisites or the next expected system event. */
   description?: string;
   /** Imperative action — runs on click (mutates state, opens modal, etc.) */
-  action?: { label: string; onClick: () => void };
+  action?: { label: string; onClick: () => void; disabled?: boolean; loading?: boolean };
   /** Navigation action — preferred when the CTA just goes somewhere. Takes priority over `action`. */
   actionTo?: { label: string; to: string };
   /** Optional second CTA rendered beside the primary (e.g. an alternative path). */
@@ -31,6 +33,7 @@ const linkButtonClasses = cn(
 );
 
 export function EmptyState({
+  variant = 'default',
   icon,
   title,
   message,
@@ -46,6 +49,7 @@ export function EmptyState({
   return (
     <div
       role="status"
+      data-variant={variant}
       className={cn('flex min-w-0 flex-col items-center justify-center px-4 py-16 text-center', className)}
     >
       {icon && (
@@ -77,7 +81,8 @@ export function EmptyState({
               {actionTo.label}
             </Link>
           ) : action ? (
-            <CtaButton onClick={action.onClick} variant="secondary" size="md" wrapLabel className="min-h-11 md:min-h-10">
+            <CtaButton onClick={action.onClick} variant="secondary" size="md" wrapLabel className="min-h-11 md:min-h-10"
+              disabled={action.disabled} loading={action.loading}>
               {action.label}
             </CtaButton>
           ) : null}

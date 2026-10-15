@@ -25,15 +25,9 @@ export function RegionEndpointDetails(props: RegionEndpointPanelProps) {
         : !configured ? <div className="space-y-3">
           <EmptyState icon={<Icon icon={Server} size="xl" />} title={t('region.empty.title', 'No region on record')}
             message={t('region.empty.message', 'TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla.')}
+            action={{ label: t('region.refresh', 'Refresh'), onClick: props.onRefresh, disabled: props.refreshDisabled || props.isRefreshing, loading: props.isRefreshing }}
           />
-          <div className="flex flex-col items-center gap-2">
-            <Button variant="secondary" wrapLabel className="min-h-11 md:min-h-9" onClick={props.onRefresh}
-              loading={props.isRefreshing} disabled={props.isRefreshing || props.refreshDisabled}
-              aria-busy={props.isRefreshing || undefined} title={props.refreshBlockReason ?? undefined}>
-              {t('region.refresh', 'Refresh')}
-            </Button>
-            {props.refreshBlockReason && <HelperText>{props.refreshBlockReason}</HelperText>}
-          </div>
+          {props.refreshBlockReason && <HelperText className="text-center">{props.refreshBlockReason}</HelperText>}
         </div>
         : <div className="min-w-0 space-y-4">
           <div className="flex flex-wrap items-center gap-2">

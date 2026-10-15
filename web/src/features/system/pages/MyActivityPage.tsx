@@ -168,7 +168,8 @@ function MyActivityContent() {
                   <GlassPanel key={title} className={className}>
                     <div className="p-4 sm:p-5">
                       <PanelTitle className="mb-3">{title}</PanelTitle>
-                      <EmptyState message={t('common.unknown', 'Unknown')} />
+                      <EmptyState variant="informational" message={t('common.unknown', 'Unknown')}
+                        description={t('activity.myActivity.pendingHelp', 'This panel fills after the activity feed returns data for the selected period.')} />
                     </div>
                   </GlassPanel>
                 ))}

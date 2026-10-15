@@ -588,6 +588,9 @@ export default function TeslaChargingHistoryPage() {
               <EmptyState
                 icon={<Icon icon={Receipt} size="xl" />}
                 message={emptyMessage}
+                action={scopeRecovery}
+                variant={!scopeRecovery ? 'informational' : undefined}
+                description={!scopeRecovery ? t('tesla_charging.sessionsAppear', 'Sessions appear after Tesla charging history syncs; a selected date range can also exclude older sessions.') : undefined}
               />
             ) : (
               <>
@@ -645,6 +648,9 @@ export default function TeslaChargingHistoryPage() {
               <EmptyState
                 icon={<Icon icon={MapPin} size="xl" />}
                 message={emptyMessage}
+                action={scopeRecovery}
+                variant={!scopeRecovery ? 'informational' : undefined}
+                description={!scopeRecovery ? t('tesla_charging.locationsAppear', 'Charging locations appear when synced sessions include location evidence.') : undefined}
               />
             ) : (
               <div className="space-y-3">
@@ -699,7 +705,9 @@ export default function TeslaChargingHistoryPage() {
             <SitePriceRadar vin={queryVin} enabled={scopeEnabled} />
           ) : (
             <LayoutCard title={t('tesla_charging.priceRadar', 'Price Radar')}>
-              {firstLoading ? <Skeleton height={220} /> : <EmptyState message={prerequisiteMessage} />}
+              {firstLoading ? <Skeleton height={220} /> : <EmptyState message={prerequisiteMessage} action={scopeRecovery}
+                variant={!scopeRecovery ? 'informational' : undefined}
+                description={!scopeRecovery ? t('tesla_charging.selectVehicleHelp', 'Choose a vehicle or wait for fleet sync to finish before the price radar can load.') : undefined} />}
             </LayoutCard>
           )}
           </SectionErrorBoundary>

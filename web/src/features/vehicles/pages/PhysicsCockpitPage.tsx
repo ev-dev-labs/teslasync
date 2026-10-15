@@ -47,7 +47,8 @@ export default function PhysicsCockpitPage() {
   const unresolved = t('shareCard.states.pending', 'Source availability has not resolved yet.');
   const deferred = t('dataSources.status.paused', 'Refresh paused');
   const pendingContent = (state: DataState<unknown>, query: DataStateSource<unknown>) =>
-    !hasVehicle ? <EmptyState message={prerequisite} />
+    !hasVehicle ? <EmptyState message={prerequisite}
+      actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }} />
       : state.status === 'initial' && (query.isPending || !query.isSuccess)
         ? <div role="status">
             <Text as="p" variant="bodySm">{unresolved}</Text>
@@ -106,7 +107,8 @@ export default function PhysicsCockpitPage() {
       {cockpit?.honesty && (
         <Text as="p" variant="bodySm">{cockpit.honesty}</Text>
       )}
-      {!hasVehicle && <EmptyState message={prerequisite} />}
+      {!hasVehicle && <EmptyState message={prerequisite}
+        actionTo={{ label: t('common.noVehicleSelected.action', 'Set up TeslaSync'), to: '/onboarding' }} />}
       <LayoutCard title={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}>
       <StaleRefreshWarning state={cockpitState} label={t('vehicles.physicsCockpit.snapshot', 'Live cockpit readings')}
         message={cockpitState.isRefreshBlocked ? deferred : undefined} />

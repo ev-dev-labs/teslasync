@@ -334,6 +334,7 @@ export default function LocationsPage() {
               icon={<Icon icon={MapPin} size="xl" />}
               title={unresolvedTitle}
               message={unresolvedMessage}
+              action={{ label: t('common.retry', 'Retry'), onClick: () => { void refetch(); } }}
             />
           ) : !hasLocations ? (
             <EmptyState

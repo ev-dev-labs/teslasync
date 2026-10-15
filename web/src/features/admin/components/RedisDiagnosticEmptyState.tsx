@@ -352,7 +352,10 @@ function OtherRedisVehicles({
               </Button>
             ))}
           </div>
-        ) : <EmptyState message={t('common.noData', 'No data available')} className="py-6" />}
+        ) : <EmptyState variant="informational"
+          message={t('common.noData', 'No Redis signal keys are available yet.')}
+          description={t('redis.diagnostic.emptyHelp', 'Signal keys appear after the backend publishes vehicle telemetry to Redis.')}
+          className="py-6" />}
       </SourceContent>
     </div>
   )

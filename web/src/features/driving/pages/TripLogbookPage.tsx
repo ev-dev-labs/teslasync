@@ -400,7 +400,8 @@ export default function TripLogbookPage() {
             ) : isLoading ? (
               <Skeleton height={320} />
             ) : !sourceAvailable ? (
-              <EmptyState message={t('driving.brief.unavailable', 'Source unavailable')} />
+              <EmptyState message={t('driving.brief.unavailable', 'Source unavailable')}
+                action={{ label: t('common.retry', 'Retry'), onClick: () => { void drivesQuery.refetch(); } }} />
             ) : drives.length === 0 ? (
               <EmptyState
                 icon={<NotebookPen className="h-8 w-8" />}

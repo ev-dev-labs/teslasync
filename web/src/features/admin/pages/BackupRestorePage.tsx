@@ -812,18 +812,10 @@ export default function BackupRestorePage() {
         message={runsOffset === 0
           ? t('backup.noRunsMessage', 'Trigger a backup or wait for the scheduled run.')
           : t('common.noData', 'No data available')}
+        action={{ label: t('backup.quickBackup', 'Quick backup'), onClick: handleQuickBackup,
+          loading: quickBackupMutation.isPending, disabled: !canWrite }}
       />
-      <div className="flex justify-center pb-6">
-        <Button
-          variant="secondary"
-          onClick={handleQuickBackup}
-          loading={quickBackupMutation.isPending}
-          disabled={!canWrite}
-          title={writeBlockReason ?? undefined}
-        >
-          {t('backup.quickBackup', 'Quick backup')}
-        </Button>
-      </div>
+      {writeBlockReason && <Text as="p" variant="caption" className="text-center">{writeBlockReason}</Text>}
     </div>
   );
 

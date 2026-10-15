@@ -30,7 +30,7 @@ export default function DriveScorePage() {
   const model = useDriveScorePage();
   const {
     t, hasData, hasDrives, drivesLoading, scoreLoading, drivesPaused, scorePaused, vehicleIdStr,
-    apiScoreState, drivesError, scoreQuery, refetch, drivesQuery,
+    apiScoreState, drivesError, scoreQuery, refetch, drivesQuery, resetRange,
   } = model;
   const historyPausedMessage = t('driveScore.historyPaused', 'Drive history loading is deferred.');
   const serverPausedMessage = t('driveScore.serverPaused', 'Server drive score loading is deferred.');
@@ -66,6 +66,13 @@ export default function DriveScorePage() {
                header range for successfully loaded empty evidence. */
             icon={emptyIcon}
             message={paused ? (drivesPaused ? historyPausedMessage : serverPausedMessage) : emptyMsg}
+            action={{
+              label: t(paused ? 'common.retry' : 'common.clearFilters', paused ? 'Retry' : 'Clear filters'),
+              onClick: () => {
+                if (paused) void (combinedScore && !drivesPaused ? scoreQuery.refetch() : refetch());
+                else resetRange();
+              },
+            }}
           />}
         >
           {null}

@@ -102,7 +102,9 @@ export default function OutageAutobiographyPage() {
             label={t('system.outage.title', 'Outage autobiography')}
             emptyMessage={t('system.outage.empty', 'No outage evidence has been recorded for this vehicle yet.')}
             errorMessage={t('system.outage.loadError', 'Unable to load outage evidence.')}
-            emptyContent={outageEmptyContext ? <EmptyState message={outageEmptyContext} /> : undefined}
+            emptyContent={outageEmptyContext ? <EmptyState message={outageEmptyContext}
+              actionTo={vehiclePrerequisite ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
+              action={!vehiclePrerequisite ? { label: t('common.retry', 'Retry'), onClick: () => { void outageQuery.refetch(); } } : undefined} /> : undefined}
             error={state.fatalError}
             errorRecovery={{ onRetry: () => { void outageQuery.refetch(); } }}
           >
@@ -119,7 +121,9 @@ export default function OutageAutobiographyPage() {
               ))}
             </ul>
           ) : !outage.replay_preserves_event_time ? (
-            <EmptyState message={t('system.outage.detailsUnavailable', 'No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.')} />
+            <EmptyState variant="informational"
+              message={t('system.outage.detailsUnavailable', 'No replay assurance or outage notes were supplied. Missing details do not establish zero incidents.')}
+              description={t('system.outage.detailsUnavailableHelp', 'These details appear only when the outage evidence source supplies replay assurance or notes.')} />
           ) : null}
           </> : null}
           </SourceContent>
@@ -135,7 +139,9 @@ export default function OutageAutobiographyPage() {
             label={t('system.outage.certificate', 'Session certificate')}
             emptyMessage={t('system.outage.certificateEmpty', 'A session certificate is not available for this vehicle yet.')}
             errorMessage={t('system.outage.certificateError', 'Unable to load the session certificate.')}
-            emptyContent={certificateEmptyContext ? <EmptyState message={certificateEmptyContext} /> : undefined}
+            emptyContent={certificateEmptyContext ? <EmptyState message={certificateEmptyContext}
+              actionTo={vehiclePrerequisite ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
+              action={!vehiclePrerequisite ? { label: t('common.retry', 'Retry'), onClick: () => { void certificateQuery.refetch(); } } : undefined} /> : undefined}
           >
             <Text as="p" variant="bodySm">
               {t('system.outage.certificateReady', 'The session certificate is available for download with its original evidence intact.')}

@@ -227,10 +227,14 @@ export default function SpeedProfilePage() {
   const selectionMessage = t('driving.brief.selectVehicle', 'Select a vehicle');
   const pausedMessage = t('dataSources.status.paused', 'Refresh paused');
   const profilePlaceholder = missingSelection || profilePaused
-    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage} />
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage}
+        actionTo={missingSelection ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
+        action={!missingSelection ? { label: t('common.retry', 'Retry'), onClick: () => { void profileQuery.refetch(); } } : undefined} />
     : null;
   const drivesPlaceholder = missingSelection || drivesPaused
-    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage} />
+    ? <EmptyState message={missingSelection ? selectionMessage : pausedMessage}
+        actionTo={missingSelection ? { label: t('yearReview.goToVehicles', 'Go to vehicles'), to: '/vehicles' } : undefined}
+        action={!missingSelection ? { label: t('common.retry', 'Retry'), onClick: () => { void drivesQuery.refetch(); } } : undefined} />
     : null;
   const driveValueStatus = missingSelection
     ? selectionMessage

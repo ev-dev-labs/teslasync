@@ -30,12 +30,14 @@ export function EventEvidencePanel({ clip }: EventEvidencePanelProps) {
       <LayoutCard title={t('dashcam.events.title', 'Event evidence')}>
         {/* Metadata import and motion analysis live outside this component; Reconstruction is a separate read-only surface. */}
         <EmptyState
+          variant="informational"
           icon={<AlertTriangle className="h-8 w-8" />}
           title={t('dashcam.events.emptyTitle', 'No event candidates yet')}
           message={t(
             'dashcam.events.emptyMessage',
             'Import metadata (event.json / folder) or run local motion analysis to derive clip event candidates. View telemetry-derived incidents separately in the Reconstruction tab; they are not added to this clip’s event evidence.',
           )}
+          description={t('dashcam.events.emptyHelp', 'Candidates appear after metadata import or local motion analysis completes.')}
         />
       </LayoutCard>
     );

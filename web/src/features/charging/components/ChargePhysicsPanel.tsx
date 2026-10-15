@@ -56,7 +56,9 @@ export function ChargePhysicsPanel({ sessionId }: { sessionId: string | undefine
             ))}
           </ol>
           {(physics.story ?? []).length === 0 && (
-            <EmptyState message={t('common.noData', 'No data available')} />
+            <EmptyState variant="informational"
+              message={t('common.noData', 'No data available')}
+              description={t('charging.physics.emptyHelp', 'Physics events appear when the charging session reports energy and power milestones.')} />
           )}
           {physics.at_limit_still_plugged_s != null && (
             <Text as="p" variant="bodySm" className="flex items-center gap-2">
