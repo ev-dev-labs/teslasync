@@ -187,7 +187,7 @@ function renderPage(initialEntry = '/drive-compare') {
     <MemoryRouter initialEntries={[initialEntry]}>
       <DriveComparePage />
       <LocationEvidence />
-    </MemoryRouter>,
+    </MemoryRouter>
   );
   const result = render(workspace());
   return { ...result, rerenderPage: () => result.rerender(workspace()) };
